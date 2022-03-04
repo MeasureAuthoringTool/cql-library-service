@@ -32,7 +32,11 @@ public class CqlLibraryServiceApplication {
         registry
             .addMapping("/**")
             .allowedMethods("PUT", "POST", "GET")
-            .allowedOrigins("http://localhost:9000", "https://dev-madie.hcqis.org", "https://test-madie.hcqis.org", "https://impl-madie.hcqis.org");
+            .allowedOrigins(
+                "http://localhost:9000",
+                "https://dev-madie.hcqis.org",
+                "https://test-madie.hcqis.org",
+                "https://impl-madie.hcqis.org");
       }
     };
   }
