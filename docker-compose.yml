@@ -1,23 +1,23 @@
 version: "3"
 services:
-  madie-measure:
+  madie-cql-library:
     build:
       context: .
     volumes:
       - ./:/app:cached
       - ~/.m2:/root/.m2:consistent
     ports:
-      - "8080:8080"
+      - "8082:8082"
     depends_on:
       - "madie-mongo"
     environment:
       WAIT_HOSTS: madie-mongo:27017
       
-  madie-mongo:
+  madie-cql-library-mongo:
     image: mongo:4.4
     tmpfs: /data/db
     restart: always
-    container_name: 'madie-mongo'
+    container_name: 'madie-cql-library-mongo'
     ports:
       - 27017:27017
     environment:

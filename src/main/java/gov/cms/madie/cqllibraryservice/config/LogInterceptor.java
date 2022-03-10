@@ -1,4 +1,4 @@
-package gov.cms.madie.cqllibraryservice.interceptors;
+package gov.cms.madie.cqllibraryservice.config;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -10,7 +10,6 @@ import javax.servlet.http.HttpServletResponse;
 @Slf4j(topic = "action_audit")
 @Component
 public class LogInterceptor implements HandlerInterceptor {
-
   @Override
   public void afterCompletion(
       HttpServletRequest request, HttpServletResponse response, Object handler, Exception ex) {
