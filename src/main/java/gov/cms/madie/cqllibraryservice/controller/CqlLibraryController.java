@@ -36,7 +36,7 @@ public class CqlLibraryController {
     return ResponseEntity.ok(cqlLibraries);
   }
 
-  @PostMapping("/cql-library")
+  @PostMapping("/cql-libraries")
   public ResponseEntity<CqlLibrary> createCqlLibrary(
       @RequestBody CqlLibrary cqlLibrary, Principal principal) {
     final String username = principal.getName();
