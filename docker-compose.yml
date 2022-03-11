@@ -9,9 +9,9 @@ services:
     ports:
       - "8082:8082"
     depends_on:
-      - "madie-mongo"
+      - "madie-cql-library-mongo"
     environment:
-      WAIT_HOSTS: madie-mongo:27017
+      WAIT_HOSTS: madie-cql-library-mongo:27017
       
   madie-cql-library-mongo:
     image: mongo:4.4
