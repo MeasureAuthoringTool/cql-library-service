@@ -23,69 +23,70 @@ import static org.mockito.Mockito.*;
 @ExtendWith(MockitoExtension.class)
 class CqlLibraryControllerTest {
 
-    @Mock
-    CqlLibraryRepository cqlLibraryRepository;
+  @Mock CqlLibraryRepository cqlLibraryRepository;
 
-    @InjectMocks
-    CqlLibraryController cqlLibraryController;
+  @InjectMocks CqlLibraryController cqlLibraryController;
 
-    private CqlLibrary cqlLibrary;
+  private CqlLibrary cqlLibrary;
 
-    @BeforeEach
-    public void setUp() {
-        cqlLibrary = new CqlLibrary();
-        cqlLibrary.setId("testCqlLibraryId");
-        cqlLibrary.setCqlLibraryName("testCqlLibraryName");
-    }
+  @BeforeEach
+  public void setUp() {
+    cqlLibrary = new CqlLibrary();
+    cqlLibrary.setId("testCqlLibraryId");
+    cqlLibrary.setCqlLibraryName("testCqlLibraryName");
+  }
 
-    @Test
-    void getCqlLibrariesWithoutCurrentUserFilter() {
-        List<CqlLibrary> cqlLibraries = List.of(cqlLibrary);
-        when(cqlLibraryRepository.findAll()).thenReturn(cqlLibraries);
-        Principal principal = mock(Principal.class);
-        when(principal.getName()).thenReturn("test.user");
+  @Test
+  void getCqlLibrariesWithoutCurrentUserFilter() {
+    List<CqlLibrary> cqlLibraries = List.of(cqlLibrary);
+    when(cqlLibraryRepository.findAll()).thenReturn(cqlLibraries);
+    Principal principal = mock(Principal.class);
+    when(principal.getName()).thenReturn("test.user");
 
-        ResponseEntity<List<CqlLibrary>> response = cqlLibraryController.getCqlLibraries(principal, false);
-        verify(cqlLibraryRepository, times(1)).findAll();
-        verifyNoMoreInteractions(cqlLibraryRepository);
-        assertNotNull(response.getBody());
-        assertNotNull(response.getBody().get(0));
-        assertEquals("testCqlLibraryId", response.getBody().get(0).getId());
-    }
+    ResponseEntity<List<CqlLibrary>> response =
+        cqlLibraryController.getCqlLibraries(principal, false);
+    verify(cqlLibraryRepository, times(1)).findAll();
+    verifyNoMoreInteractions(cqlLibraryRepository);
+    assertNotNull(response.getBody());
+    assertNotNull(response.getBody().get(0));
+    assertEquals("testCqlLibraryId", response.getBody().get(0).getId());
+  }
 
-    @Test
-    void getCqlLibrariesWithCurrentUserFilter() {
-        List<CqlLibrary> cqlLibraries = List.of(cqlLibrary);
-        when(cqlLibraryRepository.findAllByCreatedBy(anyString())).thenReturn(cqlLibraries);
-        Principal principal = mock(Principal.class);
-        when(principal.getName()).thenReturn("test.user");
+  @Test
+  void getCqlLibrariesWithCurrentUserFilter() {
+    List<CqlLibrary> cqlLibraries = List.of(cqlLibrary);
+    when(cqlLibraryRepository.findAllByCreatedBy(anyString())).thenReturn(cqlLibraries);
+    Principal principal = mock(Principal.class);
+    when(principal.getName()).thenReturn("test.user");
 
-        ResponseEntity<List<CqlLibrary>> response = cqlLibraryController.getCqlLibraries(principal, true);
-        verify(cqlLibraryRepository, times(1)).findAllByCreatedBy(eq("test.user"));
-        verifyNoMoreInteractions(cqlLibraryRepository);
-        assertNotNull(response.getBody());
-        assertNotNull(response.getBody().get(0));
-        assertEquals("testCqlLibraryId", response.getBody().get(0).getId());
-    }
+    ResponseEntity<List<CqlLibrary>> response =
+        cqlLibraryController.getCqlLibraries(principal, true);
+    verify(cqlLibraryRepository, times(1)).findAllByCreatedBy(eq("test.user"));
+    verifyNoMoreInteractions(cqlLibraryRepository);
+    assertNotNull(response.getBody());
+    assertNotNull(response.getBody().get(0));
+    assertEquals("testCqlLibraryId", response.getBody().get(0).getId());
+  }
 
-    @Test
-    void testSaveCqlLibrary() {
-        ArgumentCaptor<CqlLibrary> saveCqlLibraryArgCaptor = ArgumentCaptor.forClass(CqlLibrary.class);
-        doReturn(cqlLibrary).when(cqlLibraryRepository).save(ArgumentMatchers.any());
+  @Test
+  void testSaveCqlLibrary() {
+    ArgumentCaptor<CqlLibrary> saveCqlLibraryArgCaptor = ArgumentCaptor.forClass(CqlLibrary.class);
+    doReturn(cqlLibrary).when(cqlLibraryRepository).save(ArgumentMatchers.any());
 
-        CqlLibrary cqlLibrary = new CqlLibrary();
-        Principal principal = mock(Principal.class);
-        when(principal.getName()).thenReturn("test.user");
+    CqlLibrary cqlLibrary = new CqlLibrary();
+    Principal principal = mock(Principal.class);
+    when(principal.getName()).thenReturn("test.user");
 
-        ResponseEntity<CqlLibrary> response = cqlLibraryController.createCqlLibrary(cqlLibrary, principal);
-        assertNotNull(response.getBody());
-        assertEquals("testCqlLibraryId", response.getBody().getId());
+    ResponseEntity<CqlLibrary> response =
+        cqlLibraryController.createCqlLibrary(cqlLibrary, principal);
+    assertNotNull(response.getBody());
+    assertEquals("testCqlLibraryId", response.getBody().getId());
 
-        verify(cqlLibraryRepository, times(1)).save(saveCqlLibraryArgCaptor.capture());
-        CqlLibrary savedCqlLibrary = saveCqlLibraryArgCaptor.getValue();
-        assertThat(savedCqlLibrary.getCreatedBy(), is(equalTo("test.user")));
-        assertThat(savedCqlLibrary.getLastModifiedBy(), is(equalTo("test.user")));
-        assertThat(savedCqlLibrary.getCreatedAt(), is(notNullValue()));
-        assertThat(savedCqlLibrary.getLastModifiedAt(), is(notNullValue()));
-    }
+    verify(cqlLibraryRepository, times(1)).save(saveCqlLibraryArgCaptor.capture());
+    CqlLibrary savedCqlLibrary = saveCqlLibraryArgCaptor.getValue();
+    assertThat(savedCqlLibrary.getCreatedBy(), is(equalTo("test.user")));
+    assertThat(savedCqlLibrary.getLastModifiedBy(), is(equalTo("test.user")));
+    assertThat(savedCqlLibrary.getCreatedAt(), is(notNullValue()));
+    assertThat(savedCqlLibrary.getLastModifiedAt(), is(notNullValue()));
+  }
 }
