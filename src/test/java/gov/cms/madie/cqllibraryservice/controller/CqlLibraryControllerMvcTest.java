@@ -6,7 +6,6 @@ import gov.cms.madie.cqllibraryservice.models.CqlLibrary;
 import gov.cms.madie.cqllibraryservice.respositories.CqlLibraryRepository;
 import org.bson.types.ObjectId;
 import org.hamcrest.CustomMatcher;
-import org.hamcrest.Matcher;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
@@ -20,7 +19,7 @@ import java.util.Optional;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
@@ -40,11 +39,6 @@ public class CqlLibraryControllerMvcTest {
     return mapper.writeValueAsString(cqlLibrary);
   }
 
-  public CqlLibrary fromJsonString(final String json) throws JsonProcessingException {
-    ObjectMapper mapper = new ObjectMapper();
-    return mapper.readValue(json, CqlLibrary.class);
-  }
-
   @Test
   public void testCreateCqlLibraryReturnsValidationErrorForNullCqlLibraryName() throws Exception {
     String json = toJsonString(CqlLibrary.builder().cqlLibraryName(null).build());
@@ -59,6 +53,7 @@ public class CqlLibraryControllerMvcTest {
         .andExpect(status().isBadRequest())
         .andExpect(
             jsonPath("$.validationErrors.cqlLibraryName").value("Library name is required."));
+    verifyNoInteractions(repository);
   }
 
   @Test
@@ -75,6 +70,7 @@ public class CqlLibraryControllerMvcTest {
         .andExpect(status().isBadRequest())
         .andExpect(
             jsonPath("$.validationErrors.cqlLibraryName").value("Library name is required."));
+    verifyNoInteractions(repository);
   }
 
   @Test
@@ -96,6 +92,7 @@ public class CqlLibraryControllerMvcTest {
                     "Library name must start with an upper case letter, "
                         + "followed by alpha-numeric character(s) and must not contain "
                         + "spaces or other special characters."));
+    verifyNoInteractions(repository);
   }
 
   @Test
@@ -116,6 +113,7 @@ public class CqlLibraryControllerMvcTest {
                     "Library name must start with an upper case letter, "
                         + "followed by alpha-numeric character(s) and must not contain "
                         + "spaces or other special characters."));
+    verifyNoInteractions(repository);
   }
 
   @Test
@@ -136,6 +134,7 @@ public class CqlLibraryControllerMvcTest {
                     "Library name must start with an upper case letter, "
                         + "followed by alpha-numeric character(s) and must not contain "
                         + "spaces or other special characters."));
+    verifyNoInteractions(repository);
   }
 
   @Test
@@ -157,6 +156,7 @@ public class CqlLibraryControllerMvcTest {
                     "Library name must start with an upper case letter, "
                         + "followed by alpha-numeric character(s) and must not contain "
                         + "spaces or other special characters."));
+    verifyNoInteractions(repository);
   }
 
   @Test
@@ -176,6 +176,7 @@ public class CqlLibraryControllerMvcTest {
         .andExpect(
             jsonPath("$.validationErrors.cqlLibraryName")
                 .value("Library name cannot be more than 255 characters."));
+    verifyNoInteractions(repository);
   }
 
   @Test
@@ -194,6 +195,8 @@ public class CqlLibraryControllerMvcTest {
         .andExpect(status().isBadRequest())
         .andExpect(
             jsonPath("$.validationErrors.cqlLibraryName").value("Library name must be unique."));
+    verify(repository, times(1)).findByCqlLibraryName(anyString());
+    verifyNoMoreInteractions(repository);
   }
 
   @Test
@@ -234,5 +237,7 @@ public class CqlLibraryControllerMvcTest {
         .andExpect(jsonPath("$.lastModifiedBy").value(TEST_USER_ID))
         .andExpect(jsonPath("$.createdAt").value(fiveMinMatcher))
         .andExpect(jsonPath("$.lastModifiedAt").value(fiveMinMatcher));
+    verify(repository, times(1)).findByCqlLibraryName(anyString());
+    verify(repository, times(1)).save(any(CqlLibrary.class));
   }
 }
