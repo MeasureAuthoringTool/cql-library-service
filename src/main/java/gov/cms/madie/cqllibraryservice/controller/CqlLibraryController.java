@@ -1,15 +1,19 @@
 package gov.cms.madie.cqllibraryservice.controller;
 
+import gov.cms.madie.cqllibraryservice.exceptions.DuplicateKeyException;
 import gov.cms.madie.cqllibraryservice.models.CqlLibrary;
 import gov.cms.madie.cqllibraryservice.respositories.CqlLibraryRepository;
+import io.micrometer.core.instrument.util.StringUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.security.Principal;
@@ -18,12 +22,13 @@ import java.util.List;
 
 @Slf4j
 @RestController
+@RequestMapping("/cql-libraries")
 @RequiredArgsConstructor
 public class CqlLibraryController {
 
   private final CqlLibraryRepository cqlLibraryRepository;
 
-  @GetMapping("/cql-libraries")
+  @GetMapping
   public ResponseEntity<List<CqlLibrary>> getCqlLibraries(
       Principal principal,
       @RequestParam(required = false, defaultValue = "false", name = "currentUser")
@@ -36,11 +41,14 @@ public class CqlLibraryController {
     return ResponseEntity.ok(cqlLibraries);
   }
 
-  @PostMapping("/cql-libraries")
+  @PostMapping
   public ResponseEntity<CqlLibrary> createCqlLibrary(
-      @RequestBody CqlLibrary cqlLibrary, Principal principal) {
+      @Validated(CqlLibrary.ValidationSequence.class) @RequestBody CqlLibrary cqlLibrary,
+      Principal principal) {
     final String username = principal.getName();
     log.info("User [{}] is attempting to create a new cql library", username);
+
+    checkDuplicateCqlLibraryName(cqlLibrary.getCqlLibraryName());
 
     // Clear ID so that the unique GUID from MongoDB will be applied
     Instant now = Instant.now();
@@ -55,5 +63,12 @@ public class CqlLibraryController {
         username,
         cqlLibrary.getId());
     return ResponseEntity.status(HttpStatus.CREATED).body(savedCqlLibrary);
+  }
+
+  private void checkDuplicateCqlLibraryName(String cqlLibraryName) {
+    if (StringUtils.isNotEmpty(cqlLibraryName)
+        && cqlLibraryRepository.findByCqlLibraryName(cqlLibraryName).isPresent()) {
+      throw new DuplicateKeyException("cqlLibraryName", "Library name must be unique.");
+    }
   }
 }
