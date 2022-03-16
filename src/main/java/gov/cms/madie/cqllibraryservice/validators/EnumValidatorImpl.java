@@ -6,12 +6,12 @@ import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-public class EnumValidatorImpl implements ConstraintValidator<gov.cms.madie.cqllibraryservice.validators.EnumValidator, String> {
+public class EnumValidatorImpl implements ConstraintValidator<EnumValidator, String> {
 
   private List<String> acceptedValues;
 
   @Override
-  public void initialize(gov.cms.madie.cqllibraryservice.validators.EnumValidator annotation) {
+  public void initialize(EnumValidator annotation) {
     acceptedValues =
         Stream.of(annotation.enumClass().getEnumConstants())
             .map(Enum::toString)

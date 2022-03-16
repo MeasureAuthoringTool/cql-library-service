@@ -40,8 +40,7 @@ public class CqlLibrary {
 
   @NotNull(
       groups = {ValidationOrder1.class},
-      message = "Model is required."
-  )
+      message = "Model is required.")
   @EnumValidator(
       enumClass = ModelType.class,
       message = "Model must be one of the supported types in MADiE.",
