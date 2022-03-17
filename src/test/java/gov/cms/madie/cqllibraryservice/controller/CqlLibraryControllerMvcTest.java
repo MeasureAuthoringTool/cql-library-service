@@ -41,7 +41,7 @@ public class CqlLibraryControllerMvcTest {
 
   @Test
   public void testCreateCqlLibraryReturnsValidationErrorForNullCqlLibraryName() throws Exception {
-    String json = toJsonString(CqlLibrary.builder().cqlLibraryName(null).build());
+    String json = toJsonString(CqlLibrary.builder().cqlLibraryName(null).model("QI-Core").build());
     when(repository.findByCqlLibraryName(anyString())).thenReturn(Optional.empty());
     mockMvc
         .perform(
@@ -58,7 +58,7 @@ public class CqlLibraryControllerMvcTest {
 
   @Test
   public void testCreateCqlLibraryReturnsValidationErrorForEmptyCqlLibraryName() throws Exception {
-    String json = toJsonString(CqlLibrary.builder().cqlLibraryName("").build());
+    String json = toJsonString(CqlLibrary.builder().cqlLibraryName("").model("QI-Core").build());
     when(repository.findByCqlLibraryName(anyString())).thenReturn(Optional.empty());
     mockMvc
         .perform(
@@ -76,7 +76,8 @@ public class CqlLibraryControllerMvcTest {
   @Test
   public void testCreateCqlLibraryReturnsValidationErrorForLowercaseStartCharacter()
       throws Exception {
-    String json = toJsonString(CqlLibrary.builder().cqlLibraryName("aBCDefg").build());
+    String json =
+        toJsonString(CqlLibrary.builder().cqlLibraryName("aBCDefg").model("QI-Core").build());
     when(repository.findByCqlLibraryName(anyString())).thenReturn(Optional.empty());
     mockMvc
         .perform(
@@ -97,7 +98,8 @@ public class CqlLibraryControllerMvcTest {
 
   @Test
   public void testCreateCqlLibraryReturnsValidationErrorForContainingSpaces() throws Exception {
-    String json = toJsonString(CqlLibrary.builder().cqlLibraryName("With  spaces ").build());
+    String json =
+        toJsonString(CqlLibrary.builder().cqlLibraryName("With  spaces ").model("QI-Core").build());
     when(repository.findByCqlLibraryName(anyString())).thenReturn(Optional.empty());
     mockMvc
         .perform(
@@ -118,7 +120,9 @@ public class CqlLibraryControllerMvcTest {
 
   @Test
   public void testCreateCqlLibraryReturnsValidationErrorForContainingUnderscore() throws Exception {
-    String json = toJsonString(CqlLibrary.builder().cqlLibraryName("With_underscore").build());
+    String json =
+        toJsonString(
+            CqlLibrary.builder().cqlLibraryName("With_underscore").model("QI-Core").build());
     when(repository.findByCqlLibraryName(anyString())).thenReturn(Optional.empty());
     mockMvc
         .perform(
@@ -140,7 +144,8 @@ public class CqlLibraryControllerMvcTest {
   @Test
   public void testCreateCqlLibraryReturnsValidationErrorForContainingSpecialCharacters()
       throws Exception {
-    String json = toJsonString(CqlLibrary.builder().cqlLibraryName("Name*$").build());
+    String json =
+        toJsonString(CqlLibrary.builder().cqlLibraryName("Name*$").model("QI-Core").build());
     when(repository.findByCqlLibraryName(anyString())).thenReturn(Optional.empty());
     mockMvc
         .perform(
@@ -163,7 +168,8 @@ public class CqlLibraryControllerMvcTest {
   public void testCreateCqlLibraryReturnsValidationErrorForLengthOver255Chars() throws Exception {
     final String reallyLongName =
         "Reallylongnamethatisover255charactersbutwouldotherwisebevalidifitwereunder255charactersandisjustanattempttogetthevalidatortoblowupwiththisstupidlylongnamethatnobodywouldeveractuallyusebecausereallywhowouldtypeareallylongnamelikethiswithoutspacesorunderscorestoseparatewords";
-    String json = toJsonString(CqlLibrary.builder().cqlLibraryName(reallyLongName).build());
+    String json =
+        toJsonString(CqlLibrary.builder().cqlLibraryName(reallyLongName).model("QI-Core").build());
     when(repository.findByCqlLibraryName(anyString())).thenReturn(Optional.empty());
     mockMvc
         .perform(
@@ -182,8 +188,10 @@ public class CqlLibraryControllerMvcTest {
   @Test
   public void testCreateCqlLibraryReturnsValidationErrorForDuplicateCqlLibraryName()
       throws Exception {
-    String json = toJsonString(CqlLibrary.builder().cqlLibraryName("DuplicateName").build());
-    CqlLibrary existingCqlLibrary = CqlLibrary.builder().cqlLibraryName("DuplicateName").build();
+    String json =
+        toJsonString(CqlLibrary.builder().cqlLibraryName("DuplicateName").model("QI-Core").build());
+    CqlLibrary existingCqlLibrary =
+        CqlLibrary.builder().cqlLibraryName("DuplicateName").model("QI-Core").build();
     when(repository.findByCqlLibraryName(anyString())).thenReturn(Optional.of(existingCqlLibrary));
     mockMvc
         .perform(
@@ -200,8 +208,43 @@ public class CqlLibraryControllerMvcTest {
   }
 
   @Test
-  public void testCreateCqlLibraryReturnsCreatedForValidName() throws Exception {
-    CqlLibrary library = CqlLibrary.builder().cqlLibraryName("NewValidName1").build();
+  public void testCreateCqlLibraryReturnsValidationErrorForInvalidModel() throws Exception {
+    String json = toJsonString(CqlLibrary.builder().cqlLibraryName("Name").model("RANDOM").build());
+    when(repository.findByCqlLibraryName(anyString())).thenReturn(Optional.empty());
+    mockMvc
+        .perform(
+            post("/cql-libraries")
+                .with(user(TEST_USER_ID))
+                .with(csrf())
+                .content(json)
+                .contentType(MediaType.APPLICATION_JSON_VALUE))
+        .andExpect(status().isBadRequest())
+        .andExpect(
+            jsonPath("$.validationErrors.model")
+                .value("Model must be one of the supported types in MADiE."));
+    verifyNoInteractions(repository);
+  }
+
+  @Test
+  public void testCreateCqlLibraryReturnsValidationErrorForNullModel() throws Exception {
+    String json = toJsonString(CqlLibrary.builder().cqlLibraryName("Name").model(null).build());
+    when(repository.findByCqlLibraryName(anyString())).thenReturn(Optional.empty());
+    mockMvc
+        .perform(
+            post("/cql-libraries")
+                .with(user(TEST_USER_ID))
+                .with(csrf())
+                .content(json)
+                .contentType(MediaType.APPLICATION_JSON_VALUE))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.validationErrors.model").value("Model is required."));
+    verifyNoInteractions(repository);
+  }
+
+  @Test
+  public void testCreateCqlLibraryReturnsCreatedForValidObject() throws Exception {
+    CqlLibrary library =
+        CqlLibrary.builder().cqlLibraryName("NewValidName1").model("QI-Core").build();
     String json = toJsonString(library);
     when(repository.findByCqlLibraryName(anyString())).thenReturn(Optional.empty());
     String objectId = ObjectId.get().toHexString();
