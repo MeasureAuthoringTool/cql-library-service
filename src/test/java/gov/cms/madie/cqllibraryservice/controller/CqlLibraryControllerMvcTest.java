@@ -41,14 +41,11 @@ public class CqlLibraryControllerMvcTest {
 
   private static final String TEST_USER_ID = "test-okta-user-id-123";
 
-  @MockBean
-  private CqlLibraryRepository repository;
+  @MockBean private CqlLibraryRepository repository;
 
-  @Captor
-  private ArgumentCaptor<CqlLibrary> cqlLibraryArgumentCaptor;
+  @Captor private ArgumentCaptor<CqlLibrary> cqlLibraryArgumentCaptor;
 
-  @Autowired
-  private MockMvc mockMvc;
+  @Autowired private MockMvc mockMvc;
 
   public String toJsonString(CqlLibrary cqlLibrary) throws JsonProcessingException {
     ObjectMapper mapper = new ObjectMapper();
@@ -302,10 +299,7 @@ public class CqlLibraryControllerMvcTest {
   public void testGetCqlLibraryReturns404() throws Exception {
     when(repository.findById(anyString())).thenReturn(Optional.empty());
     mockMvc
-        .perform(
-            get("/cql-libraries/Libary1_ID")
-                .with(user(TEST_USER_ID))
-                .with(csrf()))
+        .perform(get("/cql-libraries/Libary1_ID").with(user(TEST_USER_ID)).with(csrf()))
         .andExpect(status().isNotFound());
     verify(repository, times(1)).findById(anyString());
   }
@@ -313,20 +307,19 @@ public class CqlLibraryControllerMvcTest {
   @Test
   public void testGetCqlLibraryReturnsCqlLibrary() throws Exception {
     final Instant createdTime = Instant.now().minus(100, ChronoUnit.MINUTES);
-    final CqlLibrary existingLibrary = CqlLibrary.builder()
-        .id("Library1_ID")
-        .cqlLibraryName("Library1").model(ModelType.QI_CORE.getValue())
-        .createdAt(createdTime)
-        .createdBy("User1")
-        .lastModifiedAt(createdTime)
-        .lastModifiedBy("User1")
-        .build();
+    final CqlLibrary existingLibrary =
+        CqlLibrary.builder()
+            .id("Library1_ID")
+            .cqlLibraryName("Library1")
+            .model(ModelType.QI_CORE.getValue())
+            .createdAt(createdTime)
+            .createdBy("User1")
+            .lastModifiedAt(createdTime)
+            .lastModifiedBy("User1")
+            .build();
     when(repository.findById(anyString())).thenReturn(Optional.of(existingLibrary));
     mockMvc
-        .perform(
-            get("/cql-libraries/Libary1_ID")
-                .with(user(TEST_USER_ID))
-                .with(csrf()))
+        .perform(get("/cql-libraries/Libary1_ID").with(user(TEST_USER_ID)).with(csrf()))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.cqlLibraryName").value(existingLibrary.getCqlLibraryName()))
         .andExpect(jsonPath("$.id").value(existingLibrary.getId()))
@@ -339,7 +332,8 @@ public class CqlLibraryControllerMvcTest {
 
   @Test
   public void testUpdateCqlLibraryReturns400ForNullLibraryId() throws Exception {
-    final CqlLibrary updatingLibrary = CqlLibrary.builder().id(null).cqlLibraryName("NewName").model("QI-Core").build();
+    final CqlLibrary updatingLibrary =
+        CqlLibrary.builder().id(null).cqlLibraryName("NewName").model("QI-Core").build();
     String json = toJsonString(updatingLibrary);
     mockMvc
         .perform(
@@ -349,14 +343,17 @@ public class CqlLibraryControllerMvcTest {
                 .content(json)
                 .contentType(MediaType.APPLICATION_JSON_VALUE))
         .andExpect(status().isBadRequest())
-        .andExpect(jsonPath("$.message")
-            .value("CQL Library ID is required for Update (PUT) operation on a CQL Library. (PUT [base]/[resource]/[id])"));
+        .andExpect(
+            jsonPath("$.message")
+                .value(
+                    "CQL Library ID is required for Update (PUT) operation on a CQL Library. (PUT [base]/[resource]/[id])"));
     verifyNoInteractions(repository);
   }
 
   @Test
   public void testUpdateCqlLibraryReturns400ForEmptyLibraryId() throws Exception {
-    final CqlLibrary updatingLibrary = CqlLibrary.builder().id("").cqlLibraryName("NewName").model("QI-Core").build();
+    final CqlLibrary updatingLibrary =
+        CqlLibrary.builder().id("").cqlLibraryName("NewName").model("QI-Core").build();
     String json = toJsonString(updatingLibrary);
     mockMvc
         .perform(
@@ -366,14 +363,17 @@ public class CqlLibraryControllerMvcTest {
                 .content(json)
                 .contentType(MediaType.APPLICATION_JSON_VALUE))
         .andExpect(status().isBadRequest())
-        .andExpect(jsonPath("$.message")
-            .value("CQL Library ID is required for Update (PUT) operation on a CQL Library. (PUT [base]/[resource]/[id])"));
+        .andExpect(
+            jsonPath("$.message")
+                .value(
+                    "CQL Library ID is required for Update (PUT) operation on a CQL Library. (PUT [base]/[resource]/[id])"));
     verifyNoInteractions(repository);
   }
 
   @Test
   public void testUpdateCqlLibraryReturns400ForMismatchedLibraryId() throws Exception {
-    final CqlLibrary updatingLibrary = CqlLibrary.builder().id("Wrong_ID").cqlLibraryName("NewName").model("QI-Core").build();
+    final CqlLibrary updatingLibrary =
+        CqlLibrary.builder().id("Wrong_ID").cqlLibraryName("NewName").model("QI-Core").build();
     String json = toJsonString(updatingLibrary);
     mockMvc
         .perform(
@@ -383,14 +383,17 @@ public class CqlLibraryControllerMvcTest {
                 .content(json)
                 .contentType(MediaType.APPLICATION_JSON_VALUE))
         .andExpect(status().isBadRequest())
-        .andExpect(jsonPath("$.message")
-                .value("CQL Library ID is required for Update (PUT) operation on a CQL Library. (PUT [base]/[resource]/[id])"));
+        .andExpect(
+            jsonPath("$.message")
+                .value(
+                    "CQL Library ID is required for Update (PUT) operation on a CQL Library. (PUT [base]/[resource]/[id])"));
     verifyNoInteractions(repository);
   }
 
   @Test
   public void testUpdateCqlLibraryReturns400ForNullName() throws Exception {
-    final CqlLibrary updatingLibrary = CqlLibrary.builder().id("Wrong_ID").cqlLibraryName(null).model("QI-Core").build();
+    final CqlLibrary updatingLibrary =
+        CqlLibrary.builder().id("Wrong_ID").cqlLibraryName(null).model("QI-Core").build();
     String json = toJsonString(updatingLibrary);
     mockMvc
         .perform(
@@ -400,13 +403,15 @@ public class CqlLibraryControllerMvcTest {
                 .content(json)
                 .contentType(MediaType.APPLICATION_JSON_VALUE))
         .andExpect(status().isBadRequest())
-        .andExpect(jsonPath("$.validationErrors.cqlLibraryName").value("Library name is required."));
+        .andExpect(
+            jsonPath("$.validationErrors.cqlLibraryName").value("Library name is required."));
     verifyNoInteractions(repository);
   }
 
   @Test
   public void testUpdateCqlLibraryReturns400ForEmptyName() throws Exception {
-    final CqlLibrary updatingLibrary = CqlLibrary.builder().id("Wrong_ID").cqlLibraryName("").model("QI-Core").build();
+    final CqlLibrary updatingLibrary =
+        CqlLibrary.builder().id("Wrong_ID").cqlLibraryName("").model("QI-Core").build();
     String json = toJsonString(updatingLibrary);
     mockMvc
         .perform(
@@ -416,13 +421,15 @@ public class CqlLibraryControllerMvcTest {
                 .content(json)
                 .contentType(MediaType.APPLICATION_JSON_VALUE))
         .andExpect(status().isBadRequest())
-        .andExpect(jsonPath("$.validationErrors.cqlLibraryName").value("Library name is required."));
+        .andExpect(
+            jsonPath("$.validationErrors.cqlLibraryName").value("Library name is required."));
     verifyNoInteractions(repository);
   }
 
   @Test
   public void testUpdateCqlLibraryReturns400ForNullModel() throws Exception {
-    final CqlLibrary updatingLibrary = CqlLibrary.builder().id("Wrong_ID").cqlLibraryName("LibraryName").model(null).build();
+    final CqlLibrary updatingLibrary =
+        CqlLibrary.builder().id("Wrong_ID").cqlLibraryName("LibraryName").model(null).build();
     String json = toJsonString(updatingLibrary);
     mockMvc
         .perform(
@@ -438,7 +445,8 @@ public class CqlLibraryControllerMvcTest {
 
   @Test
   public void testUpdateCqlLibraryReturns400ForEmptyModel() throws Exception {
-    final CqlLibrary updatingLibrary = CqlLibrary.builder().id("Wrong_ID").cqlLibraryName("LibraryName").model("").build();
+    final CqlLibrary updatingLibrary =
+        CqlLibrary.builder().id("Wrong_ID").cqlLibraryName("LibraryName").model("").build();
     String json = toJsonString(updatingLibrary);
     mockMvc
         .perform(
@@ -448,13 +456,20 @@ public class CqlLibraryControllerMvcTest {
                 .content(json)
                 .contentType(MediaType.APPLICATION_JSON_VALUE))
         .andExpect(status().isBadRequest())
-        .andExpect(jsonPath("$.validationErrors.model").value("Model must be one of the supported types in MADiE."));
+        .andExpect(
+            jsonPath("$.validationErrors.model")
+                .value("Model must be one of the supported types in MADiE."));
     verifyNoInteractions(repository);
   }
 
   @Test
   public void testUpdateCqlLibraryReturns400ForBadModel() throws Exception {
-    final CqlLibrary updatingLibrary = CqlLibrary.builder().id("Wrong_ID").cqlLibraryName("LibraryName").model("FAKE_MODEL").build();
+    final CqlLibrary updatingLibrary =
+        CqlLibrary.builder()
+            .id("Wrong_ID")
+            .cqlLibraryName("LibraryName")
+            .model("FAKE_MODEL")
+            .build();
     String json = toJsonString(updatingLibrary);
     mockMvc
         .perform(
@@ -464,13 +479,16 @@ public class CqlLibraryControllerMvcTest {
                 .content(json)
                 .contentType(MediaType.APPLICATION_JSON_VALUE))
         .andExpect(status().isBadRequest())
-        .andExpect(jsonPath("$.validationErrors.model").value("Model must be one of the supported types in MADiE."));
+        .andExpect(
+            jsonPath("$.validationErrors.model")
+                .value("Model must be one of the supported types in MADiE."));
     verifyNoInteractions(repository);
   }
 
   @Test
   public void testUpdateCqlLibraryReturns404ForNotFoundLibrary() throws Exception {
-    final CqlLibrary updatingLibrary = CqlLibrary.builder().id("Library1_ID").cqlLibraryName("NewName").model("QI-Core").build();
+    final CqlLibrary updatingLibrary =
+        CqlLibrary.builder().id("Library1_ID").cqlLibraryName("NewName").model("QI-Core").build();
     String json = toJsonString(updatingLibrary);
     when(repository.findById(anyString())).thenReturn(Optional.empty());
     mockMvc
@@ -481,22 +499,27 @@ public class CqlLibraryControllerMvcTest {
                 .content(json)
                 .contentType(MediaType.APPLICATION_JSON_VALUE))
         .andExpect(status().isNotFound())
-        .andExpect(jsonPath("$.message").value("Could not find resource CQL Library with id: Library1_ID"));
+        .andExpect(
+            jsonPath("$.message")
+                .value("Could not find resource CQL Library with id: Library1_ID"));
     verify(repository, times(1)).findById(anyString());
   }
 
   @Test
   public void testUpdateCqlLibraryReturns400ForNonUniqueLibraryName() throws Exception {
     final Instant createdTime = Instant.now().minus(100, ChronoUnit.MINUTES);
-    final CqlLibrary existingLibrary = CqlLibrary.builder()
-        .id("Library1_ID")
-        .cqlLibraryName("Library1").model(ModelType.QI_CORE.getValue())
-        .createdAt(createdTime)
-        .createdBy("User1")
-        .lastModifiedAt(createdTime)
-        .lastModifiedBy("User1")
-        .build();
-    final CqlLibrary updatingLibrary = existingLibrary.toBuilder().id("Library1_ID").cqlLibraryName("NewName").build();
+    final CqlLibrary existingLibrary =
+        CqlLibrary.builder()
+            .id("Library1_ID")
+            .cqlLibraryName("Library1")
+            .model(ModelType.QI_CORE.getValue())
+            .createdAt(createdTime)
+            .createdBy("User1")
+            .lastModifiedAt(createdTime)
+            .lastModifiedBy("User1")
+            .build();
+    final CqlLibrary updatingLibrary =
+        existingLibrary.toBuilder().id("Library1_ID").cqlLibraryName("NewName").build();
     String json = toJsonString(updatingLibrary);
     when(repository.findById(anyString())).thenReturn(Optional.of(existingLibrary));
     when(repository.existsByCqlLibraryName(anyString())).thenReturn(true);
@@ -508,7 +531,8 @@ public class CqlLibraryControllerMvcTest {
                 .content(json)
                 .contentType(MediaType.APPLICATION_JSON_VALUE))
         .andExpect(status().isBadRequest())
-        .andExpect(jsonPath("$.validationErrors.cqlLibraryName").value("Library name must be unique."));
+        .andExpect(
+            jsonPath("$.validationErrors.cqlLibraryName").value("Library name must be unique."));
     verify(repository, times(1)).findById(anyString());
     verify(repository, times(1)).existsByCqlLibraryName(anyString());
   }
@@ -516,15 +540,18 @@ public class CqlLibraryControllerMvcTest {
   @Test
   public void testUpdateCqlLibraryReturns200ForSuccessfulUpdate() throws Exception {
     final Instant createdTime = Instant.now().minus(100, ChronoUnit.MINUTES);
-    final CqlLibrary existingLibrary = CqlLibrary.builder()
-        .id("Library1_ID")
-        .cqlLibraryName("Library1").model(ModelType.QI_CORE.getValue())
-        .createdAt(createdTime)
-        .createdBy("User1")
-        .lastModifiedAt(createdTime)
-        .lastModifiedBy("User1")
-        .build();
-    final CqlLibrary updatingLibrary = existingLibrary.toBuilder().id("Library1_ID").cqlLibraryName("NewName").build();
+    final CqlLibrary existingLibrary =
+        CqlLibrary.builder()
+            .id("Library1_ID")
+            .cqlLibraryName("Library1")
+            .model(ModelType.QI_CORE.getValue())
+            .createdAt(createdTime)
+            .createdBy("User1")
+            .lastModifiedAt(createdTime)
+            .lastModifiedBy("User1")
+            .build();
+    final CqlLibrary updatingLibrary =
+        existingLibrary.toBuilder().id("Library1_ID").cqlLibraryName("NewName").build();
     String json = toJsonString(updatingLibrary);
     when(repository.findById(anyString())).thenReturn(Optional.of(existingLibrary));
     when(repository.existsByCqlLibraryName(anyString())).thenReturn(false);

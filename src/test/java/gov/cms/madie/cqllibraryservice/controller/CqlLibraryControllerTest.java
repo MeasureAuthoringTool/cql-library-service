@@ -22,7 +22,6 @@ import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Optional;
 
-
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.notNullValue;
@@ -37,7 +36,6 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
-
 
 @ExtendWith(MockitoExtension.class)
 class CqlLibraryControllerTest {
@@ -116,14 +114,18 @@ class CqlLibraryControllerTest {
   @Test
   public void testGetCqlLibraryThrowsExceptionForNotFound() {
     when(cqlLibraryRepository.findById(anyString())).thenReturn(Optional.empty());
-    assertThrows(ResourceNotFoundException.class, () -> cqlLibraryController.getCqlLibrary("Library1"));
+    assertThrows(
+        ResourceNotFoundException.class, () -> cqlLibraryController.getCqlLibrary("Library1"));
   }
 
   @Test
   public void testGetCqlLibraryReturnsLibrary() {
-    CqlLibrary library = CqlLibrary.builder()
-        .id("Library1_ID")
-        .cqlLibraryName("Library1").model(ModelType.QI_CORE.getValue()).build();
+    CqlLibrary library =
+        CqlLibrary.builder()
+            .id("Library1_ID")
+            .cqlLibraryName("Library1")
+            .model(ModelType.QI_CORE.getValue())
+            .build();
     when(cqlLibraryRepository.findById(anyString())).thenReturn(Optional.of(library));
     ResponseEntity<CqlLibrary> output = cqlLibraryController.getCqlLibrary("Library1_ID");
     assertNotNull(output);
@@ -133,95 +135,131 @@ class CqlLibraryControllerTest {
   @Test
   public void testUpdateCqlLibraryThrowsExceptionForNullIdOnLibrary() {
     final String pathId = "Library1_ID";
-    final CqlLibrary existingLibrary = CqlLibrary.builder()
-        .id("Library1_ID")
-        .cqlLibraryName("Library1").model(ModelType.QI_CORE.getValue()).build();
-    final CqlLibrary updatingLibrary = existingLibrary.toBuilder().id(null).cqlLibraryName("NewName").build();
+    final CqlLibrary existingLibrary =
+        CqlLibrary.builder()
+            .id("Library1_ID")
+            .cqlLibraryName("Library1")
+            .model(ModelType.QI_CORE.getValue())
+            .build();
+    final CqlLibrary updatingLibrary =
+        existingLibrary.toBuilder().id(null).cqlLibraryName("NewName").build();
 
-    assertThrows(InvalidIdException.class, () -> cqlLibraryController.updateCqlLibrary(pathId, updatingLibrary, principal));
+    assertThrows(
+        InvalidIdException.class,
+        () -> cqlLibraryController.updateCqlLibrary(pathId, updatingLibrary, principal));
   }
 
   @Test
   public void testUpdateCqlLibraryThrowsExceptionForEmptyIdOnLibrary() {
     final String pathId = "Library1_ID";
-    final CqlLibrary existingLibrary = CqlLibrary.builder()
-        .id("Library1_ID")
-        .cqlLibraryName("Library1").model(ModelType.QI_CORE.getValue()).build();
-    final CqlLibrary updatingLibrary = existingLibrary.toBuilder().id("").cqlLibraryName("NewName").build();
+    final CqlLibrary existingLibrary =
+        CqlLibrary.builder()
+            .id("Library1_ID")
+            .cqlLibraryName("Library1")
+            .model(ModelType.QI_CORE.getValue())
+            .build();
+    final CqlLibrary updatingLibrary =
+        existingLibrary.toBuilder().id("").cqlLibraryName("NewName").build();
 
-    assertThrows(InvalidIdException.class, () -> cqlLibraryController.updateCqlLibrary(pathId, updatingLibrary, principal));
+    assertThrows(
+        InvalidIdException.class,
+        () -> cqlLibraryController.updateCqlLibrary(pathId, updatingLibrary, principal));
   }
 
   @Test
   public void testUpdateCqlLibraryThrowsExceptionForNullId() {
     final String pathId = null;
-    final CqlLibrary existingLibrary = CqlLibrary.builder()
-        .id("Library1_ID")
-        .cqlLibraryName("Library1").model(ModelType.QI_CORE.getValue()).build();
-    final CqlLibrary updatingLibrary = existingLibrary.toBuilder().id("Library1_ID").cqlLibraryName("NewName").build();
+    final CqlLibrary existingLibrary =
+        CqlLibrary.builder()
+            .id("Library1_ID")
+            .cqlLibraryName("Library1")
+            .model(ModelType.QI_CORE.getValue())
+            .build();
+    final CqlLibrary updatingLibrary =
+        existingLibrary.toBuilder().id("Library1_ID").cqlLibraryName("NewName").build();
 
-    assertThrows(InvalidIdException.class, () -> cqlLibraryController.updateCqlLibrary(pathId, updatingLibrary, principal));
+    assertThrows(
+        InvalidIdException.class,
+        () -> cqlLibraryController.updateCqlLibrary(pathId, updatingLibrary, principal));
   }
 
   @Test
   public void testUpdateCqlLibraryThrowsExceptionForEmpty() {
     final String pathId = "";
-    final CqlLibrary existingLibrary = CqlLibrary.builder()
-        .id("Library1_ID")
-        .cqlLibraryName("Library1").model(ModelType.QI_CORE.getValue()).build();
-    final CqlLibrary updatingLibrary = existingLibrary.toBuilder().id("Library1_ID").cqlLibraryName("NewName").build();
+    final CqlLibrary existingLibrary =
+        CqlLibrary.builder()
+            .id("Library1_ID")
+            .cqlLibraryName("Library1")
+            .model(ModelType.QI_CORE.getValue())
+            .build();
+    final CqlLibrary updatingLibrary =
+        existingLibrary.toBuilder().id("Library1_ID").cqlLibraryName("NewName").build();
 
-    assertThrows(InvalidIdException.class, () -> cqlLibraryController.updateCqlLibrary(pathId, updatingLibrary, principal));
+    assertThrows(
+        InvalidIdException.class,
+        () -> cqlLibraryController.updateCqlLibrary(pathId, updatingLibrary, principal));
   }
 
   @Test
   public void testUpdateCqlLibraryThrowsExceptionForMismatchedIds() {
     final String pathId = "Library1_ID";
-    final CqlLibrary updatingLibrary = CqlLibrary.builder().id("Library2_ID").cqlLibraryName("NewName").build();
+    final CqlLibrary updatingLibrary =
+        CqlLibrary.builder().id("Library2_ID").cqlLibraryName("NewName").build();
 
-    assertThrows(InvalidIdException.class, () -> cqlLibraryController.updateCqlLibrary(pathId, updatingLibrary, principal));
+    assertThrows(
+        InvalidIdException.class,
+        () -> cqlLibraryController.updateCqlLibrary(pathId, updatingLibrary, principal));
   }
 
   @Test
   public void testUpdateCqlLibraryThrowsExceptionForNotFound() {
     final String pathId = "Library1_ID";
-    final CqlLibrary updatingLibrary = CqlLibrary.builder().id("Library1_ID").cqlLibraryName("NewName").build();
+    final CqlLibrary updatingLibrary =
+        CqlLibrary.builder().id("Library1_ID").cqlLibraryName("NewName").build();
 
     when(cqlLibraryRepository.findById(anyString())).thenReturn(Optional.empty());
 
-    assertThrows(ResourceNotFoundException.class, () -> cqlLibraryController.updateCqlLibrary(pathId, updatingLibrary, principal));
+    assertThrows(
+        ResourceNotFoundException.class,
+        () -> cqlLibraryController.updateCqlLibrary(pathId, updatingLibrary, principal));
   }
 
   @Test
   public void testUpdateCqlLibraryThrowsExceptionForNonUniqueNameUpdate() {
     final String pathId = "Library1_ID";
-    final CqlLibrary existingLibrary = CqlLibrary.builder()
-        .id("Library1_ID")
-        .cqlLibraryName("Library1").model(ModelType.QI_CORE.getValue()).build();
-    final CqlLibrary otherLibrary = CqlLibrary.builder()
-        .id("Library2_ID")
-        .cqlLibraryName("NewName").model(ModelType.QI_CORE.getValue()).build();
-    final CqlLibrary updatingLibrary = existingLibrary.toBuilder().id("Library1_ID").cqlLibraryName("NewName").build();
+    final CqlLibrary existingLibrary =
+        CqlLibrary.builder()
+            .id("Library1_ID")
+            .cqlLibraryName("Library1")
+            .model(ModelType.QI_CORE.getValue())
+            .build();
+    final CqlLibrary updatingLibrary =
+        existingLibrary.toBuilder().id("Library1_ID").cqlLibraryName("NewName").build();
 
     when(cqlLibraryRepository.findById(anyString())).thenReturn(Optional.of(existingLibrary));
     when(cqlLibraryRepository.existsByCqlLibraryName(anyString())).thenReturn(true);
 
-    assertThrows(DuplicateKeyException.class, () -> cqlLibraryController.updateCqlLibrary(pathId, updatingLibrary, principal));
+    assertThrows(
+        DuplicateKeyException.class,
+        () -> cqlLibraryController.updateCqlLibrary(pathId, updatingLibrary, principal));
   }
 
   @Test
   public void testUpdateCqlLibrarySuccessfullyUpdates() {
     final String pathId = "Library1_ID";
     final Instant createdTime = Instant.now().minus(100, ChronoUnit.MINUTES);
-    final CqlLibrary existingLibrary = CqlLibrary.builder()
-        .id("Library1_ID")
-        .cqlLibraryName("Library1").model(ModelType.QI_CORE.getValue())
-        .createdAt(createdTime)
-        .createdBy("User1")
-        .lastModifiedAt(createdTime)
-        .lastModifiedBy("User1")
-        .build();
-    final CqlLibrary updatingLibrary = existingLibrary.toBuilder().id("Library1_ID").cqlLibraryName("NewName").build();
+    final CqlLibrary existingLibrary =
+        CqlLibrary.builder()
+            .id("Library1_ID")
+            .cqlLibraryName("Library1")
+            .model(ModelType.QI_CORE.getValue())
+            .createdAt(createdTime)
+            .createdBy("User1")
+            .lastModifiedAt(createdTime)
+            .lastModifiedBy("User1")
+            .build();
+    final CqlLibrary updatingLibrary =
+        existingLibrary.toBuilder().id("Library1_ID").cqlLibraryName("NewName").build();
 
     when(cqlLibraryRepository.findById(anyString())).thenReturn(Optional.of(existingLibrary));
     when(cqlLibraryRepository.existsByCqlLibraryName(anyString())).thenReturn(false);
@@ -229,7 +267,8 @@ class CqlLibraryControllerTest {
 
     when(cqlLibraryRepository.save(any(CqlLibrary.class))).thenReturn(updatingLibrary);
 
-    ResponseEntity<CqlLibrary> output = cqlLibraryController.updateCqlLibrary(pathId, updatingLibrary, principal);
+    ResponseEntity<CqlLibrary> output =
+        cqlLibraryController.updateCqlLibrary(pathId, updatingLibrary, principal);
     assertThat(output.getBody(), is(equalTo(updatingLibrary)));
     verify(cqlLibraryRepository, times(1)).save(cqlLibraryArgumentCaptor.capture());
     CqlLibrary savedValue = cqlLibraryArgumentCaptor.getValue();

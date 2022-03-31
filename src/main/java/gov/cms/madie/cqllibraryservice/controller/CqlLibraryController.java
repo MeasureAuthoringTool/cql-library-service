@@ -17,7 +17,6 @@ import java.security.Principal;
 import java.time.Instant;
 import java.util.List;
 import java.util.Objects;
-import java.util.Optional;
 
 @Slf4j
 @RestController
@@ -84,17 +83,19 @@ public class CqlLibraryController {
       throw new InvalidIdException("CQL Library", "Update (PUT)", "(PUT [base]/[resource]/[id])");
     }
 
-    return cqlLibraryRepository.findById(cqlLibrary.getId())
-        .map(persistedLibrary -> {
-          if (isCqlLibraryNameChanged(cqlLibrary, persistedLibrary)) {
-            checkDuplicateCqlLibraryName(cqlLibrary.getCqlLibraryName());
-          }
-          cqlLibrary.setLastModifiedAt(Instant.now());
-          cqlLibrary.setLastModifiedBy(username);
-          cqlLibrary.setCreatedAt(persistedLibrary.getCreatedAt());
-          cqlLibrary.setCreatedBy(persistedLibrary.getCreatedBy());
-          return ResponseEntity.ok(cqlLibraryRepository.save(cqlLibrary));
-        })
+    return cqlLibraryRepository
+        .findById(cqlLibrary.getId())
+        .map(
+            persistedLibrary -> {
+              if (isCqlLibraryNameChanged(cqlLibrary, persistedLibrary)) {
+                checkDuplicateCqlLibraryName(cqlLibrary.getCqlLibraryName());
+              }
+              cqlLibrary.setLastModifiedAt(Instant.now());
+              cqlLibrary.setLastModifiedBy(username);
+              cqlLibrary.setCreatedAt(persistedLibrary.getCreatedAt());
+              cqlLibrary.setCreatedBy(persistedLibrary.getCreatedBy());
+              return ResponseEntity.ok(cqlLibraryRepository.save(cqlLibrary));
+            })
         .orElseThrow(() -> new ResourceNotFoundException("CQL Library", id));
   }
 
