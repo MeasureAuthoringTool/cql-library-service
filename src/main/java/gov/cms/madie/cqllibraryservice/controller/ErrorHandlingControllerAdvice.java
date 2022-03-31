@@ -1,6 +1,8 @@
 package gov.cms.madie.cqllibraryservice.controller;
 
 import gov.cms.madie.cqllibraryservice.exceptions.DuplicateKeyException;
+import gov.cms.madie.cqllibraryservice.exceptions.InvalidIdException;
+import gov.cms.madie.cqllibraryservice.exceptions.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.web.error.ErrorAttributeOptions;
@@ -34,9 +36,7 @@ public class ErrorHandlingControllerAdvice {
     Map<String, String> validationErrors = new HashMap<>();
     ex.getConstraintViolations()
         .forEach(
-            (error) -> {
-              validationErrors.put(error.getPropertyPath().toString(), error.getMessage());
-            });
+            (error) -> validationErrors.put(error.getPropertyPath().toString(), error.getMessage()));
     Map<String, Object> errorAttributes = getErrorAttributes(request, HttpStatus.BAD_REQUEST);
     errorAttributes.put("validationErrors", validationErrors);
     return errorAttributes;
@@ -71,6 +71,21 @@ public class ErrorHandlingControllerAdvice {
     errorAttributes.put(
         "validationErrors", Map.of(ex.getKey(), Objects.requireNonNull(ex.getMessage())));
     return errorAttributes;
+  }
+
+  @ExceptionHandler(ResourceNotFoundException.class)
+  @ResponseStatus(HttpStatus.NOT_FOUND)
+  @ResponseBody
+  Map<String, Object> onResourceNotFoundException(
+      ResourceNotFoundException ex, WebRequest request) {
+    return getErrorAttributes(request, HttpStatus.NOT_FOUND);
+  }
+
+  @ExceptionHandler(InvalidIdException.class)
+  @ResponseStatus(HttpStatus.BAD_REQUEST)
+  @ResponseBody
+  Map<String, Object> onInvalidKeyException(WebRequest request) {
+    return getErrorAttributes(request, HttpStatus.BAD_REQUEST);
   }
 
   private Map<String, Object> getErrorAttributes(WebRequest request, HttpStatus httpStatus) {

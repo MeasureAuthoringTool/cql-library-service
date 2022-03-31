@@ -14,7 +14,7 @@ import javax.validation.groups.Default;
 import java.time.Instant;
 
 @Data
-@Builder
+@Builder(toBuilder = true)
 @NoArgsConstructor
 @AllArgsConstructor
 public class CqlLibrary {
