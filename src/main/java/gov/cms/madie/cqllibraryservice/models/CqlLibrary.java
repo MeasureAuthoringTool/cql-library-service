@@ -47,6 +47,7 @@ public class CqlLibrary {
       groups = {ValidationOrder4.class})
   private String model;
 
+  private String cql;
   private Instant createdAt;
   private String createdBy;
   private Instant lastModifiedAt;

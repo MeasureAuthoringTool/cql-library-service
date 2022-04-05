@@ -254,8 +254,10 @@ public class CqlLibraryControllerMvcTest {
 
   @Test
   public void testCreateCqlLibraryReturnsCreatedForValidObject() throws Exception {
+    final String cql = "library AdvancedIllnessandFrailtyExclusion_QICore4 version '5.0.000'";
     CqlLibrary library =
-        CqlLibrary.builder().cqlLibraryName("NewValidName1").model("QI-Core").build();
+        CqlLibrary.builder().cqlLibraryName("NewValidName1").model("QI-Core").cql(cql).build();
+
     String json = toJsonString(library);
     when(repository.existsByCqlLibraryName(anyString())).thenReturn(false);
     String objectId = ObjectId.get().toHexString();
@@ -287,6 +289,7 @@ public class CqlLibraryControllerMvcTest {
         .andExpect(status().isCreated())
         .andExpect(jsonPath("$.cqlLibraryName").value("NewValidName1"))
         .andExpect(jsonPath("$.id").isNotEmpty())
+        .andExpect(jsonPath("$.cql").value(cql))
         .andExpect(jsonPath("$.createdBy").value(TEST_USER_ID))
         .andExpect(jsonPath("$.lastModifiedBy").value(TEST_USER_ID))
         .andExpect(jsonPath("$.createdAt").value(fiveMinMatcher))
@@ -551,7 +554,12 @@ public class CqlLibraryControllerMvcTest {
             .lastModifiedBy("User1")
             .build();
     final CqlLibrary updatingLibrary =
-        existingLibrary.toBuilder().id("Library1_ID").cqlLibraryName("NewName").build();
+        existingLibrary
+            .toBuilder()
+            .id("Library1_ID")
+            .cqlLibraryName("NewName")
+            .cql("library testCql version '2.1.000'")
+            .build();
     String json = toJsonString(updatingLibrary);
     when(repository.findById(anyString())).thenReturn(Optional.of(existingLibrary));
     when(repository.existsByCqlLibraryName(anyString())).thenReturn(false);
@@ -573,6 +581,7 @@ public class CqlLibraryControllerMvcTest {
     assertThat(savedValue, is(notNullValue()));
     assertThat(savedValue.getId(), is(equalTo("Library1_ID")));
     assertThat(savedValue.getCqlLibraryName(), is(equalTo("NewName")));
+    assertThat(savedValue.getCql(), is(equalTo("library testCql version '2.1.000'")));
     assertThat(savedValue.getCreatedAt(), is(equalTo(createdTime)));
     assertThat(savedValue.getCreatedBy(), is(equalTo("User1")));
     assertThat(savedValue.getLastModifiedAt(), is(notNullValue()));

@@ -124,6 +124,7 @@ class CqlLibraryControllerTest {
         CqlLibrary.builder()
             .id("Library1_ID")
             .cqlLibraryName("Library1")
+            .cql("library testCql version '1.0.000'")
             .model(ModelType.QI_CORE.getValue())
             .build();
     when(cqlLibraryRepository.findById(anyString())).thenReturn(Optional.of(library));
@@ -184,7 +185,7 @@ class CqlLibraryControllerTest {
   }
 
   @Test
-  public void testUpdateCqlLibraryThrowsExceptionForEmpty() {
+  public void testUpdateCqlLibraryThrowsExceptionForEmptyId() {
     final String pathId = "";
     final CqlLibrary existingLibrary =
         CqlLibrary.builder()
@@ -253,13 +254,19 @@ class CqlLibraryControllerTest {
             .id("Library1_ID")
             .cqlLibraryName("Library1")
             .model(ModelType.QI_CORE.getValue())
+            .cql("library testCql version '1.0.000'")
             .createdAt(createdTime)
             .createdBy("User1")
             .lastModifiedAt(createdTime)
             .lastModifiedBy("User1")
             .build();
     final CqlLibrary updatingLibrary =
-        existingLibrary.toBuilder().id("Library1_ID").cqlLibraryName("NewName").build();
+        existingLibrary
+            .toBuilder()
+            .id("Library1_ID")
+            .cqlLibraryName("NewName")
+            .cql("library testCql version '2.1.000'")
+            .build();
 
     when(cqlLibraryRepository.findById(anyString())).thenReturn(Optional.of(existingLibrary));
     when(cqlLibraryRepository.existsByCqlLibraryName(anyString())).thenReturn(false);
@@ -275,6 +282,7 @@ class CqlLibraryControllerTest {
     assertThat(savedValue, is(notNullValue()));
     assertThat(savedValue.getId(), is(equalTo("Library1_ID")));
     assertThat(savedValue.getCqlLibraryName(), is(equalTo("NewName")));
+    assertThat(savedValue.getCql(), is(equalTo("library testCql version '2.1.000'")));
     assertThat(savedValue.getCreatedAt(), is(equalTo(createdTime)));
     assertThat(savedValue.getCreatedBy(), is(equalTo("User1")));
     assertThat(savedValue.getLastModifiedAt(), is(notNullValue()));
