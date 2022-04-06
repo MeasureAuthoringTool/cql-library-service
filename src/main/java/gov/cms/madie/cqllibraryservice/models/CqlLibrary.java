@@ -46,12 +46,17 @@ public class CqlLibrary {
       message = "Model must be one of the supported types in MADiE.",
       groups = {ValidationOrder4.class})
   private String model;
-
+  private Version version;
+  private boolean draft;
+  private String groupId;
   private String cql;
   private Instant createdAt;
   private String createdBy;
   private Instant lastModifiedAt;
   private String lastModifiedBy;
+  private String publisher;
+  private String description;
+  private boolean experimental;
 
   @GroupSequence({
     CqlLibrary.ValidationOrder1.class,
