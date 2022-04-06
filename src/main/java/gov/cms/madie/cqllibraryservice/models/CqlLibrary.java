@@ -1,5 +1,8 @@
 package gov.cms.madie.cqllibraryservice.models;
 
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import gov.cms.madie.cqllibraryservice.utils.VersionJsonSerializer;
 import gov.cms.madie.cqllibraryservice.validators.EnumValidator;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -46,7 +49,11 @@ public class CqlLibrary {
       message = "Model must be one of the supported types in MADiE.",
       groups = {ValidationOrder4.class})
   private String model;
+
+  @JsonSerialize(using = VersionJsonSerializer.VersionSerializer.class)
+  @JsonDeserialize(using = VersionJsonSerializer.VersionDeserializer.class)
   private Version version;
+
   private boolean draft;
   private String groupId;
   private String cql;
