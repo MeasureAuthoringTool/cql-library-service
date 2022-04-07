@@ -56,7 +56,7 @@ public class CqlLibraryController {
 
     checkDuplicateCqlLibraryName(cqlLibrary.getCqlLibraryName());
 
-    // Clear ID & groupId so that the unique GUID from MongoDB will be applied
+    // Clear ID so that the unique GUID from MongoDB will be applied
     Instant now = Instant.now();
     cqlLibrary.setId(null);
     cqlLibrary.setCreatedBy(username);
