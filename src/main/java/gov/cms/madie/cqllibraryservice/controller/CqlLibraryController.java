@@ -112,7 +112,7 @@ public class CqlLibraryController {
       @PathVariable("id") String id, Principal principal) {
     final String username = principal.getName();
     Optional<CqlLibrary> libraryOptional = cqlLibraryRepository.findById(id);
-    if (!libraryOptional.isPresent()) {
+    if (libraryOptional.isEmpty()) {
       throw new ResourceNotFoundException("CQL Library", id);
     }
     final CqlLibrary cqlLibrary = libraryOptional.get();
@@ -149,7 +149,7 @@ public class CqlLibraryController {
       Principal principal) {
     final String username = principal.getName();
     Optional<CqlLibrary> libraryOptional = cqlLibraryRepository.findById(id);
-    if (!libraryOptional.isPresent()) {
+    if (libraryOptional.isEmpty()) {
       throw new ResourceNotFoundException("CQL Library", id);
     }
     final CqlLibrary cqlLibrary = libraryOptional.get();
