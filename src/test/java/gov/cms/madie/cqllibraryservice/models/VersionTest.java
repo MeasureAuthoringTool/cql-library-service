@@ -12,19 +12,19 @@ class VersionTest {
 
   @Test
   public void testToStringFormatsRevisionZero() {
-    final Version v = new Version(1,2,0);
+    final Version v = new Version(1, 2, 0);
     assertThat(v.toString(), is(equalTo("1.2.000")));
   }
 
   @Test
   public void testToStringFormatsRevisionNumberLeadingZeros() {
-    final Version v = new Version(1,2,4);
+    final Version v = new Version(1, 2, 4);
     assertThat(v.toString(), is(equalTo("1.2.004")));
   }
 
   @Test
   public void testToStringFormatsRevisionNumberLeadingTrailingZeros() {
-    final Version v = new Version(1,2,40);
+    final Version v = new Version(1, 2, 40);
     assertThat(v.toString(), is(equalTo("1.2.040")));
   }
 
@@ -97,5 +97,4 @@ class VersionTest {
     assertThat(output.getRevisionNumber(), is(equalTo(9)));
     assertThat(output.toString(), is(equalTo("1.5.009")));
   }
-
 }

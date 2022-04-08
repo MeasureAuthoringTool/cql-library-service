@@ -32,6 +32,10 @@ public class Version {
 
   @Override
   public String toString() {
-    return this.getMajor() + "." + this.getMinor() + "." + String.format("%03d", this.getRevisionNumber());
+    return this.getMajor()
+        + "."
+        + this.getMinor()
+        + "."
+        + String.format("%03d", this.getRevisionNumber());
   }
 }
