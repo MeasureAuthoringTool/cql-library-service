@@ -2,9 +2,12 @@ package gov.cms.madie.cqllibraryservice.controller;
 
 import gov.cms.madie.cqllibraryservice.exceptions.DuplicateKeyException;
 import gov.cms.madie.cqllibraryservice.exceptions.InvalidIdException;
+import gov.cms.madie.cqllibraryservice.exceptions.PermissionDeniedException;
+import gov.cms.madie.cqllibraryservice.exceptions.ResourceNotDraftableException;
 import gov.cms.madie.cqllibraryservice.exceptions.ResourceNotFoundException;
 import gov.cms.madie.cqllibraryservice.models.CqlLibrary;
 import gov.cms.madie.cqllibraryservice.respositories.CqlLibraryRepository;
+import gov.cms.madie.cqllibraryservice.services.CqlLibraryService;
 import io.micrometer.core.instrument.util.StringUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -17,6 +20,7 @@ import java.security.Principal;
 import java.time.Instant;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 
 @Slf4j
 @RestController
@@ -25,6 +29,7 @@ import java.util.Objects;
 public class CqlLibraryController {
 
   private final CqlLibraryRepository cqlLibraryRepository;
+  private final CqlLibraryService cqlLibraryService;
 
   @GetMapping
   public ResponseEntity<List<CqlLibrary>> getCqlLibraries(
@@ -100,6 +105,85 @@ public class CqlLibraryController {
               return ResponseEntity.ok(cqlLibraryRepository.save(cqlLibrary));
             })
         .orElseThrow(() -> new ResourceNotFoundException("CQL Library", id));
+  }
+
+  @PostMapping("/{id}/draft")
+  public ResponseEntity<CqlLibrary> createDraft(
+      @PathVariable("id") String id, Principal principal) {
+    final String username = principal.getName();
+    Optional<CqlLibrary> libraryOptional = cqlLibraryRepository.findById(id);
+    if (!libraryOptional.isPresent()) {
+      throw new ResourceNotFoundException("CQL Library", id);
+    }
+    final CqlLibrary cqlLibrary = libraryOptional.get();
+
+    log.info("creating draft for: {}", cqlLibrary);
+
+    if (!Objects.equals(cqlLibrary.getCreatedBy(), username)) {
+      log.info("User [{}] doest not have permission to create a draft of CQL Library with id [{}]",
+          username, cqlLibrary.getId());
+      throw new PermissionDeniedException("CQL Library", cqlLibrary.getId(), username);
+    }
+    if (!cqlLibraryService.isDraftable(cqlLibrary)) {
+      throw new ResourceNotDraftableException("CQL Library");
+    }
+    var now = Instant.now();
+    CqlLibrary clonedCqlLibrary = cqlLibrary
+        .toBuilder()
+        .draft(true)
+        .createdAt(now)
+        .lastModifiedAt(now)
+        .build();
+
+    CqlLibrary savedCqlLibrary = cqlLibraryRepository.save(clonedCqlLibrary);
+    log.info("User [{}] successfully created a draft cql library with ID [{}]",
+        username, savedCqlLibrary.getId());
+    return ResponseEntity.status(HttpStatus.CREATED).body(savedCqlLibrary);
+
+  }
+
+  @PostMapping("/{id}/version/{isMajor}")
+  public ResponseEntity<CqlLibrary> createVersion(
+      @PathVariable("id") String id,
+      @PathVariable("isMajor") boolean isMajor,
+      Principal principal) {
+    final String username = principal.getName();
+    Optional<CqlLibrary> libraryOptional = cqlLibraryRepository.findById(id);
+    if (!libraryOptional.isPresent()) {
+      throw new ResourceNotFoundException("CQL Library", id);
+    }
+    final CqlLibrary cqlLibrary = libraryOptional.get();
+
+    try {
+      if (!Objects.equals(cqlLibrary.getCreatedBy(), username)) {
+        log.info("User [{}] doest not have permission to create a draft of CQL Library with id [{}]",
+            username, cqlLibrary.getId());
+        throw new PermissionDeniedException("CQL Library", cqlLibrary.getId(), username);
+      }
+      var now = Instant.now();
+      CqlLibrary clonedCqlLibrary = cqlLibrary
+          .toBuilder()
+          .draft(false)
+          .createdAt(now)
+          .lastModifiedAt(now)
+          .build();
+
+      if (isMajor) {
+        // Todo get the max major and increment it add it to this version
+        clonedCqlLibrary.setVersion(cqlLibrary.getVersion());
+      } else {
+        // Todo get the max of minor version and it
+        clonedCqlLibrary.setVersion(cqlLibrary.getVersion());
+      }
+
+      CqlLibrary savedCqlLibrary = cqlLibraryRepository.save(clonedCqlLibrary);
+      log.info("User [{}] successfully versioned cql library with ID [{}]",
+          username, savedCqlLibrary.getId());
+      return ResponseEntity.status(HttpStatus.CREATED).body(savedCqlLibrary);
+
+    } catch (Exception exception) {
+      throw new RuntimeException();
+    }
   }
 
   private void checkDuplicateCqlLibraryName(String cqlLibraryName) {

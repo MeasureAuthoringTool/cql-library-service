@@ -2,6 +2,7 @@ package gov.cms.madie.cqllibraryservice.controller;
 
 import gov.cms.madie.cqllibraryservice.exceptions.DuplicateKeyException;
 import gov.cms.madie.cqllibraryservice.exceptions.InvalidIdException;
+import gov.cms.madie.cqllibraryservice.exceptions.ResourceNotDraftableException;
 import gov.cms.madie.cqllibraryservice.exceptions.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -80,6 +81,14 @@ public class ErrorHandlingControllerAdvice {
   Map<String, Object> onResourceNotFoundException(
       ResourceNotFoundException ex, WebRequest request) {
     return getErrorAttributes(request, HttpStatus.NOT_FOUND);
+  }
+
+  @ExceptionHandler(ResourceNotDraftableException.class)
+  @ResponseStatus(HttpStatus.CONFLICT)
+  @ResponseBody
+  Map<String, Object> onResourceNotDraftableException(
+      ResourceNotDraftableException ex, WebRequest request) {
+    return getErrorAttributes(request, HttpStatus.CONFLICT);
   }
 
   @ExceptionHandler(InvalidIdException.class)
