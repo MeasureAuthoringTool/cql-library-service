@@ -114,7 +114,9 @@ public class CqlLibraryController {
 
   @PostMapping("/draft/{id}")
   public ResponseEntity<CqlLibrary> createDraft(
-      @PathVariable("id") String id, @RequestBody final CqlLibrary cqlLibrary, Principal principal) {
+      @PathVariable("id") String id,
+      @RequestBody final CqlLibrary cqlLibrary,
+      Principal principal) {
     return ResponseEntity.status(HttpStatus.CREATED)
         .body(versionService.createDraft(id, cqlLibrary.getCqlLibraryName(), principal.getName()));
   }

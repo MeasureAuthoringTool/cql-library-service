@@ -1,7 +1,9 @@
 package gov.cms.madie.cqllibraryservice.controller;
 
+import gov.cms.madie.cqllibraryservice.exceptions.BadRequestObjectException;
 import gov.cms.madie.cqllibraryservice.exceptions.DuplicateKeyException;
 import gov.cms.madie.cqllibraryservice.exceptions.InvalidIdException;
+import gov.cms.madie.cqllibraryservice.exceptions.PermissionDeniedException;
 import gov.cms.madie.cqllibraryservice.exceptions.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -87,6 +89,20 @@ public class ErrorHandlingControllerAdvice {
   @ResponseBody
   Map<String, Object> onInvalidKeyException(WebRequest request) {
     return getErrorAttributes(request, HttpStatus.BAD_REQUEST);
+  }
+
+  @ExceptionHandler(BadRequestObjectException.class)
+  @ResponseStatus(HttpStatus.BAD_REQUEST)
+  @ResponseBody
+  Map<String, Object> onBadRequestObjectException(WebRequest request) {
+    return getErrorAttributes(request, HttpStatus.BAD_REQUEST);
+  }
+
+  @ExceptionHandler(PermissionDeniedException.class)
+  @ResponseStatus(HttpStatus.FORBIDDEN)
+  @ResponseBody
+  Map<String, Object> onPermissionDeniedException(WebRequest request) {
+    return getErrorAttributes(request, HttpStatus.FORBIDDEN);
   }
 
   private Map<String, Object> getErrorAttributes(WebRequest request, HttpStatus httpStatus) {

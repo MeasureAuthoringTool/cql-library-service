@@ -1,6 +1,6 @@
 package gov.cms.madie.cqllibraryservice.service;
 
-import gov.cms.madie.cqllibraryservice.exceptions.BadRequestObject;
+import gov.cms.madie.cqllibraryservice.exceptions.BadRequestObjectException;
 import gov.cms.madie.cqllibraryservice.exceptions.PermissionDeniedException;
 import gov.cms.madie.cqllibraryservice.exceptions.ResourceNotFoundException;
 import gov.cms.madie.cqllibraryservice.models.CqlLibrary;
@@ -41,7 +41,7 @@ public class VersionService {
           "User [{}] attempted to version CQL Library with id [{}] which is not in a draft state",
           username,
           cqlLibrary.getId());
-      throw new BadRequestObject("CQL Library", id, username);
+      throw new BadRequestObjectException("CQL Library", id, username);
     }
 
     cqlLibrary.setDraft(false);

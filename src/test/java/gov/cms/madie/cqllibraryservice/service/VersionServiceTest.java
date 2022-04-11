@@ -1,6 +1,6 @@
 package gov.cms.madie.cqllibraryservice.service;
 
-import gov.cms.madie.cqllibraryservice.exceptions.BadRequestObject;
+import gov.cms.madie.cqllibraryservice.exceptions.BadRequestObjectException;
 import gov.cms.madie.cqllibraryservice.exceptions.PermissionDeniedException;
 import gov.cms.madie.cqllibraryservice.exceptions.ResourceNotFoundException;
 import gov.cms.madie.cqllibraryservice.models.CqlLibrary;
@@ -33,8 +33,7 @@ class VersionServiceTest {
 
   @InjectMocks VersionService versionService;
 
-  @Captor
-  private ArgumentCaptor<CqlLibrary> cqlLibraryArgumentCaptor;
+  @Captor private ArgumentCaptor<CqlLibrary> cqlLibraryArgumentCaptor;
 
   @Test
   void testCreateVersionThrowsExceptionForResourceNotFound() {
@@ -47,10 +46,8 @@ class VersionServiceTest {
 
   @Test
   void testCreateVersionThrowsExceptionWhenUserIsNotTheOwner() {
-    CqlLibrary existingCqlLibrary = CqlLibrary.builder()
-        .id("testCqlLibraryId")
-        .createdBy("testUser")
-        .build();
+    CqlLibrary existingCqlLibrary =
+        CqlLibrary.builder().id("testCqlLibraryId").createdBy("testUser").build();
 
     when(cqlLibraryRepository.findById(anyString())).thenReturn(Optional.of(existingCqlLibrary));
 
@@ -61,26 +58,20 @@ class VersionServiceTest {
 
   @Test
   void testCreateVersionThrowsExceptionIfLibraryIsNotDraft() {
-    CqlLibrary existingCqlLibrary = CqlLibrary.builder()
-        .id("testCqlLibraryId")
-        .createdBy("testUser")
-        .draft(false)
-        .build();
+    CqlLibrary existingCqlLibrary =
+        CqlLibrary.builder().id("testCqlLibraryId").createdBy("testUser").draft(false).build();
 
     when(cqlLibraryRepository.findById(anyString())).thenReturn(Optional.of(existingCqlLibrary));
 
     assertThrows(
-        BadRequestObject.class,
+        BadRequestObjectException.class,
         () -> versionService.createVersion(existingCqlLibrary.getId(), true, "testUser"));
   }
 
   @Test
   void testCreateVersionThrowsRunTimeExceptionIfGroupIdIsNull() {
-    CqlLibrary existingCqlLibrary = CqlLibrary.builder()
-        .id("testCqlLibraryId")
-        .createdBy("testUser")
-        .draft(true)
-        .build();
+    CqlLibrary existingCqlLibrary =
+        CqlLibrary.builder().id("testCqlLibraryId").createdBy("testUser").draft(true).build();
 
     when(cqlLibraryRepository.findById(anyString())).thenReturn(Optional.of(existingCqlLibrary));
 
@@ -91,13 +82,14 @@ class VersionServiceTest {
 
   @Test
   void testCreateVersionMajorSuccess() {
-    CqlLibrary existingCqlLibrary = CqlLibrary.builder()
-        .id("testCqlLibraryId")
-        .createdBy("testUser")
-        .draft(true)
-        .groupId("testGroupId")
-        .version(Version.parse("1.0.000"))
-        .build();
+    CqlLibrary existingCqlLibrary =
+        CqlLibrary.builder()
+            .id("testCqlLibraryId")
+            .createdBy("testUser")
+            .draft(true)
+            .groupId("testGroupId")
+            .version(Version.parse("1.0.000"))
+            .build();
 
     CqlLibrary updatedCqlLibrary = existingCqlLibrary.toBuilder().build();
     when(cqlLibraryRepository.findById(anyString())).thenReturn(Optional.of(existingCqlLibrary));
@@ -116,13 +108,14 @@ class VersionServiceTest {
 
   @Test
   void testCreateVersionMinorSuccess() {
-    CqlLibrary existingCqlLibrary = CqlLibrary.builder()
-        .id("testCqlLibraryId")
-        .createdBy("testUser")
-        .draft(true)
-        .groupId("testGroupId")
-        .version(Version.parse("1.0.000"))
-        .build();
+    CqlLibrary existingCqlLibrary =
+        CqlLibrary.builder()
+            .id("testCqlLibraryId")
+            .createdBy("testUser")
+            .draft(true)
+            .groupId("testGroupId")
+            .version(Version.parse("1.0.000"))
+            .build();
 
     CqlLibrary updatedCqlLibrary = existingCqlLibrary.toBuilder().build();
     when(cqlLibraryRepository.findById(anyString())).thenReturn(Optional.of(existingCqlLibrary));
@@ -148,10 +141,8 @@ class VersionServiceTest {
 
   @Test
   void testCreateDraftThrowsExceptionForUserIsNotOwner() {
-    CqlLibrary existingCqlLibrary = CqlLibrary.builder()
-        .id("testCqlLibraryId")
-        .createdBy("testUser")
-        .build();
+    CqlLibrary existingCqlLibrary =
+        CqlLibrary.builder().id("testCqlLibraryId").createdBy("testUser").build();
 
     when(cqlLibraryRepository.findById(anyString())).thenReturn(Optional.of(existingCqlLibrary));
 
@@ -162,13 +153,14 @@ class VersionServiceTest {
 
   @Test
   void testCreateDraftSuccess() {
-    CqlLibrary existingCqlLibrary = CqlLibrary.builder()
-        .id("testCqlLibraryId")
-        .createdBy("testUser")
-        .draft(false)
-        .groupId("testGroupId")
-        .version(Version.parse("1.0.000"))
-        .build();
+    CqlLibrary existingCqlLibrary =
+        CqlLibrary.builder()
+            .id("testCqlLibraryId")
+            .createdBy("testUser")
+            .draft(false)
+            .groupId("testGroupId")
+            .version(Version.parse("1.0.000"))
+            .build();
 
     CqlLibrary clonedCqlLibrary = existingCqlLibrary.toBuilder().build();
     when(cqlLibraryRepository.findById(anyString())).thenReturn(Optional.of(existingCqlLibrary));
@@ -184,5 +176,4 @@ class VersionServiceTest {
     assertThat(savedValue.getVersion(), is(equalTo(existingCqlLibrary.getVersion())));
     assertThat(savedValue.getGroupId(), is(equalTo(existingCqlLibrary.getGroupId())));
   }
-
 }
