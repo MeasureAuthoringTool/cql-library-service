@@ -627,6 +627,7 @@ public class CqlLibraryControllerMvcTest {
                 .contentType(MediaType.APPLICATION_JSON_VALUE))
         .andExpect(status().isConflict())
         .andExpect(content().contentType(MediaType.APPLICATION_JSON_VALUE));
+    verify(versionService, times(1)).createDraft(eq("Library1_ID"), eq("Library1"), eq(TEST_USER_ID));
   }
 
   @Test
