@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import gov.cms.madie.cqllibraryservice.exceptions.InternalServerErrorException;
 import gov.cms.madie.cqllibraryservice.exceptions.PermissionDeniedException;
 import gov.cms.madie.cqllibraryservice.exceptions.ResourceNotDraftableException;
 import gov.cms.madie.cqllibraryservice.exceptions.ResourceNotFoundException;
@@ -727,6 +728,22 @@ public class CqlLibraryControllerMvcTest {
                 .contentType(MediaType.APPLICATION_JSON_VALUE))
         .andExpect(status().isForbidden())
         .andExpect(content().contentType(MediaType.APPLICATION_JSON_VALUE));
+    verify(versionService, times(1)).createVersion(eq("Library1_ID"), eq(false), eq(TEST_USER_ID));
+  }
+
+  @Test
+  public void testCreateVersionReturnsInternalServerError() throws Exception {
+    when(versionService.createVersion(anyString(), anyBoolean(), anyString()))
+        .thenThrow(new InternalServerErrorException("Unable to update version number"));
+    mockMvc
+        .perform(
+            put("/cql-libraries/version/Library1_ID?isMajor=false")
+                .with(user(TEST_USER_ID))
+                .with(csrf())
+                .contentType(MediaType.APPLICATION_JSON_VALUE))
+        .andExpect(status().isInternalServerError())
+        .andExpect(content().contentType(MediaType.APPLICATION_JSON_VALUE))
+        .andExpect(jsonPath("$.message").value("Unable to update version number"));
     verify(versionService, times(1)).createVersion(eq("Library1_ID"), eq(false), eq(TEST_USER_ID));
   }
 
