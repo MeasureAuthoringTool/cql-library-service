@@ -22,7 +22,7 @@ public class CqlLibraryVersionRepositoryImpl implements CqlLibraryVersionReposit
   @Override
   public Optional<Version> findMaxVersionByGroupId(String groupId) {
     Query q =
-        new Query(Criteria.where("groupId").is(groupId))
+        new Query(Criteria.where("groupId").is(groupId).and("draft").is(false))
             .with(Sort.by(Sort.Direction.DESC, "version.major", "version.minor"))
             .limit(1);
     CqlLibrary one = mongoTemplate.findOne(q, CqlLibrary.class);
@@ -38,7 +38,7 @@ public class CqlLibraryVersionRepositoryImpl implements CqlLibraryVersionReposit
   public Optional<Version> findMaxMinorVersionByGroupIdAndVersionMajor(
       String groupId, int majorVersion) {
     Query q =
-        new Query(Criteria.where("groupId").is(groupId).and("version.major").is(majorVersion))
+        new Query(Criteria.where("groupId").is(groupId).and("version.major").is(majorVersion).and("draft").is(false))
             .with(Sort.by(Sort.Direction.DESC, "version.major", "version.minor"))
             .limit(1);
     CqlLibrary one = mongoTemplate.findOne(q, CqlLibrary.class);
