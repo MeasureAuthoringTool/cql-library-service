@@ -2,6 +2,7 @@ package gov.cms.madie.cqllibraryservice.controllers;
 
 import gov.cms.madie.cqllibraryservice.exceptions.BadRequestObjectException;
 import gov.cms.madie.cqllibraryservice.exceptions.DuplicateKeyException;
+import gov.cms.madie.cqllibraryservice.exceptions.InternalServerErrorException;
 import gov.cms.madie.cqllibraryservice.exceptions.InvalidIdException;
 import gov.cms.madie.cqllibraryservice.exceptions.ResourceNotDraftableException;
 import gov.cms.madie.cqllibraryservice.exceptions.PermissionDeniedException;
@@ -112,6 +113,13 @@ public class ErrorHandlingControllerAdvice {
   @ResponseBody
   Map<String, Object> onPermissionDeniedException(WebRequest request) {
     return getErrorAttributes(request, HttpStatus.FORBIDDEN);
+  }
+
+  @ExceptionHandler(InternalServerErrorException.class)
+  @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
+  @ResponseBody
+  Map<String, Object> onInternalServerErrorException(WebRequest request) {
+    return getErrorAttributes(request, HttpStatus.INTERNAL_SERVER_ERROR);
   }
 
   private Map<String, Object> getErrorAttributes(WebRequest request, HttpStatus httpStatus) {

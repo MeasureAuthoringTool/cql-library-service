@@ -630,39 +630,6 @@ public class CqlLibraryControllerMvcTest {
   }
 
   @Test
-  public void testCreateDraftReturnsConflict() throws Exception {
-    final Instant createdTime = Instant.now().minus(100, ChronoUnit.MINUTES);
-    final CqlLibrary existingLibrary =
-        CqlLibrary.builder()
-            .id("Library1_ID")
-            .cqlLibraryName("Library1")
-            .model(ModelType.QI_CORE.getValue())
-            .draft(true)
-            .version(new Version(1, 0, 0))
-            .groupId("group1")
-            .createdAt(createdTime)
-            .createdBy("User1")
-            .lastModifiedAt(createdTime)
-            .lastModifiedBy("User1")
-            .build();
-    final String json =
-        toJsonString(
-            existingLibrary.toBuilder().draft(false).version(new Version(2, 1, 0)).build());
-
-    when(versionService.createDraft(anyString(), anyString(), anyString()))
-        .thenThrow(new ResourceNotDraftableException("CQL Library"));
-    mockMvc
-        .perform(
-            post("/cql-libraries/draft/Library1_ID")
-                .with(user(TEST_USER_ID))
-                .with(csrf())
-                .content(json)
-                .contentType(MediaType.APPLICATION_JSON_VALUE))
-        .andExpect(status().isConflict())
-        .andExpect(content().contentType(MediaType.APPLICATION_JSON_VALUE));
-  }
-
-  @Test
   public void testCreateDraftReturnsNotFound() throws Exception {
     final Instant createdTime = Instant.now().minus(100, ChronoUnit.MINUTES);
     final CqlLibrary existingLibrary =
@@ -693,6 +660,7 @@ public class CqlLibraryControllerMvcTest {
                 .contentType(MediaType.APPLICATION_JSON_VALUE))
         .andExpect(status().isNotFound())
         .andExpect(content().contentType(MediaType.APPLICATION_JSON_VALUE));
+    verify(versionService, times(1)).createDraft(eq("Library1_ID"), eq("Library1"), eq(TEST_USER_ID));
   }
 
   @Test
@@ -728,6 +696,7 @@ public class CqlLibraryControllerMvcTest {
         .andExpect(jsonPath("$.cqlLibraryName").value("Library1"))
         .andExpect(jsonPath("$.draft").value(true))
         .andExpect(jsonPath("$.version").value("1.2.000"));
+    verify(versionService, times(1)).createDraft(eq("Library1_ID"), eq("Library1"), eq(TEST_USER_ID));
   }
 
   @Test
@@ -742,6 +711,7 @@ public class CqlLibraryControllerMvcTest {
                 .contentType(MediaType.APPLICATION_JSON_VALUE))
         .andExpect(status().isNotFound())
         .andExpect(content().contentType(MediaType.APPLICATION_JSON_VALUE));
+    verify(versionService, times(1)).createVersion(eq("Library1_ID"), eq(true), eq(TEST_USER_ID));
   }
 
   @Test
@@ -750,12 +720,13 @@ public class CqlLibraryControllerMvcTest {
         .thenThrow(new PermissionDeniedException("CQL Library", "Library1_ID", "test.user"));
     mockMvc
         .perform(
-            put("/cql-libraries/version/Library1_ID?isMajor=true")
+            put("/cql-libraries/version/Library1_ID?isMajor=false")
                 .with(user(TEST_USER_ID))
                 .with(csrf())
                 .contentType(MediaType.APPLICATION_JSON_VALUE))
         .andExpect(status().isForbidden())
         .andExpect(content().contentType(MediaType.APPLICATION_JSON_VALUE));
+    verify(versionService, times(1)).createVersion(eq("Library1_ID"), eq(false), eq(TEST_USER_ID));
   }
 
   @Test
@@ -789,5 +760,6 @@ public class CqlLibraryControllerMvcTest {
         .andExpect(jsonPath("$.cqlLibraryName").value("Library1"))
         .andExpect(jsonPath("$.draft").value(false))
         .andExpect(jsonPath("$.version").value("2.0.000"));
+    verify(versionService, times(1)).createVersion(eq("Library1_ID"), eq(true), eq(TEST_USER_ID));
   }
 }

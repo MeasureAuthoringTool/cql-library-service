@@ -1,6 +1,7 @@
 package gov.cms.madie.cqllibraryservice.services;
 
 import gov.cms.madie.cqllibraryservice.exceptions.BadRequestObjectException;
+import gov.cms.madie.cqllibraryservice.exceptions.InternalServerErrorException;
 import gov.cms.madie.cqllibraryservice.exceptions.PermissionDeniedException;
 import gov.cms.madie.cqllibraryservice.exceptions.ResourceNotDraftableException;
 import gov.cms.madie.cqllibraryservice.exceptions.ResourceNotFoundException;
@@ -246,7 +247,7 @@ class VersionServiceTest {
         .thenThrow(cause);
     CqlLibrary lib = CqlLibrary.builder().groupId("group1").version(Version.parse("1.0.0")).build();
     assertThrows(
-        RuntimeException.class,
+        InternalServerErrorException.class,
         () -> versionService.getNextVersion(lib, false),
         "Unable to update version number");
     verify(cqlLibraryRepository, times(1))

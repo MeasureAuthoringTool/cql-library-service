@@ -1,6 +1,7 @@
 package gov.cms.madie.cqllibraryservice.services;
 
 import gov.cms.madie.cqllibraryservice.exceptions.BadRequestObjectException;
+import gov.cms.madie.cqllibraryservice.exceptions.InternalServerErrorException;
 import gov.cms.madie.cqllibraryservice.exceptions.PermissionDeniedException;
 import gov.cms.madie.cqllibraryservice.exceptions.ResourceNotDraftableException;
 import gov.cms.madie.cqllibraryservice.exceptions.ResourceNotFoundException;
@@ -115,7 +116,7 @@ public class VersionService {
       }
     } catch (RuntimeException ex) {
       log.error("VersionController::updateVersion Exception while updating version number", ex);
-      throw new RuntimeException("Unable to update version number", ex);
+      throw new InternalServerErrorException("Unable to update version number", ex);
     }
   }
 
