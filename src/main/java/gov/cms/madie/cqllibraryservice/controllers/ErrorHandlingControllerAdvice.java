@@ -1,7 +1,11 @@
-package gov.cms.madie.cqllibraryservice.controller;
+package gov.cms.madie.cqllibraryservice.controllers;
 
+import gov.cms.madie.cqllibraryservice.exceptions.BadRequestObjectException;
 import gov.cms.madie.cqllibraryservice.exceptions.DuplicateKeyException;
+import gov.cms.madie.cqllibraryservice.exceptions.InternalServerErrorException;
 import gov.cms.madie.cqllibraryservice.exceptions.InvalidIdException;
+import gov.cms.madie.cqllibraryservice.exceptions.ResourceNotDraftableException;
+import gov.cms.madie.cqllibraryservice.exceptions.PermissionDeniedException;
 import gov.cms.madie.cqllibraryservice.exceptions.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -82,11 +86,40 @@ public class ErrorHandlingControllerAdvice {
     return getErrorAttributes(request, HttpStatus.NOT_FOUND);
   }
 
+  @ExceptionHandler(ResourceNotDraftableException.class)
+  @ResponseStatus(HttpStatus.CONFLICT)
+  @ResponseBody
+  Map<String, Object> onResourceNotDraftableException(
+      ResourceNotDraftableException ex, WebRequest request) {
+    return getErrorAttributes(request, HttpStatus.CONFLICT);
+  }
+
   @ExceptionHandler(InvalidIdException.class)
   @ResponseStatus(HttpStatus.BAD_REQUEST)
   @ResponseBody
   Map<String, Object> onInvalidKeyException(WebRequest request) {
     return getErrorAttributes(request, HttpStatus.BAD_REQUEST);
+  }
+
+  @ExceptionHandler(BadRequestObjectException.class)
+  @ResponseStatus(HttpStatus.BAD_REQUEST)
+  @ResponseBody
+  Map<String, Object> onBadRequestObjectException(WebRequest request) {
+    return getErrorAttributes(request, HttpStatus.BAD_REQUEST);
+  }
+
+  @ExceptionHandler(PermissionDeniedException.class)
+  @ResponseStatus(HttpStatus.FORBIDDEN)
+  @ResponseBody
+  Map<String, Object> onPermissionDeniedException(WebRequest request) {
+    return getErrorAttributes(request, HttpStatus.FORBIDDEN);
+  }
+
+  @ExceptionHandler(InternalServerErrorException.class)
+  @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
+  @ResponseBody
+  Map<String, Object> onInternalServerErrorException(WebRequest request) {
+    return getErrorAttributes(request, HttpStatus.INTERNAL_SERVER_ERROR);
   }
 
   private Map<String, Object> getErrorAttributes(WebRequest request, HttpStatus httpStatus) {

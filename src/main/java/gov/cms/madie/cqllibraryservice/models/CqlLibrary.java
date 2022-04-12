@@ -1,5 +1,8 @@
 package gov.cms.madie.cqllibraryservice.models;
 
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import gov.cms.madie.cqllibraryservice.utils.VersionJsonSerializer;
 import gov.cms.madie.cqllibraryservice.validators.EnumValidator;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -47,11 +50,20 @@ public class CqlLibrary {
       groups = {ValidationOrder4.class})
   private String model;
 
+  @JsonSerialize(using = VersionJsonSerializer.VersionSerializer.class)
+  @JsonDeserialize(using = VersionJsonSerializer.VersionDeserializer.class)
+  private Version version;
+
+  private boolean draft;
+  private String groupId;
   private String cql;
   private Instant createdAt;
   private String createdBy;
   private Instant lastModifiedAt;
   private String lastModifiedBy;
+  private String publisher;
+  private String description;
+  private boolean experimental;
 
   @GroupSequence({
     CqlLibrary.ValidationOrder1.class,

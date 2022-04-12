@@ -1,12 +1,18 @@
-package gov.cms.madie.cqllibraryservice.controller;
+package gov.cms.madie.cqllibraryservice.controllers;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import gov.cms.madie.cqllibraryservice.exceptions.InternalServerErrorException;
+import gov.cms.madie.cqllibraryservice.exceptions.PermissionDeniedException;
+import gov.cms.madie.cqllibraryservice.exceptions.ResourceNotDraftableException;
+import gov.cms.madie.cqllibraryservice.exceptions.ResourceNotFoundException;
 import gov.cms.madie.cqllibraryservice.models.CqlLibrary;
 import gov.cms.madie.cqllibraryservice.models.ModelType;
-import gov.cms.madie.cqllibraryservice.respositories.CqlLibraryRepository;
+import gov.cms.madie.cqllibraryservice.models.Version;
+import gov.cms.madie.cqllibraryservice.repositories.CqlLibraryRepository;
+import gov.cms.madie.cqllibraryservice.services.VersionService;
 import org.bson.types.ObjectId;
 import org.hamcrest.CustomMatcher;
 import org.junit.jupiter.api.Test;
@@ -42,6 +48,8 @@ public class CqlLibraryControllerMvcTest {
   private static final String TEST_USER_ID = "test-okta-user-id-123";
 
   @MockBean private CqlLibraryRepository repository;
+
+  @MockBean private VersionService versionService;
 
   @Captor private ArgumentCaptor<CqlLibrary> cqlLibraryArgumentCaptor;
 
@@ -587,5 +595,189 @@ public class CqlLibraryControllerMvcTest {
     assertThat(savedValue.getLastModifiedAt(), is(notNullValue()));
     assertThat(savedValue.getLastModifiedAt().isAfter(createdTime), is(true));
     assertThat(savedValue.getLastModifiedBy(), is(equalTo(TEST_USER_ID)));
+  }
+
+  @Test
+  public void testCreateDraftReturnsConflictWhenDraftAlreadyExists() throws Exception {
+    final Instant createdTime = Instant.now().minus(100, ChronoUnit.MINUTES);
+    final CqlLibrary existingLibrary =
+        CqlLibrary.builder()
+            .id("Library1_ID")
+            .cqlLibraryName("Library1")
+            .model(ModelType.QI_CORE.getValue())
+            .draft(true)
+            .version(new Version(1, 0, 0))
+            .groupId("group1")
+            .createdAt(createdTime)
+            .createdBy("User1")
+            .lastModifiedAt(createdTime)
+            .lastModifiedBy("User1")
+            .build();
+    final String json =
+        toJsonString(
+            existingLibrary.toBuilder().draft(false).version(new Version(2, 1, 0)).build());
+
+    when(versionService.createDraft(anyString(), anyString(), anyString()))
+        .thenThrow(new ResourceNotDraftableException("CQL Library"));
+    mockMvc
+        .perform(
+            post("/cql-libraries/draft/Library1_ID")
+                .with(user(TEST_USER_ID))
+                .with(csrf())
+                .content(json)
+                .contentType(MediaType.APPLICATION_JSON_VALUE))
+        .andExpect(status().isConflict())
+        .andExpect(content().contentType(MediaType.APPLICATION_JSON_VALUE));
+    verify(versionService, times(1)).createDraft(eq("Library1_ID"), eq("Library1"), eq(TEST_USER_ID));
+  }
+
+  @Test
+  public void testCreateDraftReturnsNotFound() throws Exception {
+    final Instant createdTime = Instant.now().minus(100, ChronoUnit.MINUTES);
+    final CqlLibrary existingLibrary =
+        CqlLibrary.builder()
+            .id("Library1_ID")
+            .cqlLibraryName("Library1")
+            .model(ModelType.QI_CORE.getValue())
+            .draft(true)
+            .version(new Version(1, 0, 0))
+            .groupId("group1")
+            .createdAt(createdTime)
+            .createdBy("User1")
+            .lastModifiedAt(createdTime)
+            .lastModifiedBy("User1")
+            .build();
+    final String json =
+        toJsonString(
+            existingLibrary.toBuilder().draft(false).version(new Version(2, 1, 0)).build());
+
+    when(versionService.createDraft(anyString(), anyString(), anyString()))
+        .thenThrow(new ResourceNotFoundException("CQL Library", "Library1_ID"));
+    mockMvc
+        .perform(
+            post("/cql-libraries/draft/Library1_ID")
+                .with(user(TEST_USER_ID))
+                .with(csrf())
+                .content(json)
+                .contentType(MediaType.APPLICATION_JSON_VALUE))
+        .andExpect(status().isNotFound())
+        .andExpect(content().contentType(MediaType.APPLICATION_JSON_VALUE));
+    verify(versionService, times(1)).createDraft(eq("Library1_ID"), eq("Library1"), eq(TEST_USER_ID));
+  }
+
+  @Test
+  public void testCreateDraftReturnsCreatedDraft() throws Exception {
+    final Instant createdTime = Instant.now().minus(100, ChronoUnit.MINUTES);
+    final CqlLibrary draftLibrary =
+        CqlLibrary.builder()
+            .id("Library1_ID")
+            .cqlLibraryName("Library1")
+            .model(ModelType.QI_CORE.getValue())
+            .draft(true)
+            .version(new Version(1, 2, 0))
+            .groupId("group1")
+            .createdAt(createdTime)
+            .createdBy("User1")
+            .lastModifiedAt(createdTime)
+            .lastModifiedBy("User1")
+            .build();
+    final String json = toJsonString(draftLibrary.toBuilder().draft(false).build());
+
+    when(versionService.createDraft(anyString(), anyString(), anyString()))
+        .thenReturn(draftLibrary);
+    mockMvc
+        .perform(
+            post("/cql-libraries/draft/Library1_ID")
+                .with(user(TEST_USER_ID))
+                .with(csrf())
+                .content(json)
+                .contentType(MediaType.APPLICATION_JSON_VALUE))
+        .andExpect(status().isCreated())
+        .andExpect(content().contentType(MediaType.APPLICATION_JSON_VALUE))
+        .andExpect(jsonPath("$.id").value("Library1_ID"))
+        .andExpect(jsonPath("$.cqlLibraryName").value("Library1"))
+        .andExpect(jsonPath("$.draft").value(true))
+        .andExpect(jsonPath("$.version").value("1.2.000"));
+    verify(versionService, times(1)).createDraft(eq("Library1_ID"), eq("Library1"), eq(TEST_USER_ID));
+  }
+
+  @Test
+  public void testCreateVersionReturnsNotFound() throws Exception {
+    when(versionService.createVersion(anyString(), anyBoolean(), anyString()))
+        .thenThrow(new ResourceNotFoundException("CQL Library", "Library1_ID"));
+    mockMvc
+        .perform(
+            put("/cql-libraries/version/Library1_ID?isMajor=true")
+                .with(user(TEST_USER_ID))
+                .with(csrf())
+                .contentType(MediaType.APPLICATION_JSON_VALUE))
+        .andExpect(status().isNotFound())
+        .andExpect(content().contentType(MediaType.APPLICATION_JSON_VALUE));
+    verify(versionService, times(1)).createVersion(eq("Library1_ID"), eq(true), eq(TEST_USER_ID));
+  }
+
+  @Test
+  public void testCreateVersionReturnsForbiddenForPermissionDenied() throws Exception {
+    when(versionService.createVersion(anyString(), anyBoolean(), anyString()))
+        .thenThrow(new PermissionDeniedException("CQL Library", "Library1_ID", "test.user"));
+    mockMvc
+        .perform(
+            put("/cql-libraries/version/Library1_ID?isMajor=false")
+                .with(user(TEST_USER_ID))
+                .with(csrf())
+                .contentType(MediaType.APPLICATION_JSON_VALUE))
+        .andExpect(status().isForbidden())
+        .andExpect(content().contentType(MediaType.APPLICATION_JSON_VALUE));
+    verify(versionService, times(1)).createVersion(eq("Library1_ID"), eq(false), eq(TEST_USER_ID));
+  }
+
+  @Test
+  public void testCreateVersionReturnsInternalServerError() throws Exception {
+    when(versionService.createVersion(anyString(), anyBoolean(), anyString()))
+        .thenThrow(new InternalServerErrorException("Unable to update version number"));
+    mockMvc
+        .perform(
+            put("/cql-libraries/version/Library1_ID?isMajor=false")
+                .with(user(TEST_USER_ID))
+                .with(csrf())
+                .contentType(MediaType.APPLICATION_JSON_VALUE))
+        .andExpect(status().isInternalServerError())
+        .andExpect(content().contentType(MediaType.APPLICATION_JSON_VALUE))
+        .andExpect(jsonPath("$.message").value("Unable to update version number"));
+    verify(versionService, times(1)).createVersion(eq("Library1_ID"), eq(false), eq(TEST_USER_ID));
+  }
+
+  @Test
+  public void testCreateVersionReturnsCreatedVersion() throws Exception {
+    final Instant createdTime = Instant.now().minus(100, ChronoUnit.MINUTES);
+    final CqlLibrary versionLibrary =
+        CqlLibrary.builder()
+            .id("Library1_ID")
+            .cqlLibraryName("Library1")
+            .model(ModelType.QI_CORE.getValue())
+            .draft(false)
+            .version(new Version(2, 0, 0))
+            .groupId("group1")
+            .createdAt(createdTime)
+            .createdBy("User1")
+            .lastModifiedAt(createdTime)
+            .lastModifiedBy("User1")
+            .build();
+
+    when(versionService.createVersion(anyString(), anyBoolean(), anyString()))
+        .thenReturn(versionLibrary);
+    mockMvc
+        .perform(
+            put("/cql-libraries/version/Library1_ID?isMajor=true")
+                .with(user(TEST_USER_ID))
+                .with(csrf())
+                .contentType(MediaType.APPLICATION_JSON_VALUE))
+        .andExpect(status().isOk())
+        .andExpect(content().contentType(MediaType.APPLICATION_JSON_VALUE))
+        .andExpect(jsonPath("$.id").value("Library1_ID"))
+        .andExpect(jsonPath("$.cqlLibraryName").value("Library1"))
+        .andExpect(jsonPath("$.draft").value(false))
+        .andExpect(jsonPath("$.version").value("2.0.000"));
+    verify(versionService, times(1)).createVersion(eq("Library1_ID"), eq(true), eq(TEST_USER_ID));
   }
 }

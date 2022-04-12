@@ -7,7 +7,7 @@ Jira Ticket: [MAT-0000](https://jira.cms.gov/browse/MAT-0000)
 
 ### All Submissions
 * [ ] This PR has the JIRA linked.
-* [ ] Required tests are included.
+* [ ] Required tests are included and Code coverage is verified.
 * [ ] No extemporaneous files are included (i.e Complied files or testing results).
 * [ ] This PR is merging into the **correct branch**.
 * [ ] All Documentation needed for this PR is Complete (or noted in a TODO or other Ticket).
