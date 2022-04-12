@@ -123,13 +123,6 @@ public class CqlLibraryController {
     return ResponseEntity.status(HttpStatus.CREATED).body(output);
   }
 
-  //  @PostMapping("/version")
-  //  public Object getThing(
-  //      @RequestBody final CqlLibrary cqlLibrary,
-  //      @RequestParam(name = "major", required = false, defaultValue = "false") boolean major) {
-  //    return versionService.getNextVersion(cqlLibrary, major);
-  //  }
-
   private void checkDuplicateCqlLibraryName(String cqlLibraryName) {
     if (StringUtils.isNotEmpty(cqlLibraryName)
         && cqlLibraryRepository.existsByCqlLibraryName(cqlLibraryName)) {
