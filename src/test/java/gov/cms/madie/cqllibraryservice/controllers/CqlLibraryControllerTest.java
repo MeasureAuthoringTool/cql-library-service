@@ -1,11 +1,15 @@
-package gov.cms.madie.cqllibraryservice.controller;
+package gov.cms.madie.cqllibraryservice.controllers;
 
 import gov.cms.madie.cqllibraryservice.exceptions.DuplicateKeyException;
 import gov.cms.madie.cqllibraryservice.exceptions.InvalidIdException;
+import gov.cms.madie.cqllibraryservice.exceptions.PermissionDeniedException;
+import gov.cms.madie.cqllibraryservice.exceptions.ResourceNotDraftableException;
 import gov.cms.madie.cqllibraryservice.exceptions.ResourceNotFoundException;
 import gov.cms.madie.cqllibraryservice.models.CqlLibrary;
 import gov.cms.madie.cqllibraryservice.models.ModelType;
-import gov.cms.madie.cqllibraryservice.respositories.CqlLibraryRepository;
+import gov.cms.madie.cqllibraryservice.models.Version;
+import gov.cms.madie.cqllibraryservice.repositories.CqlLibraryRepository;
+import gov.cms.madie.cqllibraryservice.services.VersionService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -14,6 +18,7 @@ import org.mockito.Captor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 
 import java.security.Principal;
@@ -28,6 +33,7 @@ import static org.hamcrest.CoreMatchers.notNullValue;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doReturn;
@@ -41,6 +47,8 @@ import static org.mockito.Mockito.when;
 class CqlLibraryControllerTest {
 
   @Mock CqlLibraryRepository cqlLibraryRepository;
+
+  @Mock VersionService versionService;
 
   @InjectMocks CqlLibraryController cqlLibraryController;
 
@@ -288,5 +296,80 @@ class CqlLibraryControllerTest {
     assertThat(savedValue.getLastModifiedAt(), is(notNullValue()));
     assertThat(savedValue.getLastModifiedAt().isAfter(createdTime), is(true));
     assertThat(savedValue.getLastModifiedBy(), is(equalTo("User2")));
+  }
+
+  @Test
+  public void testCreateDraftReturnsDraft() {
+    CqlLibrary draft =
+        CqlLibrary.builder()
+            .id("Library1_ID")
+            .cqlLibraryName("Library1")
+            .model(ModelType.QI_CORE.getValue())
+            .draft(true)
+            .version(new Version(0, 0, 0))
+            .cql("library testCql version '1.0.000'")
+            .createdBy("User1")
+            .lastModifiedBy("User1")
+            .build();
+    when(versionService.createDraft(anyString(), anyString(), anyString())).thenReturn(draft);
+    when(principal.getName()).thenReturn("test.user");
+    ResponseEntity<CqlLibrary> output =
+        cqlLibraryController.createDraft(
+            "Library1_ID",
+            CqlLibrary.builder().id("Library1_ID").cqlLibraryName("Library1").draft(false).build(),
+            principal);
+    assertThat(output, is(notNullValue()));
+    assertThat(output.getStatusCode(), is(equalTo(HttpStatus.CREATED)));
+    assertThat(output.getBody(), is(equalTo(draft)));
+  }
+
+  @Test
+  public void testCreateDraftReturnsException() {
+    when(versionService.createDraft(anyString(), anyString(), anyString()))
+        .thenThrow(new ResourceNotDraftableException("CqlLibrary"));
+    when(principal.getName()).thenReturn("test.user");
+    assertThrows(
+        ResourceNotDraftableException.class,
+        () ->
+            cqlLibraryController.createDraft(
+                "Library1_ID",
+                CqlLibrary.builder()
+                    .id("Library1_ID")
+                    .cqlLibraryName("Library1")
+                    .draft(false)
+                    .build(),
+                principal));
+  }
+
+  @Test
+  public void testCreateVersionReturnsVersion() {
+    CqlLibrary version =
+        CqlLibrary.builder()
+            .id("Library1_ID")
+            .cqlLibraryName("Library1")
+            .model(ModelType.QI_CORE.getValue())
+            .draft(false)
+            .version(new Version(1, 0, 0))
+            .cql("library testCql version '1.0.000'")
+            .createdBy("User1")
+            .lastModifiedBy("User1")
+            .build();
+    when(principal.getName()).thenReturn("test.user");
+    when(versionService.createVersion(anyString(), anyBoolean(), anyString())).thenReturn(version);
+    ResponseEntity<CqlLibrary> output =
+        cqlLibraryController.createVersion("Library1_ID", true, principal);
+    assertThat(output, is(notNullValue()));
+    assertThat(output.getStatusCode(), is(HttpStatus.OK));
+    assertThat(output.getBody(), is(equalTo(version)));
+  }
+
+  @Test
+  public void testCreateVersionReturnsError() {
+    when(principal.getName()).thenReturn("test.user");
+    when(versionService.createVersion(anyString(), anyBoolean(), anyString()))
+        .thenThrow(new PermissionDeniedException("CQL Library", cqlLibrary.getId(), "test.user"));
+    assertThrows(
+        PermissionDeniedException.class,
+        () -> cqlLibraryController.createVersion("Library1_ID", true, principal));
   }
 }

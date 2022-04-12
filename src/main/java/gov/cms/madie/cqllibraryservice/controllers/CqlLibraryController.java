@@ -1,13 +1,12 @@
-package gov.cms.madie.cqllibraryservice.controller;
+package gov.cms.madie.cqllibraryservice.controllers;
 
 import gov.cms.madie.cqllibraryservice.exceptions.DuplicateKeyException;
 import gov.cms.madie.cqllibraryservice.exceptions.InvalidIdException;
-import gov.cms.madie.cqllibraryservice.exceptions.PermissionDeniedException;
-import gov.cms.madie.cqllibraryservice.exceptions.ResourceNotDraftableException;
 import gov.cms.madie.cqllibraryservice.exceptions.ResourceNotFoundException;
 import gov.cms.madie.cqllibraryservice.models.CqlLibrary;
-import gov.cms.madie.cqllibraryservice.respositories.CqlLibraryRepository;
-import gov.cms.madie.cqllibraryservice.services.CqlLibraryService;
+import gov.cms.madie.cqllibraryservice.models.Version;
+import gov.cms.madie.cqllibraryservice.repositories.CqlLibraryRepository;
+import gov.cms.madie.cqllibraryservice.services.VersionService;
 import io.micrometer.core.instrument.util.StringUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -20,7 +19,7 @@ import java.security.Principal;
 import java.time.Instant;
 import java.util.List;
 import java.util.Objects;
-import java.util.Optional;
+import java.util.UUID;
 
 @Slf4j
 @RestController
@@ -29,7 +28,7 @@ import java.util.Optional;
 public class CqlLibraryController {
 
   private final CqlLibraryRepository cqlLibraryRepository;
-  private final CqlLibraryService cqlLibraryService;
+  private final VersionService versionService;
 
   @GetMapping
   public ResponseEntity<List<CqlLibrary>> getCqlLibraries(
@@ -68,9 +67,9 @@ public class CqlLibraryController {
     cqlLibrary.setCreatedAt(now);
     cqlLibrary.setLastModifiedBy(username);
     cqlLibrary.setLastModifiedAt(now);
-//    cqlLibrary.setVersion("0.0.000");
+    cqlLibrary.setVersion(Version.parse("0.0.000"));
     cqlLibrary.setDraft(true);
-    cqlLibrary.setGroupId(null); // generate a new id
+    cqlLibrary.setGroupId(UUID.randomUUID().toString()); // generate a new id
     CqlLibrary savedCqlLibrary = cqlLibraryRepository.save(cqlLibrary);
     log.info(
         "User [{}] successfully created new cql library with ID [{}]",
@@ -107,84 +106,29 @@ public class CqlLibraryController {
         .orElseThrow(() -> new ResourceNotFoundException("CQL Library", id));
   }
 
-  @PostMapping("/{id}/draft")
-  public ResponseEntity<CqlLibrary> createDraft(
-      @PathVariable("id") String id, Principal principal) {
-    final String username = principal.getName();
-    Optional<CqlLibrary> libraryOptional = cqlLibraryRepository.findById(id);
-    if (libraryOptional.isEmpty()) {
-      throw new ResourceNotFoundException("CQL Library", id);
-    }
-    final CqlLibrary cqlLibrary = libraryOptional.get();
-
-    log.info("creating draft for: {}", cqlLibrary);
-
-    if (!Objects.equals(cqlLibrary.getCreatedBy(), username)) {
-      log.info("User [{}] doest not have permission to create a draft of CQL Library with id [{}]",
-          username, cqlLibrary.getId());
-      throw new PermissionDeniedException("CQL Library", cqlLibrary.getId(), username);
-    }
-    if (!cqlLibraryService.isDraftable(cqlLibrary)) {
-      throw new ResourceNotDraftableException("CQL Library");
-    }
-    var now = Instant.now();
-    CqlLibrary clonedCqlLibrary = cqlLibrary
-        .toBuilder()
-        .draft(true)
-        .createdAt(now)
-        .lastModifiedAt(now)
-        .build();
-
-    CqlLibrary savedCqlLibrary = cqlLibraryRepository.save(clonedCqlLibrary);
-    log.info("User [{}] successfully created a draft cql library with ID [{}]",
-        username, savedCqlLibrary.getId());
-    return ResponseEntity.status(HttpStatus.CREATED).body(savedCqlLibrary);
-
-  }
-
-  @PostMapping("/{id}/version/{isMajor}")
+  @PutMapping("/version/{id}")
   public ResponseEntity<CqlLibrary> createVersion(
-      @PathVariable("id") String id,
-      @PathVariable("isMajor") boolean isMajor,
-      Principal principal) {
-    final String username = principal.getName();
-    Optional<CqlLibrary> libraryOptional = cqlLibraryRepository.findById(id);
-    if (libraryOptional.isEmpty()) {
-      throw new ResourceNotFoundException("CQL Library", id);
-    }
-    final CqlLibrary cqlLibrary = libraryOptional.get();
-
-    try {
-      if (!Objects.equals(cqlLibrary.getCreatedBy(), username)) {
-        log.info("User [{}] doest not have permission to create a draft of CQL Library with id [{}]",
-            username, cqlLibrary.getId());
-        throw new PermissionDeniedException("CQL Library", cqlLibrary.getId(), username);
-      }
-      var now = Instant.now();
-      CqlLibrary clonedCqlLibrary = cqlLibrary
-          .toBuilder()
-          .draft(false)
-          .createdAt(now)
-          .lastModifiedAt(now)
-          .build();
-
-      if (isMajor) {
-        // Todo get the max major and increment it add it to this version
-        clonedCqlLibrary.setVersion(cqlLibrary.getVersion());
-      } else {
-        // Todo get the max of minor version and it
-        clonedCqlLibrary.setVersion(cqlLibrary.getVersion());
-      }
-
-      CqlLibrary savedCqlLibrary = cqlLibraryRepository.save(clonedCqlLibrary);
-      log.info("User [{}] successfully versioned cql library with ID [{}]",
-          username, savedCqlLibrary.getId());
-      return ResponseEntity.status(HttpStatus.CREATED).body(savedCqlLibrary);
-
-    } catch (Exception exception) {
-      throw new RuntimeException();
-    }
+      @PathVariable("id") String id, @RequestParam boolean isMajor, Principal principal) {
+    return ResponseEntity.ok(versionService.createVersion(id, isMajor, principal.getName()));
   }
+
+  @PostMapping("/draft/{id}")
+  public ResponseEntity<CqlLibrary> createDraft(
+      @PathVariable("id") String id,
+      @RequestBody final CqlLibrary cqlLibrary,
+      Principal principal) {
+    var output =
+        versionService.createDraft(id, cqlLibrary.getCqlLibraryName(), principal.getName());
+    log.info("output: {}", output);
+    return ResponseEntity.status(HttpStatus.CREATED).body(output);
+  }
+
+  //  @PostMapping("/version")
+  //  public Object getThing(
+  //      @RequestBody final CqlLibrary cqlLibrary,
+  //      @RequestParam(name = "major", required = false, defaultValue = "false") boolean major) {
+  //    return versionService.getNextVersion(cqlLibrary, major);
+  //  }
 
   private void checkDuplicateCqlLibraryName(String cqlLibraryName) {
     if (StringUtils.isNotEmpty(cqlLibraryName)

@@ -63,6 +63,7 @@ public class CqlLibrary {
   private String lastModifiedBy;
   private String publisher;
   private String description;
+  private boolean experimental;
 
   @GroupSequence({
     CqlLibrary.ValidationOrder1.class,

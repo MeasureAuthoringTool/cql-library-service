@@ -19,7 +19,8 @@ public class VersionJsonSerializer {
 
   public static class VersionSerializer extends JsonSerializer<Version> {
     @Override
-    public void serialize(Version value, JsonGenerator gen, SerializerProvider serializers) throws IOException {
+    public void serialize(Version value, JsonGenerator gen, SerializerProvider serializers)
+        throws IOException {
       gen.writeString(value == null ? null : value.toString());
     }
   }
@@ -36,6 +37,4 @@ public class VersionJsonSerializer {
       return null;
     }
   }
-
-
 }

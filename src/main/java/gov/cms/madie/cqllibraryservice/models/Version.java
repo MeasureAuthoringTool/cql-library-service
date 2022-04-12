@@ -8,7 +8,7 @@ import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @Data
-@Builder
+@Builder(toBuilder = true)
 @NoArgsConstructor
 @AllArgsConstructor
 public class Version {
@@ -32,6 +32,10 @@ public class Version {
 
   @Override
   public String toString() {
-    return this.getMajor() + "." + this.getMinor() + "." + String.format("%03d", this.getRevisionNumber());
+    return this.getMajor()
+        + "."
+        + this.getMinor()
+        + "."
+        + String.format("%03d", this.getRevisionNumber());
   }
 }
