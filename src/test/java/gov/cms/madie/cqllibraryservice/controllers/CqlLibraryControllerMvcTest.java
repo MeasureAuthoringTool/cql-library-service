@@ -524,6 +524,7 @@ public class CqlLibraryControllerMvcTest {
             .id("Library1_ID")
             .cqlLibraryName("Library1")
             .model(ModelType.QI_CORE.getValue())
+            .draft(true)
             .createdAt(createdTime)
             .createdBy("User1")
             .lastModifiedAt(createdTime)
@@ -549,6 +550,38 @@ public class CqlLibraryControllerMvcTest {
   }
 
   @Test
+  public void testUpdateCqlLibraryReturns409ForUpdateAttemptOnVersionedLibrary() throws Exception {
+    final Instant createdTime = Instant.now().minus(100, ChronoUnit.MINUTES);
+    final CqlLibrary existingLibrary =
+        CqlLibrary.builder()
+            .id("Library1_ID")
+            .cqlLibraryName("Library1")
+            .model(ModelType.QI_CORE.getValue())
+            .draft(false)
+            .createdAt(createdTime)
+            .createdBy("User1")
+            .lastModifiedAt(createdTime)
+            .lastModifiedBy("User1")
+            .build();
+    final CqlLibrary updatingLibrary =
+        existingLibrary.toBuilder().id("Library1_ID").cqlLibraryName("NewName").build();
+    String json = toJsonString(updatingLibrary);
+    when(repository.findById(anyString())).thenReturn(Optional.of(existingLibrary));
+    mockMvc
+        .perform(
+            put("/cql-libraries/Library1_ID")
+                .with(user(TEST_USER_ID))
+                .with(csrf())
+                .content(json)
+                .contentType(MediaType.APPLICATION_JSON_VALUE))
+        .andExpect(status().isConflict())
+        .andExpect(
+            jsonPath("$.message").value(
+                "Could not update resource CQL Library with id: Library1_ID. Resource is not a Draft."));
+    verify(repository, times(1)).findById(anyString());
+  }
+
+  @Test
   public void testUpdateCqlLibraryReturns200ForSuccessfulUpdate() throws Exception {
     final Instant createdTime = Instant.now().minus(100, ChronoUnit.MINUTES);
     final CqlLibrary existingLibrary =
@@ -556,6 +589,7 @@ public class CqlLibraryControllerMvcTest {
             .id("Library1_ID")
             .cqlLibraryName("Library1")
             .model(ModelType.QI_CORE.getValue())
+            .draft(true)
             .createdAt(createdTime)
             .createdBy("User1")
             .lastModifiedAt(createdTime)
