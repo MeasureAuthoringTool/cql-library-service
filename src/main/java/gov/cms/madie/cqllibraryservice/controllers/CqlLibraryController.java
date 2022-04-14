@@ -2,6 +2,7 @@ package gov.cms.madie.cqllibraryservice.controllers;
 
 import gov.cms.madie.cqllibraryservice.exceptions.DuplicateKeyException;
 import gov.cms.madie.cqllibraryservice.exceptions.InvalidIdException;
+import gov.cms.madie.cqllibraryservice.exceptions.InvalidResourceStateException;
 import gov.cms.madie.cqllibraryservice.exceptions.ResourceNotFoundException;
 import gov.cms.madie.cqllibraryservice.models.CqlLibrary;
 import gov.cms.madie.cqllibraryservice.models.Version;
@@ -94,6 +95,9 @@ public class CqlLibraryController {
         .findById(cqlLibrary.getId())
         .map(
             persistedLibrary -> {
+              if (!cqlLibrary.isDraft()) {
+                throw new InvalidResourceStateException("CQL Library", id);
+              }
               if (isCqlLibraryNameChanged(cqlLibrary, persistedLibrary)) {
                 checkDuplicateCqlLibraryName(cqlLibrary.getCqlLibraryName());
               }

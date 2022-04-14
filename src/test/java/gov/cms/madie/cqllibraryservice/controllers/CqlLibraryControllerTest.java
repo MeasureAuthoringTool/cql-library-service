@@ -2,6 +2,7 @@ package gov.cms.madie.cqllibraryservice.controllers;
 
 import gov.cms.madie.cqllibraryservice.exceptions.DuplicateKeyException;
 import gov.cms.madie.cqllibraryservice.exceptions.InvalidIdException;
+import gov.cms.madie.cqllibraryservice.exceptions.InvalidResourceStateException;
 import gov.cms.madie.cqllibraryservice.exceptions.PermissionDeniedException;
 import gov.cms.madie.cqllibraryservice.exceptions.ResourceNotDraftableException;
 import gov.cms.madie.cqllibraryservice.exceptions.ResourceNotFoundException;
@@ -241,6 +242,7 @@ class CqlLibraryControllerTest {
             .id("Library1_ID")
             .cqlLibraryName("Library1")
             .model(ModelType.QI_CORE.getValue())
+            .draft(true)
             .build();
     final CqlLibrary updatingLibrary =
         existingLibrary.toBuilder().id("Library1_ID").cqlLibraryName("NewName").build();
@@ -254,6 +256,26 @@ class CqlLibraryControllerTest {
   }
 
   @Test
+  public void testUpdateCqlLibraryThrowsExceptionForNonDraftUpdate() {
+    final String pathId = "Library1_ID";
+    final CqlLibrary existingLibrary =
+        CqlLibrary.builder()
+            .id("Library1_ID")
+            .cqlLibraryName("Library1")
+            .model(ModelType.QI_CORE.getValue())
+            .draft(false)
+            .build();
+    final CqlLibrary updatingLibrary =
+        existingLibrary.toBuilder().id("Library1_ID").cqlLibraryName("NewName").build();
+
+    when(cqlLibraryRepository.findById(anyString())).thenReturn(Optional.of(existingLibrary));
+
+    assertThrows(
+        InvalidResourceStateException.class,
+        () -> cqlLibraryController.updateCqlLibrary(pathId, updatingLibrary, principal));
+  }
+
+  @Test
   public void testUpdateCqlLibrarySuccessfullyUpdates() {
     final String pathId = "Library1_ID";
     final Instant createdTime = Instant.now().minus(100, ChronoUnit.MINUTES);
@@ -263,6 +285,7 @@ class CqlLibraryControllerTest {
             .cqlLibraryName("Library1")
             .model(ModelType.QI_CORE.getValue())
             .cql("library testCql version '1.0.000'")
+            .draft(true)
             .createdAt(createdTime)
             .createdBy("User1")
             .lastModifiedAt(createdTime)
