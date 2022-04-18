@@ -1,10 +1,6 @@
 package gov.cms.madie.cqllibraryservice.services;
 
-import gov.cms.madie.cqllibraryservice.exceptions.BadRequestObjectException;
-import gov.cms.madie.cqllibraryservice.exceptions.InternalServerErrorException;
-import gov.cms.madie.cqllibraryservice.exceptions.PermissionDeniedException;
-import gov.cms.madie.cqllibraryservice.exceptions.ResourceNotDraftableException;
-import gov.cms.madie.cqllibraryservice.exceptions.ResourceNotFoundException;
+import gov.cms.madie.cqllibraryservice.exceptions.*;
 import gov.cms.madie.cqllibraryservice.models.CqlLibrary;
 import gov.cms.madie.cqllibraryservice.models.Version;
 import gov.cms.madie.cqllibraryservice.repositories.CqlLibraryRepository;
@@ -55,6 +51,18 @@ class VersionServiceTest {
     assertThrows(
         PermissionDeniedException.class,
         () -> versionService.createVersion(existingCqlLibrary.getId(), true, "testUser1"));
+  }
+
+  @Test
+  void testCreateVersionThrowsExceptionWhenCqlHasErrors() {
+    CqlLibrary existingCqlLibrary =
+        CqlLibrary.builder().id("testCqlLibraryId").createdBy("testUser").draft(true).cqlErrors(true).build();
+
+    when(cqlLibraryRepository.findById(anyString())).thenReturn(Optional.of(existingCqlLibrary));
+
+    assertThrows(
+        ResourceCannotBeVersionedException.class,
+        () -> versionService.createVersion(existingCqlLibrary.getId(), true, "testUser"));
   }
 
   @Test

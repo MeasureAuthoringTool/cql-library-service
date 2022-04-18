@@ -45,11 +45,11 @@ public class VersionService {
       throw new BadRequestObjectException("CQL Library", id, username);
     }
 
-    if(cqlLibrary.isCqlErrors()){
+    if (cqlLibrary.isCqlErrors()) {
       log.error(
-              "User [{}] cannot create a version for CQL Library with id [{}] as the Cql has errors in it",
-              username,
-              cqlLibrary.getId());
+          "User [{}] cannot create a version for CQL Library with id [{}] as the Cql has errors in it",
+          username,
+          cqlLibrary.getId());
       throw new ResourceCannotBeVersionedException("CQL Library", cqlLibrary.getId(), username);
     }
 
