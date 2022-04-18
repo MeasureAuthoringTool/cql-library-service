@@ -5,6 +5,7 @@ import gov.cms.madie.cqllibraryservice.exceptions.InternalServerErrorException;
 import gov.cms.madie.cqllibraryservice.exceptions.PermissionDeniedException;
 import gov.cms.madie.cqllibraryservice.exceptions.ResourceNotDraftableException;
 import gov.cms.madie.cqllibraryservice.exceptions.ResourceNotFoundException;
+import gov.cms.madie.cqllibraryservice.exceptions.ResourceCannotBeVersionedException;
 import gov.cms.madie.cqllibraryservice.models.CqlLibrary;
 import gov.cms.madie.cqllibraryservice.models.Version;
 import gov.cms.madie.cqllibraryservice.repositories.CqlLibraryRepository;
@@ -42,6 +43,14 @@ public class VersionService {
           username,
           cqlLibrary.getId());
       throw new BadRequestObjectException("CQL Library", id, username);
+    }
+
+    if(cqlLibrary.isCqlErrors()){
+      log.error(
+              "User [{}] cannot create a version for CQL Library with id [{}] as the Cql has errors in it",
+              username,
+              cqlLibrary.getId());
+      throw new ResourceCannotBeVersionedException("CQL Library", cqlLibrary.getId(), username);
     }
 
     cqlLibrary.setDraft(false);

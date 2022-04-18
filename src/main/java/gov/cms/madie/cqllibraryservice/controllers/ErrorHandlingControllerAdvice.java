@@ -7,6 +7,7 @@ import gov.cms.madie.cqllibraryservice.exceptions.InvalidIdException;
 import gov.cms.madie.cqllibraryservice.exceptions.ResourceNotDraftableException;
 import gov.cms.madie.cqllibraryservice.exceptions.PermissionDeniedException;
 import gov.cms.madie.cqllibraryservice.exceptions.ResourceNotFoundException;
+import gov.cms.madie.cqllibraryservice.exceptions.ResourceCannotBeVersionedException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.web.error.ErrorAttributeOptions;
@@ -113,6 +114,13 @@ public class ErrorHandlingControllerAdvice {
   @ResponseBody
   Map<String, Object> onPermissionDeniedException(WebRequest request) {
     return getErrorAttributes(request, HttpStatus.FORBIDDEN);
+  }
+
+  @ExceptionHandler(ResourceCannotBeVersionedException.class)
+  @ResponseStatus(HttpStatus.BAD_REQUEST)
+  @ResponseBody
+  Map<String, Object> ResourceCannotBeVersionedException(WebRequest request) {
+    return getErrorAttributes(request, HttpStatus.BAD_REQUEST);
   }
 
   @ExceptionHandler(InternalServerErrorException.class)

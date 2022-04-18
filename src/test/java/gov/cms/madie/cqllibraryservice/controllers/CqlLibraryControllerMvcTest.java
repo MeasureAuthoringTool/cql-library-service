@@ -628,7 +628,8 @@ public class CqlLibraryControllerMvcTest {
                 .contentType(MediaType.APPLICATION_JSON_VALUE))
         .andExpect(status().isConflict())
         .andExpect(content().contentType(MediaType.APPLICATION_JSON_VALUE));
-    verify(versionService, times(1)).createDraft(eq("Library1_ID"), eq("Library1"), eq(TEST_USER_ID));
+    verify(versionService, times(1))
+        .createDraft(eq("Library1_ID"), eq("Library1"), eq(TEST_USER_ID));
   }
 
   @Test
@@ -662,7 +663,8 @@ public class CqlLibraryControllerMvcTest {
                 .contentType(MediaType.APPLICATION_JSON_VALUE))
         .andExpect(status().isNotFound())
         .andExpect(content().contentType(MediaType.APPLICATION_JSON_VALUE));
-    verify(versionService, times(1)).createDraft(eq("Library1_ID"), eq("Library1"), eq(TEST_USER_ID));
+    verify(versionService, times(1))
+        .createDraft(eq("Library1_ID"), eq("Library1"), eq(TEST_USER_ID));
   }
 
   @Test
@@ -698,7 +700,8 @@ public class CqlLibraryControllerMvcTest {
         .andExpect(jsonPath("$.cqlLibraryName").value("Library1"))
         .andExpect(jsonPath("$.draft").value(true))
         .andExpect(jsonPath("$.version").value("1.2.000"));
-    verify(versionService, times(1)).createDraft(eq("Library1_ID"), eq("Library1"), eq(TEST_USER_ID));
+    verify(versionService, times(1))
+        .createDraft(eq("Library1_ID"), eq("Library1"), eq(TEST_USER_ID));
   }
 
   @Test
