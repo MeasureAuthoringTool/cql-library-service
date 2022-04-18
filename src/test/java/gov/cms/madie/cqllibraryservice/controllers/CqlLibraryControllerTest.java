@@ -2,6 +2,7 @@ package gov.cms.madie.cqllibraryservice.controllers;
 
 import gov.cms.madie.cqllibraryservice.exceptions.DuplicateKeyException;
 import gov.cms.madie.cqllibraryservice.exceptions.InvalidIdException;
+import gov.cms.madie.cqllibraryservice.exceptions.InvalidResourceStateException;
 import gov.cms.madie.cqllibraryservice.exceptions.PermissionDeniedException;
 import gov.cms.madie.cqllibraryservice.exceptions.ResourceNotDraftableException;
 import gov.cms.madie.cqllibraryservice.exceptions.ResourceNotFoundException;
@@ -9,6 +10,7 @@ import gov.cms.madie.cqllibraryservice.models.CqlLibrary;
 import gov.cms.madie.cqllibraryservice.models.ModelType;
 import gov.cms.madie.cqllibraryservice.models.Version;
 import gov.cms.madie.cqllibraryservice.repositories.CqlLibraryRepository;
+import gov.cms.madie.cqllibraryservice.services.CqlLibraryService;
 import gov.cms.madie.cqllibraryservice.services.VersionService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -37,6 +39,7 @@ import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -49,6 +52,8 @@ class CqlLibraryControllerTest {
   @Mock CqlLibraryRepository cqlLibraryRepository;
 
   @Mock VersionService versionService;
+
+  @Mock CqlLibraryService cqlLibraryService;
 
   @InjectMocks CqlLibraryController cqlLibraryController;
 
@@ -241,15 +246,40 @@ class CqlLibraryControllerTest {
             .id("Library1_ID")
             .cqlLibraryName("Library1")
             .model(ModelType.QI_CORE.getValue())
+            .draft(true)
             .build();
     final CqlLibrary updatingLibrary =
         existingLibrary.toBuilder().id("Library1_ID").cqlLibraryName("NewName").build();
 
     when(cqlLibraryRepository.findById(anyString())).thenReturn(Optional.of(existingLibrary));
-    when(cqlLibraryRepository.existsByCqlLibraryName(anyString())).thenReturn(true);
+    when(cqlLibraryService.isCqlLibraryNameChanged(any(CqlLibrary.class), any(CqlLibrary.class)))
+        .thenReturn(true);
+    doThrow(new DuplicateKeyException("cqlLibraryName", "Library name must be unique."))
+        .when(cqlLibraryService)
+        .checkDuplicateCqlLibraryName(anyString());
 
     assertThrows(
         DuplicateKeyException.class,
+        () -> cqlLibraryController.updateCqlLibrary(pathId, updatingLibrary, principal));
+  }
+
+  @Test
+  public void testUpdateCqlLibraryThrowsExceptionForNonDraftUpdate() {
+    final String pathId = "Library1_ID";
+    final CqlLibrary existingLibrary =
+        CqlLibrary.builder()
+            .id("Library1_ID")
+            .cqlLibraryName("Library1")
+            .model(ModelType.QI_CORE.getValue())
+            .draft(false)
+            .build();
+    final CqlLibrary updatingLibrary =
+        existingLibrary.toBuilder().id("Library1_ID").cqlLibraryName("NewName").build();
+
+    when(cqlLibraryRepository.findById(anyString())).thenReturn(Optional.of(existingLibrary));
+
+    assertThrows(
+        InvalidResourceStateException.class,
         () -> cqlLibraryController.updateCqlLibrary(pathId, updatingLibrary, principal));
   }
 
@@ -263,6 +293,7 @@ class CqlLibraryControllerTest {
             .cqlLibraryName("Library1")
             .model(ModelType.QI_CORE.getValue())
             .cql("library testCql version '1.0.000'")
+            .draft(true)
             .createdAt(createdTime)
             .createdBy("User1")
             .lastModifiedAt(createdTime)
@@ -277,7 +308,8 @@ class CqlLibraryControllerTest {
             .build();
 
     when(cqlLibraryRepository.findById(anyString())).thenReturn(Optional.of(existingLibrary));
-    when(cqlLibraryRepository.existsByCqlLibraryName(anyString())).thenReturn(false);
+    when(cqlLibraryService.isCqlLibraryNameChanged(any(CqlLibrary.class), any(CqlLibrary.class)))
+        .thenReturn(false);
     when(principal.getName()).thenReturn("User2");
 
     when(cqlLibraryRepository.save(any(CqlLibrary.class))).thenReturn(updatingLibrary);

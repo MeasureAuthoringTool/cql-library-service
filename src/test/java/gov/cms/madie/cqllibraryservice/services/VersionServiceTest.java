@@ -58,7 +58,12 @@ class VersionServiceTest {
   @Test
   void testCreateVersionThrowsExceptionWhenCqlHasErrors() {
     CqlLibrary existingCqlLibrary =
-        CqlLibrary.builder().id("testCqlLibraryId").createdBy("testUser").draft(true).cqlErrors(true).build();
+        CqlLibrary.builder()
+            .id("testCqlLibraryId")
+            .createdBy("testUser")
+            .draft(true)
+            .cqlErrors(true)
+            .build();
 
     when(cqlLibraryRepository.findById(anyString())).thenReturn(Optional.of(existingCqlLibrary));
 
