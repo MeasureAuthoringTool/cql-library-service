@@ -21,6 +21,7 @@ import java.util.Objects;
 @Service
 public class VersionService {
 
+  private final CqlLibraryService cqlLibraryService;
   private final CqlLibraryRepository cqlLibraryRepository;
 
   public CqlLibrary createVersion(String id, boolean isMajor, String username) {
@@ -72,6 +73,10 @@ public class VersionService {
         cqlLibraryRepository
             .findById(id)
             .orElseThrow(() -> new ResourceNotFoundException("CQL Library", id));
+
+    if (!Objects.equals(cqlLibraryName, cqlLibrary.getCqlLibraryName())) {
+      cqlLibraryService.checkDuplicateCqlLibraryName(cqlLibraryName);
+    }
 
     if (!Objects.equals(cqlLibrary.getCreatedBy(), username)) {
       log.info(

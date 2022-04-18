@@ -28,6 +28,8 @@ class VersionServiceTest {
 
   @Mock CqlLibraryRepository cqlLibraryRepository;
 
+  @Mock CqlLibraryService cqlLibraryService;
+
   @InjectMocks VersionService versionService;
 
   @Captor private ArgumentCaptor<CqlLibrary> cqlLibraryArgumentCaptor;
@@ -157,6 +159,7 @@ class VersionServiceTest {
         CqlLibrary.builder().id("testCqlLibraryId").createdBy("testUser").build();
 
     when(cqlLibraryRepository.findById(anyString())).thenReturn(Optional.of(existingCqlLibrary));
+    doNothing().when(cqlLibraryService).checkDuplicateCqlLibraryName(anyString());
 
     assertThrows(
         PermissionDeniedException.class,
@@ -177,6 +180,7 @@ class VersionServiceTest {
     CqlLibrary clonedCqlLibrary = existingCqlLibrary.toBuilder().build();
     when(cqlLibraryRepository.findById(anyString())).thenReturn(Optional.of(existingCqlLibrary));
     when(cqlLibraryRepository.save(any(CqlLibrary.class))).thenReturn(clonedCqlLibrary);
+    doNothing().when(cqlLibraryService).checkDuplicateCqlLibraryName(anyString());
     when(cqlLibraryRepository.existsByGroupIdAndDraft(anyString(), anyBoolean())).thenReturn(false);
 
     versionService.createDraft("testCqlLibraryId", "testNewCqlLibraryName", "testUser");
@@ -202,6 +206,7 @@ class VersionServiceTest {
             .build();
 
     when(cqlLibraryRepository.findById(anyString())).thenReturn(Optional.of(existingCqlLibrary));
+    doNothing().when(cqlLibraryService).checkDuplicateCqlLibraryName(anyString());
     when(cqlLibraryRepository.existsByGroupIdAndDraft(anyString(), anyBoolean())).thenReturn(true);
 
     assertThrows(

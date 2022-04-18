@@ -1,13 +1,13 @@
 package gov.cms.madie.cqllibraryservice.controllers;
 
-import gov.cms.madie.cqllibraryservice.exceptions.DuplicateKeyException;
 import gov.cms.madie.cqllibraryservice.exceptions.InvalidIdException;
+import gov.cms.madie.cqllibraryservice.exceptions.InvalidResourceStateException;
 import gov.cms.madie.cqllibraryservice.exceptions.ResourceNotFoundException;
 import gov.cms.madie.cqllibraryservice.models.CqlLibrary;
 import gov.cms.madie.cqllibraryservice.models.Version;
 import gov.cms.madie.cqllibraryservice.repositories.CqlLibraryRepository;
+import gov.cms.madie.cqllibraryservice.services.CqlLibraryService;
 import gov.cms.madie.cqllibraryservice.services.VersionService;
-import io.micrometer.core.instrument.util.StringUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -18,7 +18,6 @@ import org.springframework.web.bind.annotation.*;
 import java.security.Principal;
 import java.time.Instant;
 import java.util.List;
-import java.util.Objects;
 import java.util.UUID;
 
 @Slf4j
@@ -29,6 +28,7 @@ public class CqlLibraryController {
 
   private final CqlLibraryRepository cqlLibraryRepository;
   private final VersionService versionService;
+  private final CqlLibraryService cqlLibraryService;
 
   @GetMapping
   public ResponseEntity<List<CqlLibrary>> getCqlLibraries(
@@ -58,7 +58,7 @@ public class CqlLibraryController {
     final String username = principal.getName();
     log.info("User [{}] is attempting to create a new cql library", username);
 
-    checkDuplicateCqlLibraryName(cqlLibrary.getCqlLibraryName());
+    cqlLibraryService.checkDuplicateCqlLibraryName(cqlLibrary.getCqlLibraryName());
 
     // Clear ID so that the unique GUID from MongoDB will be applied
     Instant now = Instant.now();
@@ -94,8 +94,11 @@ public class CqlLibraryController {
         .findById(cqlLibrary.getId())
         .map(
             persistedLibrary -> {
-              if (isCqlLibraryNameChanged(cqlLibrary, persistedLibrary)) {
-                checkDuplicateCqlLibraryName(cqlLibrary.getCqlLibraryName());
+              if (!cqlLibrary.isDraft()) {
+                throw new InvalidResourceStateException("CQL Library", id);
+              }
+              if (cqlLibraryService.isCqlLibraryNameChanged(cqlLibrary, persistedLibrary)) {
+                cqlLibraryService.checkDuplicateCqlLibraryName(cqlLibrary.getCqlLibraryName());
               }
               cqlLibrary.setLastModifiedAt(Instant.now());
               cqlLibrary.setLastModifiedBy(username);
@@ -121,16 +124,5 @@ public class CqlLibraryController {
         versionService.createDraft(id, cqlLibrary.getCqlLibraryName(), principal.getName());
     log.info("output: {}", output);
     return ResponseEntity.status(HttpStatus.CREATED).body(output);
-  }
-
-  private void checkDuplicateCqlLibraryName(String cqlLibraryName) {
-    if (StringUtils.isNotEmpty(cqlLibraryName)
-        && cqlLibraryRepository.existsByCqlLibraryName(cqlLibraryName)) {
-      throw new DuplicateKeyException("cqlLibraryName", "Library name must be unique.");
-    }
-  }
-
-  private boolean isCqlLibraryNameChanged(CqlLibrary cqlLibrary, CqlLibrary persistedCqlLibrary) {
-    return !Objects.equals(persistedCqlLibrary.getCqlLibraryName(), cqlLibrary.getCqlLibraryName());
   }
 }

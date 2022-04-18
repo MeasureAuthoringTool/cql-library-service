@@ -4,6 +4,7 @@ import gov.cms.madie.cqllibraryservice.exceptions.BadRequestObjectException;
 import gov.cms.madie.cqllibraryservice.exceptions.DuplicateKeyException;
 import gov.cms.madie.cqllibraryservice.exceptions.InternalServerErrorException;
 import gov.cms.madie.cqllibraryservice.exceptions.InvalidIdException;
+import gov.cms.madie.cqllibraryservice.exceptions.InvalidResourceStateException;
 import gov.cms.madie.cqllibraryservice.exceptions.ResourceNotDraftableException;
 import gov.cms.madie.cqllibraryservice.exceptions.PermissionDeniedException;
 import gov.cms.madie.cqllibraryservice.exceptions.ResourceNotFoundException;
@@ -87,11 +88,10 @@ public class ErrorHandlingControllerAdvice {
     return getErrorAttributes(request, HttpStatus.NOT_FOUND);
   }
 
-  @ExceptionHandler(ResourceNotDraftableException.class)
+  @ExceptionHandler({ResourceNotDraftableException.class, InvalidResourceStateException.class})
   @ResponseStatus(HttpStatus.CONFLICT)
   @ResponseBody
-  Map<String, Object> onResourceNotDraftableException(
-      ResourceNotDraftableException ex, WebRequest request) {
+  Map<String, Object> onResourceNotDraftableException(WebRequest request) {
     return getErrorAttributes(request, HttpStatus.CONFLICT);
   }
 
