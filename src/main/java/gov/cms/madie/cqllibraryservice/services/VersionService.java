@@ -49,7 +49,9 @@ public class VersionService {
     if (cqlLibrary.isCqlErrors()) {
       log.error(
           "User [{}] cannot create a version for CQL Library with id [{}] "
-              + "as the Cql has errors in it", username, cqlLibrary.getId());
+              + "as the Cql has errors in it",
+          username,
+          cqlLibrary.getId());
       throw new ResourceCannotBeVersionedException("CQL Library", cqlLibrary.getId(), username);
     }
 
