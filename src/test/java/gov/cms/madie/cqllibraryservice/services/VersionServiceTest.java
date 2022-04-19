@@ -73,6 +73,24 @@ class VersionServiceTest {
   }
 
   @Test
+  void testCreateVersionThrowsExceptionWhenCqlisEmpty() {
+    CqlLibrary existingCqlLibrary =
+        CqlLibrary.builder()
+            .id("testCqlLibraryId")
+            .createdBy("testUser")
+            .draft(true)
+            .cqlErrors(true)
+            .cql("")
+            .build();
+
+    when(cqlLibraryRepository.findById(anyString())).thenReturn(Optional.of(existingCqlLibrary));
+
+    assertThrows(
+        ResourceCannotBeVersionedException.class,
+        () -> versionService.createVersion(existingCqlLibrary.getId(), true, "testUser"));
+  }
+
+  @Test
   void testCreateVersionThrowsExceptionIfLibraryIsNotDraft() {
     CqlLibrary existingCqlLibrary =
         CqlLibrary.builder().id("testCqlLibraryId").createdBy("testUser").draft(false).build();
@@ -103,6 +121,7 @@ class VersionServiceTest {
             .id("testCqlLibraryId")
             .createdBy("testUser")
             .draft(true)
+            .cql("library testCql version '1.0.000'")
             .groupId("testGroupId")
             .version(Version.parse("1.0.000"))
             .build();
@@ -130,6 +149,7 @@ class VersionServiceTest {
         CqlLibrary.builder()
             .id("testCqlLibraryId")
             .createdBy("testUser")
+            .cql("library testCql version '1.0.000'")
             .draft(true)
             .groupId("testGroupId")
             .version(Version.parse("1.0.000"))

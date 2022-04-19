@@ -52,7 +52,22 @@ public class VersionService {
               + "as the Cql has errors in it",
           username,
           cqlLibrary.getId());
-      throw new ResourceCannotBeVersionedException("CQL Library", cqlLibrary.getId(), username);
+
+      throw new ResourceCannotBeVersionedException(
+          "CQL Library", cqlLibrary.getId(), username, "the Cql has errors in it");
+    }
+
+    if (cqlLibrary.getCql().length() == 0) {
+      log.error(
+          "User [{}] cannot create a version for CQL Library with id [{}] "
+              + "as there is no associated Cql with this library",
+          username,
+          cqlLibrary.getId());
+      throw new ResourceCannotBeVersionedException(
+          "CQL Library",
+          cqlLibrary.getId(),
+          username,
+          "there is no associated Cql with this library");
     }
 
     cqlLibrary.setDraft(false);
