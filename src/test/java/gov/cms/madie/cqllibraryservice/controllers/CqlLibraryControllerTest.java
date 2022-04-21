@@ -387,9 +387,10 @@ class CqlLibraryControllerTest {
             .lastModifiedBy("User1")
             .build();
     when(principal.getName()).thenReturn("test.user");
-    when(versionService.createVersion(anyString(), anyBoolean(), anyString())).thenReturn(version);
+    when(versionService.createVersion(anyString(), anyBoolean(), anyString(), anyString()))
+        .thenReturn(version);
     ResponseEntity<CqlLibrary> output =
-        cqlLibraryController.createVersion("Library1_ID", true, principal);
+        cqlLibraryController.createVersion("Library1_ID", true, principal, "accesstoken");
     assertThat(output, is(notNullValue()));
     assertThat(output.getStatusCode(), is(HttpStatus.OK));
     assertThat(output.getBody(), is(equalTo(version)));
@@ -398,10 +399,10 @@ class CqlLibraryControllerTest {
   @Test
   public void testCreateVersionReturnsError() {
     when(principal.getName()).thenReturn("test.user");
-    when(versionService.createVersion(anyString(), anyBoolean(), anyString()))
+    when(versionService.createVersion(anyString(), anyBoolean(), anyString(), anyString()))
         .thenThrow(new PermissionDeniedException("CQL Library", cqlLibrary.getId(), "test.user"));
     assertThrows(
         PermissionDeniedException.class,
-        () -> cqlLibraryController.createVersion("Library1_ID", true, principal));
+        () -> cqlLibraryController.createVersion("Library1_ID", true, principal, "accesstoken"));
   }
 }

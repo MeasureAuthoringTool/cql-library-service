@@ -1,19 +1,20 @@
 package gov.cms.madie.cqllibraryservice.services;
 
-import gov.cms.madie.cqllibraryservice.exceptions.BadRequestObjectException;
-import gov.cms.madie.cqllibraryservice.exceptions.InternalServerErrorException;
-import gov.cms.madie.cqllibraryservice.exceptions.PermissionDeniedException;
-import gov.cms.madie.cqllibraryservice.exceptions.ResourceNotDraftableException;
-import gov.cms.madie.cqllibraryservice.exceptions.ResourceNotFoundException;
-import gov.cms.madie.cqllibraryservice.exceptions.ResourceCannotBeVersionedException;
+import gov.cms.madie.cqllibraryservice.exceptions.*;
 import gov.cms.madie.cqllibraryservice.models.CqlLibrary;
 import gov.cms.madie.cqllibraryservice.models.Version;
 import gov.cms.madie.cqllibraryservice.repositories.CqlLibraryRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.*;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestTemplate;
+import org.springframework.web.util.UriComponentsBuilder;
 
+import java.net.URI;
 import java.time.Instant;
+import java.util.Collections;
 import java.util.Objects;
 
 @Slf4j
@@ -23,13 +24,51 @@ public class VersionService {
 
   private final CqlLibraryService cqlLibraryService;
   private final CqlLibraryRepository cqlLibraryRepository;
+  private final RestTemplate hapiFhirRestTemplate;
 
-  public CqlLibrary createVersion(String id, boolean isMajor, String username) {
+  @Value("${madie.fhir.service.baseUrl}")
+  private String madieFhirService;
+
+  @Value("${madie.fhir.service.hapi-fhir.libraries.uri}")
+  private String librariesUri;
+
+  public CqlLibrary createVersion(String id, boolean isMajor, String username, String accessToken) {
     CqlLibrary cqlLibrary =
         cqlLibraryRepository
             .findById(id)
             .orElseThrow(() -> new ResourceNotFoundException("CQL Library", id));
 
+    validateCqlLibrary(cqlLibrary, username);
+
+    try {
+      persistHapiFhirCqlLibrary(cqlLibrary, accessToken);
+    } catch (Exception e) {
+      log.error(
+          "User [{}] cannot create a version for CQL Library with id [{}]"
+              + "as there was an issue calling the Hapi Fhir service",
+          username,
+          cqlLibrary.getId(),
+          e);
+      throw new PersistHapiFhirCqlLibraryException("CQL Library", cqlLibrary.getId(), username);
+    }
+
+    cqlLibrary.setDraft(false);
+    cqlLibrary.setLastModifiedAt(Instant.now());
+    cqlLibrary.setLastModifiedBy(username);
+
+    Version next = getNextVersion(cqlLibrary, isMajor);
+    cqlLibrary.setVersion(next);
+    var savedCqlLibrary = cqlLibraryRepository.save(cqlLibrary);
+
+    log.info(
+        "User [{}] successfully versioned cql library with ID [{}]",
+        username,
+        savedCqlLibrary.getId());
+
+    return savedCqlLibrary;
+  }
+
+  private void validateCqlLibrary(CqlLibrary cqlLibrary, String username) {
     if (!Objects.equals(cqlLibrary.getCreatedBy(), username)) {
       log.error(
           "User [{}] doest not have permission to create a version of CQL Library with id [{}]",
@@ -43,7 +82,7 @@ public class VersionService {
           "User [{}] attempted to version CQL Library with id [{}] which is not in a draft state",
           username,
           cqlLibrary.getId());
-      throw new BadRequestObjectException("CQL Library", id, username);
+      throw new BadRequestObjectException("CQL Library", cqlLibrary.getId(), username);
     }
 
     if (cqlLibrary.isCqlErrors()) {
@@ -69,20 +108,6 @@ public class VersionService {
           username,
           "there is no associated Cql with this library");
     }
-
-    cqlLibrary.setDraft(false);
-    cqlLibrary.setLastModifiedAt(Instant.now());
-    cqlLibrary.setLastModifiedBy(username);
-
-    Version next = getNextVersion(cqlLibrary, isMajor);
-    cqlLibrary.setVersion(next);
-    var savedCqlLibrary = cqlLibraryRepository.save(cqlLibrary);
-
-    log.info(
-        "User [{}] successfully versioned cql library with ID [{}]",
-        username,
-        savedCqlLibrary.getId());
-    return savedCqlLibrary;
   }
 
   public CqlLibrary createDraft(String id, String cqlLibraryName, String username) {
@@ -162,5 +187,26 @@ public class VersionService {
       return true;
     }
     return !cqlLibraryRepository.existsByGroupIdAndDraft(cqlLibrary.getGroupId(), true);
+  }
+
+  private ResponseEntity<String> persistHapiFhirCqlLibrary(
+      CqlLibrary cqlLibrary, String accessToken) {
+    URI uri = buildMadieFhirServiceUri();
+    HttpHeaders headers = new HttpHeaders();
+    headers.add("Authorization", accessToken);
+    headers.setContentType(MediaType.APPLICATION_JSON);
+    headers.setAccept(Collections.singletonList(MediaType.APPLICATION_JSON));
+
+    HttpEntity<CqlLibrary> request = new HttpEntity<>(cqlLibrary,headers);
+
+    return hapiFhirRestTemplate.exchange(uri, HttpMethod.POST, request, String.class);
+  }
+
+  private URI buildMadieFhirServiceUri() {
+
+    return UriComponentsBuilder.fromHttpUrl(madieFhirService + librariesUri + "/create")
+        .build()
+        .encode()
+        .toUri();
   }
 }

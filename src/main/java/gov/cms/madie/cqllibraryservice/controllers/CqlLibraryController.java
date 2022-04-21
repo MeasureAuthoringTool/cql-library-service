@@ -111,8 +111,12 @@ public class CqlLibraryController {
 
   @PutMapping("/version/{id}")
   public ResponseEntity<CqlLibrary> createVersion(
-      @PathVariable("id") String id, @RequestParam boolean isMajor, Principal principal) {
-    return ResponseEntity.ok(versionService.createVersion(id, isMajor, principal.getName()));
+      @PathVariable("id") String id,
+      @RequestParam boolean isMajor,
+      Principal principal,
+      @RequestHeader("Authorization") String accessToken) {
+    return ResponseEntity.ok(
+        versionService.createVersion(id, isMajor, principal.getName(), accessToken));
   }
 
   @PostMapping("/draft/{id}")

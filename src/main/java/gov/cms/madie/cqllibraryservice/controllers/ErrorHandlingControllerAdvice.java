@@ -115,7 +115,7 @@ public class ErrorHandlingControllerAdvice {
     return getErrorAttributes(request, HttpStatus.BAD_REQUEST);
   }
 
-  @ExceptionHandler(InternalServerErrorException.class)
+  @ExceptionHandler({InternalServerErrorException.class, PersistHapiFhirCqlLibraryException.class})
   @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
   @ResponseBody
   Map<String, Object> onInternalServerErrorException(WebRequest request) {

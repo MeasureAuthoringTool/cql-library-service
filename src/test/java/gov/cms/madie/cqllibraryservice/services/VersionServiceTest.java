@@ -8,6 +8,8 @@ import gov.cms.madie.cqllibraryservice.repositories.CqlLibraryRepository;
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
+
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -15,7 +17,13 @@ import org.mockito.Captor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.ResponseEntity;
+import org.springframework.test.util.ReflectionTestUtils;
+import org.springframework.web.client.RestTemplate;
 
+import java.net.URI;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -30,9 +38,17 @@ class VersionServiceTest {
 
   @Mock CqlLibraryService cqlLibraryService;
 
+  @Mock RestTemplate restTemplate;
+
   @InjectMocks VersionService versionService;
 
   @Captor private ArgumentCaptor<CqlLibrary> cqlLibraryArgumentCaptor;
+
+  @BeforeEach
+  public void setup() {
+    ReflectionTestUtils.setField(versionService, "madieFhirService", "http://test.hapiFhir");
+    ReflectionTestUtils.setField(versionService, "librariesUri", "/hapiFhir/libraries");
+  }
 
   @Test
   void testCreateVersionThrowsExceptionForResourceNotFound() {
@@ -40,7 +56,7 @@ class VersionServiceTest {
 
     assertThrows(
         ResourceNotFoundException.class,
-        () -> versionService.createVersion("testCqlLibraryId", true, "testUser"));
+        () -> versionService.createVersion("testCqlLibraryId", true, "testUser", "accesstoken"));
   }
 
   @Test
@@ -52,7 +68,9 @@ class VersionServiceTest {
 
     assertThrows(
         PermissionDeniedException.class,
-        () -> versionService.createVersion(existingCqlLibrary.getId(), true, "testUser1"));
+        () ->
+            versionService.createVersion(
+                existingCqlLibrary.getId(), true, "testUser1", "accesstoken"));
   }
 
   @Test
@@ -69,7 +87,9 @@ class VersionServiceTest {
 
     assertThrows(
         ResourceCannotBeVersionedException.class,
-        () -> versionService.createVersion(existingCqlLibrary.getId(), true, "testUser"));
+        () ->
+            versionService.createVersion(
+                existingCqlLibrary.getId(), true, "testUser", "accesstoken"));
   }
 
   @Test
@@ -87,7 +107,9 @@ class VersionServiceTest {
 
     assertThrows(
         ResourceCannotBeVersionedException.class,
-        () -> versionService.createVersion(existingCqlLibrary.getId(), true, "testUser"));
+        () ->
+            versionService.createVersion(
+                existingCqlLibrary.getId(), true, "testUser", "accesstoken"));
   }
 
   @Test
@@ -99,7 +121,9 @@ class VersionServiceTest {
 
     assertThrows(
         BadRequestObjectException.class,
-        () -> versionService.createVersion(existingCqlLibrary.getId(), true, "testUser"));
+        () ->
+            versionService.createVersion(
+                existingCqlLibrary.getId(), true, "testUser", "accesstoken"));
   }
 
   @Test
@@ -111,7 +135,9 @@ class VersionServiceTest {
 
     assertThrows(
         RuntimeException.class,
-        () -> versionService.createVersion(existingCqlLibrary.getId(), true, "testUser"));
+        () ->
+            versionService.createVersion(
+                existingCqlLibrary.getId(), true, "testUser", "accesstoken"));
   }
 
   @Test
@@ -127,13 +153,17 @@ class VersionServiceTest {
             .build();
 
     CqlLibrary updatedCqlLibrary = existingCqlLibrary.toBuilder().build();
+
     when(cqlLibraryRepository.findById(anyString())).thenReturn(Optional.of(existingCqlLibrary));
     when(cqlLibraryRepository.findMaxVersionByGroupId(anyString()))
         .thenReturn(Optional.of(Version.parse("1.0.0")));
     //    when(cqlLibraryRepository.findAll()).thenReturn(List.of(existingCqlLibrary));
     when(cqlLibraryRepository.save(any(CqlLibrary.class))).thenReturn(updatedCqlLibrary);
+    when(restTemplate.exchange(
+            any(URI.class), any(HttpMethod.class), any(HttpEntity.class), any(Class.class)))
+        .thenReturn(ResponseEntity.ok("http://Library"));
+    versionService.createVersion("testCqlLibraryId", true, "testUser", "accesstoken");
 
-    versionService.createVersion("testCqlLibraryId", true, "testUser");
     verify(cqlLibraryRepository, times(1)).save(cqlLibraryArgumentCaptor.capture());
     CqlLibrary savedValue = cqlLibraryArgumentCaptor.getValue();
 
@@ -156,12 +186,15 @@ class VersionServiceTest {
             .build();
 
     CqlLibrary updatedCqlLibrary = existingCqlLibrary.toBuilder().build();
+
     when(cqlLibraryRepository.findById(anyString())).thenReturn(Optional.of(existingCqlLibrary));
     when(cqlLibraryRepository.findMaxMinorVersionByGroupIdAndVersionMajor(anyString(), anyInt()))
         .thenReturn(Optional.of(Version.parse("1.0.0")));
     when(cqlLibraryRepository.save(any(CqlLibrary.class))).thenReturn(updatedCqlLibrary);
-
-    versionService.createVersion("testCqlLibraryId", false, "testUser");
+    when(restTemplate.exchange(
+            any(URI.class), any(HttpMethod.class), any(HttpEntity.class), any(Class.class)))
+        .thenReturn(ResponseEntity.ok("http://Library"));
+    versionService.createVersion("testCqlLibraryId", false, "testUser", "accesstoken");
     verify(cqlLibraryRepository, times(1)).save(cqlLibraryArgumentCaptor.capture());
     CqlLibrary savedValue = cqlLibraryArgumentCaptor.getValue();
 
