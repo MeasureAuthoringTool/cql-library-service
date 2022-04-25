@@ -111,7 +111,7 @@ public class ErrorHandlingControllerAdvice {
   @ExceptionHandler(ResourceCannotBeVersionedException.class)
   @ResponseStatus(HttpStatus.BAD_REQUEST)
   @ResponseBody
-  Map<String, Object> ResourceCannotBeVersionedException(WebRequest request) {
+  Map<String, Object> onResourceCannotBeVersionedException(WebRequest request) {
     return getErrorAttributes(request, HttpStatus.BAD_REQUEST);
   }
 
