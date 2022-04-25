@@ -197,7 +197,7 @@ public class VersionService {
     headers.setContentType(MediaType.APPLICATION_JSON);
     headers.setAccept(Collections.singletonList(MediaType.APPLICATION_JSON));
 
-    HttpEntity<CqlLibrary> request = new HttpEntity<>(cqlLibrary,headers);
+    HttpEntity<CqlLibrary> request = new HttpEntity<>(cqlLibrary, headers);
 
     return hapiFhirRestTemplate.exchange(uri, HttpMethod.POST, request, String.class);
   }
