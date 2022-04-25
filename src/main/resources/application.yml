@@ -12,7 +12,12 @@ server:
 
 madie:
   allowedApi: http://localhost:9000
-
+  fhir:
+    service:
+      baseUrl: ${FHIR_SERVICES_URL:http://localhost:8085/api}
+      hapi-fhir:
+        libraries:
+          uri: /hapiFhir/libraries
 management:
   endpoints:
     enabled-by-default: false
@@ -24,8 +29,6 @@ okta:
   oauth2:
     issuer: ${OKTA_ISSUER:https://dev-18092578.okta.com/oauth2/default}
     audience: ${OKTA_AUDIENCE:api://default}
-
-
 
 hapi-fhir:
   url: ${HAPI_FHIR_URL:http://localhost:8087/fhir}
