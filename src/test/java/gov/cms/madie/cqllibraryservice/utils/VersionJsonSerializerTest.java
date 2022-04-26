@@ -32,7 +32,7 @@ class VersionJsonSerializerTest {
         output,
         is(
             equalTo(
-                "{\"id\":null,\"cqlLibraryName\":null,\"model\":null,\"version\":\"1.2.000\",\"draft\":false,\"groupId\":null,\"cql\":null,\"createdAt\":null,\"createdBy\":null,\"lastModifiedAt\":null,\"lastModifiedBy\":null,\"publisher\":null,\"description\":null,\"experimental\":false}")));
+                "{\"id\":null,\"cqlLibraryName\":null,\"model\":null,\"version\":\"1.2.000\",\"draft\":false,\"groupId\":null,\"cqlErrors\":false,\"cql\":null,\"createdAt\":null,\"createdBy\":null,\"lastModifiedAt\":null,\"lastModifiedBy\":null,\"publisher\":null,\"description\":null,\"experimental\":false}")));
   }
 
   @Test

@@ -1,13 +1,6 @@
 package gov.cms.madie.cqllibraryservice.controllers;
 
-import gov.cms.madie.cqllibraryservice.exceptions.BadRequestObjectException;
-import gov.cms.madie.cqllibraryservice.exceptions.DuplicateKeyException;
-import gov.cms.madie.cqllibraryservice.exceptions.InternalServerErrorException;
-import gov.cms.madie.cqllibraryservice.exceptions.InvalidIdException;
-import gov.cms.madie.cqllibraryservice.exceptions.InvalidResourceStateException;
-import gov.cms.madie.cqllibraryservice.exceptions.ResourceNotDraftableException;
-import gov.cms.madie.cqllibraryservice.exceptions.PermissionDeniedException;
-import gov.cms.madie.cqllibraryservice.exceptions.ResourceNotFoundException;
+import gov.cms.madie.cqllibraryservice.exceptions.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.web.error.ErrorAttributeOptions;
@@ -115,7 +108,14 @@ public class ErrorHandlingControllerAdvice {
     return getErrorAttributes(request, HttpStatus.FORBIDDEN);
   }
 
-  @ExceptionHandler(InternalServerErrorException.class)
+  @ExceptionHandler(ResourceCannotBeVersionedException.class)
+  @ResponseStatus(HttpStatus.BAD_REQUEST)
+  @ResponseBody
+  Map<String, Object> onResourceCannotBeVersionedException(WebRequest request) {
+    return getErrorAttributes(request, HttpStatus.BAD_REQUEST);
+  }
+
+  @ExceptionHandler({InternalServerErrorException.class, PersistHapiFhirCqlLibraryException.class})
   @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
   @ResponseBody
   Map<String, Object> onInternalServerErrorException(WebRequest request) {

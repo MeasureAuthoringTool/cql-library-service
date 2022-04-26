@@ -794,48 +794,54 @@ public class CqlLibraryControllerMvcTest {
 
   @Test
   public void testCreateVersionReturnsNotFound() throws Exception {
-    when(versionService.createVersion(anyString(), anyBoolean(), anyString()))
+    when(versionService.createVersion(anyString(), anyBoolean(), anyString(), anyString()))
         .thenThrow(new ResourceNotFoundException("CQL Library", "Library1_ID"));
     mockMvc
         .perform(
             put("/cql-libraries/version/Library1_ID?isMajor=true")
                 .with(user(TEST_USER_ID))
                 .with(csrf())
+                .header("Authorization", "test-okta")
                 .contentType(MediaType.APPLICATION_JSON_VALUE))
         .andExpect(status().isNotFound())
         .andExpect(content().contentType(MediaType.APPLICATION_JSON_VALUE));
-    verify(versionService, times(1)).createVersion(eq("Library1_ID"), eq(true), eq(TEST_USER_ID));
+    verify(versionService, times(1))
+        .createVersion(eq("Library1_ID"), eq(true), eq(TEST_USER_ID), eq("test-okta"));
   }
 
   @Test
   public void testCreateVersionReturnsForbiddenForPermissionDenied() throws Exception {
-    when(versionService.createVersion(anyString(), anyBoolean(), anyString()))
+    when(versionService.createVersion(anyString(), anyBoolean(), anyString(), anyString()))
         .thenThrow(new PermissionDeniedException("CQL Library", "Library1_ID", "test.user"));
     mockMvc
         .perform(
             put("/cql-libraries/version/Library1_ID?isMajor=false")
                 .with(user(TEST_USER_ID))
                 .with(csrf())
+                .header("Authorization", "test-okta")
                 .contentType(MediaType.APPLICATION_JSON_VALUE))
         .andExpect(status().isForbidden())
         .andExpect(content().contentType(MediaType.APPLICATION_JSON_VALUE));
-    verify(versionService, times(1)).createVersion(eq("Library1_ID"), eq(false), eq(TEST_USER_ID));
+    verify(versionService, times(1))
+        .createVersion(eq("Library1_ID"), eq(false), eq(TEST_USER_ID), eq("test-okta"));
   }
 
   @Test
   public void testCreateVersionReturnsInternalServerError() throws Exception {
-    when(versionService.createVersion(anyString(), anyBoolean(), anyString()))
+    when(versionService.createVersion(anyString(), anyBoolean(), anyString(), anyString()))
         .thenThrow(new InternalServerErrorException("Unable to update version number"));
     mockMvc
         .perform(
             put("/cql-libraries/version/Library1_ID?isMajor=false")
                 .with(user(TEST_USER_ID))
                 .with(csrf())
+                .header("Authorization", "test-okta")
                 .contentType(MediaType.APPLICATION_JSON_VALUE))
         .andExpect(status().isInternalServerError())
         .andExpect(content().contentType(MediaType.APPLICATION_JSON_VALUE))
         .andExpect(jsonPath("$.message").value("Unable to update version number"));
-    verify(versionService, times(1)).createVersion(eq("Library1_ID"), eq(false), eq(TEST_USER_ID));
+    verify(versionService, times(1))
+        .createVersion(eq("Library1_ID"), eq(false), eq(TEST_USER_ID), eq("test-okta"));
   }
 
   @Test
@@ -855,13 +861,14 @@ public class CqlLibraryControllerMvcTest {
             .lastModifiedBy("User1")
             .build();
 
-    when(versionService.createVersion(anyString(), anyBoolean(), anyString()))
+    when(versionService.createVersion(anyString(), anyBoolean(), anyString(), anyString()))
         .thenReturn(versionLibrary);
     mockMvc
         .perform(
             put("/cql-libraries/version/Library1_ID?isMajor=true")
                 .with(user(TEST_USER_ID))
                 .with(csrf())
+                .header("Authorization", "test-okta")
                 .contentType(MediaType.APPLICATION_JSON_VALUE))
         .andExpect(status().isOk())
         .andExpect(content().contentType(MediaType.APPLICATION_JSON_VALUE))
@@ -869,6 +876,7 @@ public class CqlLibraryControllerMvcTest {
         .andExpect(jsonPath("$.cqlLibraryName").value("Library1"))
         .andExpect(jsonPath("$.draft").value(false))
         .andExpect(jsonPath("$.version").value("2.0.000"));
-    verify(versionService, times(1)).createVersion(eq("Library1_ID"), eq(true), eq(TEST_USER_ID));
+    verify(versionService, times(1))
+        .createVersion(eq("Library1_ID"), eq(true), eq(TEST_USER_ID), eq("test-okta"));
   }
 }

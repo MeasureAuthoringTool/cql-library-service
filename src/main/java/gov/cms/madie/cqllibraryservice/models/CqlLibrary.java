@@ -56,6 +56,7 @@ public class CqlLibrary {
 
   private boolean draft;
   private String groupId;
+  private boolean cqlErrors;
   private String cql;
   private Instant createdAt;
   private String createdBy;
