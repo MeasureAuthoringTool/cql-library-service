@@ -4,6 +4,7 @@ import gov.cms.madie.cqllibraryservice.exceptions.InvalidIdException;
 import gov.cms.madie.cqllibraryservice.exceptions.InvalidResourceStateException;
 import gov.cms.madie.cqllibraryservice.exceptions.ResourceNotFoundException;
 import gov.cms.madie.cqllibraryservice.models.CqlLibrary;
+import gov.cms.madie.cqllibraryservice.models.CqlLibraryDraft;
 import gov.cms.madie.cqllibraryservice.models.Version;
 import gov.cms.madie.cqllibraryservice.repositories.CqlLibraryRepository;
 import gov.cms.madie.cqllibraryservice.services.CqlLibraryService;
@@ -94,12 +95,15 @@ public class CqlLibraryController {
         .findById(cqlLibrary.getId())
         .map(
             persistedLibrary -> {
-              if (!cqlLibrary.isDraft()) {
+              if (!persistedLibrary.isDraft()) {
                 throw new InvalidResourceStateException("CQL Library", id);
               }
               if (cqlLibraryService.isCqlLibraryNameChanged(cqlLibrary, persistedLibrary)) {
                 cqlLibraryService.checkDuplicateCqlLibraryName(cqlLibrary.getCqlLibraryName());
               }
+              cqlLibrary.setGroupId(persistedLibrary.getGroupId());
+              cqlLibrary.setDraft(persistedLibrary.isDraft());
+              cqlLibrary.setVersion(persistedLibrary.getVersion());
               cqlLibrary.setLastModifiedAt(Instant.now());
               cqlLibrary.setLastModifiedBy(username);
               cqlLibrary.setCreatedAt(persistedLibrary.getCreatedAt());
@@ -122,7 +126,7 @@ public class CqlLibraryController {
   @PostMapping("/draft/{id}")
   public ResponseEntity<CqlLibrary> createDraft(
       @PathVariable("id") String id,
-      @RequestBody final CqlLibrary cqlLibrary,
+      @Validated(CqlLibrary.ValidationSequence.class) @RequestBody final CqlLibraryDraft cqlLibrary,
       Principal principal) {
     var output =
         versionService.createDraft(id, cqlLibrary.getCqlLibraryName(), principal.getName());

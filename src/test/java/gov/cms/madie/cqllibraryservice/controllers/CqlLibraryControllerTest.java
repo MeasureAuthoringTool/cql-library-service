@@ -7,6 +7,7 @@ import gov.cms.madie.cqllibraryservice.exceptions.PermissionDeniedException;
 import gov.cms.madie.cqllibraryservice.exceptions.ResourceNotDraftableException;
 import gov.cms.madie.cqllibraryservice.exceptions.ResourceNotFoundException;
 import gov.cms.madie.cqllibraryservice.models.CqlLibrary;
+import gov.cms.madie.cqllibraryservice.models.CqlLibraryDraft;
 import gov.cms.madie.cqllibraryservice.models.ModelType;
 import gov.cms.madie.cqllibraryservice.models.Version;
 import gov.cms.madie.cqllibraryservice.repositories.CqlLibraryRepository;
@@ -274,7 +275,7 @@ class CqlLibraryControllerTest {
             .draft(false)
             .build();
     final CqlLibrary updatingLibrary =
-        existingLibrary.toBuilder().id("Library1_ID").cqlLibraryName("NewName").build();
+        existingLibrary.toBuilder().id("Library1_ID").cqlLibraryName("NewName").draft(true).build();
 
     when(cqlLibraryRepository.findById(anyString())).thenReturn(Optional.of(existingLibrary));
 
@@ -305,6 +306,7 @@ class CqlLibraryControllerTest {
             .id("Library1_ID")
             .cqlLibraryName("NewName")
             .cql("library testCql version '2.1.000'")
+            .draft(false)
             .build();
 
     when(cqlLibraryRepository.findById(anyString())).thenReturn(Optional.of(existingLibrary));
@@ -348,7 +350,7 @@ class CqlLibraryControllerTest {
     ResponseEntity<CqlLibrary> output =
         cqlLibraryController.createDraft(
             "Library1_ID",
-            CqlLibrary.builder().id("Library1_ID").cqlLibraryName("Library1").draft(false).build(),
+            CqlLibraryDraft.builder().cqlLibraryName("Library1").build(),
             principal);
     assertThat(output, is(notNullValue()));
     assertThat(output.getStatusCode(), is(equalTo(HttpStatus.CREATED)));
@@ -365,10 +367,8 @@ class CqlLibraryControllerTest {
         () ->
             cqlLibraryController.createDraft(
                 "Library1_ID",
-                CqlLibrary.builder()
-                    .id("Library1_ID")
+                CqlLibraryDraft.builder()
                     .cqlLibraryName("Library1")
-                    .draft(false)
                     .build(),
                 principal));
   }

@@ -10,6 +10,7 @@ import gov.cms.madie.cqllibraryservice.exceptions.PermissionDeniedException;
 import gov.cms.madie.cqllibraryservice.exceptions.ResourceNotDraftableException;
 import gov.cms.madie.cqllibraryservice.exceptions.ResourceNotFoundException;
 import gov.cms.madie.cqllibraryservice.models.CqlLibrary;
+import gov.cms.madie.cqllibraryservice.models.CqlLibraryDraft;
 import gov.cms.madie.cqllibraryservice.models.ModelType;
 import gov.cms.madie.cqllibraryservice.models.Version;
 import gov.cms.madie.cqllibraryservice.repositories.CqlLibraryRepository;
@@ -58,11 +59,11 @@ public class CqlLibraryControllerMvcTest {
 
   @Autowired private MockMvc mockMvc;
 
-  public String toJsonString(CqlLibrary cqlLibrary) throws JsonProcessingException {
+  public String toJsonString(Object obj) throws JsonProcessingException {
     ObjectMapper mapper = new ObjectMapper();
     mapper.registerModule(new JavaTimeModule());
     mapper.configure(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS, false);
-    return mapper.writeValueAsString(cqlLibrary);
+    return mapper.writeValueAsString(obj);
   }
 
   @Test
@@ -642,6 +643,68 @@ public class CqlLibraryControllerMvcTest {
     assertThat(savedValue.getLastModifiedAt(), is(notNullValue()));
     assertThat(savedValue.getLastModifiedAt().isAfter(createdTime), is(true));
     assertThat(savedValue.getLastModifiedBy(), is(equalTo(TEST_USER_ID)));
+  }
+
+  @Test
+  public void testCreateDraftReturnsValidationErrorForContainingUnderscore() throws Exception {
+    final CqlLibraryDraft draft = CqlLibraryDraft.builder().cqlLibraryName("Invalid_").build();
+    mockMvc
+        .perform(
+            post("/cql-libraries/draft/Library1_ID")
+                .with(user(TEST_USER_ID))
+                .with(csrf())
+                .content(toJsonString(draft))
+                .contentType(MediaType.APPLICATION_JSON_VALUE))
+        .andExpect(status().isBadRequest())
+        .andExpect(content().contentType(MediaType.APPLICATION_JSON_VALUE))
+        .andExpect(
+            jsonPath("$.validationErrors.cqlLibraryName")
+                .value(
+                    "Library name must start with an upper case letter, "
+                        + "followed by alpha-numeric character(s) and must not contain "
+                        + "spaces or other special characters."));
+    verifyNoInteractions(repository);
+  }
+
+  @Test
+  public void testCreateDraftReturnsValidationErrorForContainingSpecialCharacters() throws Exception {
+    final CqlLibraryDraft draft = CqlLibraryDraft.builder().cqlLibraryName("Name*$").build();
+    mockMvc
+        .perform(
+            post("/cql-libraries/draft/Library1_ID")
+                .with(user(TEST_USER_ID))
+                .with(csrf())
+                .content(toJsonString(draft))
+                .contentType(MediaType.APPLICATION_JSON_VALUE))
+        .andExpect(status().isBadRequest())
+        .andExpect(content().contentType(MediaType.APPLICATION_JSON_VALUE))
+        .andExpect(
+            jsonPath("$.validationErrors.cqlLibraryName")
+                .value(
+                    "Library name must start with an upper case letter, "
+                        + "followed by alpha-numeric character(s) and must not contain "
+                        + "spaces or other special characters."));
+    verifyNoInteractions(repository);
+  }
+
+  @Test
+  public void testCreateDraftReturnsValidationErrorForLengthOver255Chars() throws Exception {
+    final String reallyLongName =
+        "Reallylongnamethatisover255charactersbutwouldotherwisebevalidifitwereunder255charactersandisjustanattempttogetthevalidatortoblowupwiththisstupidlylongnamethatnobodywouldeveractuallyusebecausereallywhowouldtypeareallylongnamelikethiswithoutspacesorunderscorestoseparatewords";
+    final CqlLibraryDraft draft = CqlLibraryDraft.builder().cqlLibraryName(reallyLongName).build();
+    mockMvc
+        .perform(
+            post("/cql-libraries/draft/Library1_ID")
+                .with(user(TEST_USER_ID))
+                .with(csrf())
+                .content(toJsonString(draft))
+                .contentType(MediaType.APPLICATION_JSON_VALUE))
+        .andExpect(status().isBadRequest())
+        .andExpect(content().contentType(MediaType.APPLICATION_JSON_VALUE))
+        .andExpect(
+            jsonPath("$.validationErrors.cqlLibraryName")
+                .value("Library name cannot be more than 255 characters."));
+    verifyNoInteractions(repository);
   }
 
   @Test
