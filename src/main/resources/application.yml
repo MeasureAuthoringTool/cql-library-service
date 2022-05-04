@@ -18,6 +18,10 @@ madie:
       hapi-fhir:
         libraries:
           uri: /hapiFhir/libraries
+  cql-elm:
+    service:
+      base-url: ${ELM_TRANSLATOR_SERVICE_URL:http://localhost:8084/api}
+      elm-json-uri: /cql/translator/cql
 management:
   endpoints:
     enabled-by-default: false

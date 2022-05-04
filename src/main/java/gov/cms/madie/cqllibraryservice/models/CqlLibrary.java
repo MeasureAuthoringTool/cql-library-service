@@ -4,17 +4,17 @@ import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import gov.cms.madie.cqllibraryservice.utils.VersionJsonSerializer;
 import gov.cms.madie.cqllibraryservice.validators.EnumValidator;
+import java.time.Instant;
+import javax.validation.GroupSequence;
+import javax.validation.constraints.*;
+import javax.validation.groups.Default;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.springframework.data.annotation.Id;
+import org.springframework.data.annotation.Transient;
 import org.springframework.data.mongodb.core.index.Indexed;
-
-import javax.validation.GroupSequence;
-import javax.validation.constraints.*;
-import javax.validation.groups.Default;
-import java.time.Instant;
 
 @Data
 @Builder(toBuilder = true)
@@ -58,6 +58,8 @@ public class CqlLibrary {
   private String groupId;
   private boolean cqlErrors;
   private String cql;
+  @Transient private String elmJson;
+  @Transient private String elmXml;
   private Instant createdAt;
   private String createdBy;
   private Instant lastModifiedAt;

@@ -1,35 +1,5 @@
 package gov.cms.madie.cqllibraryservice.controllers;
 
-import gov.cms.madie.cqllibraryservice.exceptions.DuplicateKeyException;
-import gov.cms.madie.cqllibraryservice.exceptions.InvalidIdException;
-import gov.cms.madie.cqllibraryservice.exceptions.InvalidResourceStateException;
-import gov.cms.madie.cqllibraryservice.exceptions.PermissionDeniedException;
-import gov.cms.madie.cqllibraryservice.exceptions.ResourceNotDraftableException;
-import gov.cms.madie.cqllibraryservice.exceptions.ResourceNotFoundException;
-import gov.cms.madie.cqllibraryservice.models.CqlLibrary;
-import gov.cms.madie.cqllibraryservice.models.CqlLibraryDraft;
-import gov.cms.madie.cqllibraryservice.models.ModelType;
-import gov.cms.madie.cqllibraryservice.models.Version;
-import gov.cms.madie.cqllibraryservice.repositories.CqlLibraryRepository;
-import gov.cms.madie.cqllibraryservice.services.CqlLibraryService;
-import gov.cms.madie.cqllibraryservice.services.VersionService;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentCaptor;
-import org.mockito.Captor;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
-
-import java.security.Principal;
-import java.time.Instant;
-import java.time.temporal.ChronoUnit;
-import java.util.List;
-import java.util.Optional;
-
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.notNullValue;
@@ -46,6 +16,35 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
+
+import gov.cms.madie.cqllibraryservice.exceptions.DuplicateKeyException;
+import gov.cms.madie.cqllibraryservice.exceptions.InvalidIdException;
+import gov.cms.madie.cqllibraryservice.exceptions.InvalidResourceStateException;
+import gov.cms.madie.cqllibraryservice.exceptions.PermissionDeniedException;
+import gov.cms.madie.cqllibraryservice.exceptions.ResourceNotDraftableException;
+import gov.cms.madie.cqllibraryservice.exceptions.ResourceNotFoundException;
+import gov.cms.madie.cqllibraryservice.models.CqlLibrary;
+import gov.cms.madie.cqllibraryservice.models.CqlLibraryDraft;
+import gov.cms.madie.cqllibraryservice.models.ModelType;
+import gov.cms.madie.cqllibraryservice.models.Version;
+import gov.cms.madie.cqllibraryservice.repositories.CqlLibraryRepository;
+import gov.cms.madie.cqllibraryservice.services.CqlLibraryService;
+import gov.cms.madie.cqllibraryservice.services.VersionService;
+import java.security.Principal;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
+import java.util.List;
+import java.util.Optional;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
+import org.mockito.Captor;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 
 @ExtendWith(MockitoExtension.class)
 class CqlLibraryControllerTest {
@@ -349,9 +348,7 @@ class CqlLibraryControllerTest {
     when(principal.getName()).thenReturn("test.user");
     ResponseEntity<CqlLibrary> output =
         cqlLibraryController.createDraft(
-            "Library1_ID",
-            CqlLibraryDraft.builder().cqlLibraryName("Library1").build(),
-            principal);
+            "Library1_ID", CqlLibraryDraft.builder().cqlLibraryName("Library1").build(), principal);
     assertThat(output, is(notNullValue()));
     assertThat(output.getStatusCode(), is(equalTo(HttpStatus.CREATED)));
     assertThat(output.getBody(), is(equalTo(draft)));
@@ -367,9 +364,7 @@ class CqlLibraryControllerTest {
         () ->
             cqlLibraryController.createDraft(
                 "Library1_ID",
-                CqlLibraryDraft.builder()
-                    .cqlLibraryName("Library1")
-                    .build(),
+                CqlLibraryDraft.builder().cqlLibraryName("Library1").build(),
                 principal));
   }
 

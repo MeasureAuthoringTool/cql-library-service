@@ -1,6 +1,10 @@
 package gov.cms.madie.cqllibraryservice.controllers;
 
 import gov.cms.madie.cqllibraryservice.exceptions.*;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Objects;
+import javax.validation.ConstraintViolationException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.web.error.ErrorAttributeOptions;
@@ -13,11 +17,6 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.context.request.WebRequest;
-
-import javax.validation.ConstraintViolationException;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Objects;
 
 @RequiredArgsConstructor
 @ControllerAdvice
@@ -115,7 +114,12 @@ public class ErrorHandlingControllerAdvice {
     return getErrorAttributes(request, HttpStatus.BAD_REQUEST);
   }
 
-  @ExceptionHandler({InternalServerErrorException.class, PersistHapiFhirCqlLibraryException.class})
+  @ExceptionHandler({
+    InternalServerErrorException.class,
+    PersistHapiFhirCqlLibraryException.class,
+    CqlElmTranslationErrorException.class,
+    CqlElmTranslationServiceException.class
+  })
   @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
   @ResponseBody
   Map<String, Object> onInternalServerErrorException(WebRequest request) {

@@ -2,8 +2,13 @@ package gov.cms.madie.cqllibraryservice.services;
 
 import gov.cms.madie.cqllibraryservice.exceptions.*;
 import gov.cms.madie.cqllibraryservice.models.CqlLibrary;
+import gov.cms.madie.cqllibraryservice.models.ElmJson;
 import gov.cms.madie.cqllibraryservice.models.Version;
 import gov.cms.madie.cqllibraryservice.repositories.CqlLibraryRepository;
+import java.net.URI;
+import java.time.Instant;
+import java.util.Collections;
+import java.util.Objects;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -11,11 +16,6 @@ import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
-
-import java.net.URI;
-import java.time.Instant;
-import java.util.Collections;
-import java.util.Objects;
 
 @Slf4j
 @RequiredArgsConstructor
@@ -25,6 +25,8 @@ public class VersionService {
   private final CqlLibraryService cqlLibraryService;
   private final CqlLibraryRepository cqlLibraryRepository;
   private final RestTemplate hapiFhirRestTemplate;
+
+  private final ElmTranslatorClient elmTranslatorClient;
 
   @Value("${madie.fhir.service.baseUrl}")
   private String madieFhirService;
@@ -40,8 +42,23 @@ public class VersionService {
 
     validateCqlLibrary(cqlLibrary, username);
 
+    cqlLibrary.setDraft(false);
+    cqlLibrary.setLastModifiedAt(Instant.now());
+    cqlLibrary.setLastModifiedBy(username);
+
+    Version next = getNextVersion(cqlLibrary, isMajor);
+    cqlLibrary.setVersion(next);
+
     try {
+      final ElmJson elmJson = elmTranslatorClient.getElmJson(cqlLibrary.getCql(), accessToken);
+      if (elmTranslatorClient.hasErrors(elmJson)) {
+        throw new CqlElmTranslationErrorException(cqlLibrary.getCqlLibraryName());
+      }
+      cqlLibrary.setElmJson(elmJson.getJson());
+      cqlLibrary.setElmXml(elmJson.getXml());
       persistHapiFhirCqlLibrary(cqlLibrary, accessToken);
+    } catch (CqlElmTranslationServiceException | CqlElmTranslationErrorException e) {
+      throw e;
     } catch (Exception e) {
       log.error(
           "User [{}] cannot create a version for CQL Library with id [{}]"
@@ -52,12 +69,6 @@ public class VersionService {
       throw new PersistHapiFhirCqlLibraryException("CQL Library", cqlLibrary.getId(), username);
     }
 
-    cqlLibrary.setDraft(false);
-    cqlLibrary.setLastModifiedAt(Instant.now());
-    cqlLibrary.setLastModifiedBy(username);
-
-    Version next = getNextVersion(cqlLibrary, isMajor);
-    cqlLibrary.setVersion(next);
     var savedCqlLibrary = cqlLibraryRepository.save(cqlLibrary);
 
     log.info(

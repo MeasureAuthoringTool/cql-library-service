@@ -1,9 +1,25 @@
 package gov.cms.madie.cqllibraryservice.controllers;
 
+import static org.hamcrest.CoreMatchers.equalTo;
+import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.CoreMatchers.notNullValue;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.*;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import gov.cms.madie.cqllibraryservice.exceptions.CqlElmTranslationErrorException;
+import gov.cms.madie.cqllibraryservice.exceptions.CqlElmTranslationServiceException;
 import gov.cms.madie.cqllibraryservice.exceptions.DuplicateKeyException;
 import gov.cms.madie.cqllibraryservice.exceptions.InternalServerErrorException;
 import gov.cms.madie.cqllibraryservice.exceptions.PermissionDeniedException;
@@ -16,6 +32,9 @@ import gov.cms.madie.cqllibraryservice.models.Version;
 import gov.cms.madie.cqllibraryservice.repositories.CqlLibraryRepository;
 import gov.cms.madie.cqllibraryservice.services.CqlLibraryService;
 import gov.cms.madie.cqllibraryservice.services.VersionService;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
+import java.util.Optional;
 import org.bson.types.ObjectId;
 import org.hamcrest.CustomMatcher;
 import org.junit.jupiter.api.Test;
@@ -26,24 +45,6 @@ import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
-
-import java.time.Instant;
-import java.time.temporal.ChronoUnit;
-import java.util.Optional;
-
-import static org.hamcrest.CoreMatchers.equalTo;
-import static org.hamcrest.CoreMatchers.is;
-import static org.hamcrest.CoreMatchers.notNullValue;
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.*;
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @WebMvcTest({CqlLibraryController.class})
 public class CqlLibraryControllerMvcTest {
@@ -667,7 +668,8 @@ public class CqlLibraryControllerMvcTest {
   }
 
   @Test
-  public void testCreateDraftReturnsValidationErrorForContainingSpecialCharacters() throws Exception {
+  public void testCreateDraftReturnsValidationErrorForContainingSpecialCharacters()
+      throws Exception {
     final CqlLibraryDraft draft = CqlLibraryDraft.builder().cqlLibraryName("Name*$").build();
     mockMvc
         .perform(
@@ -903,6 +905,51 @@ public class CqlLibraryControllerMvcTest {
         .andExpect(status().isInternalServerError())
         .andExpect(content().contentType(MediaType.APPLICATION_JSON_VALUE))
         .andExpect(jsonPath("$.message").value("Unable to update version number"));
+    verify(versionService, times(1))
+        .createVersion(eq("Library1_ID"), eq(false), eq(TEST_USER_ID), eq("test-okta"));
+  }
+
+  @Test
+  public void testCreateVersionReturnsInternalServerErrorForCqlElmTranslationErrorException()
+      throws Exception {
+    when(versionService.createVersion(anyString(), anyBoolean(), anyString(), anyString()))
+        .thenThrow(new CqlElmTranslationErrorException("TestLibrary"));
+    mockMvc
+        .perform(
+            put("/cql-libraries/version/Library1_ID?isMajor=false")
+                .with(user(TEST_USER_ID))
+                .with(csrf())
+                .header("Authorization", "test-okta")
+                .contentType(MediaType.APPLICATION_JSON_VALUE))
+        .andExpect(status().isInternalServerError())
+        .andExpect(content().contentType(MediaType.APPLICATION_JSON_VALUE))
+        .andExpect(
+            jsonPath("$.message")
+                .value(
+                    "CQL-ELM translator found errors in the CQL for library TestLibrary! Version not created."));
+    verify(versionService, times(1))
+        .createVersion(eq("Library1_ID"), eq(false), eq(TEST_USER_ID), eq("test-okta"));
+  }
+
+  @Test
+  public void testCreateVersionReturnsInternalServerErrorForCqlElmTranslationServiceException()
+      throws Exception {
+    when(versionService.createVersion(anyString(), anyBoolean(), anyString(), anyString()))
+        .thenThrow(
+            new CqlElmTranslationServiceException(
+                "There was an error calling CQL-ELM translation service",
+                new RuntimeException("cause")));
+    mockMvc
+        .perform(
+            put("/cql-libraries/version/Library1_ID?isMajor=false")
+                .with(user(TEST_USER_ID))
+                .with(csrf())
+                .header("Authorization", "test-okta")
+                .contentType(MediaType.APPLICATION_JSON_VALUE))
+        .andExpect(status().isInternalServerError())
+        .andExpect(content().contentType(MediaType.APPLICATION_JSON_VALUE))
+        .andExpect(
+            jsonPath("$.message").value("There was an error calling CQL-ELM translation service"));
     verify(versionService, times(1))
         .createVersion(eq("Library1_ID"), eq(false), eq(TEST_USER_ID), eq("test-okta"));
   }
