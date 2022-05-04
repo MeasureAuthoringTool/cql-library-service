@@ -1,14 +1,20 @@
 package gov.cms.madie.cqllibraryservice.services;
 
-import gov.cms.madie.cqllibraryservice.exceptions.*;
-import gov.cms.madie.cqllibraryservice.models.CqlLibrary;
-import gov.cms.madie.cqllibraryservice.models.Version;
-import gov.cms.madie.cqllibraryservice.repositories.CqlLibraryRepository;
-
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.*;
 
+import gov.cms.madie.cqllibraryservice.exceptions.*;
+import gov.cms.madie.cqllibraryservice.models.CqlLibrary;
+import gov.cms.madie.cqllibraryservice.models.ElmJson;
+import gov.cms.madie.cqllibraryservice.models.Version;
+import gov.cms.madie.cqllibraryservice.repositories.CqlLibraryRepository;
+import java.net.URI;
+import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -23,14 +29,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.web.client.RestTemplate;
 
-import java.net.URI;
-import java.util.Optional;
-
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.*;
-
 @ExtendWith(MockitoExtension.class)
 class VersionServiceTest {
 
@@ -39,6 +37,8 @@ class VersionServiceTest {
   @Mock CqlLibraryService cqlLibraryService;
 
   @Mock RestTemplate restTemplate;
+
+  @Mock ElmTranslatorClient elmTranslatorClient;
 
   @InjectMocks VersionService versionService;
 
@@ -141,6 +141,56 @@ class VersionServiceTest {
   }
 
   @Test
+  void testCreateVersionThrowsElmTranslatorErrorException() {
+    CqlLibrary existingCqlLibrary =
+        CqlLibrary.builder()
+            .id("testCqlLibraryId")
+            .createdBy("testUser")
+            .cqlLibraryName("TestLibrary")
+            .draft(true)
+            .cql("library testCql version '1.0.000'")
+            .groupId("testGroupId")
+            .version(Version.parse("1.0.000"))
+            .build();
+
+    when(cqlLibraryRepository.findById(anyString())).thenReturn(Optional.of(existingCqlLibrary));
+    when(cqlLibraryRepository.findMaxVersionByGroupId(anyString()))
+        .thenReturn(Optional.of(Version.parse("1.0.0")));
+    when(elmTranslatorClient.getElmJson(anyString(), anyString()))
+        .thenReturn(ElmJson.builder().json("{}").xml("<></>").build());
+    when(elmTranslatorClient.hasErrors(any(ElmJson.class))).thenReturn(true);
+    assertThrows(
+        CqlElmTranslationErrorException.class,
+        () -> versionService.createVersion("testCqlLibraryId", true, "testUser", "accesstoken"));
+  }
+
+  @Test
+  void testCreateVersionHandlesHasErrorsException() {
+    CqlLibrary existingCqlLibrary =
+        CqlLibrary.builder()
+            .id("testCqlLibraryId")
+            .createdBy("testUser")
+            .cqlLibraryName("TestLibrary")
+            .draft(true)
+            .cql("library testCql version '1.0.000'")
+            .groupId("testGroupId")
+            .version(Version.parse("1.0.000"))
+            .build();
+
+    when(cqlLibraryRepository.findById(anyString())).thenReturn(Optional.of(existingCqlLibrary));
+    when(cqlLibraryRepository.findMaxVersionByGroupId(anyString()))
+        .thenReturn(Optional.of(Version.parse("1.0.0")));
+    when(elmTranslatorClient.getElmJson(anyString(), anyString()))
+        .thenReturn(ElmJson.builder().json("{}").xml("<></>").build());
+    when(elmTranslatorClient.hasErrors(any(ElmJson.class)))
+        .thenThrow(
+            new CqlElmTranslationServiceException("TEST_ERROR", new RuntimeException("CAUSE")));
+    assertThrows(
+        CqlElmTranslationServiceException.class,
+        () -> versionService.createVersion("testCqlLibraryId", true, "testUser", "accesstoken"));
+  }
+
+  @Test
   void testCreateVersionMajorSuccess() {
     CqlLibrary existingCqlLibrary =
         CqlLibrary.builder()
@@ -162,6 +212,9 @@ class VersionServiceTest {
     when(restTemplate.exchange(
             any(URI.class), any(HttpMethod.class), any(HttpEntity.class), any(Class.class)))
         .thenReturn(ResponseEntity.ok("http://Library"));
+    when(elmTranslatorClient.getElmJson(anyString(), anyString()))
+        .thenReturn(ElmJson.builder().json("{}").xml("<></>").build());
+    when(elmTranslatorClient.hasErrors(any(ElmJson.class))).thenReturn(false);
     versionService.createVersion("testCqlLibraryId", true, "testUser", "accesstoken");
 
     verify(cqlLibraryRepository, times(1)).save(cqlLibraryArgumentCaptor.capture());
@@ -194,6 +247,9 @@ class VersionServiceTest {
     when(restTemplate.exchange(
             any(URI.class), any(HttpMethod.class), any(HttpEntity.class), any(Class.class)))
         .thenReturn(ResponseEntity.ok("http://Library"));
+    when(elmTranslatorClient.getElmJson(anyString(), anyString()))
+        .thenReturn(ElmJson.builder().json("{}").xml("<></>").build());
+    when(elmTranslatorClient.hasErrors(any(ElmJson.class))).thenReturn(false);
     versionService.createVersion("testCqlLibraryId", false, "testUser", "accesstoken");
     verify(cqlLibraryRepository, times(1)).save(cqlLibraryArgumentCaptor.capture());
     CqlLibrary savedValue = cqlLibraryArgumentCaptor.getValue();

@@ -1,10 +1,10 @@
 package gov.cms.madie.cqllibraryservice.validators;
 
+import java.lang.annotation.*;
 import javax.validation.Constraint;
 import javax.validation.Payload;
 import javax.validation.ReportAsSingleViolation;
 import javax.validation.constraints.NotNull;
-import java.lang.annotation.*;
 
 @NotNull(message = "Value cannot be null")
 @ReportAsSingleViolation

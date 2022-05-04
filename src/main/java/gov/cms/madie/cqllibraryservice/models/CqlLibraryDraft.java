@@ -1,15 +1,14 @@
 package gov.cms.madie.cqllibraryservice.models;
 
+import javax.validation.constraints.NotBlank;
+import javax.validation.constraints.NotNull;
+import javax.validation.constraints.Pattern;
+import javax.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.springframework.data.mongodb.core.index.Indexed;
-
-import javax.validation.constraints.NotBlank;
-import javax.validation.constraints.NotNull;
-import javax.validation.constraints.Pattern;
-import javax.validation.constraints.Size;
 
 @Data
 @Builder(toBuilder = true)
@@ -34,5 +33,4 @@ public class CqlLibraryDraft {
               + "spaces or other special characters.")
   @Indexed(unique = true, name = "UniqueCqlLibraryName")
   private String cqlLibraryName;
-
 }
