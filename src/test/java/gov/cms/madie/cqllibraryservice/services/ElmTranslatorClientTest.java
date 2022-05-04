@@ -92,23 +92,6 @@ class ElmTranslatorClientTest {
             + "                                  \"message\" : \"Could not resolve identifier define in the current library.\"\n"
             + "                                }]\n"
             + "        }";
-    //        """
-    //        {
-    //          "errorExceptions": [{
-    //                                  "startLine" : 2,
-    //                                  "startChar" : 1,
-    //                                  "endLine" : 2,
-    //                                  "endChar" : 6,
-    //                                  "errorType" : null,
-    //                                  "errorSeverity" : "Error",
-    //                                  "targetIncludeLibraryId" : "TestLib",
-    //                                  "targetIncludeLibraryVersionId" : "2",
-    //                                  "type" : null,
-    //                                  "message" : "Could not resolve identifier define in the
-    // current library."
-    //                                }]
-    //        }
-    //        """;
     ElmJson elmJson = ElmJson.builder().json(json).build();
     boolean output = elmTranslatorClient.hasErrors(elmJson);
     assertThat(output, is(true));
@@ -116,12 +99,7 @@ class ElmTranslatorClientTest {
 
   @Test
   void testHasErrorsReturnsFalseForEmptyArray() {
-    final String json = "{\n" + "          \"errorExceptions\": []\n" + "        }";
-    //    final String json = """
-    //        {
-    //          "errorExceptions": []
-    //        }
-    //        """;
+    final String json = "{\"errorExceptions\": []}";
     ElmJson elmJson = ElmJson.builder().json(json).build();
     boolean output = elmTranslatorClient.hasErrors(elmJson);
     assertThat(output, is(false));
@@ -129,12 +107,7 @@ class ElmTranslatorClientTest {
 
   @Test
   void testHasErrorsReturnsFalseForNullFieldValue() {
-    //    final String json = """
-    //        {
-    //          "errorExceptions": null
-    //        }
-    //        """;
-    final String json = "{\n" + "          \"errorExceptions\": null\n" + "        }";
+    final String json = "{\"errorExceptions\": null}";
     ElmJson elmJson = ElmJson.builder().json(json).build();
     boolean output = elmTranslatorClient.hasErrors(elmJson);
     assertThat(output, is(false));
@@ -142,15 +115,6 @@ class ElmTranslatorClientTest {
 
   @Test
   void testHasErrorsReturnsFalseForMissingField() {
-    //    final String json =
-    //        """
-    //        {
-    //          "library" : {
-    //            "annotation" : [ { } ]
-    //          }
-    //        }
-    //        """;
-
     final String json =
         "{\n"
             + "          \"library\" : {\n"
