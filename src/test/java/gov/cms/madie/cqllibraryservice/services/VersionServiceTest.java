@@ -47,7 +47,7 @@ class VersionServiceTest {
   @BeforeEach
   public void setup() {
     ReflectionTestUtils.setField(versionService, "madieFhirService", "http://test.hapiFhir");
-    ReflectionTestUtils.setField(versionService, "librariesUri", "/hapiFhir/libraries");
+    ReflectionTestUtils.setField(versionService, "librariesUri", "/fhir/libraries");
   }
 
   @Test
