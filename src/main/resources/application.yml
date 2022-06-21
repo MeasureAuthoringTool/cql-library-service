@@ -17,7 +17,7 @@ madie:
       baseUrl: ${FHIR_SERVICES_URL:http://localhost:8085/api}
       hapi-fhir:
         libraries:
-          uri: /hapiFhir/libraries
+          uri: /fhir/libraries
   cql-elm:
     service:
       base-url: ${ELM_TRANSLATOR_SERVICE_URL:http://localhost:8084/api}
