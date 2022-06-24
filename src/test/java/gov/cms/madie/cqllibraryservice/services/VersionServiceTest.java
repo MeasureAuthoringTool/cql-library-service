@@ -9,9 +9,9 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 
 import gov.cms.madie.cqllibraryservice.exceptions.*;
-import gov.cms.madie.cqllibraryservice.models.CqlLibrary;
-import gov.cms.madie.cqllibraryservice.models.ElmJson;
-import gov.cms.madie.cqllibraryservice.models.Version;
+import gov.cms.madie.models.library.CqlLibrary;
+import gov.cms.madie.models.measure.ElmJson;
+import gov.cms.madie.models.library.Version;
 import gov.cms.madie.cqllibraryservice.repositories.CqlLibraryRepository;
 import java.net.URI;
 import java.util.Optional;
