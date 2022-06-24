@@ -11,7 +11,7 @@ import static org.mockito.Mockito.when;
 
 import gov.cms.madie.cqllibraryservice.config.EnvironmentConfig;
 import gov.cms.madie.cqllibraryservice.exceptions.CqlElmTranslationServiceException;
-import gov.cms.madie.cqllibraryservice.models.ElmJson;
+import gov.cms.madie.models.measure.ElmJson;
 import java.net.URI;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
