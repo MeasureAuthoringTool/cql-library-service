@@ -4,7 +4,8 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import gov.cms.madie.cqllibraryservice.config.EnvironmentConfig;
 import gov.cms.madie.cqllibraryservice.exceptions.CqlElmTranslationServiceException;
-import gov.cms.madie.cqllibraryservice.models.ElmJson;
+import gov.cms.madie.models.measure.ElmJson;
+
 import java.net.URI;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

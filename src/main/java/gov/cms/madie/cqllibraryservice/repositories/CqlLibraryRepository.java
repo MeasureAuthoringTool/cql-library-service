@@ -1,6 +1,6 @@
 package gov.cms.madie.cqllibraryservice.repositories;
 
-import gov.cms.madie.cqllibraryservice.models.CqlLibrary;
+import gov.cms.madie.models.library.CqlLibrary;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.data.mongodb.repository.ExistsQuery;
