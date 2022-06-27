@@ -7,8 +7,8 @@ import static org.hamcrest.MatcherAssert.assertThat;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import gov.cms.madie.cqllibraryservice.models.CqlLibrary;
-import gov.cms.madie.cqllibraryservice.models.Version;
+import gov.cms.madie.models.library.CqlLibrary;
+import gov.cms.madie.models.library.Version;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -37,16 +37,19 @@ class VersionJsonSerializerTest {
 
   @Test
   public void testSerializerHandlesVersionWithMajorAndMinor() throws JsonProcessingException {
-    String output =
-        objectMapper.writeValueAsString(
-            Version.builder().major(1).minor(2).revisionNumber(0).build());
-    assertThat(output, is(equalTo("\"1.2.000\"")));
+    Version versionWithMajorAndMinor =
+        Version.builder().major(1).minor(2).revisionNumber(0).build();
+    String output = objectMapper.writeValueAsString(versionWithMajorAndMinor);
+    assertThat(versionWithMajorAndMinor.toString(), is(equalTo("1.2.000")));
+    assertThat(output, is(equalTo("{\"major\":1,\"minor\":2,\"revisionNumber\":0}")));
   }
 
   @Test
   public void testSerializerHandlesVersionAllZeroes() throws JsonProcessingException {
-    String output = objectMapper.writeValueAsString(new Version());
-    assertThat(output, is(equalTo("\"0.0.000\"")));
+    Version allZeroVersion = new Version();
+    String output = objectMapper.writeValueAsString(allZeroVersion);
+    assertThat(allZeroVersion.toString(), is(equalTo("0.0.000")));
+    assertThat(output, is(equalTo("{\"major\":0,\"minor\":0,\"revisionNumber\":0}")));
   }
 
   @Test
@@ -60,22 +63,30 @@ class VersionJsonSerializerTest {
   @Test
   public void testDeSerializerHandlesMajorMinor() throws JsonProcessingException {
     Version expected = new Version(2, 45, 0);
-    String json = "\"2.45.000\"";
+    String json = "{\"major\":2,\"minor\":45,\"revisionNumber\":0}";
     Version output = objectMapper.readValue(json, Version.class);
     assertThat(output, is(equalTo(expected)));
   }
 
   @Test
-  public void testDeSerializerHandlesNull() throws JsonProcessingException {
+  public void testDeSerializerHandlesNull() {
     String json = "null";
-    Version output = objectMapper.readValue(json, Version.class);
+    Version output = null;
+    try {
+      objectMapper.readValue(json, Version.class);
+    } catch (JsonProcessingException ex) {
+    }
     assertThat(output, is(nullValue()));
   }
 
   @Test
-  public void testDeSerializerHandlesException() throws JsonProcessingException {
+  public void testDeSerializerHandlesException() {
     String json = "\"ab.bc.ddd\"";
-    Version output = objectMapper.readValue(json, Version.class);
+    Version output = null;
+    try {
+      objectMapper.readValue(json, Version.class);
+    } catch (JsonProcessingException ex) {
+    }
     assertThat(output, is(nullValue()));
   }
 }

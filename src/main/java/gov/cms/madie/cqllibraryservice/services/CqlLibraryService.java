@@ -1,7 +1,7 @@
 package gov.cms.madie.cqllibraryservice.services;
 
 import gov.cms.madie.cqllibraryservice.exceptions.DuplicateKeyException;
-import gov.cms.madie.cqllibraryservice.models.CqlLibrary;
+import gov.cms.madie.models.library.CqlLibrary;
 import gov.cms.madie.cqllibraryservice.repositories.CqlLibraryRepository;
 import io.micrometer.core.instrument.util.StringUtils;
 import java.util.Objects;

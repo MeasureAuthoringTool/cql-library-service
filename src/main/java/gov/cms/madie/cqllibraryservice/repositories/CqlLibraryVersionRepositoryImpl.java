@@ -1,7 +1,7 @@
 package gov.cms.madie.cqllibraryservice.repositories;
 
-import gov.cms.madie.cqllibraryservice.models.CqlLibrary;
-import gov.cms.madie.cqllibraryservice.models.Version;
+import gov.cms.madie.models.library.CqlLibrary;
+import gov.cms.madie.models.library.Version;
 import java.util.Optional;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.mongodb.core.MongoTemplate;
