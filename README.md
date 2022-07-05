@@ -2,7 +2,7 @@
 
 This is a Spring Boot micro-service which is responsible for operations associated with the MADiE Measure Micro Frontend.
 
-# Running Locally
+## Running Locally
 
 The application can be run as a spring-boot application. It requires a locally running MongoDb instance.
 
@@ -20,12 +20,11 @@ docker compose down --remove-orphans && docker volume prune && docker compose bu
 
 When the application runs with a spring.profile=IT it will use the madie-cql-library-mongo service running in the container.  Running the application with no profile will allow the configuration that contains environment variables to be passed in.  This is how the ENTRY is configured in the dev-madie.hcqis.org instance that allows the application to run
 
-#Testing
+## Testing
 The application can be check for "health" by running Spring actuator endpoints.  For example, 
 
 ```
 curl --location --request GET 'http://localhost:8080/api/actuator/health'
 ```
 
-#Coverage
-
+## Coverage
