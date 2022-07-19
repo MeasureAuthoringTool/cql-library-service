@@ -1,6 +1,8 @@
 package gov.cms.madie.cqllibraryservice.services;
 
 import gov.cms.madie.cqllibraryservice.exceptions.*;
+import gov.cms.madie.cqllibraryservice.repositories.CqlLibraryActionLogRepository;
+import gov.cms.madie.models.common.ActionType;
 import gov.cms.madie.models.library.CqlLibrary;
 import gov.cms.madie.models.measure.ElmJson;
 import gov.cms.madie.models.library.Version;
@@ -23,7 +25,9 @@ import org.springframework.web.util.UriComponentsBuilder;
 public class VersionService {
 
   private final CqlLibraryService cqlLibraryService;
+  private final ActionLogService actionLogService;
   private final CqlLibraryRepository cqlLibraryRepository;
+  private final CqlLibraryActionLogRepository cqlLibraryHistoryRepository;
   private final RestTemplate hapiFhirRestTemplate;
 
   private final ElmTranslatorClient elmTranslatorClient;
@@ -70,6 +74,11 @@ public class VersionService {
     }
 
     var savedCqlLibrary = cqlLibraryRepository.save(cqlLibrary);
+
+    actionLogService.logAction(
+        cqlLibrary.getGroupId(),
+        isMajor ? ActionType.VERSIONED_MAJOR : ActionType.VERSIONED_MINOR,
+        username);
 
     log.info(
         "User [{}] successfully versioned cql library with ID [{}]",

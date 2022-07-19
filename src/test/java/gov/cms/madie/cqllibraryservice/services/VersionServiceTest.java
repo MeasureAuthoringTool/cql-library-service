@@ -9,6 +9,7 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 
 import gov.cms.madie.cqllibraryservice.exceptions.*;
+import gov.cms.madie.models.common.ActionType;
 import gov.cms.madie.models.library.CqlLibrary;
 import gov.cms.madie.models.measure.ElmJson;
 import gov.cms.madie.models.library.Version;
@@ -40,9 +41,15 @@ class VersionServiceTest {
 
   @Mock ElmTranslatorClient elmTranslatorClient;
 
+  @Mock ActionLogService actionLogService;
+
   @InjectMocks VersionService versionService;
 
   @Captor private ArgumentCaptor<CqlLibrary> cqlLibraryArgumentCaptor;
+
+  @Captor private ArgumentCaptor<ActionType> actionTypeArgumentCaptor;
+
+  @Captor private ArgumentCaptor<String> targetIdArgumentCaptor;
 
   @BeforeEach
   public void setup() {
@@ -224,6 +231,11 @@ class VersionServiceTest {
     assertThat(savedValue.getVersion().toString(), is(equalTo("2.0.000")));
     // groupId should remain same
     assertThat(savedValue.getGroupId(), is(equalTo(existingCqlLibrary.getGroupId())));
+
+    verify(actionLogService, times(1))
+        .logAction(targetIdArgumentCaptor.capture(), actionTypeArgumentCaptor.capture(), anyString());
+    assertThat(targetIdArgumentCaptor.getValue(), is(equalTo("testGroupId")));
+    assertThat(actionTypeArgumentCaptor.getValue(), is(equalTo(ActionType.VERSIONED_MAJOR)));
   }
 
   @Test
@@ -256,6 +268,11 @@ class VersionServiceTest {
 
     assertFalse(savedValue.isDraft());
     assertThat(savedValue.getVersion().toString(), is(equalTo("1.1.000")));
+
+    verify(actionLogService, times(1))
+        .logAction(targetIdArgumentCaptor.capture(), actionTypeArgumentCaptor.capture(), anyString());
+    assertThat(targetIdArgumentCaptor.getValue(), is(equalTo("testGroupId")));
+    assertThat(actionTypeArgumentCaptor.getValue(), is(equalTo(ActionType.VERSIONED_MINOR)));
   }
 
   @Test

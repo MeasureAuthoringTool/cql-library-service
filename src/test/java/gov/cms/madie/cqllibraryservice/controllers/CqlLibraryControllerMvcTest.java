@@ -25,6 +25,8 @@ import gov.cms.madie.cqllibraryservice.exceptions.InternalServerErrorException;
 import gov.cms.madie.cqllibraryservice.exceptions.PermissionDeniedException;
 import gov.cms.madie.cqllibraryservice.exceptions.ResourceNotDraftableException;
 import gov.cms.madie.cqllibraryservice.exceptions.ResourceNotFoundException;
+import gov.cms.madie.cqllibraryservice.services.ActionLogService;
+import gov.cms.madie.models.common.ActionType;
 import gov.cms.madie.models.library.CqlLibrary;
 import gov.cms.madie.models.library.CqlLibraryDraft;
 import gov.cms.madie.models.common.ModelType;
@@ -56,7 +58,13 @@ public class CqlLibraryControllerMvcTest {
   @MockBean private VersionService versionService;
   @MockBean private CqlLibraryService cqlLibraryService;
 
+  @MockBean ActionLogService actionLogService;
+
   @Captor private ArgumentCaptor<CqlLibrary> cqlLibraryArgumentCaptor;
+
+  @Captor private ArgumentCaptor<ActionType> actionTypeArgumentCaptor;
+
+  @Captor private ArgumentCaptor<String> targetIdArgumentCaptor;
 
   @Autowired private MockMvc mockMvc;
 
@@ -312,6 +320,11 @@ public class CqlLibraryControllerMvcTest {
         .andExpect(jsonPath("$.lastModifiedAt").value(fiveMinMatcher));
     verify(cqlLibraryService, times(1)).checkDuplicateCqlLibraryName(anyString());
     verify(repository, times(1)).save(any(CqlLibrary.class));
+
+    verify(actionLogService, times(1))
+        .logAction(targetIdArgumentCaptor.capture(), actionTypeArgumentCaptor.capture(), anyString());
+    assertThat(targetIdArgumentCaptor.getValue(), is(notNullValue()));
+    assertThat(actionTypeArgumentCaptor.getValue(), is(equalTo(ActionType.CREATED)));
   }
 
   @Test
