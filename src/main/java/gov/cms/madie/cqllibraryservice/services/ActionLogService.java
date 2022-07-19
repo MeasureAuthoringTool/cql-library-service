@@ -14,11 +14,11 @@ import java.time.Instant;
 @Service
 public class ActionLogService {
 
-  private final CqlLibraryActionLogRepository cqlLibraryHistoryRepository;
+  private final CqlLibraryActionLogRepository cqlLibraryActionLogRepository;
 
   public boolean logAction(
       final String targetId, final ActionType actionType, final String userId) {
-    return cqlLibraryHistoryRepository.pushEvent(
+    return cqlLibraryActionLogRepository.pushEvent(
         targetId,
         Action.builder()
             .actionType(actionType)
