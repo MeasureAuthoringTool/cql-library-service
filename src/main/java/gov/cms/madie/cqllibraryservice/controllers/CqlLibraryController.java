@@ -3,6 +3,8 @@ package gov.cms.madie.cqllibraryservice.controllers;
 import gov.cms.madie.cqllibraryservice.exceptions.InvalidIdException;
 import gov.cms.madie.cqllibraryservice.exceptions.InvalidResourceStateException;
 import gov.cms.madie.cqllibraryservice.exceptions.ResourceNotFoundException;
+import gov.cms.madie.cqllibraryservice.services.ActionLogService;
+import gov.cms.madie.models.common.ActionType;
 import gov.cms.madie.models.library.CqlLibrary;
 import gov.cms.madie.models.library.CqlLibraryDraft;
 import gov.cms.madie.models.library.Version;
@@ -27,6 +29,7 @@ import org.springframework.web.bind.annotation.*;
 public class CqlLibraryController {
 
   private final CqlLibraryRepository cqlLibraryRepository;
+  private final ActionLogService actionLogService;
   private final VersionService versionService;
   private final CqlLibraryService cqlLibraryService;
 
@@ -75,6 +78,7 @@ public class CqlLibraryController {
         "User [{}] successfully created new cql library with ID [{}]",
         username,
         cqlLibrary.getId());
+    actionLogService.logAction(cqlLibrary.getGroupId(), ActionType.CREATED, username);
     return ResponseEntity.status(HttpStatus.CREATED).body(savedCqlLibrary);
   }
 
