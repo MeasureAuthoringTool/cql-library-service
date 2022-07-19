@@ -24,7 +24,7 @@ import static org.mockito.Mockito.when;
 @ExtendWith(MockitoExtension.class)
 class ActionLogServiceTest {
 
-  @Mock CqlLibraryActionLogRepository cqlLibraryHistoryRepository;
+  @Mock CqlLibraryActionLogRepository cqlLibraryActionLogRepository;
 
   @InjectMocks ActionLogService actionLogService;
 
@@ -34,10 +34,10 @@ class ActionLogServiceTest {
 
   @Test
   void testLogActionReturnsTrue() {
-    when(cqlLibraryHistoryRepository.pushEvent(anyString(), any(Action.class))).thenReturn(true);
+    when(cqlLibraryActionLogRepository.pushEvent(anyString(), any(Action.class))).thenReturn(true);
     boolean output = actionLogService.logAction("TARGET_ID", ActionType.CREATED, "firstUser");
     assertThat(output, is(true));
-    verify(cqlLibraryHistoryRepository, times(1))
+    verify(cqlLibraryActionLogRepository, times(1))
         .pushEvent(stringArgumentCaptor.capture(), actionArgumentCaptor.capture());
     assertThat(stringArgumentCaptor.getValue(), is(equalTo("TARGET_ID")));
     Action value = actionArgumentCaptor.getValue();
@@ -48,11 +48,11 @@ class ActionLogServiceTest {
 
   @Test
   void testLogActionReturnsFalse() {
-    when(cqlLibraryHistoryRepository.pushEvent(anyString(), any(Action.class))).thenReturn(false);
+    when(cqlLibraryActionLogRepository.pushEvent(anyString(), any(Action.class))).thenReturn(false);
     boolean output =
         actionLogService.logAction("TARGET_ID", ActionType.VERSIONED_MAJOR, "secondUser");
     assertThat(output, is(false));
-    verify(cqlLibraryHistoryRepository, times(1))
+    verify(cqlLibraryActionLogRepository, times(1))
         .pushEvent(stringArgumentCaptor.capture(), actionArgumentCaptor.capture());
     assertThat(stringArgumentCaptor.getValue(), is(equalTo("TARGET_ID")));
     Action value = actionArgumentCaptor.getValue();
