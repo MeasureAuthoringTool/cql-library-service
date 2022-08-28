@@ -130,7 +130,7 @@ public class VersionService {
     }
   }
 
-  public CqlLibrary createDraft(String id, String cqlLibraryName, String username) {
+  public CqlLibrary createDraft(String id, String cqlLibraryName, String cql, String username) {
     CqlLibrary cqlLibrary =
         cqlLibraryRepository
             .findById(id)
@@ -156,6 +156,7 @@ public class VersionService {
     // Clear ID so that the unique GUID from MongoDB will be applied
     clonedCqlLibrary.setId(null);
     clonedCqlLibrary.setCqlLibraryName(cqlLibraryName);
+    clonedCqlLibrary.setCql(cql);
     clonedCqlLibrary.setDraft(true);
     var now = Instant.now();
     clonedCqlLibrary.setCreatedAt(now);

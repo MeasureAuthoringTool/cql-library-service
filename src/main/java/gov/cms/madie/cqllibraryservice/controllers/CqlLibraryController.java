@@ -131,8 +131,10 @@ public class CqlLibraryController {
       @PathVariable("id") String id,
       @Validated(CqlLibrary.ValidationSequence.class) @RequestBody final CqlLibraryDraft cqlLibrary,
       Principal principal) {
+    System.out.println(cqlLibrary);
     var output =
-        versionService.createDraft(id, cqlLibrary.getCqlLibraryName(), principal.getName());
+        versionService.createDraft(
+            id, cqlLibrary.getCqlLibraryName(), cqlLibrary.getCql(), principal.getName());
     log.info("output: {}", output);
     return ResponseEntity.status(HttpStatus.CREATED).body(output);
   }
