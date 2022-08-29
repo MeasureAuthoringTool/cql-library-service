@@ -132,7 +132,8 @@ class CqlLibraryControllerTest {
     assertThat(savedCqlLibrary.getLastModifiedAt(), is(notNullValue()));
 
     verify(actionLogService, times(1))
-        .logAction(targetIdArgumentCaptor.capture(), actionTypeArgumentCaptor.capture(), anyString());
+        .logAction(
+            targetIdArgumentCaptor.capture(), actionTypeArgumentCaptor.capture(), anyString());
     assertThat(targetIdArgumentCaptor.getValue(), is(notNullValue()));
     assertThat(actionTypeArgumentCaptor.getValue(), is(equalTo(ActionType.CREATED)));
   }
@@ -357,11 +358,17 @@ class CqlLibraryControllerTest {
             .createdBy("User1")
             .lastModifiedBy("User1")
             .build();
-    when(versionService.createDraft(anyString(), anyString(), anyString())).thenReturn(draft);
+    when(versionService.createDraft(anyString(), anyString(), anyString(), anyString()))
+        .thenReturn(draft);
     when(principal.getName()).thenReturn("test.user");
     ResponseEntity<CqlLibrary> output =
         cqlLibraryController.createDraft(
-            "Library1_ID", CqlLibraryDraft.builder().cqlLibraryName("Library1").build(), principal);
+            "Library1_ID",
+            CqlLibraryDraft.builder()
+                .cqlLibraryName("Library1")
+                .cql("library Library1 version '1.0.000'")
+                .build(),
+            principal);
     assertThat(output, is(notNullValue()));
     assertThat(output.getStatusCode(), is(equalTo(HttpStatus.CREATED)));
     assertThat(output.getBody(), is(equalTo(draft)));
@@ -369,7 +376,7 @@ class CqlLibraryControllerTest {
 
   @Test
   public void testCreateDraftReturnsException() {
-    when(versionService.createDraft(anyString(), anyString(), anyString()))
+    when(versionService.createDraft(anyString(), anyString(), anyString(), anyString()))
         .thenThrow(new ResourceNotDraftableException("CqlLibrary"));
     when(principal.getName()).thenReturn("test.user");
     assertThrows(
@@ -377,7 +384,10 @@ class CqlLibraryControllerTest {
         () ->
             cqlLibraryController.createDraft(
                 "Library1_ID",
-                CqlLibraryDraft.builder().cqlLibraryName("Library1").build(),
+                CqlLibraryDraft.builder()
+                    .cqlLibraryName("Library1")
+                    .cql("library Library1 version '1.0.000'")
+                    .build(),
                 principal));
   }
 

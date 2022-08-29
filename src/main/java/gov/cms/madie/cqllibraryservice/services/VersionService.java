@@ -50,8 +50,11 @@ public class VersionService {
     cqlLibrary.setLastModifiedAt(Instant.now());
     cqlLibrary.setLastModifiedBy(username);
 
+    String existingCqlLibraryLine =libraryContentTemplate(cqlLibrary.getCqlLibraryName(),cqlLibrary.getVersion());
     Version next = getNextVersion(cqlLibrary, isMajor);
     cqlLibrary.setVersion(next);
+    String synchedCqlLibraryLine =libraryContentTemplate(cqlLibrary.getCqlLibraryName(),next);
+    cqlLibrary.setCql(cqlLibrary.getCql().replace(existingCqlLibraryLine, synchedCqlLibraryLine));
 
     try {
       final ElmJson elmJson = elmTranslatorClient.getElmJson(cqlLibrary.getCql(), accessToken);
@@ -86,6 +89,10 @@ public class VersionService {
         savedCqlLibrary.getId());
 
     return savedCqlLibrary;
+  }
+
+  private String libraryContentTemplate(String cqlLibraryName,Version version){
+    return "library " + cqlLibraryName + " version " + "\'" + version + "\'";
   }
 
   private void validateCqlLibrary(CqlLibrary cqlLibrary, String username) {
@@ -130,7 +137,7 @@ public class VersionService {
     }
   }
 
-  public CqlLibrary createDraft(String id, String cqlLibraryName, String username) {
+  public CqlLibrary createDraft(String id, String cqlLibraryName, String cql, String username) {
     CqlLibrary cqlLibrary =
         cqlLibraryRepository
             .findById(id)
@@ -156,6 +163,7 @@ public class VersionService {
     // Clear ID so that the unique GUID from MongoDB will be applied
     clonedCqlLibrary.setId(null);
     clonedCqlLibrary.setCqlLibraryName(cqlLibraryName);
+    clonedCqlLibrary.setCql(cql);
     clonedCqlLibrary.setDraft(true);
     var now = Instant.now();
     clonedCqlLibrary.setCreatedAt(now);
