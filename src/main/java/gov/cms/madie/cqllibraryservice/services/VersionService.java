@@ -50,10 +50,10 @@ public class VersionService {
     cqlLibrary.setLastModifiedAt(Instant.now());
     cqlLibrary.setLastModifiedBy(username);
 
-    String existingCqlLibraryLine =synchingCQL(cqlLibrary.getCqlLibraryName(),cqlLibrary.getVersion());
+    String existingCqlLibraryLine =libraryContentTemplate(cqlLibrary.getCqlLibraryName(),cqlLibrary.getVersion());
     Version next = getNextVersion(cqlLibrary, isMajor);
     cqlLibrary.setVersion(next);
-    String synchedCqlLibraryLine =synchingCQL(cqlLibrary.getCqlLibraryName(),next);
+    String synchedCqlLibraryLine =libraryContentTemplate(cqlLibrary.getCqlLibraryName(),next);
     cqlLibrary.setCql(cqlLibrary.getCql().replace(existingCqlLibraryLine, synchedCqlLibraryLine));
 
     try {
@@ -91,7 +91,7 @@ public class VersionService {
     return savedCqlLibrary;
   }
 
-  private String synchingCQL(String cqlLibraryName,Version version){
+  private String libraryContentTemplate(String cqlLibraryName,Version version){
     return "library " + cqlLibraryName + " version " + "\'" + version + "\'";
   }
 
