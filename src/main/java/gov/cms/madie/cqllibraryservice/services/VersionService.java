@@ -50,8 +50,11 @@ public class VersionService {
     cqlLibrary.setLastModifiedAt(Instant.now());
     cqlLibrary.setLastModifiedBy(username);
 
+    String existingCqlLibraryLine =synchingCQL(cqlLibrary.getCqlLibraryName(),cqlLibrary.getVersion());
     Version next = getNextVersion(cqlLibrary, isMajor);
     cqlLibrary.setVersion(next);
+    String synchedCqlLibraryLine =synchingCQL(cqlLibrary.getCqlLibraryName(),next);
+    cqlLibrary.setCql(cqlLibrary.getCql().replace(existingCqlLibraryLine, synchedCqlLibraryLine));
 
     try {
       final ElmJson elmJson = elmTranslatorClient.getElmJson(cqlLibrary.getCql(), accessToken);
@@ -86,6 +89,10 @@ public class VersionService {
         savedCqlLibrary.getId());
 
     return savedCqlLibrary;
+  }
+
+  private String synchingCQL(String cqlLibraryName,Version version){
+    return "library " + cqlLibraryName + " version " + "\'" + version + "\'";
   }
 
   private void validateCqlLibrary(CqlLibrary cqlLibrary, String username) {
