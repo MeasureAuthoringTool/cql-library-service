@@ -233,7 +233,8 @@ class VersionServiceTest {
     assertThat(savedValue.getGroupId(), is(equalTo(existingCqlLibrary.getGroupId())));
 
     verify(actionLogService, times(1))
-        .logAction(targetIdArgumentCaptor.capture(), actionTypeArgumentCaptor.capture(), anyString());
+        .logAction(
+            targetIdArgumentCaptor.capture(), actionTypeArgumentCaptor.capture(), anyString());
     assertThat(targetIdArgumentCaptor.getValue(), is(equalTo("testGroupId")));
     assertThat(actionTypeArgumentCaptor.getValue(), is(equalTo(ActionType.VERSIONED_MAJOR)));
   }
@@ -270,7 +271,8 @@ class VersionServiceTest {
     assertThat(savedValue.getVersion().toString(), is(equalTo("1.1.000")));
 
     verify(actionLogService, times(1))
-        .logAction(targetIdArgumentCaptor.capture(), actionTypeArgumentCaptor.capture(), anyString());
+        .logAction(
+            targetIdArgumentCaptor.capture(), actionTypeArgumentCaptor.capture(), anyString());
     assertThat(targetIdArgumentCaptor.getValue(), is(equalTo("testGroupId")));
     assertThat(actionTypeArgumentCaptor.getValue(), is(equalTo(ActionType.VERSIONED_MINOR)));
   }
@@ -281,7 +283,9 @@ class VersionServiceTest {
 
     assertThrows(
         ResourceNotFoundException.class,
-        () -> versionService.createDraft("testCqlLibraryId", "Library1", "testUser"));
+        () ->
+            versionService.createDraft(
+                "testCqlLibraryId", "Library1", "library testCql version '1.0.000'", "testUser"));
   }
 
   @Test
@@ -294,7 +298,12 @@ class VersionServiceTest {
 
     assertThrows(
         PermissionDeniedException.class,
-        () -> versionService.createDraft(existingCqlLibrary.getId(), "Library1", "testUser1"));
+        () ->
+            versionService.createDraft(
+                existingCqlLibrary.getId(),
+                "Library1",
+                "library testCql version '1.0.000'",
+                "testUser1"));
   }
 
   @Test
@@ -314,7 +323,11 @@ class VersionServiceTest {
     doNothing().when(cqlLibraryService).checkDuplicateCqlLibraryName(anyString());
     when(cqlLibraryRepository.existsByGroupIdAndDraft(anyString(), anyBoolean())).thenReturn(false);
 
-    versionService.createDraft("testCqlLibraryId", "testNewCqlLibraryName", "testUser");
+    versionService.createDraft(
+        "testCqlLibraryId",
+        "testNewCqlLibraryName",
+        "library testCql version '1.0.000'",
+        "testUser");
     verify(cqlLibraryRepository, times(1)).save(cqlLibraryArgumentCaptor.capture());
     CqlLibrary savedValue = cqlLibraryArgumentCaptor.getValue();
 
@@ -342,7 +355,12 @@ class VersionServiceTest {
 
     assertThrows(
         ResourceNotDraftableException.class,
-        () -> versionService.createDraft("testCqlLibraryId", "testNewCqlLibraryName", "testUser"));
+        () ->
+            versionService.createDraft(
+                "testCqlLibraryId",
+                "testNewCqlLibraryName",
+                "library testCql version '1.0.000'",
+                "testUser"));
   }
 
   @Test
