@@ -54,6 +54,7 @@ import org.springframework.test.web.servlet.MockMvc;
 public class CqlLibraryControllerMvcTest {
 
   private static final String TEST_USER_ID = "test-okta-user-id-123";
+  private static final String MODEL = ModelType.QI_CORE.toString();
 
   @MockBean private CqlLibraryRepository repository;
 
@@ -69,8 +70,6 @@ public class CqlLibraryControllerMvcTest {
   @Captor private ArgumentCaptor<String> targetIdArgumentCaptor;
 
   @Autowired private MockMvc mockMvc;
-
-  private static final String MODEL = ModelType.QI_CORE.toString();
 
   public String toJsonString(Object obj) throws JsonProcessingException {
     ObjectMapper mapper = new ObjectMapper();
