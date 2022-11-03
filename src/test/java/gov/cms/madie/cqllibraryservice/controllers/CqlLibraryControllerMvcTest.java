@@ -115,8 +115,7 @@ public class CqlLibraryControllerMvcTest {
   @Test
   public void testCreateCqlLibraryReturnsValidationErrorForLowercaseStartCharacter()
       throws Exception {
-    String json =
-        toJsonString(CqlLibrary.builder().cqlLibraryName("aBCDefg").model(MODEL).build());
+    String json = toJsonString(CqlLibrary.builder().cqlLibraryName("aBCDefg").model(MODEL).build());
     when(repository.existsByCqlLibraryName(anyString())).thenReturn(false);
     mockMvc
         .perform(
@@ -160,8 +159,7 @@ public class CqlLibraryControllerMvcTest {
   @Test
   public void testCreateCqlLibraryReturnsValidationErrorForContainingUnderscore() throws Exception {
     String json =
-        toJsonString(
-            CqlLibrary.builder().cqlLibraryName("With_underscore").model(MODEL).build());
+        toJsonString(CqlLibrary.builder().cqlLibraryName("With_underscore").model(MODEL).build());
     when(repository.existsByCqlLibraryName(anyString())).thenReturn(false);
     mockMvc
         .perform(
@@ -183,8 +181,7 @@ public class CqlLibraryControllerMvcTest {
   @Test
   public void testCreateCqlLibraryReturnsValidationErrorForContainingSpecialCharacters()
       throws Exception {
-    String json =
-        toJsonString(CqlLibrary.builder().cqlLibraryName("Name*$").model(MODEL).build());
+    String json = toJsonString(CqlLibrary.builder().cqlLibraryName("Name*$").model(MODEL).build());
     when(repository.existsByCqlLibraryName(anyString())).thenReturn(false);
     mockMvc
         .perform(
@@ -228,8 +225,7 @@ public class CqlLibraryControllerMvcTest {
   public void testCreateCqlLibraryReturnsValidationErrorForDuplicateCqlLibraryName()
       throws Exception {
     String json =
-        toJsonString(
-            CqlLibrary.builder().cqlLibraryName("DuplicateName").model(MODEL).build());
+        toJsonString(CqlLibrary.builder().cqlLibraryName("DuplicateName").model(MODEL).build());
     doThrow(new DuplicateKeyException("cqlLibraryName", "Library name must be unique."))
         .when(cqlLibraryService)
         .checkDuplicateCqlLibraryName(anyString());
@@ -284,11 +280,7 @@ public class CqlLibraryControllerMvcTest {
   public void testCreateCqlLibraryReturnsCreatedForValidObject() throws Exception {
     final String cql = "library AdvancedIllnessandFrailtyExclusion_QICore4 version '5.0.000'";
     CqlLibrary library =
-        CqlLibrary.builder()
-            .cqlLibraryName("NewValidName1")
-            .model(MODEL)
-            .cql(cql)
-            .build();
+        CqlLibrary.builder().cqlLibraryName("NewValidName1").model(MODEL).cql(cql).build();
 
     String json = toJsonString(library);
     doNothing().when(cqlLibraryService).checkDuplicateCqlLibraryName(anyString());
@@ -414,11 +406,7 @@ public class CqlLibraryControllerMvcTest {
   @Test
   public void testUpdateCqlLibraryReturns400ForMismatchedLibraryId() throws Exception {
     final CqlLibrary updatingLibrary =
-        CqlLibrary.builder()
-            .id("Wrong_ID")
-            .cqlLibraryName("NewName")
-            .model(MODEL)
-            .build();
+        CqlLibrary.builder().id("Wrong_ID").cqlLibraryName("NewName").model(MODEL).build();
     String json = toJsonString(updatingLibrary);
     mockMvc
         .perform(
@@ -533,11 +521,7 @@ public class CqlLibraryControllerMvcTest {
   @Test
   public void testUpdateCqlLibraryReturns404ForNotFoundLibrary() throws Exception {
     final CqlLibrary updatingLibrary =
-        CqlLibrary.builder()
-            .id("Library1_ID")
-            .cqlLibraryName("NewName")
-            .model(MODEL)
-            .build();
+        CqlLibrary.builder().id("Library1_ID").cqlLibraryName("NewName").model(MODEL).build();
     String json = toJsonString(updatingLibrary);
     when(repository.findById(anyString())).thenReturn(Optional.empty());
     mockMvc
