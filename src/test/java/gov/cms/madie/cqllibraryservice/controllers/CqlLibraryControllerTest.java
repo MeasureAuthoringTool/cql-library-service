@@ -254,6 +254,7 @@ class CqlLibraryControllerTest {
 
   @Test
   public void testUpdateCqlLibraryThrowsExceptionForNonUniqueNameUpdate() {
+    when(principal.getName()).thenReturn("test.user");
     final String pathId = "Library1_ID";
     final CqlLibrary existingLibrary =
         CqlLibrary.builder()
@@ -261,6 +262,7 @@ class CqlLibraryControllerTest {
             .cqlLibraryName("Library1")
             .model(ModelType.QI_CORE.getValue())
             .draft(true)
+            .createdBy("test.user")
             .build();
     final CqlLibrary updatingLibrary =
         existingLibrary.toBuilder().id("Library1_ID").cqlLibraryName("NewName").build();
@@ -279,6 +281,7 @@ class CqlLibraryControllerTest {
 
   @Test
   public void testUpdateCqlLibraryThrowsExceptionForNonDraftUpdate() {
+    when(principal.getName()).thenReturn("test.user");
     final String pathId = "Library1_ID";
     final CqlLibrary existingLibrary =
         CqlLibrary.builder()
@@ -286,6 +289,7 @@ class CqlLibraryControllerTest {
             .cqlLibraryName("Library1")
             .model(ModelType.QI_CORE.getValue())
             .draft(false)
+            .createdBy("test.user")
             .build();
     final CqlLibrary updatingLibrary =
         existingLibrary.toBuilder().id("Library1_ID").cqlLibraryName("NewName").draft(true).build();
@@ -294,6 +298,28 @@ class CqlLibraryControllerTest {
 
     assertThrows(
         InvalidResourceStateException.class,
+        () -> cqlLibraryController.updateCqlLibrary(pathId, updatingLibrary, principal));
+  }
+
+  @Test
+  public void testUpdateCqlLibraryThrowsPermissionDeniedException() {
+    when(principal.getName()).thenReturn("test.user");
+    final String pathId = "Library1_ID";
+    final CqlLibrary existingLibrary =
+        CqlLibrary.builder()
+            .id("Library1_ID")
+            .cqlLibraryName("Library1")
+            .model(ModelType.QI_CORE.getValue())
+            .draft(false)
+            .createdBy("test.user.2")
+            .build();
+    final CqlLibrary updatingLibrary =
+        existingLibrary.toBuilder().id("Library1_ID").cqlLibraryName("NewName").draft(true).build();
+
+    when(cqlLibraryRepository.findById(anyString())).thenReturn(Optional.of(existingLibrary));
+
+    assertThrows(
+        PermissionDeniedException.class,
         () -> cqlLibraryController.updateCqlLibrary(pathId, updatingLibrary, principal));
   }
 
@@ -309,7 +335,7 @@ class CqlLibraryControllerTest {
             .cql("library testCql version '1.0.000'")
             .draft(true)
             .createdAt(createdTime)
-            .createdBy("User1")
+            .createdBy("User2")
             .lastModifiedAt(createdTime)
             .lastModifiedBy("User1")
             .build();
@@ -339,7 +365,7 @@ class CqlLibraryControllerTest {
     assertThat(savedValue.getCqlLibraryName(), is(equalTo("NewName")));
     assertThat(savedValue.getCql(), is(equalTo("library testCql version '2.1.000'")));
     assertThat(savedValue.getCreatedAt(), is(equalTo(createdTime)));
-    assertThat(savedValue.getCreatedBy(), is(equalTo("User1")));
+    assertThat(savedValue.getCreatedBy(), is(equalTo("User2")));
     assertThat(savedValue.getLastModifiedAt(), is(notNullValue()));
     assertThat(savedValue.getLastModifiedAt().isAfter(createdTime), is(true));
     assertThat(savedValue.getLastModifiedBy(), is(equalTo("User2")));
