@@ -2,6 +2,7 @@ package gov.cms.madie.cqllibraryservice.controllers;
 
 import gov.cms.madie.cqllibraryservice.exceptions.InvalidIdException;
 import gov.cms.madie.cqllibraryservice.exceptions.InvalidResourceStateException;
+import gov.cms.madie.cqllibraryservice.exceptions.PermissionDeniedException;
 import gov.cms.madie.cqllibraryservice.exceptions.ResourceNotFoundException;
 import gov.cms.madie.cqllibraryservice.services.ActionLogService;
 import gov.cms.madie.models.common.ActionType;
@@ -98,6 +99,9 @@ public class CqlLibraryController {
         .findById(cqlLibrary.getId())
         .map(
             persistedLibrary -> {
+              if (!username.equalsIgnoreCase(persistedLibrary.getCreatedBy())) {
+                throw new PermissionDeniedException("CQL Library", cqlLibrary.getId(), username);
+              }
               if (!persistedLibrary.isDraft()) {
                 throw new InvalidResourceStateException("CQL Library", id);
               }
