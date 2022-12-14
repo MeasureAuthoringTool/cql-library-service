@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Optional;
 import org.springframework.data.mongodb.repository.ExistsQuery;
 import org.springframework.data.mongodb.repository.MongoRepository;
+import org.springframework.data.mongodb.repository.Query;
 
 public interface CqlLibraryRepository
     extends MongoRepository<CqlLibrary, String>, CqlLibraryVersionRepository {
@@ -16,5 +17,6 @@ public interface CqlLibraryRepository
 
   boolean existsByGroupIdAndDraft(String groupId, boolean draft);
 
+  @Query("{createdBy : { $regex : ?0, $options: 'i' }}")
   List<CqlLibrary> findAllByCreatedBy(String user);
 }
