@@ -97,7 +97,7 @@ public class VersionService {
   }
 
   private void validateCqlLibrary(CqlLibrary cqlLibrary, String username) {
-    if (!Objects.equals(cqlLibrary.getCreatedBy(), username)) {
+    if (!username.equalsIgnoreCase(cqlLibrary.getCreatedBy())) {
       log.error(
           "User [{}] doest not have permission to create a version of CQL Library with id [{}]",
           username,
@@ -148,7 +148,7 @@ public class VersionService {
       cqlLibraryService.checkDuplicateCqlLibraryName(cqlLibraryName);
     }
 
-    if (!Objects.equals(cqlLibrary.getCreatedBy(), username)) {
+    if (!username.equalsIgnoreCase(cqlLibrary.getCreatedBy())) {
       log.info(
           "User [{}] doest not have permission to create a draft of CQL Library with id [{}]",
           username,
