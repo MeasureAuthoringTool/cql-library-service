@@ -29,10 +29,11 @@ import gov.cms.madie.cqllibraryservice.exceptions.ResourceNotDraftableException;
 import gov.cms.madie.cqllibraryservice.exceptions.ResourceNotFoundException;
 import gov.cms.madie.cqllibraryservice.services.ActionLogService;
 import gov.cms.madie.models.common.ActionType;
+import gov.cms.madie.models.common.ProgramUseContext;
 import gov.cms.madie.models.library.CqlLibrary;
 import gov.cms.madie.models.library.CqlLibraryDraft;
 import gov.cms.madie.models.common.ModelType;
-import gov.cms.madie.models.library.Version;
+import gov.cms.madie.models.common.Version;
 import gov.cms.madie.cqllibraryservice.repositories.CqlLibraryRepository;
 import gov.cms.madie.cqllibraryservice.services.CqlLibraryService;
 import gov.cms.madie.cqllibraryservice.services.VersionService;
@@ -280,7 +281,17 @@ public class CqlLibraryControllerMvcTest {
   public void testCreateCqlLibraryReturnsCreatedForValidObject() throws Exception {
     final String cql = "library AdvancedIllnessandFrailtyExclusion_QICore4 version '5.0.000'";
     CqlLibrary library =
-        CqlLibrary.builder().cqlLibraryName("NewValidName1").model(MODEL).cql(cql).build();
+        CqlLibrary.builder()
+            .cqlLibraryName("NewValidName1")
+            .model(MODEL)
+            .cql(cql)
+            .programUseContext(
+                ProgramUseContext.builder()
+                    .code("mips")
+                    .display("MIPS")
+                    .codeSystem("http://hl7.org/fhir/us/cqfmeasures/CodeSystem/quality-programs")
+                    .build())
+            .build();
 
     String json = toJsonString(library);
     doNothing().when(cqlLibraryService).checkDuplicateCqlLibraryName(anyString());
@@ -314,6 +325,12 @@ public class CqlLibraryControllerMvcTest {
         .andExpect(jsonPath("$.cqlLibraryName").value("NewValidName1"))
         .andExpect(jsonPath("$.id").isNotEmpty())
         .andExpect(jsonPath("$.cql").value(cql))
+        .andExpect(jsonPath("$.programUseContext").isNotEmpty())
+        .andExpect(jsonPath("$.programUseContext.code").value("mips"))
+        .andExpect(jsonPath("$.programUseContext.display").value("MIPS"))
+        .andExpect(
+            jsonPath("$.programUseContext.codeSystem")
+                .value("http://hl7.org/fhir/us/cqfmeasures/CodeSystem/quality-programs"))
         .andExpect(jsonPath("$.createdBy").value(TEST_USER_ID))
         .andExpect(jsonPath("$.lastModifiedBy").value(TEST_USER_ID))
         .andExpect(jsonPath("$.createdAt").value(fiveMinMatcher))

@@ -1,6 +1,6 @@
 package gov.cms.madie.cqllibraryservice.repositories;
 
-import gov.cms.madie.models.library.Version;
+import gov.cms.madie.models.common.Version;
 import java.util.Optional;
 
 public interface CqlLibraryVersionRepository {
