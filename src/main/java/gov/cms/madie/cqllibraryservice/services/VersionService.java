@@ -5,7 +5,7 @@ import gov.cms.madie.cqllibraryservice.repositories.CqlLibraryActionLogRepositor
 import gov.cms.madie.models.common.ActionType;
 import gov.cms.madie.models.library.CqlLibrary;
 import gov.cms.madie.models.measure.ElmJson;
-import gov.cms.madie.models.library.Version;
+import gov.cms.madie.models.common.Version;
 import gov.cms.madie.cqllibraryservice.repositories.CqlLibraryRepository;
 import java.net.URI;
 import java.time.Instant;

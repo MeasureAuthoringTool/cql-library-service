@@ -1,7 +1,7 @@
 package gov.cms.madie.cqllibraryservice.repositories;
 
 import gov.cms.madie.models.library.CqlLibrary;
-import gov.cms.madie.models.library.Version;
+import gov.cms.madie.models.common.Version;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
