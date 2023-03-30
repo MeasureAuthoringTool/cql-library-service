@@ -1,5 +1,6 @@
 package gov.cms.madie.cqllibraryservice.controllers;
 
+import gov.cms.madie.cqllibraryservice.exceptions.GeneralConflictException;
 import gov.cms.madie.cqllibraryservice.exceptions.InvalidIdException;
 import gov.cms.madie.cqllibraryservice.exceptions.InvalidResourceStateException;
 import gov.cms.madie.cqllibraryservice.exceptions.PermissionDeniedException;
@@ -15,10 +16,12 @@ import gov.cms.madie.cqllibraryservice.services.VersionService;
 import java.security.Principal;
 import java.time.Instant;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
@@ -118,6 +121,20 @@ public class CqlLibraryController {
               return ResponseEntity.ok(cqlLibraryRepository.save(cqlLibrary));
             })
         .orElseThrow(() -> new ResourceNotFoundException("CQL Library", id));
+  }
+
+  @GetMapping(value = "/cql", produces = MediaType.TEXT_PLAIN_VALUE)
+  public String getLibraryCql(@RequestParam String name, @RequestParam String version, @RequestParam Optional<String> model) {
+    List<CqlLibrary> libs = model.isPresent() ?
+        cqlLibraryRepository.findAllByCqlLibraryNameAndDraftAndVersionAndModel(name, false, Version.parse(version), model.get()) :
+        cqlLibraryRepository.findAllByCqlLibraryNameAndDraftAndVersion(name, false, Version.parse(version));
+    if (libs == null || libs.isEmpty()) {
+      throw new ResourceNotFoundException("Library", "name", name);
+    } else if (libs.size() > 1) {
+      throw new GeneralConflictException("Multiple versioned libraries were found. Please provide additional filters to narrow down the results to a single library.");
+    } else {
+      return libs.get(0).getCql();
+    }
   }
 
   @PutMapping("/version/{id}")

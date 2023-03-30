@@ -1,5 +1,6 @@
 package gov.cms.madie.cqllibraryservice.repositories;
 
+import gov.cms.madie.models.common.Version;
 import gov.cms.madie.models.library.CqlLibrary;
 import java.util.List;
 import java.util.Optional;
@@ -19,4 +20,11 @@ public interface CqlLibraryRepository
 
   @Query("{createdBy : { $regex : ?0, $options: 'i' }}")
   List<CqlLibrary> findAllByCreatedBy(String user);
+
+  @Query(fields="{cqlLibraryName: 1, draft:  1, cql: 1}")
+  List<CqlLibrary> findAllByCqlLibraryNameAndDraftAndVersion(String cqlLibraryName, boolean draft, Version version);
+
+  @Query(fields="{cqlLibraryName: 1, draft:  1, cql: 1}")
+  List<CqlLibrary> findAllByCqlLibraryNameAndDraftAndVersionAndModel(String cqlLibraryName, boolean draft, Version version, String model);
+
 }
