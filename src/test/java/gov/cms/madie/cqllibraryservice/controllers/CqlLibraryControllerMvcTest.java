@@ -1156,7 +1156,8 @@ public class CqlLibraryControllerMvcTest {
   @Test
   public void testGetLibraryCqlReturnsCqlForLibraryWithoutModel() throws Exception {
     final List<CqlLibrary> libraries = List.of(CqlLibrary.builder().cql("CQL_HERE").build());
-    when(repository.findAllByCqlLibraryNameAndDraftAndVersion(anyString(), anyBoolean(), any(Version.class)))
+    when(repository.findAllByCqlLibraryNameAndDraftAndVersion(
+            anyString(), anyBoolean(), any(Version.class)))
         .thenReturn(libraries);
 
     mockMvc
@@ -1166,7 +1167,7 @@ public class CqlLibraryControllerMvcTest {
                 .with(csrf())
                 .header("Authorization", "test-okta")
                 .contentType(MediaType.APPLICATION_JSON_VALUE))
-            .andExpect(status().isOk())
+        .andExpect(status().isOk())
         .andExpect(content().string("CQL_HERE"));
     verify(repository, times(1))
         .findAllByCqlLibraryNameAndDraftAndVersion(anyString(), anyBoolean(), any(Version.class));
@@ -1174,7 +1175,8 @@ public class CqlLibraryControllerMvcTest {
 
   @Test
   public void testGetLibraryCqlReturnsNotFound() throws Exception {
-    when(repository.findAllByCqlLibraryNameAndDraftAndVersion(anyString(), anyBoolean(), any(Version.class)))
+    when(repository.findAllByCqlLibraryNameAndDraftAndVersion(
+            anyString(), anyBoolean(), any(Version.class)))
         .thenReturn(List.of());
 
     mockMvc
@@ -1184,15 +1186,17 @@ public class CqlLibraryControllerMvcTest {
                 .with(csrf())
                 .header("Authorization", "test-okta")
                 .contentType(MediaType.APPLICATION_JSON_VALUE))
-            .andExpect(status().isNotFound())
-        .andExpect(jsonPath("$.message").value("Could not find resource Library with name: Library1"));
+        .andExpect(status().isNotFound())
+        .andExpect(
+            jsonPath("$.message").value("Could not find resource Library with name: Library1"));
     verify(repository, times(1))
         .findAllByCqlLibraryNameAndDraftAndVersion(anyString(), anyBoolean(), any(Version.class));
   }
 
   @Test
   public void testGetLibraryCqlReturnsConflict() throws Exception {
-    when(repository.findAllByCqlLibraryNameAndDraftAndVersion(anyString(), anyBoolean(), any(Version.class)))
+    when(repository.findAllByCqlLibraryNameAndDraftAndVersion(
+            anyString(), anyBoolean(), any(Version.class)))
         .thenReturn(List.of(CqlLibrary.builder().build(), CqlLibrary.builder().build()));
 
     mockMvc
@@ -1202,8 +1206,11 @@ public class CqlLibraryControllerMvcTest {
                 .with(csrf())
                 .header("Authorization", "test-okta")
                 .contentType(MediaType.APPLICATION_JSON_VALUE))
-            .andExpect(status().isConflict())
-        .andExpect(jsonPath("$.message").value("Multiple versioned libraries were found. Please provide additional filters to narrow down the results to a single library."));
+        .andExpect(status().isConflict())
+        .andExpect(
+            jsonPath("$.message")
+                .value(
+                    "Multiple versioned libraries were found. Please provide additional filters to narrow down the results to a single library."));
     verify(repository, times(1))
         .findAllByCqlLibraryNameAndDraftAndVersion(anyString(), anyBoolean(), any(Version.class));
   }
@@ -1211,7 +1218,8 @@ public class CqlLibraryControllerMvcTest {
   @Test
   public void testGetLibraryCqlReturnsCqlForLibraryWithModel() throws Exception {
     final List<CqlLibrary> libraries = List.of(CqlLibrary.builder().cql("CQL_HERE").build());
-    when(repository.findAllByCqlLibraryNameAndDraftAndVersionAndModel(anyString(), anyBoolean(), any(Version.class), anyString()))
+    when(repository.findAllByCqlLibraryNameAndDraftAndVersionAndModel(
+            anyString(), anyBoolean(), any(Version.class), anyString()))
         .thenReturn(libraries);
 
     mockMvc
@@ -1221,9 +1229,10 @@ public class CqlLibraryControllerMvcTest {
                 .with(csrf())
                 .header("Authorization", "test-okta")
                 .contentType(MediaType.APPLICATION_JSON_VALUE))
-            .andExpect(status().isOk())
+        .andExpect(status().isOk())
         .andExpect(content().string("CQL_HERE"));
     verify(repository, times(1))
-        .findAllByCqlLibraryNameAndDraftAndVersionAndModel(anyString(), anyBoolean(), any(Version.class), eq("QI-Core v4.1.1"));
+        .findAllByCqlLibraryNameAndDraftAndVersionAndModel(
+            anyString(), anyBoolean(), any(Version.class), eq("QI-Core v4.1.1"));
   }
 }

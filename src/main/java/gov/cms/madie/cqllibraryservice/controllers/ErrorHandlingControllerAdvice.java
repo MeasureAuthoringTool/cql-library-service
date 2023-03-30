@@ -80,9 +80,9 @@ public class ErrorHandlingControllerAdvice {
   }
 
   @ExceptionHandler({
-      GeneralConflictException.class,
-      ResourceNotDraftableException.class,
-      InvalidResourceStateException.class
+    GeneralConflictException.class,
+    ResourceNotDraftableException.class,
+    InvalidResourceStateException.class
   })
   @ResponseStatus(HttpStatus.CONFLICT)
   @ResponseBody

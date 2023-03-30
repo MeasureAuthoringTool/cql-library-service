@@ -124,14 +124,21 @@ public class CqlLibraryController {
   }
 
   @GetMapping(value = "/cql", produces = MediaType.TEXT_PLAIN_VALUE)
-  public String getLibraryCql(@RequestParam String name, @RequestParam String version, @RequestParam Optional<String> model) {
-    List<CqlLibrary> libs = model.isPresent() ?
-        cqlLibraryRepository.findAllByCqlLibraryNameAndDraftAndVersionAndModel(name, false, Version.parse(version), model.get()) :
-        cqlLibraryRepository.findAllByCqlLibraryNameAndDraftAndVersion(name, false, Version.parse(version));
+  public String getLibraryCql(
+      @RequestParam String name,
+      @RequestParam String version,
+      @RequestParam Optional<String> model) {
+    List<CqlLibrary> libs =
+        model.isPresent()
+            ? cqlLibraryRepository.findAllByCqlLibraryNameAndDraftAndVersionAndModel(
+                name, false, Version.parse(version), model.get())
+            : cqlLibraryRepository.findAllByCqlLibraryNameAndDraftAndVersion(
+                name, false, Version.parse(version));
     if (libs == null || libs.isEmpty()) {
       throw new ResourceNotFoundException("Library", "name", name);
     } else if (libs.size() > 1) {
-      throw new GeneralConflictException("Multiple versioned libraries were found. Please provide additional filters to narrow down the results to a single library.");
+      throw new GeneralConflictException(
+          "Multiple versioned libraries were found. Please provide additional filters to narrow down the results to a single library.");
     } else {
       return libs.get(0).getCql();
     }

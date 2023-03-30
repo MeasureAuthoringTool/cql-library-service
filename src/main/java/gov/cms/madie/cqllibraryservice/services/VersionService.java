@@ -65,7 +65,8 @@ public class VersionService {
       }
       cqlLibrary.setElmJson(elmJson.getJson());
       cqlLibrary.setElmXml(elmJson.getXml());
-      // TODO: determine if integration with a different external service is needed, like future madie-dqm-service?
+      // TODO: determine if integration with a different external service is needed, like future
+      // madie-dqm-service?
       if (ModelType.QI_CORE.getValue().equals(cqlLibrary.getModel())) {
         persistHapiFhirCqlLibrary(cqlLibrary, accessToken);
       }
