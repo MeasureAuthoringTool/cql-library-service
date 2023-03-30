@@ -138,7 +138,9 @@ public class CqlLibraryController {
       throw new ResourceNotFoundException("Library", "name", name);
     } else if (libs.size() > 1) {
       throw new GeneralConflictException(
-          "Multiple versioned libraries were found. Please provide additional filters to narrow down the results to a single library.");
+          "Multiple versioned libraries were found. "
+              + "Please provide additional filters "
+              + "to narrow down the results to a single library.");
     } else {
       return libs.get(0).getCql();
     }
