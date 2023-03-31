@@ -23,6 +23,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.util.CollectionUtils;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
@@ -134,7 +135,7 @@ public class CqlLibraryController {
                 name, false, Version.parse(version), model.get())
             : cqlLibraryRepository.findAllByCqlLibraryNameAndDraftAndVersion(
                 name, false, Version.parse(version));
-    if (libs == null || libs.isEmpty()) {
+    if (CollectionUtils.isEmpty(libs)) {
       throw new ResourceNotFoundException("Library", "name", name);
     } else if (libs.size() > 1) {
       throw new GeneralConflictException(
