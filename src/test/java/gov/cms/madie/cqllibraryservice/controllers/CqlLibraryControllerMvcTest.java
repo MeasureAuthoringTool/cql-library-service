@@ -32,13 +32,13 @@ import gov.cms.madie.models.common.ActionType;
 import gov.cms.madie.models.common.ProgramUseContext;
 import gov.cms.madie.models.library.CqlLibrary;
 import gov.cms.madie.models.library.CqlLibraryDraft;
-import gov.cms.madie.models.common.ModelType;
 import gov.cms.madie.models.common.Version;
 import gov.cms.madie.cqllibraryservice.repositories.CqlLibraryRepository;
 import gov.cms.madie.cqllibraryservice.services.CqlLibraryService;
 import gov.cms.madie.cqllibraryservice.services.VersionService;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.List;
 import java.util.Optional;
 import org.bson.types.ObjectId;
 import org.hamcrest.CustomMatcher;
@@ -325,6 +325,75 @@ public class CqlLibraryControllerMvcTest {
         .andExpect(jsonPath("$.cqlLibraryName").value("NewValidName1"))
         .andExpect(jsonPath("$.id").isNotEmpty())
         .andExpect(jsonPath("$.cql").value(cql))
+        .andExpect(jsonPath("$.programUseContext").isNotEmpty())
+        .andExpect(jsonPath("$.programUseContext.code").value("mips"))
+        .andExpect(jsonPath("$.programUseContext.display").value("MIPS"))
+        .andExpect(
+            jsonPath("$.programUseContext.codeSystem")
+                .value("http://hl7.org/fhir/us/cqfmeasures/CodeSystem/quality-programs"))
+        .andExpect(jsonPath("$.createdBy").value(TEST_USER_ID))
+        .andExpect(jsonPath("$.lastModifiedBy").value(TEST_USER_ID))
+        .andExpect(jsonPath("$.createdAt").value(fiveMinMatcher))
+        .andExpect(jsonPath("$.lastModifiedAt").value(fiveMinMatcher));
+    verify(cqlLibraryService, times(1)).checkDuplicateCqlLibraryName(anyString());
+    verify(repository, times(1)).save(any(CqlLibrary.class));
+
+    verify(actionLogService, times(1))
+        .logAction(
+            targetIdArgumentCaptor.capture(), actionTypeArgumentCaptor.capture(), anyString());
+    assertThat(targetIdArgumentCaptor.getValue(), is(notNullValue()));
+    assertThat(actionTypeArgumentCaptor.getValue(), is(equalTo(ActionType.CREATED)));
+  }
+
+  @Test
+  public void testCreateCqlLibraryReturnsCreatedForValidQdmLibrary() throws Exception {
+    final String cql = "library QdmLibrary1 version '1.0.000'";
+    CqlLibrary library =
+        CqlLibrary.builder()
+            .cqlLibraryName("NewValidNameQdm1")
+            .model(ModelType.QDM_5_6.toString())
+            .cql(cql)
+            .programUseContext(
+                ProgramUseContext.builder()
+                    .code("mips")
+                    .display("MIPS")
+                    .codeSystem("http://hl7.org/fhir/us/cqfmeasures/CodeSystem/quality-programs")
+                    .build())
+            .build();
+
+    String json = toJsonString(library);
+    doNothing().when(cqlLibraryService).checkDuplicateCqlLibraryName(anyString());
+    String objectId = ObjectId.get().toHexString();
+    when(repository.save(any(CqlLibrary.class)))
+        .then(
+            (args) -> {
+              CqlLibrary lib = args.getArgument(0);
+              lib.setId(objectId);
+              return lib;
+            });
+
+    CustomMatcher<Instant> fiveMinMatcher =
+        new CustomMatcher<>("Instant within last five minutes") {
+          @Override
+          public boolean matches(Object actual) {
+            System.out.println(actual);
+            final Instant i = Instant.parse(actual.toString());
+            return Instant.now().minus(5, ChronoUnit.MINUTES).isBefore(i);
+          }
+        };
+
+    mockMvc
+        .perform(
+            post("/cql-libraries")
+                .with(user(TEST_USER_ID))
+                .with(csrf())
+                .content(json)
+                .contentType(MediaType.APPLICATION_JSON_VALUE))
+        .andExpect(status().isCreated())
+        .andExpect(jsonPath("$.cqlLibraryName").value("NewValidNameQdm1"))
+        .andExpect(jsonPath("$.id").isNotEmpty())
+        .andExpect(jsonPath("$.cql").value(cql))
+        .andExpect(jsonPath("$.model").value(ModelType.QDM_5_6.toString()))
         .andExpect(jsonPath("$.programUseContext").isNotEmpty())
         .andExpect(jsonPath("$.programUseContext.code").value("mips"))
         .andExpect(jsonPath("$.programUseContext.display").value("MIPS"))
@@ -1082,5 +1151,88 @@ public class CqlLibraryControllerMvcTest {
         .andExpect(jsonPath("$.version").value("2.0.000"));
     verify(versionService, times(1))
         .createVersion(eq("Library1_ID"), eq(true), eq(TEST_USER_ID), eq("test-okta"));
+  }
+
+  @Test
+  public void testGetLibraryCqlReturnsCqlForLibraryWithoutModel() throws Exception {
+    final List<CqlLibrary> libraries = List.of(CqlLibrary.builder().cql("CQL_HERE").build());
+    when(repository.findAllByCqlLibraryNameAndDraftAndVersion(
+            anyString(), anyBoolean(), any(Version.class)))
+        .thenReturn(libraries);
+
+    mockMvc
+        .perform(
+            get("/cql-libraries/cql?name=Library1&version=1.0.000")
+                .with(user(TEST_USER_ID))
+                .with(csrf())
+                .header("Authorization", "test-okta")
+                .contentType(MediaType.APPLICATION_JSON_VALUE))
+        .andExpect(status().isOk())
+        .andExpect(content().string("CQL_HERE"));
+    verify(repository, times(1))
+        .findAllByCqlLibraryNameAndDraftAndVersion(anyString(), anyBoolean(), any(Version.class));
+  }
+
+  @Test
+  public void testGetLibraryCqlReturnsNotFound() throws Exception {
+    when(repository.findAllByCqlLibraryNameAndDraftAndVersion(
+            anyString(), anyBoolean(), any(Version.class)))
+        .thenReturn(List.of());
+
+    mockMvc
+        .perform(
+            get("/cql-libraries/cql?name=Library1&version=1.0.000")
+                .with(user(TEST_USER_ID))
+                .with(csrf())
+                .header("Authorization", "test-okta")
+                .contentType(MediaType.APPLICATION_JSON_VALUE))
+        .andExpect(status().isNotFound())
+        .andExpect(
+            jsonPath("$.message").value("Could not find resource Library with name: Library1"));
+    verify(repository, times(1))
+        .findAllByCqlLibraryNameAndDraftAndVersion(anyString(), anyBoolean(), any(Version.class));
+  }
+
+  @Test
+  public void testGetLibraryCqlReturnsConflict() throws Exception {
+    when(repository.findAllByCqlLibraryNameAndDraftAndVersion(
+            anyString(), anyBoolean(), any(Version.class)))
+        .thenReturn(List.of(CqlLibrary.builder().build(), CqlLibrary.builder().build()));
+
+    mockMvc
+        .perform(
+            get("/cql-libraries/cql?name=Library1&version=1.0.000")
+                .with(user(TEST_USER_ID))
+                .with(csrf())
+                .header("Authorization", "test-okta")
+                .contentType(MediaType.APPLICATION_JSON_VALUE))
+        .andExpect(status().isConflict())
+        .andExpect(
+            jsonPath("$.message")
+                .value(
+                    "Multiple versioned libraries were found. Please provide additional filters to narrow down the results to a single library."));
+    verify(repository, times(1))
+        .findAllByCqlLibraryNameAndDraftAndVersion(anyString(), anyBoolean(), any(Version.class));
+  }
+
+  @Test
+  public void testGetLibraryCqlReturnsCqlForLibraryWithModel() throws Exception {
+    final List<CqlLibrary> libraries = List.of(CqlLibrary.builder().cql("CQL_HERE").build());
+    when(repository.findAllByCqlLibraryNameAndDraftAndVersionAndModel(
+            anyString(), anyBoolean(), any(Version.class), anyString()))
+        .thenReturn(libraries);
+
+    mockMvc
+        .perform(
+            get("/cql-libraries/cql?name=Library1&version=1.0.000&model=QI-Core v4.1.1")
+                .with(user(TEST_USER_ID))
+                .with(csrf())
+                .header("Authorization", "test-okta")
+                .contentType(MediaType.APPLICATION_JSON_VALUE))
+        .andExpect(status().isOk())
+        .andExpect(content().string("CQL_HERE"));
+    verify(repository, times(1))
+        .findAllByCqlLibraryNameAndDraftAndVersionAndModel(
+            anyString(), anyBoolean(), any(Version.class), eq("QI-Core v4.1.1"));
   }
 }

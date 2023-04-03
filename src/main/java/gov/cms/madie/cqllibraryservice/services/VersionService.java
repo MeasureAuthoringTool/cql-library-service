@@ -3,6 +3,7 @@ package gov.cms.madie.cqllibraryservice.services;
 import gov.cms.madie.cqllibraryservice.exceptions.*;
 import gov.cms.madie.cqllibraryservice.repositories.CqlLibraryActionLogRepository;
 import gov.cms.madie.models.common.ActionType;
+import gov.cms.madie.models.common.ModelType;
 import gov.cms.madie.models.library.CqlLibrary;
 import gov.cms.madie.models.measure.ElmJson;
 import gov.cms.madie.models.common.Version;
@@ -64,7 +65,11 @@ public class VersionService {
       }
       cqlLibrary.setElmJson(elmJson.getJson());
       cqlLibrary.setElmXml(elmJson.getXml());
-      persistHapiFhirCqlLibrary(cqlLibrary, accessToken);
+      // TODO: determine if integration with a different external service is needed, like future
+      // madie-dqm-service?
+      if (ModelType.QI_CORE.getValue().equals(cqlLibrary.getModel())) {
+        persistHapiFhirCqlLibrary(cqlLibrary, accessToken);
+      }
     } catch (CqlElmTranslationServiceException | CqlElmTranslationErrorException e) {
       throw e;
     } catch (Exception e) {

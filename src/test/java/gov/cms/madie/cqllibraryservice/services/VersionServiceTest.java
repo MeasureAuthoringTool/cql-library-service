@@ -10,6 +10,7 @@ import static org.mockito.Mockito.*;
 
 import gov.cms.madie.cqllibraryservice.exceptions.*;
 import gov.cms.madie.models.common.ActionType;
+import gov.cms.madie.models.common.ModelType;
 import gov.cms.madie.models.library.CqlLibrary;
 import gov.cms.madie.models.measure.ElmJson;
 import gov.cms.madie.models.common.Version;
@@ -207,6 +208,7 @@ class VersionServiceTest {
             .cql("library testCql version '1.0.000'")
             .groupId("testGroupId")
             .version(Version.parse("1.0.000"))
+            .model(ModelType.QI_CORE.toString())
             .build();
 
     CqlLibrary updatedCqlLibrary = existingCqlLibrary.toBuilder().build();
@@ -249,6 +251,7 @@ class VersionServiceTest {
             .draft(true)
             .groupId("testGroupId")
             .version(Version.parse("1.0.000"))
+            .model(ModelType.QI_CORE.toString())
             .build();
 
     CqlLibrary updatedCqlLibrary = existingCqlLibrary.toBuilder().build();

@@ -449,4 +449,32 @@ class CqlLibraryControllerTest {
         PermissionDeniedException.class,
         () -> cqlLibraryController.createVersion("Library1_ID", true, principal, "accesstoken"));
   }
+
+  @Test
+  public void testGetLibraryCqlReturnsCqlWithoutModel() {
+    final List<CqlLibrary> libraries = List.of(CqlLibrary.builder().cql("CQL_HERE").build());
+    when(cqlLibraryRepository.findAllByCqlLibraryNameAndDraftAndVersion(
+            anyString(), anyBoolean(), any(Version.class)))
+        .thenReturn(libraries);
+
+    String output = cqlLibraryController.getLibraryCql("Library1", "1.0.000", Optional.empty());
+    assertThat(output, is(equalTo("CQL_HERE")));
+    verify(cqlLibraryRepository, times(1))
+        .findAllByCqlLibraryNameAndDraftAndVersion(anyString(), anyBoolean(), any(Version.class));
+  }
+
+  @Test
+  public void testGetLibraryCqlReturnsCqlWithModel() {
+    final List<CqlLibrary> libraries = List.of(CqlLibrary.builder().cql("CQL_HERE").build());
+    when(cqlLibraryRepository.findAllByCqlLibraryNameAndDraftAndVersionAndModel(
+            anyString(), anyBoolean(), any(Version.class), anyString()))
+        .thenReturn(libraries);
+
+    String output =
+        cqlLibraryController.getLibraryCql("Library1", "1.0.000", Optional.of("QI-Core v4.1.1"));
+    assertThat(output, is(equalTo("CQL_HERE")));
+    verify(cqlLibraryRepository, times(1))
+        .findAllByCqlLibraryNameAndDraftAndVersionAndModel(
+            anyString(), anyBoolean(), any(Version.class), eq("QI-Core v4.1.1"));
+  }
 }

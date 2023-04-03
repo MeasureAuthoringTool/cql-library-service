@@ -79,7 +79,11 @@ public class ErrorHandlingControllerAdvice {
     return getErrorAttributes(request, HttpStatus.NOT_FOUND);
   }
 
-  @ExceptionHandler({ResourceNotDraftableException.class, InvalidResourceStateException.class})
+  @ExceptionHandler({
+    GeneralConflictException.class,
+    ResourceNotDraftableException.class,
+    InvalidResourceStateException.class
+  })
   @ResponseStatus(HttpStatus.CONFLICT)
   @ResponseBody
   Map<String, Object> onResourceNotDraftableException(WebRequest request) {
