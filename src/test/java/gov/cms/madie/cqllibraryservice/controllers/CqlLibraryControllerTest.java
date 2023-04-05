@@ -451,30 +451,23 @@ class CqlLibraryControllerTest {
   }
 
   @Test
-  public void testGetLibraryCqlReturnsCqlWithoutModel() {
-    final List<CqlLibrary> libraries = List.of(CqlLibrary.builder().cql("CQL_HERE").build());
-    when(cqlLibraryRepository.findAllByCqlLibraryNameAndDraftAndVersion(
-            anyString(), anyBoolean(), any(Version.class)))
-        .thenReturn(libraries);
+  public void testGetLibraryCql() {
+    when(cqlLibraryService.getVersionedCqlLibrary(anyString(), any(), any()))
+        .thenReturn(CqlLibrary.builder().cql("Test Cql").build());
+    String cql = cqlLibraryController.getLibraryCql("TestCqlLibrary", "1.0.000", Optional.empty());
 
-    String output = cqlLibraryController.getLibraryCql("Library1", "1.0.000", Optional.empty());
-    assertThat(output, is(equalTo("CQL_HERE")));
-    verify(cqlLibraryRepository, times(1))
-        .findAllByCqlLibraryNameAndDraftAndVersion(anyString(), anyBoolean(), any(Version.class));
+    verify(cqlLibraryService, times(1)).getVersionedCqlLibrary(anyString(), any(), any());
+    assertEquals("Test Cql", cql);
   }
 
   @Test
-  public void testGetLibraryCqlReturnsCqlWithModel() {
-    final List<CqlLibrary> libraries = List.of(CqlLibrary.builder().cql("CQL_HERE").build());
-    when(cqlLibraryRepository.findAllByCqlLibraryNameAndDraftAndVersionAndModel(
-            anyString(), anyBoolean(), any(Version.class), anyString()))
-        .thenReturn(libraries);
+  public void testGetVersionedCqlLibrary() {
+    when(cqlLibraryService.getVersionedCqlLibrary(anyString(), any(), any()))
+        .thenReturn(CqlLibrary.builder().build());
+    ResponseEntity<CqlLibrary> versionedCqlLibrary =
+        cqlLibraryController.getVersionedCqlLibrary("TestCqlLibrary", "1.0.000", Optional.empty());
 
-    String output =
-        cqlLibraryController.getLibraryCql("Library1", "1.0.000", Optional.of("QI-Core v4.1.1"));
-    assertThat(output, is(equalTo("CQL_HERE")));
-    verify(cqlLibraryRepository, times(1))
-        .findAllByCqlLibraryNameAndDraftAndVersionAndModel(
-            anyString(), anyBoolean(), any(Version.class), eq("QI-Core v4.1.1"));
+    verify(cqlLibraryService, times(1)).getVersionedCqlLibrary(anyString(), any(), any());
+    assertEquals(HttpStatus.OK, versionedCqlLibrary.getStatusCode());
   }
 }
