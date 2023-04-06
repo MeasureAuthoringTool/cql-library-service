@@ -13,9 +13,11 @@ import java.util.Objects;
 import java.util.Optional;
 
 import lombok.AllArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
 
+@Slf4j
 @Service
 @AllArgsConstructor
 public class CqlLibraryService {
@@ -41,8 +43,10 @@ public class CqlLibraryService {
             : cqlLibraryRepository.findAllByCqlLibraryNameAndDraftAndVersion(
                 name, false, Version.parse(version));
     if (CollectionUtils.isEmpty(libs)) {
+      log.error("Could not find Library resource with name: [{}] Version: [{}]", name, version);
       throw new ResourceNotFoundException("Library", "name", name);
     } else if (libs.size() > 1) {
+      log.error("Multiple versioned libraries were found for [{}] Version: [{}]", name, version);
       throw new GeneralConflictException(
           "Multiple versioned libraries were found. "
               + "Please provide additional filters "
