@@ -1,6 +1,5 @@
 package gov.cms.madie.cqllibraryservice.controllers;
 
-import gov.cms.madie.cqllibraryservice.exceptions.GeneralConflictException;
 import gov.cms.madie.cqllibraryservice.exceptions.InvalidIdException;
 import gov.cms.madie.cqllibraryservice.exceptions.InvalidResourceStateException;
 import gov.cms.madie.cqllibraryservice.exceptions.PermissionDeniedException;
@@ -23,7 +22,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.util.CollectionUtils;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
@@ -57,6 +55,14 @@ public class CqlLibraryController {
         .findById(id)
         .map(ResponseEntity::ok)
         .orElseThrow(() -> new ResourceNotFoundException("CQL Library", id));
+  }
+
+  @GetMapping("/versioned")
+  public ResponseEntity<CqlLibrary> getVersionedCqlLibrary(
+      @RequestParam String name,
+      @RequestParam String version,
+      @RequestParam Optional<String> model) {
+    return ResponseEntity.ok(cqlLibraryService.getVersionedCqlLibrary(name, version, model));
   }
 
   @PostMapping
@@ -129,22 +135,7 @@ public class CqlLibraryController {
       @RequestParam String name,
       @RequestParam String version,
       @RequestParam Optional<String> model) {
-    List<CqlLibrary> libs =
-        model.isPresent()
-            ? cqlLibraryRepository.findAllByCqlLibraryNameAndDraftAndVersionAndModel(
-                name, false, Version.parse(version), model.get())
-            : cqlLibraryRepository.findAllByCqlLibraryNameAndDraftAndVersion(
-                name, false, Version.parse(version));
-    if (CollectionUtils.isEmpty(libs)) {
-      throw new ResourceNotFoundException("Library", "name", name);
-    } else if (libs.size() > 1) {
-      throw new GeneralConflictException(
-          "Multiple versioned libraries were found. "
-              + "Please provide additional filters "
-              + "to narrow down the results to a single library.");
-    } else {
-      return libs.get(0).getCql();
-    }
+    return cqlLibraryService.getVersionedCqlLibrary(name, version, model).getCql();
   }
 
   @PutMapping("/version/{id}")
