@@ -103,7 +103,7 @@ class CqlLibraryServiceTest {
             any(), anyBoolean(), any(), anyString()))
         .thenReturn(cqlLibraries);
     when(elmTranslatorClient.getElmJson(anyString(), anyString()))
-            .thenReturn(ElmJson.builder().json("{\"library\": {}}").build());
+        .thenReturn(ElmJson.builder().json("{\"library\": {}}").build());
     CqlLibrary versionedCqlLibrary =
         cqlLibraryService.getVersionedCqlLibrary(
             "TestFHIRHelpers", "1.0.000", Optional.of("QI-Core v4.1.1"), "test-okta");
@@ -122,15 +122,16 @@ class CqlLibraryServiceTest {
             .version(Version.builder().major(1).minor(0).revisionNumber(0).build())
             .model("QI-Core v4.1.1")
             .draft(false)
-                .cql("this is totally valid CQL here")
+            .cql("this is totally valid CQL here")
             .build();
     cqlLibraries.add(cqlLibrary);
     when(cqlLibraryRepository.findAllByCqlLibraryNameAndDraftAndVersion(any(), anyBoolean(), any()))
         .thenReturn(cqlLibraries);
     when(elmTranslatorClient.getElmJson(anyString(), anyString()))
-            .thenReturn(ElmJson.builder().json("{\"library\": {}}").build());
+        .thenReturn(ElmJson.builder().json("{\"library\": {}}").build());
     CqlLibrary versionedCqlLibrary =
-        cqlLibraryService.getVersionedCqlLibrary("TestFHIRHelpers", "1.0.000", Optional.empty(), "test-okta");
+        cqlLibraryService.getVersionedCqlLibrary(
+            "TestFHIRHelpers", "1.0.000", Optional.empty(), "test-okta");
     assertNotNull(versionedCqlLibrary);
     assertEquals(cqlLibrary.getCqlLibraryName(), versionedCqlLibrary.getCqlLibraryName());
     assertEquals(cqlLibrary.getVersion(), versionedCqlLibrary.getVersion());

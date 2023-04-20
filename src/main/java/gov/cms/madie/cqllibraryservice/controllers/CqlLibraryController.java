@@ -63,7 +63,8 @@ public class CqlLibraryController {
       @RequestParam String version,
       @RequestParam Optional<String> model,
       @RequestHeader("Authorization") String accessToken) {
-    return ResponseEntity.ok(cqlLibraryService.getVersionedCqlLibrary(name, version, model, accessToken));
+    return ResponseEntity.ok(
+        cqlLibraryService.getVersionedCqlLibrary(name, version, model, accessToken));
   }
 
   @PostMapping

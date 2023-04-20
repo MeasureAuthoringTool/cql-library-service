@@ -3,22 +3,15 @@ package gov.cms.madie.cqllibraryservice.services;
 import gov.cms.madie.cqllibraryservice.exceptions.*;
 import gov.cms.madie.cqllibraryservice.repositories.CqlLibraryActionLogRepository;
 import gov.cms.madie.models.common.ActionType;
-import gov.cms.madie.models.common.ModelType;
 import gov.cms.madie.models.library.CqlLibrary;
 import gov.cms.madie.models.measure.ElmJson;
 import gov.cms.madie.models.common.Version;
 import gov.cms.madie.cqllibraryservice.repositories.CqlLibraryRepository;
-import java.net.URI;
 import java.time.Instant;
-import java.util.Collections;
 import java.util.Objects;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.*;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.RestTemplate;
-import org.springframework.web.util.UriComponentsBuilder;
 
 @Slf4j
 @RequiredArgsConstructor
@@ -60,9 +53,9 @@ public class VersionService {
       cqlLibrary.setElmXml(elmJson.getXml());
       // TODO: determine if integration with a different external service is needed, like future
       // madie-dqm-service?
-//      if (ModelType.QI_CORE.getValue().equals(cqlLibrary.getModel())) {
-//        persistHapiFhirCqlLibrary(cqlLibrary, accessToken);
-//      }
+      //      if (ModelType.QI_CORE.getValue().equals(cqlLibrary.getModel())) {
+      //        persistHapiFhirCqlLibrary(cqlLibrary, accessToken);
+      //      }
     } catch (CqlElmTranslationServiceException | CqlElmTranslationErrorException e) {
       throw e;
     } catch (Exception e) {

@@ -8,7 +8,7 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.oauth2.server.resource.web.BearerTokenAuthenticationFilter;
 
 @Configuration
-public class SecurityConfig extends WebSecurityConfigurerAdapter{
+public class SecurityConfig extends WebSecurityConfigurerAdapter {
 
   @Value("${read-api-key}")
   private String madieReadApiKey;
@@ -28,9 +28,9 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter{
         .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
         .and()
         .addFilterBefore(
-                new ApiTokenSecurityFilter(madieReadApiKey, "/cql-libraries/versioned", "/cql-libraries/cql"),
-                BearerTokenAuthenticationFilter.class
-        )
+            new ApiTokenSecurityFilter(
+                madieReadApiKey, "/cql-libraries/versioned", "/cql-libraries/cql"),
+            BearerTokenAuthenticationFilter.class)
         .oauth2ResourceServer()
         .jwt()
         .and()
@@ -41,4 +41,3 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter{
         .contentSecurityPolicy("script-src 'self'");
   }
 }
-

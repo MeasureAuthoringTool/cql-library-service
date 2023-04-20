@@ -1250,7 +1250,8 @@ public class CqlLibraryControllerMvcTest {
         .andExpect(status().isOk());
 
     verify(cqlLibraryService, times(1))
-        .getVersionedCqlLibrary("TestFHIRHelpers", "1.0.000", Optional.of("QI-Core v4.1.1"), "test-okta");
+        .getVersionedCqlLibrary(
+            "TestFHIRHelpers", "1.0.000", Optional.of("QI-Core v4.1.1"), "test-okta");
   }
 
   @Test
@@ -1271,7 +1272,8 @@ public class CqlLibraryControllerMvcTest {
                 .value("Could not find resource Library with name: TestFHIRHelpers"));
 
     verify(cqlLibraryService, times(1))
-        .getVersionedCqlLibrary("TestFHIRHelpers", "1.0.000", Optional.of("QI-Core v4.1.1"), "test-okta");
+        .getVersionedCqlLibrary(
+            "TestFHIRHelpers", "1.0.000", Optional.of("QI-Core v4.1.1"), "test-okta");
   }
 
   @Test
@@ -1297,6 +1299,7 @@ public class CqlLibraryControllerMvcTest {
                     "Multiple versioned libraries were found. Please provide additional filters to narrow down the results to a single library."));
 
     verify(cqlLibraryService, times(1))
-        .getVersionedCqlLibrary("TestFHIRHelpers", "1.0.000", Optional.of("QI-Core v4.1.1"), "test-okta");
+        .getVersionedCqlLibrary(
+            "TestFHIRHelpers", "1.0.000", Optional.of("QI-Core v4.1.1"), "test-okta");
   }
 }

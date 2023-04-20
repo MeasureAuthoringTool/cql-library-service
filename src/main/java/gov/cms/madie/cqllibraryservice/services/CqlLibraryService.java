@@ -35,7 +35,8 @@ public class CqlLibraryService {
     return !Objects.equals(persistedCqlLibrary.getCqlLibraryName(), cqlLibrary.getCqlLibraryName());
   }
 
-  public CqlLibrary getVersionedCqlLibrary(String name, String version, Optional<String> model, final String accessToken) {
+  public CqlLibrary getVersionedCqlLibrary(
+      String name, String version, Optional<String> model, final String accessToken) {
     List<CqlLibrary> libs =
         model.isPresent()
             ? cqlLibraryRepository.findAllByCqlLibraryNameAndDraftAndVersionAndModel(
