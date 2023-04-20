@@ -61,8 +61,9 @@ public class CqlLibraryController {
   public ResponseEntity<CqlLibrary> getVersionedCqlLibrary(
       @RequestParam String name,
       @RequestParam String version,
-      @RequestParam Optional<String> model) {
-    return ResponseEntity.ok(cqlLibraryService.getVersionedCqlLibrary(name, version, model));
+      @RequestParam Optional<String> model,
+      @RequestHeader("Authorization") String accessToken) {
+    return ResponseEntity.ok(cqlLibraryService.getVersionedCqlLibrary(name, version, model, accessToken));
   }
 
   @PostMapping
@@ -135,7 +136,7 @@ public class CqlLibraryController {
       @RequestParam String name,
       @RequestParam String version,
       @RequestParam Optional<String> model) {
-    return cqlLibraryService.getVersionedCqlLibrary(name, version, model).getCql();
+    return cqlLibraryService.getVersionedCqlLibrary(name, version, model, null).getCql();
   }
 
   @PutMapping("/version/{id}")

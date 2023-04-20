@@ -29,15 +29,8 @@ public class VersionService {
   private final ActionLogService actionLogService;
   private final CqlLibraryRepository cqlLibraryRepository;
   private final CqlLibraryActionLogRepository cqlLibraryHistoryRepository;
-  private final RestTemplate hapiFhirRestTemplate;
 
   private final ElmTranslatorClient elmTranslatorClient;
-
-  @Value("${madie.fhir.service.baseUrl}")
-  private String madieFhirService;
-
-  @Value("${madie.fhir.service.hapi-fhir.libraries.uri}")
-  private String librariesUri;
 
   public CqlLibrary createVersion(String id, boolean isMajor, String username, String accessToken) {
     CqlLibrary cqlLibrary =
@@ -67,9 +60,9 @@ public class VersionService {
       cqlLibrary.setElmXml(elmJson.getXml());
       // TODO: determine if integration with a different external service is needed, like future
       // madie-dqm-service?
-      if (ModelType.QI_CORE.getValue().equals(cqlLibrary.getModel())) {
-        persistHapiFhirCqlLibrary(cqlLibrary, accessToken);
-      }
+//      if (ModelType.QI_CORE.getValue().equals(cqlLibrary.getModel())) {
+//        persistHapiFhirCqlLibrary(cqlLibrary, accessToken);
+//      }
     } catch (CqlElmTranslationServiceException | CqlElmTranslationErrorException e) {
       throw e;
     } catch (Exception e) {
@@ -221,26 +214,5 @@ public class VersionService {
       return true;
     }
     return !cqlLibraryRepository.existsByGroupIdAndDraft(cqlLibrary.getGroupId(), true);
-  }
-
-  private ResponseEntity<String> persistHapiFhirCqlLibrary(
-      CqlLibrary cqlLibrary, String accessToken) {
-    URI uri = buildMadieFhirServiceUri();
-    HttpHeaders headers = new HttpHeaders();
-    headers.add("Authorization", accessToken);
-    headers.setContentType(MediaType.APPLICATION_JSON);
-    headers.setAccept(Collections.singletonList(MediaType.APPLICATION_JSON));
-
-    HttpEntity<CqlLibrary> request = new HttpEntity<>(cqlLibrary, headers);
-
-    return hapiFhirRestTemplate.exchange(uri, HttpMethod.POST, request, String.class);
-  }
-
-  private URI buildMadieFhirServiceUri() {
-
-    return UriComponentsBuilder.fromHttpUrl(madieFhirService + librariesUri + "/create")
-        .build()
-        .encode()
-        .toUri();
   }
 }

@@ -34,7 +34,9 @@ okta:
     issuer: ${OKTA_ISSUER:https://dev-18092578.okta.com/oauth2/default}
     audience: ${OKTA_AUDIENCE:api://default}
 
-hapi-fhir:
-  url: ${HAPI_FHIR_URL:http://localhost:8087/fhir}
-  patient:
-    uri: /Patient
+mongock:
+  migration-scan-package:
+    - cms.gov.madie.measure.config
+
+
+read-api-key: ${READ_API_KEY:b1c9d64f}

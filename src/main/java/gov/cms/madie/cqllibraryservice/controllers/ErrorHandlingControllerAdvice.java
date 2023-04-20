@@ -111,6 +111,13 @@ public class ErrorHandlingControllerAdvice {
     return getErrorAttributes(request, HttpStatus.FORBIDDEN);
   }
 
+  @ExceptionHandler(UnauthorizedException.class)
+  @ResponseStatus(HttpStatus.UNAUTHORIZED)
+  @ResponseBody
+  Map<String, Object> onUnauthorizedException(WebRequest request) {
+    return getErrorAttributes(request, HttpStatus.UNAUTHORIZED);
+  }
+
   @ExceptionHandler(ResourceCannotBeVersionedException.class)
   @ResponseStatus(HttpStatus.BAD_REQUEST)
   @ResponseBody

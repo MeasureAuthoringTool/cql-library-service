@@ -1,6 +1,7 @@
 package gov.cms.madie.cqllibraryservice.controllers;
 
 import gov.cms.madie.cqllibraryservice.exceptions.GeneralConflictException;
+import gov.cms.madie.cqllibraryservice.services.ElmTranslatorClient;
 import gov.cms.madie.models.common.ModelType;
 
 import static org.hamcrest.CoreMatchers.equalTo;
@@ -1163,7 +1164,7 @@ public class CqlLibraryControllerMvcTest {
             .model("QI-Core v4.1.1")
             .draft(false)
             .build();
-    when(cqlLibraryService.getVersionedCqlLibrary(anyString(), any(), any()))
+    when(cqlLibraryService.getVersionedCqlLibrary(anyString(), any(), any(), any()))
         .thenReturn(cqlLibrary);
 
     mockMvc
@@ -1177,12 +1178,12 @@ public class CqlLibraryControllerMvcTest {
         .andExpect(content().string("Test Cql"));
 
     verify(cqlLibraryService, times(1))
-        .getVersionedCqlLibrary("TestFHIRHelpers", "1.0.000", Optional.of("QI-Core v4.1.1"));
+        .getVersionedCqlLibrary("TestFHIRHelpers", "1.0.000", Optional.of("QI-Core v4.1.1"), null);
   }
 
   @Test
   public void testGetLibraryCqlReturnsNotFound() throws Exception {
-    when(cqlLibraryService.getVersionedCqlLibrary(anyString(), any(), any()))
+    when(cqlLibraryService.getVersionedCqlLibrary(anyString(), any(), any(), any()))
         .thenThrow(new ResourceNotFoundException("Library", "name", "TestFHIRHelpers"));
 
     mockMvc
@@ -1198,12 +1199,12 @@ public class CqlLibraryControllerMvcTest {
                 .value("Could not find resource Library with name: TestFHIRHelpers"));
 
     verify(cqlLibraryService, times(1))
-        .getVersionedCqlLibrary("TestFHIRHelpers", "1.0.000", Optional.of("QI-Core v4.1.1"));
+        .getVersionedCqlLibrary("TestFHIRHelpers", "1.0.000", Optional.of("QI-Core v4.1.1"), null);
   }
 
   @Test
   public void testGetLibraryCqlReturnsConflict() throws Exception {
-    when(cqlLibraryService.getVersionedCqlLibrary(anyString(), any(), any()))
+    when(cqlLibraryService.getVersionedCqlLibrary(anyString(), any(), any(), any()))
         .thenThrow(
             new GeneralConflictException(
                 "Multiple versioned libraries were found. "
@@ -1224,7 +1225,7 @@ public class CqlLibraryControllerMvcTest {
                     "Multiple versioned libraries were found. Please provide additional filters to narrow down the results to a single library."));
 
     verify(cqlLibraryService, times(1))
-        .getVersionedCqlLibrary("TestFHIRHelpers", "1.0.000", Optional.of("QI-Core v4.1.1"));
+        .getVersionedCqlLibrary("TestFHIRHelpers", "1.0.000", Optional.of("QI-Core v4.1.1"), null);
   }
 
   @Test
@@ -1236,7 +1237,7 @@ public class CqlLibraryControllerMvcTest {
             .model("QI-Core v4.1.1")
             .draft(false)
             .build();
-    when(cqlLibraryService.getVersionedCqlLibrary(anyString(), any(), any()))
+    when(cqlLibraryService.getVersionedCqlLibrary(anyString(), any(), any(), any()))
         .thenReturn(cqlLibrary);
 
     mockMvc
@@ -1249,12 +1250,12 @@ public class CqlLibraryControllerMvcTest {
         .andExpect(status().isOk());
 
     verify(cqlLibraryService, times(1))
-        .getVersionedCqlLibrary("TestFHIRHelpers", "1.0.000", Optional.of("QI-Core v4.1.1"));
+        .getVersionedCqlLibrary("TestFHIRHelpers", "1.0.000", Optional.of("QI-Core v4.1.1"), "test-okta");
   }
 
   @Test
   public void testGetVersionedCqlLibraryReturnsNotFound() throws Exception {
-    when(cqlLibraryService.getVersionedCqlLibrary(anyString(), any(), any()))
+    when(cqlLibraryService.getVersionedCqlLibrary(anyString(), any(), any(), any()))
         .thenThrow(new ResourceNotFoundException("Library", "name", "TestFHIRHelpers"));
 
     mockMvc
@@ -1270,12 +1271,12 @@ public class CqlLibraryControllerMvcTest {
                 .value("Could not find resource Library with name: TestFHIRHelpers"));
 
     verify(cqlLibraryService, times(1))
-        .getVersionedCqlLibrary("TestFHIRHelpers", "1.0.000", Optional.of("QI-Core v4.1.1"));
+        .getVersionedCqlLibrary("TestFHIRHelpers", "1.0.000", Optional.of("QI-Core v4.1.1"), "test-okta");
   }
 
   @Test
   public void testGetVersionedCqlLibraryReturnsConflict() throws Exception {
-    when(cqlLibraryService.getVersionedCqlLibrary(anyString(), any(), any()))
+    when(cqlLibraryService.getVersionedCqlLibrary(anyString(), any(), any(), any()))
         .thenThrow(
             new GeneralConflictException(
                 "Multiple versioned libraries were found. "
@@ -1296,6 +1297,6 @@ public class CqlLibraryControllerMvcTest {
                     "Multiple versioned libraries were found. Please provide additional filters to narrow down the results to a single library."));
 
     verify(cqlLibraryService, times(1))
-        .getVersionedCqlLibrary("TestFHIRHelpers", "1.0.000", Optional.of("QI-Core v4.1.1"));
+        .getVersionedCqlLibrary("TestFHIRHelpers", "1.0.000", Optional.of("QI-Core v4.1.1"), "test-okta");
   }
 }

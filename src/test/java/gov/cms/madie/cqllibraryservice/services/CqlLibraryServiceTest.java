@@ -14,6 +14,7 @@ import gov.cms.madie.cqllibraryservice.exceptions.ResourceNotFoundException;
 import gov.cms.madie.models.common.Version;
 import gov.cms.madie.models.library.CqlLibrary;
 import gov.cms.madie.cqllibraryservice.repositories.CqlLibraryRepository;
+import gov.cms.madie.models.measure.ElmJson;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -29,6 +30,8 @@ class CqlLibraryServiceTest {
 
   @InjectMocks private CqlLibraryService cqlLibraryService;
   @Mock private CqlLibraryRepository cqlLibraryRepository;
+
+  @Mock private ElmTranslatorClient elmTranslatorClient;
 
   @Test
   public void testCheckDuplicateCqlLibraryNameDoesNotThrowException() {
@@ -93,14 +96,17 @@ class CqlLibraryServiceTest {
             .version(Version.builder().major(1).minor(0).revisionNumber(0).build())
             .model("QI-Core v4.1.1")
             .draft(false)
+            .cql("this is totally valid CQL here")
             .build();
     cqlLibraries.add(cqlLibrary1);
     when(cqlLibraryRepository.findAllByCqlLibraryNameAndDraftAndVersionAndModel(
             any(), anyBoolean(), any(), anyString()))
         .thenReturn(cqlLibraries);
+    when(elmTranslatorClient.getElmJson(anyString(), anyString()))
+            .thenReturn(ElmJson.builder().json("{\"library\": {}}").build());
     CqlLibrary versionedCqlLibrary =
         cqlLibraryService.getVersionedCqlLibrary(
-            "TestFHIRHelpers", "1.0.000", Optional.of("QI-Core v4.1.1"));
+            "TestFHIRHelpers", "1.0.000", Optional.of("QI-Core v4.1.1"), "test-okta");
     assertNotNull(versionedCqlLibrary);
     assertEquals(cqlLibrary1.getCqlLibraryName(), versionedCqlLibrary.getCqlLibraryName());
     assertEquals(cqlLibrary1.getVersion(), versionedCqlLibrary.getVersion());
@@ -116,12 +122,15 @@ class CqlLibraryServiceTest {
             .version(Version.builder().major(1).minor(0).revisionNumber(0).build())
             .model("QI-Core v4.1.1")
             .draft(false)
+                .cql("this is totally valid CQL here")
             .build();
     cqlLibraries.add(cqlLibrary);
     when(cqlLibraryRepository.findAllByCqlLibraryNameAndDraftAndVersion(any(), anyBoolean(), any()))
         .thenReturn(cqlLibraries);
+    when(elmTranslatorClient.getElmJson(anyString(), anyString()))
+            .thenReturn(ElmJson.builder().json("{\"library\": {}}").build());
     CqlLibrary versionedCqlLibrary =
-        cqlLibraryService.getVersionedCqlLibrary("TestFHIRHelpers", "1.0.000", Optional.empty());
+        cqlLibraryService.getVersionedCqlLibrary("TestFHIRHelpers", "1.0.000", Optional.empty(), "test-okta");
     assertNotNull(versionedCqlLibrary);
     assertEquals(cqlLibrary.getCqlLibraryName(), versionedCqlLibrary.getCqlLibraryName());
     assertEquals(cqlLibrary.getVersion(), versionedCqlLibrary.getVersion());
@@ -137,7 +146,7 @@ class CqlLibraryServiceTest {
         ResourceNotFoundException.class,
         () ->
             cqlLibraryService.getVersionedCqlLibrary(
-                "TestFHIRHelpers", "1.0.000", Optional.empty()));
+                "TestFHIRHelpers", "1.0.000", Optional.empty(), "test-okta"));
   }
 
   @Test
@@ -165,6 +174,6 @@ class CqlLibraryServiceTest {
         GeneralConflictException.class,
         () ->
             cqlLibraryService.getVersionedCqlLibrary(
-                "TestFHIRHelpers", "1.0.000", Optional.empty()));
+                "TestFHIRHelpers", "1.0.000", Optional.empty(), "test-okta"));
   }
 }
