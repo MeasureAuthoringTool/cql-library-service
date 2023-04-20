@@ -1,7 +1,6 @@
 package gov.cms.madie.cqllibraryservice.controllers;
 
 import gov.cms.madie.cqllibraryservice.exceptions.GeneralConflictException;
-import gov.cms.madie.cqllibraryservice.services.ElmTranslatorClient;
 import gov.cms.madie.models.common.ModelType;
 
 import static org.hamcrest.CoreMatchers.equalTo;
