@@ -14,7 +14,7 @@
   <name>cql-library-service</name>
   <description>Service layer for the CqlLibrary capabilities of MADiE</description>
   <properties>
-    <java.version>16</java.version>
+    <java.version>17</java.version>
     <maven.compiler.source>16</maven.compiler.source>
     <maven.compiler.target>16</maven.compiler.target>
     <mvn.checkstyle.file>madie-checkstyle.xml</mvn.checkstyle.file>
