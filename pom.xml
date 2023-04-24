@@ -4,19 +4,19 @@
   <parent>
     <groupId>org.springframework.boot</groupId>
     <artifactId>spring-boot-starter-parent</artifactId>
-    <version>2.7.9</version>
+    <version>3.0.5</version>
     <relativePath></relativePath>
     <!-- lookup parent from repository -->
   </parent>
   <groupId>gov.cms.madie</groupId>
   <artifactId>cql-library-service</artifactId>
-  <version>0.0.1</version>
+  <version>0.0.2</version>
   <name>cql-library-service</name>
   <description>Service layer for the CqlLibrary capabilities of MADiE</description>
   <properties>
-    <java.version>16</java.version>
-    <maven.compiler.source>16</maven.compiler.source>
-    <maven.compiler.target>16</maven.compiler.target>
+    <java.version>17</java.version>
+    <maven.compiler.source>${java.version}</maven.compiler.source>
+    <maven.compiler.target>${java.version}</maven.compiler.target>
     <mvn.checkstyle.file>madie-checkstyle.xml</mvn.checkstyle.file>
     <mvn.checkstyle.version>3.1.2</mvn.checkstyle.version>
     <mvnreports.version>3.2.2</mvnreports.version>
@@ -70,7 +70,7 @@
     <dependency>
       <groupId>gov.cms.madie</groupId>
       <artifactId>madie-java-models</artifactId>
-      <version>0.3.5-SNAPSHOT</version>
+      <version>0.4.0-SNAPSHOT</version>
     </dependency>
     <dependency>
       <groupId>org.springframework.boot</groupId>
@@ -270,7 +270,7 @@
       <plugin>
         <groupId>org.jacoco</groupId>
         <artifactId>jacoco-maven-plugin</artifactId>
-        <version>0.8.6</version>
+        <version>0.8.9</version>
         <executions>
           <execution>
             <id>pre-unit-test-execution</id>

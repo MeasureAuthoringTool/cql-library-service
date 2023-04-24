@@ -1,22 +1,24 @@
 package gov.cms.madie.cqllibraryservice.config.security;
 
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
-import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
+
 import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.web.SecurityFilterChain;
 
 @Configuration
-public class SecurityConfig extends WebSecurityConfigurerAdapter {
+public class SecurityConfig {
 
-  @Override
-  protected void configure(HttpSecurity http) throws Exception {
+  @Bean
+  protected SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
     http.cors()
         .and()
-        .authorizeRequests()
-        .antMatchers("/actuator/**")
+        .authorizeHttpRequests()
+        .requestMatchers("/actuator/**")
         .permitAll()
         .and()
-        .authorizeRequests()
+        .authorizeHttpRequests()
         .anyRequest()
         .authenticated()
         .and()
@@ -31,5 +33,6 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
         .xssProtection()
         .and()
         .contentSecurityPolicy("script-src 'self'");
+    return http.build();
   }
 }
