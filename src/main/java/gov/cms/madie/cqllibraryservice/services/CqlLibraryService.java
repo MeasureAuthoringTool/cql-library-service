@@ -1,11 +1,10 @@
 package gov.cms.madie.cqllibraryservice.services;
 
-import gov.cms.madie.cqllibraryservice.exceptions.DuplicateKeyException;
-import gov.cms.madie.cqllibraryservice.exceptions.GeneralConflictException;
-import gov.cms.madie.cqllibraryservice.exceptions.ResourceNotFoundException;
+import gov.cms.madie.cqllibraryservice.exceptions.*;
 import gov.cms.madie.models.common.Version;
 import gov.cms.madie.models.library.CqlLibrary;
 import gov.cms.madie.cqllibraryservice.repositories.CqlLibraryRepository;
+import gov.cms.madie.models.measure.ElmJson;
 import io.micrometer.core.instrument.util.StringUtils;
 
 import java.util.List;
@@ -22,6 +21,7 @@ import org.springframework.util.CollectionUtils;
 @AllArgsConstructor
 public class CqlLibraryService {
 
+  private final ElmTranslatorClient elmTranslatorClient;
   private CqlLibraryRepository cqlLibraryRepository;
 
   public void checkDuplicateCqlLibraryName(String cqlLibraryName) {
@@ -35,7 +35,8 @@ public class CqlLibraryService {
     return !Objects.equals(persistedCqlLibrary.getCqlLibraryName(), cqlLibrary.getCqlLibraryName());
   }
 
-  public CqlLibrary getVersionedCqlLibrary(String name, String version, Optional<String> model) {
+  public CqlLibrary getVersionedCqlLibrary(
+      String name, String version, Optional<String> model, final String accessToken) {
     List<CqlLibrary> libs =
         model.isPresent()
             ? cqlLibraryRepository.findAllByCqlLibraryNameAndDraftAndVersionAndModel(
@@ -52,6 +53,19 @@ public class CqlLibraryService {
               + "Please provide additional filters "
               + "to narrow down the results to a single library.");
     } else {
+      CqlLibrary cqlLibrary = libs.get(0);
+      if (StringUtils.isNotBlank(accessToken)) {
+        try {
+          final ElmJson elmJson = elmTranslatorClient.getElmJson(cqlLibrary.getCql(), accessToken);
+          if (elmTranslatorClient.hasErrors(elmJson)) {
+            throw new CqlElmTranslationErrorException(cqlLibrary.getCqlLibraryName());
+          }
+          cqlLibrary.setElmJson(elmJson.getJson());
+          cqlLibrary.setElmXml(elmJson.getXml());
+        } catch (CqlElmTranslationServiceException | CqlElmTranslationErrorException e) {
+          throw e;
+        }
+      }
       return libs.get(0);
     }
   }

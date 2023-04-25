@@ -15,9 +15,7 @@ import gov.cms.madie.models.library.CqlLibrary;
 import gov.cms.madie.models.measure.ElmJson;
 import gov.cms.madie.models.common.Version;
 import gov.cms.madie.cqllibraryservice.repositories.CqlLibraryRepository;
-import java.net.URI;
 import java.util.Optional;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -25,10 +23,6 @@ import org.mockito.Captor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpMethod;
-import org.springframework.http.ResponseEntity;
-import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.web.client.RestTemplate;
 
 @ExtendWith(MockitoExtension.class)
@@ -37,8 +31,6 @@ class VersionServiceTest {
   @Mock CqlLibraryRepository cqlLibraryRepository;
 
   @Mock CqlLibraryService cqlLibraryService;
-
-  @Mock RestTemplate restTemplate;
 
   @Mock ElmTranslatorClient elmTranslatorClient;
 
@@ -51,12 +43,6 @@ class VersionServiceTest {
   @Captor private ArgumentCaptor<ActionType> actionTypeArgumentCaptor;
 
   @Captor private ArgumentCaptor<String> targetIdArgumentCaptor;
-
-  @BeforeEach
-  public void setup() {
-    ReflectionTestUtils.setField(versionService, "madieFhirService", "http://test.hapiFhir");
-    ReflectionTestUtils.setField(versionService, "librariesUri", "/fhir/libraries");
-  }
 
   @Test
   void testCreateVersionThrowsExceptionForResourceNotFound() {
@@ -218,9 +204,6 @@ class VersionServiceTest {
         .thenReturn(Optional.of(Version.parse("1.0.0")));
     //    when(cqlLibraryRepository.findAll()).thenReturn(List.of(existingCqlLibrary));
     when(cqlLibraryRepository.save(any(CqlLibrary.class))).thenReturn(updatedCqlLibrary);
-    when(restTemplate.exchange(
-            any(URI.class), any(HttpMethod.class), any(HttpEntity.class), any(Class.class)))
-        .thenReturn(ResponseEntity.ok("http://Library"));
     when(elmTranslatorClient.getElmJson(anyString(), anyString()))
         .thenReturn(ElmJson.builder().json("{}").xml("<></>").build());
     when(elmTranslatorClient.hasErrors(any(ElmJson.class))).thenReturn(false);
@@ -260,9 +243,6 @@ class VersionServiceTest {
     when(cqlLibraryRepository.findMaxMinorVersionByGroupIdAndVersionMajor(anyString(), anyInt()))
         .thenReturn(Optional.of(Version.parse("1.0.0")));
     when(cqlLibraryRepository.save(any(CqlLibrary.class))).thenReturn(updatedCqlLibrary);
-    when(restTemplate.exchange(
-            any(URI.class), any(HttpMethod.class), any(HttpEntity.class), any(Class.class)))
-        .thenReturn(ResponseEntity.ok("http://Library"));
     when(elmTranslatorClient.getElmJson(anyString(), anyString()))
         .thenReturn(ElmJson.builder().json("{}").xml("<></>").build());
     when(elmTranslatorClient.hasErrors(any(ElmJson.class))).thenReturn(false);

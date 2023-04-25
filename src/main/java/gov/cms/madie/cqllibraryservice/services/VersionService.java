@@ -3,22 +3,15 @@ package gov.cms.madie.cqllibraryservice.services;
 import gov.cms.madie.cqllibraryservice.exceptions.*;
 import gov.cms.madie.cqllibraryservice.repositories.CqlLibraryActionLogRepository;
 import gov.cms.madie.models.common.ActionType;
-import gov.cms.madie.models.common.ModelType;
 import gov.cms.madie.models.library.CqlLibrary;
 import gov.cms.madie.models.measure.ElmJson;
 import gov.cms.madie.models.common.Version;
 import gov.cms.madie.cqllibraryservice.repositories.CqlLibraryRepository;
-import java.net.URI;
 import java.time.Instant;
-import java.util.Collections;
 import java.util.Objects;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.*;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.RestTemplate;
-import org.springframework.web.util.UriComponentsBuilder;
 
 @Slf4j
 @RequiredArgsConstructor
@@ -29,15 +22,8 @@ public class VersionService {
   private final ActionLogService actionLogService;
   private final CqlLibraryRepository cqlLibraryRepository;
   private final CqlLibraryActionLogRepository cqlLibraryHistoryRepository;
-  private final RestTemplate hapiFhirRestTemplate;
 
   private final ElmTranslatorClient elmTranslatorClient;
-
-  @Value("${madie.fhir.service.baseUrl}")
-  private String madieFhirService;
-
-  @Value("${madie.fhir.service.hapi-fhir.libraries.uri}")
-  private String librariesUri;
 
   public CqlLibrary createVersion(String id, boolean isMajor, String username, String accessToken) {
     CqlLibrary cqlLibrary =
@@ -65,11 +51,6 @@ public class VersionService {
       }
       cqlLibrary.setElmJson(elmJson.getJson());
       cqlLibrary.setElmXml(elmJson.getXml());
-      // TODO: determine if integration with a different external service is needed, like future
-      // madie-dqm-service?
-      if (ModelType.QI_CORE.getValue().equals(cqlLibrary.getModel())) {
-        persistHapiFhirCqlLibrary(cqlLibrary, accessToken);
-      }
     } catch (CqlElmTranslationServiceException | CqlElmTranslationErrorException e) {
       throw e;
     } catch (Exception e) {
@@ -221,26 +202,5 @@ public class VersionService {
       return true;
     }
     return !cqlLibraryRepository.existsByGroupIdAndDraft(cqlLibrary.getGroupId(), true);
-  }
-
-  private ResponseEntity<String> persistHapiFhirCqlLibrary(
-      CqlLibrary cqlLibrary, String accessToken) {
-    URI uri = buildMadieFhirServiceUri();
-    HttpHeaders headers = new HttpHeaders();
-    headers.add("Authorization", accessToken);
-    headers.setContentType(MediaType.APPLICATION_JSON);
-    headers.setAccept(Collections.singletonList(MediaType.APPLICATION_JSON));
-
-    HttpEntity<CqlLibrary> request = new HttpEntity<>(cqlLibrary, headers);
-
-    return hapiFhirRestTemplate.exchange(uri, HttpMethod.POST, request, String.class);
-  }
-
-  private URI buildMadieFhirServiceUri() {
-
-    return UriComponentsBuilder.fromHttpUrl(madieFhirService + librariesUri + "/create")
-        .build()
-        .encode()
-        .toUri();
   }
 }
