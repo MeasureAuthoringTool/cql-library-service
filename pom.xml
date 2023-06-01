@@ -5,7 +5,7 @@
     <groupId>org.springframework.boot</groupId>
     <artifactId>spring-boot-starter-parent</artifactId>
     <version>3.0.5</version>
-    <relativePath></relativePath>
+    <relativePath/>
     <!-- lookup parent from repository -->
   </parent>
   <groupId>gov.cms.madie</groupId>
@@ -60,7 +60,7 @@
     <dependency>
       <groupId>com.okta.spring</groupId>
       <artifactId>okta-spring-boot-starter</artifactId>
-      <version>2.1.6</version>
+      <version>3.0.4</version>
     </dependency>
 
     <dependency>
@@ -136,7 +136,7 @@
                     </goals>
                   </pluginExecutionFilter>
                   <action>
-                    <ignore></ignore>
+                    <ignore/>
                   </action>
                 </pluginExecution>
               </pluginExecutions>
