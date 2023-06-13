@@ -87,14 +87,13 @@ public class CqlLibraryController {
     cqlLibrary.setLastModifiedAt(now);
     cqlLibrary.setVersion(Version.parse("0.0.000"));
     cqlLibrary.setDraft(true);
-    cqlLibrary.setGroupId(UUID.randomUUID().toString()); // generate a new id
     cqlLibrary.setLibrarySetId(UUID.randomUUID().toString());
     CqlLibrary savedCqlLibrary = cqlLibraryRepository.save(cqlLibrary);
     log.info(
         "User [{}] successfully created new cql library with ID [{}]",
         username,
         cqlLibrary.getId());
-    actionLogService.logAction(cqlLibrary.getGroupId(), ActionType.CREATED, username);
+    actionLogService.logAction(cqlLibrary.getLibrarySetId(), ActionType.CREATED, username);
 
     librarySetService.createLibrarySet(
         username, savedCqlLibrary.getId(), savedCqlLibrary.getLibrarySetId());
@@ -126,7 +125,6 @@ public class CqlLibraryController {
               if (cqlLibraryService.isCqlLibraryNameChanged(cqlLibrary, persistedLibrary)) {
                 cqlLibraryService.checkDuplicateCqlLibraryName(cqlLibrary.getCqlLibraryName());
               }
-              cqlLibrary.setGroupId(persistedLibrary.getGroupId());
               cqlLibrary.setDraft(persistedLibrary.isDraft());
               cqlLibrary.setVersion(persistedLibrary.getVersion());
               cqlLibrary.setLastModifiedAt(Instant.now());
