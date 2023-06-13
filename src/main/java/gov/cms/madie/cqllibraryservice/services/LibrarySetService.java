@@ -37,9 +37,9 @@ public class LibrarySetService {
   }
 
   public LibrarySet updateLibrarySetAcls(String librarySetId, AclSpecification aclSpec) {
-    Optional<LibrarySet> OptionalLibrarySet = librarySetRepository.findByLibrarySetId(librarySetId);
-    if (OptionalLibrarySet.isPresent()) {
-      LibrarySet librarySet = OptionalLibrarySet.get();
+    Optional<LibrarySet> optionalLibrarySet = librarySetRepository.findByLibrarySetId(librarySetId);
+    if (optionalLibrarySet.isPresent()) {
+      LibrarySet librarySet = optionalLibrarySet.get();
       if (CollectionUtils.isEmpty(librarySet.getAcls())) {
         librarySet.setAcls(List.of(aclSpec));
       } else {
@@ -54,7 +54,7 @@ public class LibrarySetService {
               "Library with set id `%s` can not be shared. Library set may not exists.",
               librarySetId, aclSpec.getUserId());
       log.error(error);
-      throw new ResourceNotFoundException("Library", "id", librarySetId);
+      throw new ResourceNotFoundException("LibrarySet", "id", librarySetId);
     }
   }
 
