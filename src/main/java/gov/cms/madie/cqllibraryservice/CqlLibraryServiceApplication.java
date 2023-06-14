@@ -1,6 +1,8 @@
 package gov.cms.madie.cqllibraryservice;
 
 import gov.cms.madie.cqllibraryservice.config.LogInterceptor;
+import io.mongock.runner.springboot.EnableMongock;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
@@ -10,6 +12,7 @@ import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 @SpringBootApplication
+@EnableMongock
 public class CqlLibraryServiceApplication {
 
   public static void main(String[] args) {

@@ -2,8 +2,11 @@ package gov.cms.madie.cqllibraryservice.repositories;
 
 import gov.cms.madie.models.common.Version;
 import gov.cms.madie.models.library.CqlLibrary;
+
 import java.util.List;
 import java.util.Optional;
+
+import org.springframework.data.mongodb.repository.Aggregation;
 import org.springframework.data.mongodb.repository.ExistsQuery;
 import org.springframework.data.mongodb.repository.MongoRepository;
 import org.springframework.data.mongodb.repository.Query;
@@ -26,4 +29,13 @@ public interface CqlLibraryRepository
 
   List<CqlLibrary> findAllByCqlLibraryNameAndDraftAndVersionAndModel(
       String cqlLibraryName, boolean draft, Version version, String model);
+
+  @Aggregation(
+      pipeline = {
+        "{'$group': {'_id': '$groupId',"
+            + "'groupId': {'$first':'$groupId'},"
+            + "'createdBy': {'$first':'$createdBy'}}}",
+        "{'$sort': {'createdAt':1}}"
+      })
+  List<CqlLibrary> findCqlLibraryGroup();
 }
