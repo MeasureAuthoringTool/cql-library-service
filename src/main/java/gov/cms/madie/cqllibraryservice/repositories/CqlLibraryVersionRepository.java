@@ -5,7 +5,8 @@ import java.util.Optional;
 
 public interface CqlLibraryVersionRepository {
 
-  Optional<Version> findMaxVersionByGroupId(String groupId);
+  Optional<Version> findMaxVersionByLibrarySetId(String librarySetId);
 
-  Optional<Version> findMaxMinorVersionByGroupIdAndVersionMajor(String groupId, int majorVersion);
+  Optional<Version> findMaxMinorVersionByLibrarySetIdAndVersionMajor(
+      String librarySetId, int majorVersion);
 }

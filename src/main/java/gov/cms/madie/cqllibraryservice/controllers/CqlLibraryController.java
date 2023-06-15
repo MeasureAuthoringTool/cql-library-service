@@ -5,6 +5,7 @@ import gov.cms.madie.cqllibraryservice.exceptions.InvalidResourceStateException;
 import gov.cms.madie.cqllibraryservice.exceptions.PermissionDeniedException;
 import gov.cms.madie.cqllibraryservice.exceptions.ResourceNotFoundException;
 import gov.cms.madie.cqllibraryservice.services.ActionLogService;
+import gov.cms.madie.cqllibraryservice.services.LibrarySetService;
 import gov.cms.madie.models.common.ActionType;
 import gov.cms.madie.models.library.CqlLibrary;
 import gov.cms.madie.models.library.CqlLibraryDraft;
@@ -35,6 +36,7 @@ public class CqlLibraryController {
   private final ActionLogService actionLogService;
   private final VersionService versionService;
   private final CqlLibraryService cqlLibraryService;
+  private final LibrarySetService librarySetService;
 
   @GetMapping
   public ResponseEntity<List<CqlLibrary>> getCqlLibraries(
@@ -85,13 +87,16 @@ public class CqlLibraryController {
     cqlLibrary.setLastModifiedAt(now);
     cqlLibrary.setVersion(Version.parse("0.0.000"));
     cqlLibrary.setDraft(true);
-    cqlLibrary.setGroupId(UUID.randomUUID().toString()); // generate a new id
+    cqlLibrary.setLibrarySetId(UUID.randomUUID().toString());
     CqlLibrary savedCqlLibrary = cqlLibraryRepository.save(cqlLibrary);
     log.info(
         "User [{}] successfully created new cql library with ID [{}]",
         username,
         cqlLibrary.getId());
-    actionLogService.logAction(cqlLibrary.getGroupId(), ActionType.CREATED, username);
+    actionLogService.logAction(cqlLibrary.getLibrarySetId(), ActionType.CREATED, username);
+
+    librarySetService.createLibrarySet(
+        username, savedCqlLibrary.getId(), savedCqlLibrary.getLibrarySetId());
     return ResponseEntity.status(HttpStatus.CREATED).body(savedCqlLibrary);
   }
 
@@ -120,7 +125,6 @@ public class CqlLibraryController {
               if (cqlLibraryService.isCqlLibraryNameChanged(cqlLibrary, persistedLibrary)) {
                 cqlLibraryService.checkDuplicateCqlLibraryName(cqlLibrary.getCqlLibraryName());
               }
-              cqlLibrary.setGroupId(persistedLibrary.getGroupId());
               cqlLibrary.setDraft(persistedLibrary.isDraft());
               cqlLibrary.setVersion(persistedLibrary.getVersion());
               cqlLibrary.setLastModifiedAt(Instant.now());

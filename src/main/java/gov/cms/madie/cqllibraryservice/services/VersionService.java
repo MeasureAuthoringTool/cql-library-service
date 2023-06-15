@@ -66,7 +66,7 @@ public class VersionService {
     var savedCqlLibrary = cqlLibraryRepository.save(cqlLibrary);
 
     actionLogService.logAction(
-        cqlLibrary.getGroupId(),
+        cqlLibrary.getLibrarySetId(),
         isMajor ? ActionType.VERSIONED_MAJOR : ActionType.VERSIONED_MINOR,
         username);
 
@@ -173,14 +173,14 @@ public class VersionService {
       if (isMajor) {
         Version version =
             cqlLibraryRepository
-                .findMaxVersionByGroupId(cqlLibrary.getGroupId())
+                .findMaxVersionByLibrarySetId(cqlLibrary.getLibrarySetId())
                 .orElse(new Version());
         return version.toBuilder().major(version.getMajor() + 1).minor(0).build();
       } else {
         Version version =
             cqlLibraryRepository
-                .findMaxMinorVersionByGroupIdAndVersionMajor(
-                    cqlLibrary.getGroupId(), cqlLibrary.getVersion().getMajor())
+                .findMaxMinorVersionByLibrarySetIdAndVersionMajor(
+                    cqlLibrary.getLibrarySetId(), cqlLibrary.getVersion().getMajor())
                 .orElse(new Version());
         return version.toBuilder().minor(version.getMinor() + 1).build();
       }
@@ -201,6 +201,6 @@ public class VersionService {
     if (cqlLibrary == null) {
       return true;
     }
-    return !cqlLibraryRepository.existsByGroupIdAndDraft(cqlLibrary.getGroupId(), true);
+    return !cqlLibraryRepository.existsByLibrarySetIdAndDraft(cqlLibrary.getLibrarySetId(), true);
   }
 }

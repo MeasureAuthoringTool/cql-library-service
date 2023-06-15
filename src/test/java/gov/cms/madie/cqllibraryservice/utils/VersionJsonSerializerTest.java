@@ -13,8 +13,10 @@ import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.ActiveProfiles;
 
 @Slf4j
+@ActiveProfiles("test")
 @SpringBootTest
 class VersionJsonSerializerTest {
 
@@ -25,6 +27,7 @@ class VersionJsonSerializerTest {
     CqlLibrary library =
         CqlLibrary.builder()
             .version(Version.builder().major(1).minor(2).revisionNumber(0).build())
+            .librarySetId("testid")
             .build();
     String output = objectMapper.writeValueAsString(library);
     log.info("output: {}", output);
@@ -32,7 +35,7 @@ class VersionJsonSerializerTest {
         output,
         is(
             equalTo(
-                "{\"id\":null,\"cqlLibraryName\":null,\"model\":null,\"version\":\"1.2.000\",\"draft\":false,\"groupId\":null,\"cqlErrors\":false,\"cql\":null,\"elmJson\":null,\"elmXml\":null,\"createdAt\":null,\"createdBy\":null,\"lastModifiedAt\":null,\"lastModifiedBy\":null,\"publisher\":null,\"description\":null,\"experimental\":false,\"programUseContext\":null}")));
+                "{\"id\":null,\"librarySetId\":\"testid\",\"cqlLibraryName\":null,\"model\":null,\"version\":\"1.2.000\",\"draft\":false,\"cqlErrors\":false,\"cql\":null,\"elmJson\":null,\"elmXml\":null,\"createdAt\":null,\"createdBy\":null,\"lastModifiedAt\":null,\"lastModifiedBy\":null,\"publisher\":null,\"description\":null,\"experimental\":false,\"programUseContext\":null,\"librarySet\":null}")));
   }
 
   @Test
