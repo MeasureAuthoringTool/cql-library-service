@@ -13,11 +13,11 @@ import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.test.context.TestPropertySource;
+import org.springframework.test.context.ActiveProfiles;
 
 @Slf4j
+@ActiveProfiles("test")
 @SpringBootTest
-@TestPropertySource(properties = {"mongock.enabled=false"})
 class VersionJsonSerializerTest {
 
   @Autowired private ObjectMapper objectMapper;
@@ -35,7 +35,7 @@ class VersionJsonSerializerTest {
         output,
         is(
             equalTo(
-                "{\"id\":null,\"librarySetId\":\"testid\",\"cqlLibraryName\":null,\"model\":null,\"version\":\"1.2.000\",\"draft\":false,\"groupId\":null,\"cqlErrors\":false,\"cql\":null,\"elmJson\":null,\"elmXml\":null,\"createdAt\":null,\"createdBy\":null,\"lastModifiedAt\":null,\"lastModifiedBy\":null,\"publisher\":null,\"description\":null,\"experimental\":false,\"programUseContext\":null,\"librarySet\":null}")));
+                "{\"id\":null,\"librarySetId\":\"testid\",\"cqlLibraryName\":null,\"model\":null,\"version\":\"1.2.000\",\"draft\":false,\"cqlErrors\":false,\"cql\":null,\"elmJson\":null,\"elmXml\":null,\"createdAt\":null,\"createdBy\":null,\"lastModifiedAt\":null,\"lastModifiedBy\":null,\"publisher\":null,\"description\":null,\"experimental\":false,\"programUseContext\":null,\"librarySet\":null}")));
   }
 
   @Test

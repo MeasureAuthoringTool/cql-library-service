@@ -17,7 +17,6 @@
     <java.version>17</java.version>
     <maven.compiler.source>${java.version}</maven.compiler.source>
     <maven.compiler.target>${java.version}</maven.compiler.target>
-    <mongock.version>5.3.0</mongock.version>
     <mvn.checkstyle.file>madie-checkstyle.xml</mvn.checkstyle.file>
     <mvn.checkstyle.version>3.1.2</mvn.checkstyle.version>
     <mvnreports.version>3.2.2</mvnreports.version>
@@ -25,6 +24,37 @@
     <springboot.version>2.5.7</springboot.version>
     <springfox.version>3.0.0</springfox.version>
   </properties>
+
+  <dependencyManagement>
+    <dependencies>
+      <!-- START: needed to fix mismatched versions coming from above
+      mongock -->
+      <dependency>
+        <groupId>org.junit.jupiter</groupId>
+        <artifactId>junit-jupiter-api</artifactId>
+        <version>${junit-jupiter.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.junit.jupiter</groupId>
+        <artifactId>junit-jupiter</artifactId>
+        <version>${junit-jupiter.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.junit.jupiter</groupId>
+        <artifactId>junit-jupiter-engine</artifactId>
+        <version>${junit-jupiter.version}</version>
+      </dependency>
+      <!-- END: needed to fix mismatched versions coming from above
+            mongock -->
+      <dependency>
+        <groupId>io.mongock</groupId>
+        <artifactId>mongock-bom</artifactId>
+        <version>5.1.7</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>
 
   <dependencies>
     <dependency>
@@ -72,23 +102,21 @@
     <dependency>
       <groupId>gov.cms.madie</groupId>
       <artifactId>madie-java-models</artifactId>
-      <version>0.5.6-SNAPSHOT</version>
+      <version>0.5.8-SNAPSHOT</version>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.commons</groupId>
+      <artifactId>commons-collections4</artifactId>
+      <version>4.4</version>
     </dependency>
 
     <dependency>
       <groupId>io.mongock</groupId>
       <artifactId>mongock-springboot-v3</artifactId>
-      <version>${mongock.version}</version>
     </dependency>
     <dependency>
       <groupId>io.mongock</groupId>
       <artifactId>mongodb-springdata-v4-driver</artifactId>
-      <version>${mongock.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>io.mongock</groupId>
-      <artifactId>mongock-api</artifactId>
-      <version>${mongock.version}</version>
     </dependency>
 
     <dependency>

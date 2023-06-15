@@ -121,7 +121,7 @@ class VersionServiceTest {
   }
 
   @Test
-  void testCreateVersionThrowsRunTimeExceptionIfGroupIdIsNull() {
+  void testCreateVersionThrowsRunTimeExceptionIfLibrarySetIDIsNull() {
     CqlLibrary existingCqlLibrary =
         CqlLibrary.builder().id("testCqlLibraryId").createdBy("testUser").draft(true).build();
 
@@ -143,12 +143,12 @@ class VersionServiceTest {
             .cqlLibraryName("TestLibrary")
             .draft(true)
             .cql("library testCql version '1.0.000'")
-            .groupId("testGroupId")
+            .librarySetId("testLibrarySetId1")
             .version(Version.parse("1.0.000"))
             .build();
 
     when(cqlLibraryRepository.findById(anyString())).thenReturn(Optional.of(existingCqlLibrary));
-    when(cqlLibraryRepository.findMaxVersionByGroupId(anyString()))
+    when(cqlLibraryRepository.findMaxVersionByLibrarySetId(anyString()))
         .thenReturn(Optional.of(Version.parse("1.0.0")));
     when(elmTranslatorClient.getElmJson(anyString(), anyString()))
         .thenReturn(ElmJson.builder().json("{}").xml("<></>").build());
@@ -167,12 +167,12 @@ class VersionServiceTest {
             .cqlLibraryName("TestLibrary")
             .draft(true)
             .cql("library testCql version '1.0.000'")
-            .groupId("testGroupId")
+            .librarySetId("testLibrarySetId")
             .version(Version.parse("1.0.000"))
             .build();
 
     when(cqlLibraryRepository.findById(anyString())).thenReturn(Optional.of(existingCqlLibrary));
-    when(cqlLibraryRepository.findMaxVersionByGroupId(anyString()))
+    when(cqlLibraryRepository.findMaxVersionByLibrarySetId(anyString()))
         .thenReturn(Optional.of(Version.parse("1.0.0")));
     when(elmTranslatorClient.getElmJson(anyString(), anyString()))
         .thenReturn(ElmJson.builder().json("{}").xml("<></>").build());
@@ -192,7 +192,7 @@ class VersionServiceTest {
             .createdBy("testUser")
             .draft(true)
             .cql("library testCql version '1.0.000'")
-            .groupId("testGroupId")
+            .librarySetId("testLibrarySetId")
             .version(Version.parse("1.0.000"))
             .model(ModelType.QI_CORE.toString())
             .build();
@@ -200,7 +200,7 @@ class VersionServiceTest {
     CqlLibrary updatedCqlLibrary = existingCqlLibrary.toBuilder().build();
 
     when(cqlLibraryRepository.findById(anyString())).thenReturn(Optional.of(existingCqlLibrary));
-    when(cqlLibraryRepository.findMaxVersionByGroupId(anyString()))
+    when(cqlLibraryRepository.findMaxVersionByLibrarySetId(anyString()))
         .thenReturn(Optional.of(Version.parse("1.0.0")));
     //    when(cqlLibraryRepository.findAll()).thenReturn(List.of(existingCqlLibrary));
     when(cqlLibraryRepository.save(any(CqlLibrary.class))).thenReturn(updatedCqlLibrary);
@@ -215,12 +215,12 @@ class VersionServiceTest {
     assertFalse(savedValue.isDraft());
     assertThat(savedValue.getVersion().toString(), is(equalTo("2.0.000")));
     // groupId should remain same
-    assertThat(savedValue.getGroupId(), is(equalTo(existingCqlLibrary.getGroupId())));
+    assertThat(savedValue.getLibrarySetId(), is(equalTo(existingCqlLibrary.getLibrarySetId())));
 
     verify(actionLogService, times(1))
         .logAction(
             targetIdArgumentCaptor.capture(), actionTypeArgumentCaptor.capture(), anyString());
-    assertThat(targetIdArgumentCaptor.getValue(), is(equalTo("testGroupId")));
+    assertThat(targetIdArgumentCaptor.getValue(), is(equalTo("testLibrarySetId")));
     assertThat(actionTypeArgumentCaptor.getValue(), is(equalTo(ActionType.VERSIONED_MAJOR)));
   }
 
@@ -232,7 +232,7 @@ class VersionServiceTest {
             .createdBy("testUser")
             .cql("library testCql version '1.0.000'")
             .draft(true)
-            .groupId("testGroupId")
+            .librarySetId("testLibrarySetId")
             .version(Version.parse("1.0.000"))
             .model(ModelType.QI_CORE.toString())
             .build();
@@ -240,7 +240,8 @@ class VersionServiceTest {
     CqlLibrary updatedCqlLibrary = existingCqlLibrary.toBuilder().build();
 
     when(cqlLibraryRepository.findById(anyString())).thenReturn(Optional.of(existingCqlLibrary));
-    when(cqlLibraryRepository.findMaxMinorVersionByGroupIdAndVersionMajor(anyString(), anyInt()))
+    when(cqlLibraryRepository.findMaxMinorVersionByLibrarySetIdAndVersionMajor(
+            anyString(), anyInt()))
         .thenReturn(Optional.of(Version.parse("1.0.0")));
     when(cqlLibraryRepository.save(any(CqlLibrary.class))).thenReturn(updatedCqlLibrary);
     when(elmTranslatorClient.getElmJson(anyString(), anyString()))
@@ -256,7 +257,7 @@ class VersionServiceTest {
     verify(actionLogService, times(1))
         .logAction(
             targetIdArgumentCaptor.capture(), actionTypeArgumentCaptor.capture(), anyString());
-    assertThat(targetIdArgumentCaptor.getValue(), is(equalTo("testGroupId")));
+    assertThat(targetIdArgumentCaptor.getValue(), is(equalTo("testLibrarySetId")));
     assertThat(actionTypeArgumentCaptor.getValue(), is(equalTo(ActionType.VERSIONED_MINOR)));
   }
 
@@ -296,7 +297,7 @@ class VersionServiceTest {
             .id("testCqlLibraryId")
             .createdBy("testUser")
             .draft(false)
-            .groupId("testGroupId")
+            .librarySetId("testLibrarySetId")
             .version(Version.parse("1.0.000"))
             .build();
 
@@ -304,7 +305,8 @@ class VersionServiceTest {
     when(cqlLibraryRepository.findById(anyString())).thenReturn(Optional.of(existingCqlLibrary));
     when(cqlLibraryRepository.save(any(CqlLibrary.class))).thenReturn(clonedCqlLibrary);
     doNothing().when(cqlLibraryService).checkDuplicateCqlLibraryName(anyString());
-    when(cqlLibraryRepository.existsByGroupIdAndDraft(anyString(), anyBoolean())).thenReturn(false);
+    when(cqlLibraryRepository.existsByLibrarySetIdAndDraft(anyString(), anyBoolean()))
+        .thenReturn(false);
 
     versionService.createDraft(
         "testCqlLibraryId",
@@ -318,7 +320,7 @@ class VersionServiceTest {
     assertTrue(savedValue.isDraft());
     // version and groupId should not change
     assertThat(savedValue.getVersion(), is(equalTo(existingCqlLibrary.getVersion())));
-    assertThat(savedValue.getGroupId(), is(equalTo(existingCqlLibrary.getGroupId())));
+    assertThat(savedValue.getLibrarySetId(), is(equalTo(existingCqlLibrary.getLibrarySetId())));
   }
 
   @Test
@@ -328,13 +330,14 @@ class VersionServiceTest {
             .id("testCqlLibraryId")
             .createdBy("testUser")
             .draft(false)
-            .groupId("testGroupId")
+            .librarySetId("testLibrarySetId")
             .version(Version.parse("1.0.000"))
             .build();
 
     when(cqlLibraryRepository.findById(anyString())).thenReturn(Optional.of(existingCqlLibrary));
     doNothing().when(cqlLibraryService).checkDuplicateCqlLibraryName(anyString());
-    when(cqlLibraryRepository.existsByGroupIdAndDraft(anyString(), anyBoolean())).thenReturn(true);
+    when(cqlLibraryRepository.existsByLibrarySetIdAndDraft(anyString(), anyBoolean()))
+        .thenReturn(true);
 
     assertThrows(
         ResourceNotDraftableException.class,
@@ -348,8 +351,9 @@ class VersionServiceTest {
 
   @Test
   public void testGetNextVersionReturnsIncrementedMajorVersion() {
-    CqlLibrary lib = CqlLibrary.builder().groupId("group1").version(Version.parse("1.0.0")).build();
-    when(cqlLibraryRepository.findMaxVersionByGroupId(anyString()))
+    CqlLibrary lib =
+        CqlLibrary.builder().librarySetId("librarySet1").version(Version.parse("1.0.0")).build();
+    when(cqlLibraryRepository.findMaxVersionByLibrarySetId(anyString()))
         .thenReturn(Optional.of(Version.parse("1.0.0")));
     Version nextVersion = versionService.getNextVersion(lib, true);
     assertThat(nextVersion, is(equalTo(Version.parse("2.0.0"))));
@@ -357,8 +361,9 @@ class VersionServiceTest {
 
   @Test
   public void testGetNextVersionReturnsIncrementedMajorVersionIgnoringMinor() {
-    CqlLibrary lib = CqlLibrary.builder().groupId("group1").version(Version.parse("1.0.0")).build();
-    when(cqlLibraryRepository.findMaxVersionByGroupId(anyString()))
+    CqlLibrary lib =
+        CqlLibrary.builder().librarySetId("librarySet1").version(Version.parse("1.0.0")).build();
+    when(cqlLibraryRepository.findMaxVersionByLibrarySetId(anyString()))
         .thenReturn(Optional.of(Version.parse("2.4.0")));
     Version nextVersion = versionService.getNextVersion(lib, true);
     assertThat(nextVersion, is(equalTo(Version.parse("3.0.0"))));
@@ -366,8 +371,10 @@ class VersionServiceTest {
 
   @Test
   public void testGetNextVersionReturnsIncrementedMinorVersion() {
-    CqlLibrary lib = CqlLibrary.builder().groupId("group1").version(Version.parse("1.2.0")).build();
-    when(cqlLibraryRepository.findMaxMinorVersionByGroupIdAndVersionMajor(anyString(), anyInt()))
+    CqlLibrary lib =
+        CqlLibrary.builder().librarySetId("librarySet1").version(Version.parse("1.2.0")).build();
+    when(cqlLibraryRepository.findMaxMinorVersionByLibrarySetIdAndVersionMajor(
+            anyString(), anyInt()))
         .thenReturn(Optional.of(Version.parse("1.3.0")));
     Version nextVersion = versionService.getNextVersion(lib, false);
     assertThat(nextVersion, is(equalTo(Version.parse("1.4.0"))));
@@ -376,27 +383,30 @@ class VersionServiceTest {
   @Test
   public void testRuntimeExceptionIsRethrownForMaxVersion() {
     Exception cause = new RuntimeException("The CAUSE!!");
-    when(cqlLibraryRepository.findMaxVersionByGroupId(anyString())).thenThrow(cause);
-    CqlLibrary lib = CqlLibrary.builder().groupId("group1").version(Version.parse("1.0.0")).build();
+    when(cqlLibraryRepository.findMaxVersionByLibrarySetId(anyString())).thenThrow(cause);
+    CqlLibrary lib =
+        CqlLibrary.builder().librarySetId("librarySet1").version(Version.parse("1.0.0")).build();
     assertThrows(
         RuntimeException.class,
         () -> versionService.getNextVersion(lib, true),
         "Unable to update version number");
-    verify(cqlLibraryRepository, times(1)).findMaxVersionByGroupId(anyString());
+    verify(cqlLibraryRepository, times(1)).findMaxVersionByLibrarySetId(anyString());
   }
 
   @Test
   public void testRuntimeExceptionIsRethrownForMaxMinorVersion() {
     Exception cause = new RuntimeException("The CAUSE!!");
-    when(cqlLibraryRepository.findMaxMinorVersionByGroupIdAndVersionMajor(anyString(), anyInt()))
+    when(cqlLibraryRepository.findMaxMinorVersionByLibrarySetIdAndVersionMajor(
+            anyString(), anyInt()))
         .thenThrow(cause);
-    CqlLibrary lib = CqlLibrary.builder().groupId("group1").version(Version.parse("1.0.0")).build();
+    CqlLibrary lib =
+        CqlLibrary.builder().librarySetId("librarySet1").version(Version.parse("1.0.0")).build();
     assertThrows(
         InternalServerErrorException.class,
         () -> versionService.getNextVersion(lib, false),
         "Unable to update version number");
     verify(cqlLibraryRepository, times(1))
-        .findMaxMinorVersionByGroupIdAndVersionMajor(anyString(), anyInt());
+        .findMaxMinorVersionByLibrarySetIdAndVersionMajor(anyString(), anyInt());
   }
 
   @Test
@@ -407,15 +417,19 @@ class VersionServiceTest {
 
   @Test
   public void testIsDraftableReturnsTrueForNoExistingDraft() {
-    when(cqlLibraryRepository.existsByGroupIdAndDraft(anyString(), anyBoolean())).thenReturn(false);
-    boolean output = versionService.isDraftable(CqlLibrary.builder().groupId("group1").build());
+    when(cqlLibraryRepository.existsByLibrarySetIdAndDraft(anyString(), anyBoolean()))
+        .thenReturn(false);
+    boolean output =
+        versionService.isDraftable(CqlLibrary.builder().librarySetId("librarySet1").build());
     assertThat(output, is(true));
   }
 
   @Test
   public void testIsDraftableReturnsFalseForExistingDraft() {
-    when(cqlLibraryRepository.existsByGroupIdAndDraft(anyString(), anyBoolean())).thenReturn(true);
-    boolean output = versionService.isDraftable(CqlLibrary.builder().groupId("group1").build());
+    when(cqlLibraryRepository.existsByLibrarySetIdAndDraft(anyString(), anyBoolean()))
+        .thenReturn(true);
+    boolean output =
+        versionService.isDraftable(CqlLibrary.builder().librarySetId("librarySet1").build());
     assertThat(output, is(false));
   }
 }

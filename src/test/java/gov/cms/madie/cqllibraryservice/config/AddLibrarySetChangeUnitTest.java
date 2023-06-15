@@ -22,7 +22,6 @@ import gov.cms.madie.models.library.LibrarySet;
 public class AddLibrarySetChangeUnitTest {
 
   private CqlLibrary library1;
-  private CqlLibrary library2;
   private CqlLibrary library3;
   private CqlLibrary library4;
   private LibrarySet librarySet1;
@@ -43,14 +42,6 @@ public class AddLibrarySetChangeUnitTest {
             .librarySetId("testCqlLibrarySetId1")
             .build();
 
-    library2 =
-        CqlLibrary.builder()
-            .id("testId2")
-            .cqlLibraryName("testCqlLibraryName")
-            .model("testModel")
-            .createdBy("testCreatedBy1")
-            .librarySetId("testCqlLibrarySetId1")
-            .build();
     library3 =
         CqlLibrary.builder()
             .id("testId3")
@@ -78,12 +69,10 @@ public class AddLibrarySetChangeUnitTest {
 
   @Test
   public void addLibrarySetValues() {
-    when(libraryRepository.findAll()).thenReturn(List.of(library1, library2, library3, library4));
     when(libraryRepository.findByCqlLibrarySetId())
         .thenReturn((List.of(library1, library3, library4)));
 
     addLibrarySetChangeUnit.addLibrarySetValues(librarySetRepository, libraryRepository);
-    verify(libraryRepository, new Times(1)).findAll();
     verify(libraryRepository, new Times(1)).findByCqlLibrarySetId();
     verify(librarySetRepository, new Times(1)).save(librarySet1);
     verify(librarySetRepository, new Times(1)).save(librarySet2);

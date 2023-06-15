@@ -19,7 +19,7 @@ public interface CqlLibraryRepository
   @ExistsQuery("{cqlLibraryName: {$regex: '^?0$', $options: 'i'}}")
   boolean existsByCqlLibraryName(String cqlLibraryName);
 
-  boolean existsByGroupIdAndDraft(String groupId, boolean draft);
+  boolean existsByLibrarySetIdAndDraft(String librarySetId, boolean draft);
 
   @Query("{createdBy : { $regex : ?0, $options: 'i' }}")
   List<CqlLibrary> findAllByCreatedBy(String user);

@@ -36,6 +36,7 @@ import gov.cms.madie.models.library.CqlLibraryDraft;
 import gov.cms.madie.models.common.Version;
 import gov.cms.madie.cqllibraryservice.repositories.CqlLibraryRepository;
 import gov.cms.madie.cqllibraryservice.services.CqlLibraryService;
+import gov.cms.madie.cqllibraryservice.services.LibrarySetService;
 import gov.cms.madie.cqllibraryservice.services.VersionService;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
@@ -49,11 +50,11 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
-import org.springframework.test.context.TestPropertySource;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
+@ActiveProfiles("test")
 @WebMvcTest({CqlLibraryController.class})
-@TestPropertySource(properties = {"mongock.enabled=false"})
 public class CqlLibraryControllerMvcTest {
 
   private static final String TEST_USER_ID = "test-okta-user-id-123";
@@ -64,6 +65,8 @@ public class CqlLibraryControllerMvcTest {
 
   @MockBean private VersionService versionService;
   @MockBean private CqlLibraryService cqlLibraryService;
+  @MockBean private LibrarySetService librarySetService;
+
   @MockBean ActionLogService actionLogService;
 
   @Captor private ArgumentCaptor<CqlLibrary> cqlLibraryArgumentCaptor;
