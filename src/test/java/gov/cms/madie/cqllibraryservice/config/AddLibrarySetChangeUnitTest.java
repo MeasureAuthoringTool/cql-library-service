@@ -40,7 +40,7 @@ public class AddLibrarySetChangeUnitTest {
             .cqlLibraryName("testCqlLibraryName")
             .model("testModel")
             .createdBy("testCreatedBy1")
-            .groupId("testGroupId1")
+            .librarySetId("testCqlLibrarySetId1")
             .build();
 
     library2 =
@@ -49,7 +49,7 @@ public class AddLibrarySetChangeUnitTest {
             .cqlLibraryName("testCqlLibraryName")
             .model("testModel")
             .createdBy("testCreatedBy1")
-            .groupId("testGroupId1")
+            .librarySetId("testCqlLibrarySetId1")
             .build();
     library3 =
         CqlLibrary.builder()
@@ -57,7 +57,7 @@ public class AddLibrarySetChangeUnitTest {
             .cqlLibraryName("testCqlLibraryName")
             .model("testModel")
             .createdBy("testCreatedBy3")
-            .groupId("testGroupId1")
+            .librarySetId("testCqlLibrarySetId1")
             .build();
     library4 =
         CqlLibrary.builder()
@@ -65,23 +65,26 @@ public class AddLibrarySetChangeUnitTest {
             .cqlLibraryName("testCqlLibraryName")
             .model("testModel")
             .createdBy("testCreatedBy1")
-            .groupId("testGroupId4")
+            .librarySetId("testCqlLibrarySetId4")
             .build();
 
-    librarySet1 = LibrarySet.builder().librarySetId("testGroupId1").owner("testCreatedBy1").build();
-    librarySet2 = LibrarySet.builder().librarySetId("testGroupId1").owner("testCreatedBy3").build();
-    librarySet3 = LibrarySet.builder().librarySetId("testGroupId4").owner("testCreatedBy1").build();
+    librarySet1 =
+        LibrarySet.builder().librarySetId("testCqlLibrarySetId1").owner("testCreatedBy1").build();
+    librarySet2 =
+        LibrarySet.builder().librarySetId("testCqlLibrarySetId1").owner("testCreatedBy3").build();
+    librarySet3 =
+        LibrarySet.builder().librarySetId("testCqlLibrarySetId4").owner("testCreatedBy1").build();
   }
 
   @Test
   public void addLibrarySetValues() {
     when(libraryRepository.findAll()).thenReturn(List.of(library1, library2, library3, library4));
-    when(libraryRepository.findCqlLibraryGroup())
+    when(libraryRepository.findByCqlLibrarySetId())
         .thenReturn((List.of(library1, library3, library4)));
 
     addLibrarySetChangeUnit.addLibrarySetValues(librarySetRepository, libraryRepository);
     verify(libraryRepository, new Times(1)).findAll();
-    verify(libraryRepository, new Times(1)).findCqlLibraryGroup();
+    verify(libraryRepository, new Times(1)).findByCqlLibrarySetId();
     verify(librarySetRepository, new Times(1)).save(librarySet1);
     verify(librarySetRepository, new Times(1)).save(librarySet2);
     verify(librarySetRepository, new Times(1)).save(librarySet3);

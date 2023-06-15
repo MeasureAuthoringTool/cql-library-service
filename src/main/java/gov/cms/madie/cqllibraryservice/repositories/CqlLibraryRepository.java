@@ -32,10 +32,10 @@ public interface CqlLibraryRepository
 
   @Aggregation(
       pipeline = {
-        "{'$group': {'_id': '$groupId',"
-            + "'groupId': {'$first':'$groupId'},"
+        "{'$group': {'_id': '$librarySetId',"
+            + "'librarySetId': {'$first':'$librarySetId'},"
             + "'createdBy': {'$first':'$createdBy'}}}",
         "{'$sort': {'createdAt':1}}"
       })
-  List<CqlLibrary> findCqlLibraryGroup();
+  List<CqlLibrary> findByCqlLibrarySetId();
 }
