@@ -33,6 +33,8 @@ okta:
     issuer: ${OKTA_ISSUER:https://dev-18092578.okta.com/oauth2/default}
     audience: ${OKTA_AUDIENCE:api://default}
 
+    
 mongock:
   migration-scan-package:
-    - gov.cms.madie.cqllibraryservice
+    - gov.cms.madie.cqllibraryservice.config
+

@@ -66,6 +66,7 @@ public class CqlLibraryControllerMvcTest {
   @MockBean private VersionService versionService;
   @MockBean private CqlLibraryService cqlLibraryService;
   @MockBean private LibrarySetService librarySetService;
+
   @MockBean ActionLogService actionLogService;
 
   @Captor private ArgumentCaptor<CqlLibrary> cqlLibraryArgumentCaptor;
