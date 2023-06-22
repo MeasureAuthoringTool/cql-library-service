@@ -79,7 +79,6 @@ public class LibraryAclRepositoryImplTest {
 
         when(mongoTemplate.aggregate(any(Aggregation.class), (Class<?>) any(), any()))
                 .thenReturn(allResults).thenReturn(allResults);
-        git
         List<CqlLibrary> list = libraryAclRepository.findAllByCqlLibraryNameAndDraftAndVersion("library2", false, Version.parse("0.0.000"));
         assertEquals(list.size(), 1);
     }
