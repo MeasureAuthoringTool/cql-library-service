@@ -4,6 +4,7 @@ import gov.cms.madie.cqllibraryservice.exceptions.InvalidIdException;
 import gov.cms.madie.cqllibraryservice.exceptions.InvalidResourceStateException;
 import gov.cms.madie.cqllibraryservice.exceptions.PermissionDeniedException;
 import gov.cms.madie.cqllibraryservice.exceptions.ResourceNotFoundException;
+import gov.cms.madie.cqllibraryservice.repositories.LibrarySetRepository;
 import gov.cms.madie.cqllibraryservice.services.ActionLogService;
 import gov.cms.madie.cqllibraryservice.services.LibrarySetService;
 import gov.cms.madie.models.common.ActionType;
@@ -18,6 +19,9 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+
+import gov.cms.madie.models.library.LibrarySet;
+import gov.cms.madie.models.measure.MeasureSet;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -37,6 +41,7 @@ public class CqlLibraryController {
   private final VersionService versionService;
   private final CqlLibraryService cqlLibraryService;
   private final LibrarySetService librarySetService;
+  private final LibrarySetRepository librarySetRepository;
 
   @GetMapping
   public ResponseEntity<List<CqlLibrary>> getCqlLibraries(
@@ -46,8 +51,14 @@ public class CqlLibraryController {
     final String username = principal.getName();
     List<CqlLibrary> cqlLibraries =
         filterByCurrentUser
-            ? cqlLibraryRepository.findAllByCreatedBy(username)
+            ? cqlLibraryRepository.findAllMyLibraries(username)
             : cqlLibraryRepository.findAll();
+    cqlLibraries.forEach(
+            l -> {
+              LibrarySet librarySet =
+                      librarySetRepository.findByLibrarySetId(l.getLibrarySetId()).orElse(null);
+              l.setLibrarySet(librarySet);
+            });
     return ResponseEntity.ok(cqlLibraries);
   }
 
@@ -55,6 +66,12 @@ public class CqlLibraryController {
   public ResponseEntity<CqlLibrary> getCqlLibrary(@PathVariable("id") String id) {
     return cqlLibraryRepository
         .findById(id)
+        .map(
+            cqlLibrary ->
+                cqlLibrary
+                    .toBuilder()
+                    .librarySet(librarySetService.findByLibrarySetId(cqlLibrary.getLibrarySetId()))
+                    .build())
         .map(ResponseEntity::ok)
         .orElseThrow(() -> new ResourceNotFoundException("CQL Library", id));
   }
@@ -125,6 +142,8 @@ public class CqlLibraryController {
               if (cqlLibraryService.isCqlLibraryNameChanged(cqlLibrary, persistedLibrary)) {
                 cqlLibraryService.checkDuplicateCqlLibraryName(cqlLibrary.getCqlLibraryName());
               }
+              cqlLibrary.setLibrarySet(
+                  librarySetService.findByLibrarySetId(cqlLibrary.getLibrarySetId()));
               cqlLibrary.setDraft(persistedLibrary.isDraft());
               cqlLibrary.setVersion(persistedLibrary.getVersion());
               cqlLibrary.setLastModifiedAt(Instant.now());

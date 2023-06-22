@@ -24,11 +24,18 @@ public class VersionService {
   private final CqlLibraryActionLogRepository cqlLibraryHistoryRepository;
 
   private final ElmTranslatorClient elmTranslatorClient;
+  private final LibrarySetService librarySetService;
 
   public CqlLibrary createVersion(String id, boolean isMajor, String username, String accessToken) {
     CqlLibrary cqlLibrary =
         cqlLibraryRepository
             .findById(id)
+                .map(
+                        l ->
+                                l
+                                        .toBuilder()
+                                        .librarySet(librarySetService.findByLibrarySetId(l.getLibrarySetId()))
+                                        .build())
             .orElseThrow(() -> new ResourceNotFoundException("CQL Library", id));
 
     validateCqlLibrary(cqlLibrary, username);
@@ -128,6 +135,12 @@ public class VersionService {
     CqlLibrary cqlLibrary =
         cqlLibraryRepository
             .findById(id)
+                .map(
+                        l ->
+                                l
+                                        .toBuilder()
+                                        .librarySet(librarySetService.findByLibrarySetId(l.getLibrarySetId()))
+                                        .build())
             .orElseThrow(() -> new ResourceNotFoundException("CQL Library", id));
 
     if (!Objects.equals(cqlLibraryName, cqlLibrary.getCqlLibraryName())) {

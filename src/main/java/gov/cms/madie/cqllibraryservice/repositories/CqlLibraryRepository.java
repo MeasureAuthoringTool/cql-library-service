@@ -9,20 +9,14 @@ import java.util.Optional;
 import org.springframework.data.mongodb.repository.Aggregation;
 import org.springframework.data.mongodb.repository.ExistsQuery;
 import org.springframework.data.mongodb.repository.MongoRepository;
-import org.springframework.data.mongodb.repository.Query;
 
 public interface CqlLibraryRepository
-    extends MongoRepository<CqlLibrary, String>, CqlLibraryVersionRepository {
-
-  Optional<CqlLibrary> findByCqlLibraryName(String cqlLibraryName);
+    extends MongoRepository<CqlLibrary, String>, CqlLibraryVersionRepository, LibraryAclRepository {
 
   @ExistsQuery("{cqlLibraryName: {$regex: '^?0$', $options: 'i'}}")
   boolean existsByCqlLibraryName(String cqlLibraryName);
 
   boolean existsByLibrarySetIdAndDraft(String librarySetId, boolean draft);
-
-  @Query("{createdBy : { $regex : ?0, $options: 'i' }}")
-  List<CqlLibrary> findAllByCreatedBy(String user);
 
   List<CqlLibrary> findAllByCqlLibraryNameAndDraftAndVersion(
       String cqlLibraryName, boolean draft, Version version);
