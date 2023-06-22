@@ -27,71 +27,115 @@ import static org.mockito.Mockito.when;
 @EnableMongoRepositories(basePackages = "com.gov.madie.measure.repository")
 public class LibraryAclRepositoryImplTest {
 
-    @Mock MongoTemplate mongoTemplate;
+  @Mock MongoTemplate mongoTemplate;
 
-    @InjectMocks LibraryAclRepositoryImpl libraryAclRepository;
+  @InjectMocks LibraryAclRepositoryImpl libraryAclRepository;
 
-    private CqlLibrary library1;
-    private CqlLibrary library2;
-    private CqlLibrary library3;
-    private CqlLibrary library4;
-    private CqlLibrary library5;
+  private CqlLibrary library1;
+  private CqlLibrary library2;
+  private CqlLibrary library3;
+  private CqlLibrary library4;
+  private CqlLibrary library5;
 
-    @BeforeEach
-    void setup() {
-        LibrarySet librarySet1 = LibrarySet.builder().owner("p1").librarySetId("id-1").build();
-        LibrarySet librarySet2 = LibrarySet.builder().owner("p2").librarySetId("id-1").build();
-        library1 = CqlLibrary.builder().createdBy("p1").id("1").cqlLibraryName("test measure 1").librarySetId("1-1").version(Version.parse("0.0.000")).model("QI-Core").draft(true)
-                .build();
-        library2 = CqlLibrary.builder().createdBy("p1").id("2").cqlLibraryName("test measure 2").librarySetId("2-2").version(Version.parse("0.0.000")).model("QI-Core").draft(true)
-                .build();
-        library3 = CqlLibrary.builder().createdBy("p1").id("3").cqlLibraryName("library3").librarySetId("id-2").version(Version.parse("1.0.000")).model("QDM").draft(false)
-                .build();
-        library4 = CqlLibrary.builder().createdBy("p2").id("4").cqlLibraryName("library4").librarySetId("id-2").version(Version.parse("1.0.000")).model("QDM").draft(false)
-                .build();
-        library5 = CqlLibrary.builder().createdBy("p2").id("5").cqlLibraryName("library5").librarySetId("id-2").version(Version.parse("1.0.000")).model("QDM").draft(false)
-                .build();
+  @BeforeEach
+  void setup() {
+    LibrarySet librarySet1 = LibrarySet.builder().owner("p1").librarySetId("id-1").build();
+    LibrarySet librarySet2 = LibrarySet.builder().owner("p2").librarySetId("id-1").build();
+    library1 =
+        CqlLibrary.builder()
+            .createdBy("p1")
+            .id("1")
+            .cqlLibraryName("test measure 1")
+            .librarySetId("1-1")
+            .version(Version.parse("0.0.000"))
+            .model("QI-Core")
+            .draft(true)
+            .build();
+    library2 =
+        CqlLibrary.builder()
+            .createdBy("p1")
+            .id("2")
+            .cqlLibraryName("test measure 2")
+            .librarySetId("2-2")
+            .version(Version.parse("0.0.000"))
+            .model("QI-Core")
+            .draft(true)
+            .build();
+    library3 =
+        CqlLibrary.builder()
+            .createdBy("p1")
+            .id("3")
+            .cqlLibraryName("library3")
+            .librarySetId("id-2")
+            .version(Version.parse("1.0.000"))
+            .model("QDM")
+            .draft(false)
+            .build();
+    library4 =
+        CqlLibrary.builder()
+            .createdBy("p2")
+            .id("4")
+            .cqlLibraryName("library4")
+            .librarySetId("id-2")
+            .version(Version.parse("1.0.000"))
+            .model("QDM")
+            .draft(false)
+            .build();
+    library5 =
+        CqlLibrary.builder()
+            .createdBy("p2")
+            .id("5")
+            .cqlLibraryName("library5")
+            .librarySetId("id-2")
+            .version(Version.parse("1.0.000"))
+            .model("QDM")
+            .draft(false)
+            .build();
 
-        library1.setLibrarySet(librarySet1);
-        library2.setLibrarySet(librarySet1);
-        library3.setLibrarySet(librarySet1);
-        library4.setLibrarySet(librarySet2);
-        library5.setLibrarySet(librarySet2);
+    library1.setLibrarySet(librarySet1);
+    library2.setLibrarySet(librarySet1);
+    library3.setLibrarySet(librarySet1);
+    library4.setLibrarySet(librarySet2);
+    library5.setLibrarySet(librarySet2);
+  }
 
-    }
+  @Test
+  public void testfindAllMyLibraries() {
+    AggregationResults allResults =
+        new AggregationResults<>(List.of(library1, library2, library3), new Document());
 
-    @Test
-    public void testFindMyActiveMeasures() {
-        AggregationResults allResults = new AggregationResults<>(List.of(library1, library2, library3), new Document());
+    when(mongoTemplate.aggregate(any(Aggregation.class), (Class<?>) any(), any()))
+        .thenReturn(allResults)
+        .thenReturn(allResults);
 
-        when(mongoTemplate.aggregate(any(Aggregation.class), (Class<?>) any(), any()))
-                .thenReturn(allResults).thenReturn(allResults);
+    List<CqlLibrary> list = libraryAclRepository.findAllMyLibraries("p1");
+    assertEquals(list.size(), 3);
+  }
 
+  @Test
+  public void testfindAllByCqlLibraryNameAndDraftAndVersion() {
+    AggregationResults allResults = new AggregationResults<>(List.of(library2), new Document());
 
-        List<CqlLibrary> list = libraryAclRepository.findAllMyLibraries("p1");
-        assertEquals(list.size(), 3);
+    when(mongoTemplate.aggregate(any(Aggregation.class), (Class<?>) any(), any()))
+        .thenReturn(allResults)
+        .thenReturn(allResults);
+    List<CqlLibrary> list =
+        libraryAclRepository.findAllByCqlLibraryNameAndDraftAndVersion(
+            "library2", false, Version.parse("0.0.000"));
+    assertEquals(list.size(), 1);
+  }
 
-    }
+  @Test
+  public void testfindAllByCqlLibraryNameAndDraftAndVersionAndModel() {
+    AggregationResults allResults = new AggregationResults<>(List.of(library1), new Document());
 
-    @Test
-    public void testfindAllByCqlLibraryNameAndDraftAndVersion() {
-        AggregationResults allResults = new AggregationResults<>(List.of(library2), new Document());
+    when(mongoTemplate.aggregate(any(Aggregation.class), (Class<?>) any(), any()))
+        .thenReturn(allResults)
+        .thenReturn(allResults);
 
-        when(mongoTemplate.aggregate(any(Aggregation.class), (Class<?>) any(), any()))
-                .thenReturn(allResults).thenReturn(allResults);
-        List<CqlLibrary> list = libraryAclRepository.findAllByCqlLibraryNameAndDraftAndVersion("library2", false, Version.parse("0.0.000"));
-        assertEquals(list.size(), 1);
-    }
-
-    @Test
-    public void testfindAllByCqlLibraryNameAndDraftAndVersionAndModel() {
-        AggregationResults allResults = new AggregationResults<>(List.of(library1), new Document());
-
-        when(mongoTemplate.aggregate(any(Aggregation.class), (Class<?>) any(), any()))
-                .thenReturn(allResults).thenReturn(allResults);
-
-        List<CqlLibrary> list = libraryAclRepository.findAllByCqlLibraryNameAndDraftAndVersionAndModel("library1", false, Version.parse("0.0.000"), "QDM");
-        assertEquals(list.size(), 1);
-    }
-
+    List<CqlLibrary> list =
+        libraryAclRepository.findAllByCqlLibraryNameAndDraftAndVersionAndModel(
+            "library1", false, Version.parse("0.0.000"), "QDM");
+    assertEquals(list.size(), 1);
+  }
 }
