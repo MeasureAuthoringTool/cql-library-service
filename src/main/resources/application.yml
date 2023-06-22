@@ -2,7 +2,7 @@ spring:
   data:
     mongodb:
       database: ${MONGO_DATABASE:madiecqllibrary}
-      uri: ${MONGO_URI:mongodb://${DBUSER}:${DBPASS}@localhost:27017/madiecqllibrary}?authSource=admin&maxPoolSize=50&connectTimeoutMS=2000&serverSelectionTimeoutMS=2000
+            uri: ${MONGO_URI:mongodb://${DBUSER}:${DBPASS}@localhost:27017/madiecqllibrary}?authSource=admin&maxPoolSize=50&connectTimeoutMS=2000&serverSelectionTimeoutMS=2000
 
 server:
   port: 8082
@@ -36,5 +36,4 @@ okta:
     
 mongock:
   migration-scan-package:
-    - gov.cms.madie.cqllibraryservice.config
-
+    - gov.cms.madie.cqllibraryservice
