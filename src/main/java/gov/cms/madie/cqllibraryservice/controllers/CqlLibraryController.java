@@ -54,11 +54,11 @@ public class CqlLibraryController {
             ? cqlLibraryRepository.findAllMyLibraries(username)
             : cqlLibraryRepository.findAll();
     cqlLibraries.forEach(
-            l -> {
-              LibrarySet librarySet =
-                      librarySetRepository.findByLibrarySetId(l.getLibrarySetId()).orElse(null);
-              l.setLibrarySet(librarySet);
-            });
+        l -> {
+          LibrarySet librarySet =
+              librarySetRepository.findByLibrarySetId(l.getLibrarySetId()).orElse(null);
+          l.setLibrarySet(librarySet);
+        });
     return ResponseEntity.ok(cqlLibraries);
   }
 

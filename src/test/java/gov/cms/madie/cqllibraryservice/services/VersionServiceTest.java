@@ -23,7 +23,6 @@ import org.mockito.Captor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.web.client.RestTemplate;
 
 @ExtendWith(MockitoExtension.class)
 class VersionServiceTest {
@@ -31,6 +30,8 @@ class VersionServiceTest {
   @Mock CqlLibraryRepository cqlLibraryRepository;
 
   @Mock CqlLibraryService cqlLibraryService;
+
+  @Mock LibrarySetService librarySetService;
 
   @Mock ElmTranslatorClient elmTranslatorClient;
 
@@ -56,8 +57,11 @@ class VersionServiceTest {
   @Test
   void testCreateVersionThrowsExceptionWhenUserIsNotTheOwner() {
     CqlLibrary existingCqlLibrary =
-        CqlLibrary.builder().id("testCqlLibraryId").createdBy("testUser").build();
-
+        CqlLibrary.builder()
+            .id("testCqlLibraryId")
+            .createdBy("testUser")
+            .librarySetId("test")
+            .build();
     when(cqlLibraryRepository.findById(anyString())).thenReturn(Optional.of(existingCqlLibrary));
 
     assertThrows(

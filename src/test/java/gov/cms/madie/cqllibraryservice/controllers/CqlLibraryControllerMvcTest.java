@@ -35,6 +35,7 @@ import gov.cms.madie.models.library.CqlLibrary;
 import gov.cms.madie.models.library.CqlLibraryDraft;
 import gov.cms.madie.models.common.Version;
 import gov.cms.madie.cqllibraryservice.repositories.CqlLibraryRepository;
+import gov.cms.madie.cqllibraryservice.repositories.LibrarySetRepository;
 import gov.cms.madie.cqllibraryservice.services.CqlLibraryService;
 import gov.cms.madie.cqllibraryservice.services.LibrarySetService;
 import gov.cms.madie.cqllibraryservice.services.VersionService;
@@ -62,6 +63,7 @@ public class CqlLibraryControllerMvcTest {
   private static final String MODEL = ModelType.QI_CORE.toString();
 
   @MockBean private CqlLibraryRepository repository;
+  @MockBean private LibrarySetRepository librarySetRepository;
 
   @MockBean private VersionService versionService;
   @MockBean private CqlLibraryService cqlLibraryService;

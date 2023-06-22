@@ -23,6 +23,7 @@ import gov.cms.madie.cqllibraryservice.exceptions.InvalidResourceStateException;
 import gov.cms.madie.cqllibraryservice.exceptions.PermissionDeniedException;
 import gov.cms.madie.cqllibraryservice.exceptions.ResourceNotDraftableException;
 import gov.cms.madie.cqllibraryservice.exceptions.ResourceNotFoundException;
+import gov.cms.madie.cqllibraryservice.repositories.LibrarySetRepository;
 import gov.cms.madie.cqllibraryservice.services.ActionLogService;
 import gov.cms.madie.cqllibraryservice.services.LibrarySetService;
 import gov.cms.madie.models.common.ActionType;
@@ -53,6 +54,8 @@ import org.springframework.http.ResponseEntity;
 class CqlLibraryControllerTest {
 
   @Mock CqlLibraryRepository cqlLibraryRepository;
+
+  @Mock LibrarySetRepository librarySetRepository;
 
   @Mock VersionService versionService;
 

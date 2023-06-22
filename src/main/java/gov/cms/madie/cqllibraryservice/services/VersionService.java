@@ -30,12 +30,11 @@ public class VersionService {
     CqlLibrary cqlLibrary =
         cqlLibraryRepository
             .findById(id)
-                .map(
-                        l ->
-                                l
-                                        .toBuilder()
-                                        .librarySet(librarySetService.findByLibrarySetId(l.getLibrarySetId()))
-                                        .build())
+            .map(
+                l ->
+                    l.toBuilder()
+                        .librarySet(librarySetService.findByLibrarySetId(l.getLibrarySetId()))
+                        .build())
             .orElseThrow(() -> new ResourceNotFoundException("CQL Library", id));
 
     validateCqlLibrary(cqlLibrary, username);
@@ -135,12 +134,11 @@ public class VersionService {
     CqlLibrary cqlLibrary =
         cqlLibraryRepository
             .findById(id)
-                .map(
-                        l ->
-                                l
-                                        .toBuilder()
-                                        .librarySet(librarySetService.findByLibrarySetId(l.getLibrarySetId()))
-                                        .build())
+            .map(
+                l ->
+                    l.toBuilder()
+                        .librarySet(librarySetService.findByLibrarySetId(l.getLibrarySetId()))
+                        .build())
             .orElseThrow(() -> new ResourceNotFoundException("CQL Library", id));
 
     if (!Objects.equals(cqlLibraryName, cqlLibrary.getCqlLibraryName())) {
