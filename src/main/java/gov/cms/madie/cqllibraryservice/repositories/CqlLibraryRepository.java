@@ -4,7 +4,6 @@ import gov.cms.madie.models.common.Version;
 import gov.cms.madie.models.library.CqlLibrary;
 
 import java.util.List;
-import java.util.Optional;
 
 import org.springframework.data.mongodb.repository.Aggregation;
 import org.springframework.data.mongodb.repository.ExistsQuery;

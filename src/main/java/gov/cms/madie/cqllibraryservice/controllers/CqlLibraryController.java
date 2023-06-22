@@ -21,7 +21,6 @@ import java.util.Optional;
 import java.util.UUID;
 
 import gov.cms.madie.models.library.LibrarySet;
-import gov.cms.madie.models.measure.MeasureSet;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
