@@ -61,4 +61,22 @@ public class LibrarySetService {
   public LibrarySet findByLibrarySetId(final String librarySetId) {
     return librarySetRepository.findByLibrarySetId(librarySetId).orElse(null);
   }
+
+  public LibrarySet updateOwnership(String librarySetId, String userId) {
+    Optional<LibrarySet> optionalLibrarySet = librarySetRepository.findByLibrarySetId(librarySetId);
+    if (optionalLibrarySet.isPresent()) {
+      LibrarySet librarySet = optionalLibrarySet.get();
+      librarySet.setOwner(userId);
+      LibrarySet updatedLibrarySet = librarySetRepository.save(librarySet);
+      log.info("Owner changed in Library set [{}]", updatedLibrarySet.getId());
+      return updatedLibrarySet;
+    } else {
+      String error =
+          String.format(
+              "Library with set id `%s` can not change ownership `%s`, Library set may not exist.",
+              librarySetId, userId);
+      log.error(error);
+      throw new ResourceNotFoundException("LibrarySet", "id", librarySetId);
+    }
+  }
 }

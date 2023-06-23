@@ -14,6 +14,7 @@ import gov.cms.madie.cqllibraryservice.exceptions.ResourceNotFoundException;
 import gov.cms.madie.models.common.Version;
 import gov.cms.madie.models.library.CqlLibrary;
 import gov.cms.madie.cqllibraryservice.repositories.CqlLibraryRepository;
+import gov.cms.madie.models.library.LibrarySet;
 import gov.cms.madie.models.measure.ElmJson;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -32,6 +33,8 @@ class CqlLibraryServiceTest {
   @Mock private CqlLibraryRepository cqlLibraryRepository;
 
   @Mock private ElmTranslatorClient elmTranslatorClient;
+
+  @Mock private LibrarySetService librarySetService;
 
   @Test
   public void testCheckDuplicateCqlLibraryNameDoesNotThrowException() {
@@ -176,5 +179,18 @@ class CqlLibraryServiceTest {
         () ->
             cqlLibraryService.getVersionedCqlLibrary(
                 "TestFHIRHelpers", "1.0.000", Optional.empty(), "test-okta"));
+  }
+
+  @Test
+  public void testChangeOwnership() {
+    LibrarySet librarySet = LibrarySet.builder().librarySetId("123").owner("testUser").build();
+    CqlLibrary library =
+        CqlLibrary.builder().id("123").librarySetId("123").librarySet(librarySet).build();
+    Optional<CqlLibrary> persistedLibrary = Optional.of(library);
+    when(cqlLibraryRepository.findById(anyString())).thenReturn(persistedLibrary);
+    when(librarySetService.updateOwnership(anyString(), anyString())).thenReturn(new LibrarySet());
+
+    boolean result = cqlLibraryService.changeOwnership(library.getId(), "user123");
+    assertTrue(result);
   }
 }

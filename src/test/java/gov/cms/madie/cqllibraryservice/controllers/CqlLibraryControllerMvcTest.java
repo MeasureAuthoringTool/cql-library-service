@@ -1,5 +1,6 @@
 package gov.cms.madie.cqllibraryservice.controllers;
 
+import gov.cms.madie.cqllibraryservice.config.security.SecurityConfig;
 import gov.cms.madie.cqllibraryservice.exceptions.GeneralConflictException;
 import gov.cms.madie.models.common.ModelType;
 
@@ -7,6 +8,7 @@ import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.notNullValue;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
@@ -49,16 +51,20 @@ import org.mockito.Captor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
 @ActiveProfiles("test")
 @WebMvcTest({CqlLibraryController.class})
+@Import(SecurityConfig.class)
 public class CqlLibraryControllerMvcTest {
 
   private static final String TEST_USER_ID = "test-okta-user-id-123";
   private static final String TEST_LIBRARYSET_ID = "test-okta-user-id-321";
+  private static final String TEST_API_KEY_HEADER = "api-key";
+  private static final String TEST_API_KEY_HEADER_VALUE = "9202c9fa";
   private static final String MODEL = ModelType.QI_CORE.toString();
 
   @MockBean private CqlLibraryRepository repository;
@@ -1371,5 +1377,27 @@ public class CqlLibraryControllerMvcTest {
     verify(cqlLibraryService, times(1))
         .getVersionedCqlLibrary(
             "TestFHIRHelpers", "1.0.000", Optional.of("QI-Core v4.1.1"), "test-okta");
+  }
+
+  @Test
+  public void testChangeOwnership() throws Exception {
+    String libraryId = "f225481c-921e-4015-9e14-e5046bfac9ff";
+
+    doReturn(true).when(cqlLibraryService).changeOwnership(eq(libraryId), eq("testUser"));
+
+    mockMvc
+        .perform(
+            put("/cql-libraries/" + libraryId + "/ownership?userid=testUser")
+                .header(TEST_API_KEY_HEADER, TEST_API_KEY_HEADER_VALUE))
+        .andExpect(status().isOk())
+        .andExpect(content().string("testUser granted ownership to Library successfully."));
+
+    verify(cqlLibraryService, times(1)).changeOwnership(eq(libraryId), eq("testUser"));
+
+    verify(actionLogService, times(1))
+        .logAction(
+            targetIdArgumentCaptor.capture(), actionTypeArgumentCaptor.capture(), anyString());
+    assertNotNull(targetIdArgumentCaptor.getValue());
+    assertThat(actionTypeArgumentCaptor.getValue(), is(equalTo(ActionType.UPDATED)));
   }
 }
