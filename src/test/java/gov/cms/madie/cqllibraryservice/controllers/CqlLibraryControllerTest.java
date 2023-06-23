@@ -102,13 +102,13 @@ class CqlLibraryControllerTest {
   @Test
   void getCqlLibrariesWithCurrentUserFilter() {
     List<CqlLibrary> cqlLibraries = List.of(cqlLibrary);
-    when(cqlLibraryRepository.findAllMyLibraries(anyString())).thenReturn(cqlLibraries);
+    when(cqlLibraryRepository.findAllLibrariesByUser(anyString())).thenReturn(cqlLibraries);
     Principal principal = mock(Principal.class);
     when(principal.getName()).thenReturn("test.user");
 
     ResponseEntity<List<CqlLibrary>> response =
         cqlLibraryController.getCqlLibraries(principal, true);
-    verify(cqlLibraryRepository, times(1)).findAllMyLibraries(eq("test.user"));
+    verify(cqlLibraryRepository, times(1)).findAllLibrariesByUser(eq("test.user"));
     verifyNoMoreInteractions(cqlLibraryRepository);
     assertNotNull(response.getBody());
     assertNotNull(response.getBody().get(0));

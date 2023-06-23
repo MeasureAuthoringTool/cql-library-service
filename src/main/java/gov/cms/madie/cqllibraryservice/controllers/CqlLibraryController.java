@@ -50,7 +50,7 @@ public class CqlLibraryController {
     final String username = principal.getName();
     List<CqlLibrary> cqlLibraries =
         filterByCurrentUser
-            ? cqlLibraryRepository.findAllMyLibraries(username)
+            ? cqlLibraryRepository.findAllLibrariesByUser(username)
             : cqlLibraryRepository.findAll();
     cqlLibraries.forEach(
         l -> {

@@ -108,34 +108,7 @@ public class LibraryAclRepositoryImplTest {
         .thenReturn(allResults)
         .thenReturn(allResults);
 
-    List<CqlLibrary> list = libraryAclRepository.findAllMyLibraries("p1");
+    List<CqlLibrary> list = libraryAclRepository.findAllLibrariesByUser("p1");
     assertEquals(list.size(), 3);
-  }
-
-  @Test
-  public void testfindAllByCqlLibraryNameAndDraftAndVersion() {
-    AggregationResults allResults = new AggregationResults<>(List.of(library2), new Document());
-
-    when(mongoTemplate.aggregate(any(Aggregation.class), (Class<?>) any(), any()))
-        .thenReturn(allResults)
-        .thenReturn(allResults);
-    List<CqlLibrary> list =
-        libraryAclRepository.findAllByCqlLibraryNameAndDraftAndVersion(
-            "library2", false, Version.parse("0.0.000"));
-    assertEquals(list.size(), 1);
-  }
-
-  @Test
-  public void testfindAllByCqlLibraryNameAndDraftAndVersionAndModel() {
-    AggregationResults allResults = new AggregationResults<>(List.of(library1), new Document());
-
-    when(mongoTemplate.aggregate(any(Aggregation.class), (Class<?>) any(), any()))
-        .thenReturn(allResults)
-        .thenReturn(allResults);
-
-    List<CqlLibrary> list =
-        libraryAclRepository.findAllByCqlLibraryNameAndDraftAndVersionAndModel(
-            "library1", false, Version.parse("0.0.000"), "QDM");
-    assertEquals(list.size(), 1);
   }
 }

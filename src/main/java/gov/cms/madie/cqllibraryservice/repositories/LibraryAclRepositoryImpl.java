@@ -1,7 +1,6 @@
 package gov.cms.madie.cqllibraryservice.repositories;
 
 import gov.cms.madie.models.access.RoleEnum;
-import gov.cms.madie.models.common.Version;
 import gov.cms.madie.models.library.CqlLibrary;
 
 import org.springframework.data.mongodb.core.MongoTemplate;
@@ -33,9 +32,7 @@ public class LibraryAclRepositoryImpl implements LibraryAclRepository {
   }
 
   @Override
-  public List<CqlLibrary> findAllMyLibraries(String userId) {
-
-    Criteria libraryCriteria = Criteria.where("createdBy").is(userId);
+  public List<CqlLibrary> findAllLibrariesByUser(String userId) {
     Criteria librarySetCriteria =
         new Criteria()
             .orOperator(
@@ -44,51 +41,12 @@ public class LibraryAclRepositoryImpl implements LibraryAclRepository {
                     .is(userId)
                     .and("librarySet.acls.roles")
                     .in(RoleEnum.SHARED_WITH));
-    MatchOperation matchOperation =
-        match(new Criteria().andOperator(libraryCriteria, librarySetCriteria));
-
+    MatchOperation matchOperation = match(librarySetCriteria);
     Aggregation libraryAggregation = newAggregation(getLookupOperation(), matchOperation);
 
     List<CqlLibrary> results =
         mongoTemplate
             .aggregate(libraryAggregation, CqlLibrary.class, CqlLibrary.class)
-            .getMappedResults();
-    return results;
-  }
-
-  @Override
-  public List<CqlLibrary> findAllByCqlLibraryNameAndDraftAndVersion(
-      String cqlLibraryName, boolean draft, Version version) {
-    Criteria libraryCriteria = Criteria.where("cqlLibraryName").is(cqlLibraryName);
-    libraryCriteria.andOperator(
-        Criteria.where("draft").is(draft), Criteria.where("version").is(version));
-
-    MatchOperation matchOperation = match(new Criteria().andOperator(libraryCriteria));
-
-    Aggregation librarySetAggregation = newAggregation(getLookupOperation(), matchOperation);
-    List<CqlLibrary> results =
-        mongoTemplate
-            .aggregate(librarySetAggregation, CqlLibrary.class, CqlLibrary.class)
-            .getMappedResults();
-    return results;
-  }
-
-  @Override
-  public List<CqlLibrary> findAllByCqlLibraryNameAndDraftAndVersionAndModel(
-      String cqlLibraryName, boolean draft, Version version, String model) {
-
-    Criteria libraryCriteria = Criteria.where("cqlLibraryName").is(cqlLibraryName);
-    libraryCriteria.andOperator(
-        Criteria.where("draft").is(draft),
-        Criteria.where("version").is(version),
-        Criteria.where("model").is(model));
-
-    MatchOperation matchOperation = match(new Criteria().andOperator(libraryCriteria));
-
-    Aggregation librarySetAggregation = newAggregation(getLookupOperation(), matchOperation);
-    List<CqlLibrary> results =
-        mongoTemplate
-            .aggregate(librarySetAggregation, CqlLibrary.class, CqlLibrary.class)
             .getMappedResults();
     return results;
   }
