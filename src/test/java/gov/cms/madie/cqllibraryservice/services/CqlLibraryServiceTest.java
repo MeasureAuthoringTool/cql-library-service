@@ -10,10 +10,14 @@ import static org.mockito.Mockito.when;
 
 import gov.cms.madie.cqllibraryservice.exceptions.DuplicateKeyException;
 import gov.cms.madie.cqllibraryservice.exceptions.GeneralConflictException;
+import gov.cms.madie.cqllibraryservice.exceptions.PermissionDeniedException;
 import gov.cms.madie.cqllibraryservice.exceptions.ResourceNotFoundException;
+import gov.cms.madie.models.access.AclSpecification;
+import gov.cms.madie.models.access.RoleEnum;
 import gov.cms.madie.models.common.Version;
 import gov.cms.madie.models.library.CqlLibrary;
 import gov.cms.madie.cqllibraryservice.repositories.CqlLibraryRepository;
+import gov.cms.madie.models.library.LibrarySet;
 import gov.cms.madie.models.measure.ElmJson;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -30,6 +34,7 @@ class CqlLibraryServiceTest {
 
   @InjectMocks private CqlLibraryService cqlLibraryService;
   @Mock private CqlLibraryRepository cqlLibraryRepository;
+  @Mock private LibrarySetService librarySetService;
 
   @Mock private ElmTranslatorClient elmTranslatorClient;
 
@@ -176,5 +181,100 @@ class CqlLibraryServiceTest {
         () ->
             cqlLibraryService.getVersionedCqlLibrary(
                 "TestFHIRHelpers", "1.0.000", Optional.empty(), "test-okta"));
+  }
+
+  @Test
+  void testFindCqlLibraryById() {
+    String id = "1";
+    CqlLibrary lib =
+        CqlLibrary.builder().id(id).cqlLibraryName("XyZ").librarySetId("1-2-3-4").build();
+    when(cqlLibraryRepository.findById(anyString())).thenReturn(Optional.of(lib));
+    when(librarySetService.findByLibrarySetId(anyString())).thenReturn(new LibrarySet());
+
+    CqlLibrary cqlLib = cqlLibraryService.findCqlLibraryById(id);
+    assertEquals(cqlLib.getId(), id);
+    assertNotNull(cqlLib.getLibrarySet());
+  }
+
+  @Test
+  void testFindCqlLibraryByIdNotFound() {
+    String id = "1";
+    when(cqlLibraryRepository.findById(anyString())).thenReturn(Optional.empty());
+    Exception ex =
+        assertThrows(
+            ResourceNotFoundException.class, () -> cqlLibraryService.findCqlLibraryById(id));
+    assertEquals(ex.getMessage(), "Could not find resource CQL Library with id: " + id);
+  }
+
+  @Test
+  void testCheckAccessPermissionsWhenUserIsOwner() {
+    String id = "1";
+    String owner = "john";
+    String setId = "1-2-3-4";
+    LibrarySet librarySet = LibrarySet.builder().owner(owner).librarySetId(setId).build();
+    CqlLibrary lib =
+        CqlLibrary.builder()
+            .id(id)
+            .cqlLibraryName("XyZ")
+            .librarySetId(setId)
+            .librarySet(librarySet)
+            .build();
+
+    boolean access = cqlLibraryService.checkAccessPermissions(lib, owner);
+    assertTrue(access);
+  }
+
+  @Test
+  void testCheckAccessPermissionsWhenUserIsSharedWithUser() {
+    String id = "1";
+    String owner = "john";
+    String user = "jane";
+    String setId = "1-2-3-4";
+    AclSpecification acl = new AclSpecification();
+    acl.setUserId(user);
+    acl.setRoles(List.of(RoleEnum.SHARED_WITH));
+
+    LibrarySet librarySet =
+        LibrarySet.builder().owner(owner).librarySetId(setId).acls(List.of(acl)).build();
+    CqlLibrary lib =
+        CqlLibrary.builder()
+            .id(id)
+            .cqlLibraryName("XyZ")
+            .librarySetId(setId)
+            .librarySet(librarySet)
+            .build();
+
+    boolean access = cqlLibraryService.checkAccessPermissions(lib, user);
+    assertTrue(access);
+  }
+
+  @Test
+  void testCheckAccessPermissionsDenied() {
+    String id = "1";
+    String owner = "john";
+    String user = "jane";
+    String setId = "1-2-3-4";
+    LibrarySet librarySet = LibrarySet.builder().owner(owner).librarySetId(setId).build();
+    CqlLibrary lib =
+        CqlLibrary.builder()
+            .id(id)
+            .cqlLibraryName("XyZ")
+            .librarySetId(setId)
+            .librarySet(librarySet)
+            .build();
+
+    Exception ex =
+        assertThrows(
+            PermissionDeniedException.class,
+            () -> cqlLibraryService.checkAccessPermissions(lib, user));
+    assertEquals(
+        ex.getMessage(), "User " + user + " cannot modify resource CQL Library with id: " + id);
+  }
+
+  @Test
+  void testCheckAccessPermissionsWhenNoLibraryProvided() {
+    String owner = "john";
+    boolean access = cqlLibraryService.checkAccessPermissions(null, owner);
+    assertFalse(access);
   }
 }

@@ -682,7 +682,9 @@ public class CqlLibraryControllerMvcTest {
             .librarySetId(TEST_LIBRARYSET_ID)
             .build();
     String json = toJsonString(updatingLibrary);
-    when(repository.findById(anyString())).thenReturn(Optional.empty());
+    doThrow(new ResourceNotFoundException("CQL Library", "Library1_ID"))
+        .when(cqlLibraryService)
+        .findCqlLibraryById(anyString());
     mockMvc
         .perform(
             put("/cql-libraries/Library1_ID")
@@ -694,7 +696,7 @@ public class CqlLibraryControllerMvcTest {
         .andExpect(
             jsonPath("$.message")
                 .value("Could not find resource CQL Library with id: Library1_ID"));
-    verify(repository, times(1)).findById(anyString());
+    verify(cqlLibraryService, times(1)).findCqlLibraryById(anyString());
   }
 
   @Test
@@ -715,7 +717,9 @@ public class CqlLibraryControllerMvcTest {
     final CqlLibrary updatingLibrary =
         existingLibrary.toBuilder().id("Library1_ID").cqlLibraryName("NewName").build();
     String json = toJsonString(updatingLibrary);
-    when(repository.findById(anyString())).thenReturn(Optional.of(existingLibrary));
+    when(cqlLibraryService.findCqlLibraryById(anyString())).thenReturn(existingLibrary);
+    when(cqlLibraryService.checkAccessPermissions(any(CqlLibrary.class), anyString()))
+        .thenReturn(true);
     when(cqlLibraryService.isCqlLibraryNameChanged(any(CqlLibrary.class), any(CqlLibrary.class)))
         .thenReturn(true);
     doThrow(new DuplicateKeyException("cqlLibraryName", "Library name must be unique."))
@@ -732,7 +736,7 @@ public class CqlLibraryControllerMvcTest {
         .andExpect(status().isBadRequest())
         .andExpect(
             jsonPath("$.validationErrors.cqlLibraryName").value("Library name must be unique."));
-    verify(repository, times(1)).findById(anyString());
+    verify(cqlLibraryService, times(1)).findCqlLibraryById(anyString());
     verify(cqlLibraryService, times(1))
         .isCqlLibraryNameChanged(any(CqlLibrary.class), any(CqlLibrary.class));
   }
@@ -755,7 +759,10 @@ public class CqlLibraryControllerMvcTest {
     final CqlLibrary updatingLibrary =
         existingLibrary.toBuilder().id("Library1_ID").cqlLibraryName("NewName").build();
     String json = toJsonString(updatingLibrary);
-    when(repository.findById(anyString())).thenReturn(Optional.of(existingLibrary));
+    when(cqlLibraryService.findCqlLibraryById(anyString())).thenReturn(existingLibrary);
+    when(cqlLibraryService.checkAccessPermissions(any(CqlLibrary.class), anyString()))
+        .thenReturn(true);
+
     mockMvc
         .perform(
             put("/cql-libraries/Library1_ID")
@@ -768,7 +775,7 @@ public class CqlLibraryControllerMvcTest {
             jsonPath("$.message")
                 .value(
                     "Could not update resource CQL Library with id: Library1_ID. Resource is not a Draft."));
-    verify(repository, times(1)).findById(anyString());
+    verify(cqlLibraryService, times(1)).findCqlLibraryById(anyString());
   }
 
   @Test
@@ -789,7 +796,9 @@ public class CqlLibraryControllerMvcTest {
     final CqlLibrary updatingLibrary =
         existingLibrary.toBuilder().id("Library1_ID").cqlLibraryName("NewName").build();
     String json = toJsonString(updatingLibrary);
-    when(repository.findById(anyString())).thenReturn(Optional.of(existingLibrary));
+    when(cqlLibraryService.findCqlLibraryById(anyString())).thenReturn(existingLibrary);
+    when(cqlLibraryService.checkAccessPermissions(any(CqlLibrary.class), anyString()))
+        .thenReturn(false);
 
     mockMvc
         .perform(
@@ -799,7 +808,7 @@ public class CqlLibraryControllerMvcTest {
                 .content(json)
                 .contentType(MediaType.APPLICATION_JSON_VALUE))
         .andExpect(status().isForbidden());
-    verify(repository, times(1)).findById(anyString());
+    verify(cqlLibraryService, times(1)).findCqlLibraryById(anyString());
   }
 
   @Test
@@ -826,7 +835,9 @@ public class CqlLibraryControllerMvcTest {
             .librarySetId(TEST_LIBRARYSET_ID)
             .build();
     String json = toJsonString(updatingLibrary);
-    when(repository.findById(anyString())).thenReturn(Optional.of(existingLibrary));
+    when(cqlLibraryService.findCqlLibraryById(anyString())).thenReturn(existingLibrary);
+    when(cqlLibraryService.checkAccessPermissions(any(CqlLibrary.class), anyString()))
+        .thenReturn(true);
     when(cqlLibraryService.isCqlLibraryNameChanged(any(CqlLibrary.class), any(CqlLibrary.class)))
         .thenReturn(false);
     when(repository.save(any(CqlLibrary.class))).thenReturn(updatingLibrary);
@@ -840,7 +851,7 @@ public class CqlLibraryControllerMvcTest {
         .andExpect(status().isOk())
         .andExpect(content().contentType(MediaType.APPLICATION_JSON_VALUE))
         .andExpect(content().json(toJsonString(updatingLibrary)));
-    verify(repository, times(1)).findById(anyString());
+    verify(cqlLibraryService, times(1)).findCqlLibraryById(anyString());
     verify(repository, times(1)).save(cqlLibraryArgumentCaptor.capture());
     CqlLibrary savedValue = cqlLibraryArgumentCaptor.getValue();
     assertThat(savedValue, is(notNullValue()));

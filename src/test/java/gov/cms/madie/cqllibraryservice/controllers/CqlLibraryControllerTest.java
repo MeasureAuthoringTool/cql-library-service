@@ -63,9 +63,11 @@ class CqlLibraryControllerTest {
 
   @Mock ActionLogService actionLogService;
 
-  @InjectMocks CqlLibraryController cqlLibraryController;
+  @Mock private LibrarySetService librarySetService;
 
   @Mock Principal principal;
+
+  @InjectMocks CqlLibraryController cqlLibraryController;
 
   @Captor private ArgumentCaptor<CqlLibrary> cqlLibraryArgumentCaptor;
 
@@ -74,7 +76,6 @@ class CqlLibraryControllerTest {
   @Captor private ArgumentCaptor<String> targetIdArgumentCaptor;
 
   private CqlLibrary cqlLibrary;
-  @Mock private LibrarySetService librarySetService;
 
   @BeforeEach
   public void setUp() {
@@ -250,7 +251,9 @@ class CqlLibraryControllerTest {
     final CqlLibrary updatingLibrary =
         CqlLibrary.builder().id("Library1_ID").cqlLibraryName("NewName").build();
 
-    when(cqlLibraryRepository.findById(anyString())).thenReturn(Optional.empty());
+    doThrow(new ResourceNotFoundException("CQL Library", updatingLibrary.getId()))
+        .when(cqlLibraryService)
+        .findCqlLibraryById(anyString());
 
     assertThrows(
         ResourceNotFoundException.class,
@@ -272,7 +275,9 @@ class CqlLibraryControllerTest {
     final CqlLibrary updatingLibrary =
         existingLibrary.toBuilder().id("Library1_ID").cqlLibraryName("NewName").build();
 
-    when(cqlLibraryRepository.findById(anyString())).thenReturn(Optional.of(existingLibrary));
+    when(cqlLibraryService.findCqlLibraryById(anyString())).thenReturn(existingLibrary);
+    when(cqlLibraryService.checkAccessPermissions(any(CqlLibrary.class), anyString()))
+        .thenReturn(true);
     when(cqlLibraryService.isCqlLibraryNameChanged(any(CqlLibrary.class), any(CqlLibrary.class)))
         .thenReturn(true);
     doThrow(new DuplicateKeyException("cqlLibraryName", "Library name must be unique."))
@@ -299,8 +304,9 @@ class CqlLibraryControllerTest {
     final CqlLibrary updatingLibrary =
         existingLibrary.toBuilder().id("Library1_ID").cqlLibraryName("NewName").draft(true).build();
 
-    when(cqlLibraryRepository.findById(anyString())).thenReturn(Optional.of(existingLibrary));
-
+    when(cqlLibraryService.findCqlLibraryById(anyString())).thenReturn(existingLibrary);
+    when(cqlLibraryService.checkAccessPermissions(any(CqlLibrary.class), anyString()))
+        .thenReturn(true);
     assertThrows(
         InvalidResourceStateException.class,
         () -> cqlLibraryController.updateCqlLibrary(pathId, updatingLibrary, principal));
@@ -321,7 +327,9 @@ class CqlLibraryControllerTest {
     final CqlLibrary updatingLibrary =
         existingLibrary.toBuilder().id("Library1_ID").cqlLibraryName("NewName").draft(true).build();
 
-    when(cqlLibraryRepository.findById(anyString())).thenReturn(Optional.of(existingLibrary));
+    when(cqlLibraryService.findCqlLibraryById(anyString())).thenReturn(existingLibrary);
+    when(cqlLibraryService.checkAccessPermissions(any(CqlLibrary.class), anyString()))
+        .thenReturn(false);
 
     assertThrows(
         PermissionDeniedException.class,
@@ -353,7 +361,9 @@ class CqlLibraryControllerTest {
             .draft(false)
             .build();
 
-    when(cqlLibraryRepository.findById(anyString())).thenReturn(Optional.of(existingLibrary));
+    when(cqlLibraryService.findCqlLibraryById(anyString())).thenReturn(existingLibrary);
+    when(cqlLibraryService.checkAccessPermissions(any(CqlLibrary.class), anyString()))
+        .thenReturn(true);
     when(cqlLibraryService.isCqlLibraryNameChanged(any(CqlLibrary.class), any(CqlLibrary.class)))
         .thenReturn(false);
     when(principal.getName()).thenReturn("User2");
