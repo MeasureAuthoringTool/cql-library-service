@@ -89,9 +89,9 @@ public class VersionService {
   }
 
   private void validateCqlLibrary(CqlLibrary cqlLibrary, String username) {
-    if (!username.equalsIgnoreCase(cqlLibrary.getCreatedBy())) {
+    if (!username.equalsIgnoreCase(cqlLibrary.getLibrarySet().getOwner())) {
       log.error(
-          "User [{}] doest not have permission to create a version of CQL Library with id [{}]",
+          "User [{}] does not have permission to create a version of CQL Library with id [{}]",
           username,
           cqlLibrary.getId());
       throw new PermissionDeniedException("CQL Library", cqlLibrary.getId(), username);
