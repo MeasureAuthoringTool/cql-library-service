@@ -304,8 +304,9 @@ class VersionServiceTest {
 
   @Test
   void testCreateDraftThrowsExceptionForResourceNotFound() {
-    when(cqlLibraryRepository.findById(anyString())).thenReturn(Optional.empty());
-
+    doThrow(new ResourceNotFoundException("CQL Library", "Library1"))
+            .when(cqlLibraryService)
+            .findCqlLibraryById(anyString());
     assertThrows(
         ResourceNotFoundException.class,
         () ->
@@ -318,7 +319,7 @@ class VersionServiceTest {
     CqlLibrary existingCqlLibrary =
         CqlLibrary.builder().id("testCqlLibraryId").createdBy("testUser").build();
 
-    when(cqlLibraryRepository.findById(anyString())).thenReturn(Optional.of(existingCqlLibrary));
+    when(cqlLibraryService.findCqlLibraryById(anyString())).thenReturn(existingCqlLibrary);
     doNothing().when(cqlLibraryService).checkDuplicateCqlLibraryName(anyString());
 
     assertThrows(
@@ -343,7 +344,7 @@ class VersionServiceTest {
             .build();
 
     CqlLibrary clonedCqlLibrary = existingCqlLibrary.toBuilder().build();
-    when(cqlLibraryRepository.findById(anyString())).thenReturn(Optional.of(existingCqlLibrary));
+    when(cqlLibraryService.findCqlLibraryById(anyString())).thenReturn(existingCqlLibrary);
     when(cqlLibraryRepository.save(any(CqlLibrary.class))).thenReturn(clonedCqlLibrary);
     doNothing().when(cqlLibraryService).checkDuplicateCqlLibraryName(anyString());
     when(cqlLibraryRepository.existsByLibrarySetIdAndDraft(anyString(), anyBoolean()))
@@ -375,7 +376,7 @@ class VersionServiceTest {
             .version(Version.parse("1.0.000"))
             .build();
 
-    when(cqlLibraryRepository.findById(anyString())).thenReturn(Optional.of(existingCqlLibrary));
+    when(cqlLibraryService.findCqlLibraryById(anyString())).thenReturn(existingCqlLibrary);
     doNothing().when(cqlLibraryService).checkDuplicateCqlLibraryName(anyString());
     when(cqlLibraryRepository.existsByLibrarySetIdAndDraft(anyString(), anyBoolean()))
         .thenReturn(true);

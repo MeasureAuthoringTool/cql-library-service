@@ -116,15 +116,7 @@ public class VersionService {
   }
 
   public CqlLibrary createDraft(String id, String cqlLibraryName, String cql, String username) {
-    CqlLibrary cqlLibrary =
-        cqlLibraryRepository
-            .findById(id)
-            .map(
-                l ->
-                    l.toBuilder()
-                        .librarySet(librarySetService.findByLibrarySetId(l.getLibrarySetId()))
-                        .build())
-            .orElseThrow(() -> new ResourceNotFoundException("CQL Library", id));
+    CqlLibrary cqlLibrary = cqlLibraryService.findCqlLibraryById(id);
 
     if (!Objects.equals(cqlLibraryName, cqlLibrary.getCqlLibraryName())) {
       cqlLibraryService.checkDuplicateCqlLibraryName(cqlLibraryName);
