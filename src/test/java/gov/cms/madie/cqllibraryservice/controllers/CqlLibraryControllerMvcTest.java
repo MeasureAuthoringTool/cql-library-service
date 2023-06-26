@@ -463,11 +463,13 @@ public class CqlLibraryControllerMvcTest {
 
   @Test
   public void testGetCqlLibraryReturns404() throws Exception {
-    when(repository.findById(anyString())).thenReturn(Optional.empty());
+    doThrow(new ResourceNotFoundException("CQL Library", "Library1_ID"))
+        .when(cqlLibraryService)
+        .findCqlLibraryById(anyString());
     mockMvc
         .perform(get("/cql-libraries/Libary1_ID").with(user(TEST_USER_ID)).with(csrf()))
         .andExpect(status().isNotFound());
-    verify(repository, times(1)).findById(anyString());
+    verify(cqlLibraryService, times(1)).findCqlLibraryById(anyString());
   }
 
   @Test
@@ -483,7 +485,7 @@ public class CqlLibraryControllerMvcTest {
             .lastModifiedAt(createdTime)
             .lastModifiedBy("User1")
             .build();
-    when(repository.findById(anyString())).thenReturn(Optional.of(existingLibrary));
+    when(cqlLibraryService.findCqlLibraryById(anyString())).thenReturn(existingLibrary);
     mockMvc
         .perform(get("/cql-libraries/Libary1_ID").with(user(TEST_USER_ID)).with(csrf()))
         .andExpect(status().isOk())
@@ -493,7 +495,7 @@ public class CqlLibraryControllerMvcTest {
         .andExpect(jsonPath("$.lastModifiedBy").value("User1"))
         .andExpect(jsonPath("$.createdAt").value(is(equalTo(createdTime.toString()))))
         .andExpect(jsonPath("$.lastModifiedAt").value(is(equalTo(createdTime.toString()))));
-    verify(repository, times(1)).findById(anyString());
+    verify(cqlLibraryService, times(1)).findCqlLibraryById(anyString());
   }
 
   @Test

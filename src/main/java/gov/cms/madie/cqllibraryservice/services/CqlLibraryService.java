@@ -81,6 +81,7 @@ public class CqlLibraryService {
       cqlLibrary.setLibrarySet(librarySet);
       return cqlLibrary;
     }
+    log.error("CqlLibrary with library ID [{}] was not found", id);
     throw new ResourceNotFoundException("CQL Library", id);
   }
 
@@ -98,6 +99,10 @@ public class CqlLibraryService {
                     acl ->
                         acl.getUserId().equalsIgnoreCase(username)
                             && acl.getRoles().stream().anyMatch(allowedRoles::contains)))) {
+      log.error(
+          "User [{}] does not have permission to create a version of CQL Library with id [{}]",
+          username,
+          cqlLibrary.getId());
       throw new PermissionDeniedException("CQL Library", cqlLibrary.getId(), username);
     }
     return true;

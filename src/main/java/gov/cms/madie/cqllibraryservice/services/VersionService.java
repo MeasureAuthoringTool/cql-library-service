@@ -27,16 +27,7 @@ public class VersionService {
   private final LibrarySetService librarySetService;
 
   public CqlLibrary createVersion(String id, boolean isMajor, String username, String accessToken) {
-    CqlLibrary cqlLibrary =
-        cqlLibraryRepository
-            .findById(id)
-            .map(
-                l ->
-                    l.toBuilder()
-                        .librarySet(librarySetService.findByLibrarySetId(l.getLibrarySetId()))
-                        .build())
-            .orElseThrow(() -> new ResourceNotFoundException("CQL Library", id));
-
+    CqlLibrary cqlLibrary = cqlLibraryService.findCqlLibraryById(id);
     validateCqlLibrary(cqlLibrary, username);
 
     cqlLibrary.setDraft(false);
@@ -89,13 +80,7 @@ public class VersionService {
   }
 
   private void validateCqlLibrary(CqlLibrary cqlLibrary, String username) {
-    if (!username.equalsIgnoreCase(cqlLibrary.getLibrarySet().getOwner())) {
-      log.error(
-          "User [{}] does not have permission to create a version of CQL Library with id [{}]",
-          username,
-          cqlLibrary.getId());
-      throw new PermissionDeniedException("CQL Library", cqlLibrary.getId(), username);
-    }
+    cqlLibraryService.checkAccessPermissions(cqlLibrary, username);
 
     if (!cqlLibrary.isDraft()) {
       log.error(

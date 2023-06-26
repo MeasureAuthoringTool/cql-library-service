@@ -146,7 +146,9 @@ class CqlLibraryControllerTest {
 
   @Test
   public void testGetCqlLibraryThrowsExceptionForNotFound() {
-    when(cqlLibraryRepository.findById(anyString())).thenReturn(Optional.empty());
+    doThrow(new ResourceNotFoundException("CQL Library", "Library1"))
+        .when(cqlLibraryService)
+        .findCqlLibraryById(anyString());
     assertThrows(
         ResourceNotFoundException.class, () -> cqlLibraryController.getCqlLibrary("Library1"));
   }
@@ -160,7 +162,7 @@ class CqlLibraryControllerTest {
             .cql("library testCql version '1.0.000'")
             .model(ModelType.QI_CORE.getValue())
             .build();
-    when(cqlLibraryRepository.findById(anyString())).thenReturn(Optional.of(library));
+    when(cqlLibraryService.findCqlLibraryById(anyString())).thenReturn(library);
     ResponseEntity<CqlLibrary> output = cqlLibraryController.getCqlLibrary("Library1_ID");
     assertNotNull(output);
     assertEquals(library, output.getBody());

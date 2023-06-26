@@ -3,7 +3,6 @@ package gov.cms.madie.cqllibraryservice.controllers;
 import gov.cms.madie.cqllibraryservice.exceptions.InvalidIdException;
 import gov.cms.madie.cqllibraryservice.exceptions.InvalidResourceStateException;
 import gov.cms.madie.cqllibraryservice.exceptions.PermissionDeniedException;
-import gov.cms.madie.cqllibraryservice.exceptions.ResourceNotFoundException;
 import gov.cms.madie.cqllibraryservice.repositories.LibrarySetRepository;
 import gov.cms.madie.cqllibraryservice.services.ActionLogService;
 import gov.cms.madie.cqllibraryservice.services.LibrarySetService;
@@ -63,16 +62,7 @@ public class CqlLibraryController {
 
   @GetMapping("/{id}")
   public ResponseEntity<CqlLibrary> getCqlLibrary(@PathVariable("id") String id) {
-    return cqlLibraryRepository
-        .findById(id)
-        .map(
-            cqlLibrary ->
-                cqlLibrary
-                    .toBuilder()
-                    .librarySet(librarySetService.findByLibrarySetId(cqlLibrary.getLibrarySetId()))
-                    .build())
-        .map(ResponseEntity::ok)
-        .orElseThrow(() -> new ResourceNotFoundException("CQL Library", id));
+    return ResponseEntity.ok(cqlLibraryService.findCqlLibraryById(id));
   }
 
   @GetMapping("/versioned")

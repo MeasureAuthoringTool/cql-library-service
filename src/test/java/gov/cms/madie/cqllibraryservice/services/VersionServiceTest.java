@@ -14,7 +14,6 @@ import gov.cms.madie.models.access.RoleEnum;
 import gov.cms.madie.models.common.ActionType;
 import gov.cms.madie.models.common.ModelType;
 import gov.cms.madie.models.library.CqlLibrary;
-import gov.cms.madie.models.library.LibrarySet;
 import gov.cms.madie.models.measure.ElmJson;
 import gov.cms.madie.models.common.Version;
 import gov.cms.madie.cqllibraryservice.repositories.CqlLibraryRepository;
@@ -53,8 +52,9 @@ class VersionServiceTest {
 
   @Test
   void testCreateVersionThrowsExceptionForResourceNotFound() {
-    when(cqlLibraryRepository.findById(anyString())).thenReturn(Optional.empty());
-
+    doThrow(new ResourceNotFoundException("CQL Library", "testCqlLibraryId"))
+        .when(cqlLibraryService)
+        .findCqlLibraryById(anyString());
     assertThrows(
         ResourceNotFoundException.class,
         () -> versionService.createVersion("testCqlLibraryId", true, "testUser", "accesstoken"));
@@ -65,17 +65,13 @@ class VersionServiceTest {
     CqlLibrary existingCqlLibrary =
         CqlLibrary.builder()
             .id("testCqlLibraryId")
+            .cqlLibraryName("TestName1")
             .createdBy("testUser")
             .librarySetId("test")
             .build();
-    AclSpecification acl = new AclSpecification();
-    acl.setUserId("test");
-    acl.setRoles(List.of(RoleEnum.SHARED_WITH));
-    LibrarySet existingLibrarySet =
-        LibrarySet.builder().owner("owner").librarySetId("setId").acls(List.of(acl)).build();
-
-    when(librarySetService.findByLibrarySetId(anyString())).thenReturn(existingLibrarySet);
-    when(cqlLibraryRepository.findById(anyString())).thenReturn(Optional.of(existingCqlLibrary));
+    doThrow(new PermissionDeniedException("CQL Library", "TestName1", "testUser1"))
+        .when(cqlLibraryService)
+        .findCqlLibraryById(anyString());
 
     assertThrows(
         PermissionDeniedException.class,
@@ -97,11 +93,8 @@ class VersionServiceTest {
     AclSpecification acl = new AclSpecification();
     acl.setUserId("testUser");
     acl.setRoles(List.of(RoleEnum.SHARED_WITH));
-    LibrarySet existingLibrarySet =
-        LibrarySet.builder().owner("testUser").librarySetId("testId").acls(List.of(acl)).build();
 
-    when(librarySetService.findByLibrarySetId(anyString())).thenReturn(existingLibrarySet);
-    when(cqlLibraryRepository.findById(anyString())).thenReturn(Optional.of(existingCqlLibrary));
+    when(cqlLibraryService.findCqlLibraryById(anyString())).thenReturn(existingCqlLibrary);
     assertThrows(
         ResourceCannotBeVersionedException.class,
         () ->
@@ -120,14 +113,11 @@ class VersionServiceTest {
             .cqlErrors(true)
             .cql("")
             .build();
-    when(cqlLibraryRepository.findById(anyString())).thenReturn(Optional.of(existingCqlLibrary));
-    AclSpecification acl = new AclSpecification();
-    acl.setUserId("testUser");
-    acl.setRoles(List.of(RoleEnum.SHARED_WITH));
-    LibrarySet existingLibrarySet =
-        LibrarySet.builder().owner("testUser").librarySetId("testId").acls(List.of(acl)).build();
 
-    when(librarySetService.findByLibrarySetId(anyString())).thenReturn(existingLibrarySet);
+    when(cqlLibraryService.checkAccessPermissions(any(CqlLibrary.class), anyString()))
+        .thenReturn(true);
+    when(cqlLibraryService.findCqlLibraryById(anyString())).thenReturn(existingCqlLibrary);
+
     assertThrows(
         ResourceCannotBeVersionedException.class,
         () ->
@@ -145,13 +135,9 @@ class VersionServiceTest {
             .draft(false)
             .build();
 
-    AclSpecification acl = new AclSpecification();
-    acl.setUserId("testUser");
-    acl.setRoles(List.of(RoleEnum.SHARED_WITH));
-    LibrarySet existingLibrarySet =
-        LibrarySet.builder().owner("testUser").librarySetId("testId").acls(List.of(acl)).build();
-    when(librarySetService.findByLibrarySetId(anyString())).thenReturn(existingLibrarySet);
-    when(cqlLibraryRepository.findById(anyString())).thenReturn(Optional.of(existingCqlLibrary));
+    when(cqlLibraryService.checkAccessPermissions(any(CqlLibrary.class), anyString()))
+        .thenReturn(true);
+    when(cqlLibraryService.findCqlLibraryById(anyString())).thenReturn(existingCqlLibrary);
 
     assertThrows(
         BadRequestObjectException.class,
@@ -172,11 +158,7 @@ class VersionServiceTest {
     AclSpecification acl = new AclSpecification();
     acl.setUserId("testUser");
     acl.setRoles(List.of(RoleEnum.SHARED_WITH));
-    LibrarySet existingLibrarySet =
-        LibrarySet.builder().owner("testUser").librarySetId("testId").acls(List.of(acl)).build();
-
-    when(librarySetService.findByLibrarySetId(anyString())).thenReturn(existingLibrarySet);
-    when(cqlLibraryRepository.findById(anyString())).thenReturn(Optional.of(existingCqlLibrary));
+    when(cqlLibraryService.findCqlLibraryById(anyString())).thenReturn(existingCqlLibrary);
 
     assertThrows(
         RuntimeException.class,
@@ -201,11 +183,7 @@ class VersionServiceTest {
     AclSpecification acl = new AclSpecification();
     acl.setUserId("testUser");
     acl.setRoles(List.of(RoleEnum.SHARED_WITH));
-    LibrarySet existingLibrarySet =
-        LibrarySet.builder().owner("testUser").librarySetId("testId").acls(List.of(acl)).build();
-    when(librarySetService.findByLibrarySetId(anyString())).thenReturn(existingLibrarySet);
-
-    when(cqlLibraryRepository.findById(anyString())).thenReturn(Optional.of(existingCqlLibrary));
+    when(cqlLibraryService.findCqlLibraryById(anyString())).thenReturn(existingCqlLibrary);
     when(cqlLibraryRepository.findMaxVersionByLibrarySetId(anyString()))
         .thenReturn(Optional.of(Version.parse("1.0.0")));
     when(elmTranslatorClient.getElmJson(anyString(), anyString()))
@@ -231,10 +209,7 @@ class VersionServiceTest {
     AclSpecification acl = new AclSpecification();
     acl.setUserId("testUser");
     acl.setRoles(List.of(RoleEnum.SHARED_WITH));
-    LibrarySet existingLibrarySet =
-        LibrarySet.builder().owner("testUser").librarySetId("testId").acls(List.of(acl)).build();
-    when(librarySetService.findByLibrarySetId(anyString())).thenReturn(existingLibrarySet);
-    when(cqlLibraryRepository.findById(anyString())).thenReturn(Optional.of(existingCqlLibrary));
+    when(cqlLibraryService.findCqlLibraryById(anyString())).thenReturn(existingCqlLibrary);
     when(cqlLibraryRepository.findMaxVersionByLibrarySetId(anyString()))
         .thenReturn(Optional.of(Version.parse("1.0.0")));
     when(elmTranslatorClient.getElmJson(anyString(), anyString()))
@@ -264,13 +239,9 @@ class VersionServiceTest {
     AclSpecification acl = new AclSpecification();
     acl.setUserId("testUser");
     acl.setRoles(List.of(RoleEnum.SHARED_WITH));
-    LibrarySet existingLibrarySet =
-        LibrarySet.builder().owner("testUser").librarySetId("testId").acls(List.of(acl)).build();
-    when(librarySetService.findByLibrarySetId(anyString())).thenReturn(existingLibrarySet);
-    when(cqlLibraryRepository.findById(anyString())).thenReturn(Optional.of(existingCqlLibrary));
+    when(cqlLibraryService.findCqlLibraryById(anyString())).thenReturn(existingCqlLibrary);
     when(cqlLibraryRepository.findMaxVersionByLibrarySetId(anyString()))
         .thenReturn(Optional.of(Version.parse("1.0.0")));
-    //    when(cqlLibraryRepository.findAll()).thenReturn(List.of(existingCqlLibrary));
     when(cqlLibraryRepository.save(any(CqlLibrary.class))).thenReturn(updatedCqlLibrary);
     when(elmTranslatorClient.getElmJson(anyString(), anyString()))
         .thenReturn(ElmJson.builder().json("{}").xml("<></>").build());
@@ -309,10 +280,7 @@ class VersionServiceTest {
     AclSpecification acl = new AclSpecification();
     acl.setUserId("testUser");
     acl.setRoles(List.of(RoleEnum.SHARED_WITH));
-    LibrarySet existingLibrarySet =
-        LibrarySet.builder().owner("testUser").librarySetId("testId").acls(List.of(acl)).build();
-    when(librarySetService.findByLibrarySetId(anyString())).thenReturn(existingLibrarySet);
-    when(cqlLibraryRepository.findById(anyString())).thenReturn(Optional.of(existingCqlLibrary));
+    when(cqlLibraryService.findCqlLibraryById(anyString())).thenReturn(existingCqlLibrary);
     when(cqlLibraryRepository.findMaxMinorVersionByLibrarySetIdAndVersionMajor(
             anyString(), anyInt()))
         .thenReturn(Optional.of(Version.parse("1.0.0")));
