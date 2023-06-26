@@ -24,13 +24,10 @@ public class VersionService {
   private final CqlLibraryActionLogRepository cqlLibraryHistoryRepository;
 
   private final ElmTranslatorClient elmTranslatorClient;
+  private final LibrarySetService librarySetService;
 
   public CqlLibrary createVersion(String id, boolean isMajor, String username, String accessToken) {
-    CqlLibrary cqlLibrary =
-        cqlLibraryRepository
-            .findById(id)
-            .orElseThrow(() -> new ResourceNotFoundException("CQL Library", id));
-
+    CqlLibrary cqlLibrary = cqlLibraryService.findCqlLibraryById(id);
     validateCqlLibrary(cqlLibrary, username);
 
     cqlLibrary.setDraft(false);
@@ -83,13 +80,7 @@ public class VersionService {
   }
 
   private void validateCqlLibrary(CqlLibrary cqlLibrary, String username) {
-    if (!username.equalsIgnoreCase(cqlLibrary.getCreatedBy())) {
-      log.error(
-          "User [{}] doest not have permission to create a version of CQL Library with id [{}]",
-          username,
-          cqlLibrary.getId());
-      throw new PermissionDeniedException("CQL Library", cqlLibrary.getId(), username);
-    }
+    cqlLibraryService.checkAccessPermissions(cqlLibrary, username);
 
     if (!cqlLibrary.isDraft()) {
       log.error(
@@ -125,10 +116,7 @@ public class VersionService {
   }
 
   public CqlLibrary createDraft(String id, String cqlLibraryName, String cql, String username) {
-    CqlLibrary cqlLibrary =
-        cqlLibraryRepository
-            .findById(id)
-            .orElseThrow(() -> new ResourceNotFoundException("CQL Library", id));
+    CqlLibrary cqlLibrary = cqlLibraryService.findCqlLibraryById(id);
 
     if (!Objects.equals(cqlLibraryName, cqlLibrary.getCqlLibraryName())) {
       cqlLibraryService.checkDuplicateCqlLibraryName(cqlLibraryName);

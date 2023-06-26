@@ -23,6 +23,7 @@ import gov.cms.madie.cqllibraryservice.exceptions.InvalidResourceStateException;
 import gov.cms.madie.cqllibraryservice.exceptions.PermissionDeniedException;
 import gov.cms.madie.cqllibraryservice.exceptions.ResourceNotDraftableException;
 import gov.cms.madie.cqllibraryservice.exceptions.ResourceNotFoundException;
+import gov.cms.madie.cqllibraryservice.repositories.LibrarySetRepository;
 import gov.cms.madie.cqllibraryservice.services.ActionLogService;
 import gov.cms.madie.cqllibraryservice.services.LibrarySetService;
 import gov.cms.madie.models.common.ActionType;
@@ -54,15 +55,19 @@ class CqlLibraryControllerTest {
 
   @Mock CqlLibraryRepository cqlLibraryRepository;
 
+  @Mock LibrarySetRepository librarySetRepository;
+
   @Mock VersionService versionService;
 
   @Mock CqlLibraryService cqlLibraryService;
 
   @Mock ActionLogService actionLogService;
 
-  @InjectMocks CqlLibraryController cqlLibraryController;
+  @Mock private LibrarySetService librarySetService;
 
   @Mock Principal principal;
+
+  @InjectMocks CqlLibraryController cqlLibraryController;
 
   @Captor private ArgumentCaptor<CqlLibrary> cqlLibraryArgumentCaptor;
 
@@ -71,7 +76,6 @@ class CqlLibraryControllerTest {
   @Captor private ArgumentCaptor<String> targetIdArgumentCaptor;
 
   private CqlLibrary cqlLibrary;
-  @Mock private LibrarySetService librarySetService;
 
   @BeforeEach
   public void setUp() {
@@ -99,13 +103,13 @@ class CqlLibraryControllerTest {
   @Test
   void getCqlLibrariesWithCurrentUserFilter() {
     List<CqlLibrary> cqlLibraries = List.of(cqlLibrary);
-    when(cqlLibraryRepository.findAllByCreatedBy(anyString())).thenReturn(cqlLibraries);
+    when(cqlLibraryRepository.findAllLibrariesByUser(anyString())).thenReturn(cqlLibraries);
     Principal principal = mock(Principal.class);
     when(principal.getName()).thenReturn("test.user");
 
     ResponseEntity<List<CqlLibrary>> response =
         cqlLibraryController.getCqlLibraries(principal, true);
-    verify(cqlLibraryRepository, times(1)).findAllByCreatedBy(eq("test.user"));
+    verify(cqlLibraryRepository, times(1)).findAllLibrariesByUser(eq("test.user"));
     verifyNoMoreInteractions(cqlLibraryRepository);
     assertNotNull(response.getBody());
     assertNotNull(response.getBody().get(0));
@@ -142,7 +146,9 @@ class CqlLibraryControllerTest {
 
   @Test
   public void testGetCqlLibraryThrowsExceptionForNotFound() {
-    when(cqlLibraryRepository.findById(anyString())).thenReturn(Optional.empty());
+    doThrow(new ResourceNotFoundException("CQL Library", "Library1"))
+        .when(cqlLibraryService)
+        .findCqlLibraryById(anyString());
     assertThrows(
         ResourceNotFoundException.class, () -> cqlLibraryController.getCqlLibrary("Library1"));
   }
@@ -156,7 +162,7 @@ class CqlLibraryControllerTest {
             .cql("library testCql version '1.0.000'")
             .model(ModelType.QI_CORE.getValue())
             .build();
-    when(cqlLibraryRepository.findById(anyString())).thenReturn(Optional.of(library));
+    when(cqlLibraryService.findCqlLibraryById(anyString())).thenReturn(library);
     ResponseEntity<CqlLibrary> output = cqlLibraryController.getCqlLibrary("Library1_ID");
     assertNotNull(output);
     assertEquals(library, output.getBody());
@@ -247,7 +253,9 @@ class CqlLibraryControllerTest {
     final CqlLibrary updatingLibrary =
         CqlLibrary.builder().id("Library1_ID").cqlLibraryName("NewName").build();
 
-    when(cqlLibraryRepository.findById(anyString())).thenReturn(Optional.empty());
+    doThrow(new ResourceNotFoundException("CQL Library", updatingLibrary.getId()))
+        .when(cqlLibraryService)
+        .findCqlLibraryById(anyString());
 
     assertThrows(
         ResourceNotFoundException.class,
@@ -269,7 +277,9 @@ class CqlLibraryControllerTest {
     final CqlLibrary updatingLibrary =
         existingLibrary.toBuilder().id("Library1_ID").cqlLibraryName("NewName").build();
 
-    when(cqlLibraryRepository.findById(anyString())).thenReturn(Optional.of(existingLibrary));
+    when(cqlLibraryService.findCqlLibraryById(anyString())).thenReturn(existingLibrary);
+    when(cqlLibraryService.checkAccessPermissions(any(CqlLibrary.class), anyString()))
+        .thenReturn(true);
     when(cqlLibraryService.isCqlLibraryNameChanged(any(CqlLibrary.class), any(CqlLibrary.class)))
         .thenReturn(true);
     doThrow(new DuplicateKeyException("cqlLibraryName", "Library name must be unique."))
@@ -296,8 +306,9 @@ class CqlLibraryControllerTest {
     final CqlLibrary updatingLibrary =
         existingLibrary.toBuilder().id("Library1_ID").cqlLibraryName("NewName").draft(true).build();
 
-    when(cqlLibraryRepository.findById(anyString())).thenReturn(Optional.of(existingLibrary));
-
+    when(cqlLibraryService.findCqlLibraryById(anyString())).thenReturn(existingLibrary);
+    when(cqlLibraryService.checkAccessPermissions(any(CqlLibrary.class), anyString()))
+        .thenReturn(true);
     assertThrows(
         InvalidResourceStateException.class,
         () -> cqlLibraryController.updateCqlLibrary(pathId, updatingLibrary, principal));
@@ -318,7 +329,9 @@ class CqlLibraryControllerTest {
     final CqlLibrary updatingLibrary =
         existingLibrary.toBuilder().id("Library1_ID").cqlLibraryName("NewName").draft(true).build();
 
-    when(cqlLibraryRepository.findById(anyString())).thenReturn(Optional.of(existingLibrary));
+    when(cqlLibraryService.findCqlLibraryById(anyString())).thenReturn(existingLibrary);
+    when(cqlLibraryService.checkAccessPermissions(any(CqlLibrary.class), anyString()))
+        .thenReturn(false);
 
     assertThrows(
         PermissionDeniedException.class,
@@ -350,7 +363,9 @@ class CqlLibraryControllerTest {
             .draft(false)
             .build();
 
-    when(cqlLibraryRepository.findById(anyString())).thenReturn(Optional.of(existingLibrary));
+    when(cqlLibraryService.findCqlLibraryById(anyString())).thenReturn(existingLibrary);
+    when(cqlLibraryService.checkAccessPermissions(any(CqlLibrary.class), anyString()))
+        .thenReturn(true);
     when(cqlLibraryService.isCqlLibraryNameChanged(any(CqlLibrary.class), any(CqlLibrary.class)))
         .thenReturn(false);
     when(principal.getName()).thenReturn("User2");

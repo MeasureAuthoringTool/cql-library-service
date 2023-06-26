@@ -1,9 +1,11 @@
 package gov.cms.madie.cqllibraryservice.services;
 
 import gov.cms.madie.cqllibraryservice.exceptions.*;
+import gov.cms.madie.models.access.RoleEnum;
 import gov.cms.madie.models.common.Version;
 import gov.cms.madie.models.library.CqlLibrary;
 import gov.cms.madie.cqllibraryservice.repositories.CqlLibraryRepository;
+import gov.cms.madie.models.library.LibrarySet;
 import gov.cms.madie.models.measure.ElmJson;
 import io.micrometer.core.instrument.util.StringUtils;
 
@@ -23,6 +25,7 @@ public class CqlLibraryService {
 
   private final ElmTranslatorClient elmTranslatorClient;
   private CqlLibraryRepository cqlLibraryRepository;
+  private LibrarySetService librarySetService;
 
   public void checkDuplicateCqlLibraryName(String cqlLibraryName) {
     if (StringUtils.isNotEmpty(cqlLibraryName)
@@ -68,5 +71,40 @@ public class CqlLibraryService {
       }
       return libs.get(0);
     }
+  }
+
+  public CqlLibrary findCqlLibraryById(String id) {
+    Optional<CqlLibrary> optionalLibrary = cqlLibraryRepository.findById(id);
+    if (optionalLibrary.isPresent()) {
+      CqlLibrary cqlLibrary = optionalLibrary.get();
+      LibrarySet librarySet = librarySetService.findByLibrarySetId(cqlLibrary.getLibrarySetId());
+      cqlLibrary.setLibrarySet(librarySet);
+      return cqlLibrary;
+    }
+    log.error("CqlLibrary with library ID [{}] was not found", id);
+    throw new ResourceNotFoundException("CQL Library", id);
+  }
+
+  public boolean checkAccessPermissions(CqlLibrary cqlLibrary, String username) {
+    if (cqlLibrary == null) {
+      return false;
+    }
+
+    // TODO: hardcoded allowed ACLs for now
+    List<RoleEnum> allowedRoles = List.of(RoleEnum.SHARED_WITH);
+    if (!username.equalsIgnoreCase(cqlLibrary.getLibrarySet().getOwner())
+        && (CollectionUtils.isEmpty(cqlLibrary.getLibrarySet().getAcls())
+            || cqlLibrary.getLibrarySet().getAcls().stream()
+                .noneMatch(
+                    acl ->
+                        acl.getUserId().equalsIgnoreCase(username)
+                            && acl.getRoles().stream().anyMatch(allowedRoles::contains)))) {
+      log.error(
+          "User [{}] does not have permission to create a version of CQL Library with id [{}]",
+          username,
+          cqlLibrary.getId());
+      throw new PermissionDeniedException("CQL Library", cqlLibrary.getId(), username);
+    }
+    return true;
   }
 }
