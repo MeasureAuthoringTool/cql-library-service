@@ -9,13 +9,18 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 
 import gov.cms.madie.cqllibraryservice.exceptions.*;
+import gov.cms.madie.models.access.AclSpecification;
+import gov.cms.madie.models.access.RoleEnum;
 import gov.cms.madie.models.common.ActionType;
 import gov.cms.madie.models.common.ModelType;
 import gov.cms.madie.models.library.CqlLibrary;
 import gov.cms.madie.models.measure.ElmJson;
 import gov.cms.madie.models.common.Version;
 import gov.cms.madie.cqllibraryservice.repositories.CqlLibraryRepository;
+
+import java.util.List;
 import java.util.Optional;
+
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -23,7 +28,6 @@ import org.mockito.Captor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.web.client.RestTemplate;
 
 @ExtendWith(MockitoExtension.class)
 class VersionServiceTest {
@@ -31,6 +35,8 @@ class VersionServiceTest {
   @Mock CqlLibraryRepository cqlLibraryRepository;
 
   @Mock CqlLibraryService cqlLibraryService;
+
+  @Mock LibrarySetService librarySetService;
 
   @Mock ElmTranslatorClient elmTranslatorClient;
 
@@ -46,8 +52,9 @@ class VersionServiceTest {
 
   @Test
   void testCreateVersionThrowsExceptionForResourceNotFound() {
-    when(cqlLibraryRepository.findById(anyString())).thenReturn(Optional.empty());
-
+    doThrow(new ResourceNotFoundException("CQL Library", "testCqlLibraryId"))
+        .when(cqlLibraryService)
+        .findCqlLibraryById(anyString());
     assertThrows(
         ResourceNotFoundException.class,
         () -> versionService.createVersion("testCqlLibraryId", true, "testUser", "accesstoken"));
@@ -56,9 +63,15 @@ class VersionServiceTest {
   @Test
   void testCreateVersionThrowsExceptionWhenUserIsNotTheOwner() {
     CqlLibrary existingCqlLibrary =
-        CqlLibrary.builder().id("testCqlLibraryId").createdBy("testUser").build();
-
-    when(cqlLibraryRepository.findById(anyString())).thenReturn(Optional.of(existingCqlLibrary));
+        CqlLibrary.builder()
+            .id("testCqlLibraryId")
+            .cqlLibraryName("TestName1")
+            .createdBy("testUser")
+            .librarySetId("test")
+            .build();
+    doThrow(new PermissionDeniedException("CQL Library", "TestName1", "testUser1"))
+        .when(cqlLibraryService)
+        .findCqlLibraryById(anyString());
 
     assertThrows(
         PermissionDeniedException.class,
@@ -73,12 +86,15 @@ class VersionServiceTest {
         CqlLibrary.builder()
             .id("testCqlLibraryId")
             .createdBy("testUser")
+            .librarySetId("test")
             .draft(true)
             .cqlErrors(true)
             .build();
+    AclSpecification acl = new AclSpecification();
+    acl.setUserId("testUser");
+    acl.setRoles(List.of(RoleEnum.SHARED_WITH));
 
-    when(cqlLibraryRepository.findById(anyString())).thenReturn(Optional.of(existingCqlLibrary));
-
+    when(cqlLibraryService.findCqlLibraryById(anyString())).thenReturn(existingCqlLibrary);
     assertThrows(
         ResourceCannotBeVersionedException.class,
         () ->
@@ -92,12 +108,15 @@ class VersionServiceTest {
         CqlLibrary.builder()
             .id("testCqlLibraryId")
             .createdBy("testUser")
+            .librarySetId("id")
             .draft(true)
             .cqlErrors(true)
             .cql("")
             .build();
 
-    when(cqlLibraryRepository.findById(anyString())).thenReturn(Optional.of(existingCqlLibrary));
+    when(cqlLibraryService.checkAccessPermissions(any(CqlLibrary.class), anyString()))
+        .thenReturn(true);
+    when(cqlLibraryService.findCqlLibraryById(anyString())).thenReturn(existingCqlLibrary);
 
     assertThrows(
         ResourceCannotBeVersionedException.class,
@@ -109,9 +128,16 @@ class VersionServiceTest {
   @Test
   void testCreateVersionThrowsExceptionIfLibraryIsNotDraft() {
     CqlLibrary existingCqlLibrary =
-        CqlLibrary.builder().id("testCqlLibraryId").createdBy("testUser").draft(false).build();
+        CqlLibrary.builder()
+            .id("testCqlLibraryId")
+            .createdBy("testUser")
+            .librarySetId("id")
+            .draft(false)
+            .build();
 
-    when(cqlLibraryRepository.findById(anyString())).thenReturn(Optional.of(existingCqlLibrary));
+    when(cqlLibraryService.checkAccessPermissions(any(CqlLibrary.class), anyString()))
+        .thenReturn(true);
+    when(cqlLibraryService.findCqlLibraryById(anyString())).thenReturn(existingCqlLibrary);
 
     assertThrows(
         BadRequestObjectException.class,
@@ -123,9 +149,16 @@ class VersionServiceTest {
   @Test
   void testCreateVersionThrowsRunTimeExceptionIfLibrarySetIDIsNull() {
     CqlLibrary existingCqlLibrary =
-        CqlLibrary.builder().id("testCqlLibraryId").createdBy("testUser").draft(true).build();
-
-    when(cqlLibraryRepository.findById(anyString())).thenReturn(Optional.of(existingCqlLibrary));
+        CqlLibrary.builder()
+            .id("testCqlLibraryId")
+            .createdBy("testUser")
+            .librarySetId("id")
+            .draft(true)
+            .build();
+    AclSpecification acl = new AclSpecification();
+    acl.setUserId("testUser");
+    acl.setRoles(List.of(RoleEnum.SHARED_WITH));
+    when(cqlLibraryService.findCqlLibraryById(anyString())).thenReturn(existingCqlLibrary);
 
     assertThrows(
         RuntimeException.class,
@@ -147,7 +180,10 @@ class VersionServiceTest {
             .version(Version.parse("1.0.000"))
             .build();
 
-    when(cqlLibraryRepository.findById(anyString())).thenReturn(Optional.of(existingCqlLibrary));
+    AclSpecification acl = new AclSpecification();
+    acl.setUserId("testUser");
+    acl.setRoles(List.of(RoleEnum.SHARED_WITH));
+    when(cqlLibraryService.findCqlLibraryById(anyString())).thenReturn(existingCqlLibrary);
     when(cqlLibraryRepository.findMaxVersionByLibrarySetId(anyString()))
         .thenReturn(Optional.of(Version.parse("1.0.0")));
     when(elmTranslatorClient.getElmJson(anyString(), anyString()))
@@ -170,8 +206,10 @@ class VersionServiceTest {
             .librarySetId("testLibrarySetId")
             .version(Version.parse("1.0.000"))
             .build();
-
-    when(cqlLibraryRepository.findById(anyString())).thenReturn(Optional.of(existingCqlLibrary));
+    AclSpecification acl = new AclSpecification();
+    acl.setUserId("testUser");
+    acl.setRoles(List.of(RoleEnum.SHARED_WITH));
+    when(cqlLibraryService.findCqlLibraryById(anyString())).thenReturn(existingCqlLibrary);
     when(cqlLibraryRepository.findMaxVersionByLibrarySetId(anyString()))
         .thenReturn(Optional.of(Version.parse("1.0.0")));
     when(elmTranslatorClient.getElmJson(anyString(), anyString()))
@@ -198,11 +236,12 @@ class VersionServiceTest {
             .build();
 
     CqlLibrary updatedCqlLibrary = existingCqlLibrary.toBuilder().build();
-
-    when(cqlLibraryRepository.findById(anyString())).thenReturn(Optional.of(existingCqlLibrary));
+    AclSpecification acl = new AclSpecification();
+    acl.setUserId("testUser");
+    acl.setRoles(List.of(RoleEnum.SHARED_WITH));
+    when(cqlLibraryService.findCqlLibraryById(anyString())).thenReturn(existingCqlLibrary);
     when(cqlLibraryRepository.findMaxVersionByLibrarySetId(anyString()))
         .thenReturn(Optional.of(Version.parse("1.0.0")));
-    //    when(cqlLibraryRepository.findAll()).thenReturn(List.of(existingCqlLibrary));
     when(cqlLibraryRepository.save(any(CqlLibrary.class))).thenReturn(updatedCqlLibrary);
     when(elmTranslatorClient.getElmJson(anyString(), anyString()))
         .thenReturn(ElmJson.builder().json("{}").xml("<></>").build());
@@ -238,8 +277,10 @@ class VersionServiceTest {
             .build();
 
     CqlLibrary updatedCqlLibrary = existingCqlLibrary.toBuilder().build();
-
-    when(cqlLibraryRepository.findById(anyString())).thenReturn(Optional.of(existingCqlLibrary));
+    AclSpecification acl = new AclSpecification();
+    acl.setUserId("testUser");
+    acl.setRoles(List.of(RoleEnum.SHARED_WITH));
+    when(cqlLibraryService.findCqlLibraryById(anyString())).thenReturn(existingCqlLibrary);
     when(cqlLibraryRepository.findMaxMinorVersionByLibrarySetIdAndVersionMajor(
             anyString(), anyInt()))
         .thenReturn(Optional.of(Version.parse("1.0.0")));
@@ -263,8 +304,9 @@ class VersionServiceTest {
 
   @Test
   void testCreateDraftThrowsExceptionForResourceNotFound() {
-    when(cqlLibraryRepository.findById(anyString())).thenReturn(Optional.empty());
-
+    doThrow(new ResourceNotFoundException("CQL Library", "Library1"))
+            .when(cqlLibraryService)
+            .findCqlLibraryById(anyString());
     assertThrows(
         ResourceNotFoundException.class,
         () ->
@@ -277,7 +319,7 @@ class VersionServiceTest {
     CqlLibrary existingCqlLibrary =
         CqlLibrary.builder().id("testCqlLibraryId").createdBy("testUser").build();
 
-    when(cqlLibraryRepository.findById(anyString())).thenReturn(Optional.of(existingCqlLibrary));
+    when(cqlLibraryService.findCqlLibraryById(anyString())).thenReturn(existingCqlLibrary);
     doNothing().when(cqlLibraryService).checkDuplicateCqlLibraryName(anyString());
 
     assertThrows(
@@ -302,7 +344,7 @@ class VersionServiceTest {
             .build();
 
     CqlLibrary clonedCqlLibrary = existingCqlLibrary.toBuilder().build();
-    when(cqlLibraryRepository.findById(anyString())).thenReturn(Optional.of(existingCqlLibrary));
+    when(cqlLibraryService.findCqlLibraryById(anyString())).thenReturn(existingCqlLibrary);
     when(cqlLibraryRepository.save(any(CqlLibrary.class))).thenReturn(clonedCqlLibrary);
     doNothing().when(cqlLibraryService).checkDuplicateCqlLibraryName(anyString());
     when(cqlLibraryRepository.existsByLibrarySetIdAndDraft(anyString(), anyBoolean()))
@@ -334,7 +376,7 @@ class VersionServiceTest {
             .version(Version.parse("1.0.000"))
             .build();
 
-    when(cqlLibraryRepository.findById(anyString())).thenReturn(Optional.of(existingCqlLibrary));
+    when(cqlLibraryService.findCqlLibraryById(anyString())).thenReturn(existingCqlLibrary);
     doNothing().when(cqlLibraryService).checkDuplicateCqlLibraryName(anyString());
     when(cqlLibraryRepository.existsByLibrarySetIdAndDraft(anyString(), anyBoolean()))
         .thenReturn(true);

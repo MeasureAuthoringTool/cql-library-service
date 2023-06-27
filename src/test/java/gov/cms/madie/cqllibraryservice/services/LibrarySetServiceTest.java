@@ -1,5 +1,8 @@
 package gov.cms.madie.cqllibraryservice.services;
 
+import gov.cms.madie.cqllibraryservice.repositories.LibrarySetRepository;
+import gov.cms.madie.models.library.LibrarySet;
+import org.junit.jupiter.api.Assertions;
 import gov.cms.madie.cqllibraryservice.exceptions.ResourceNotFoundException;
 import gov.cms.madie.cqllibraryservice.repositories.LibrarySetRepository;
 import gov.cms.madie.models.library.LibrarySet;
@@ -29,6 +32,15 @@ class LibrarySetServiceTest {
 
   @BeforeEach
   public void setUp() {
+    librarySet = LibrarySet.builder().librarySetId("set-1").owner("user-1").id("1").build();
+  }
+
+  @Test
+  void testFindByLibrarySetId() {
+    when(librarySetRepository.findByLibrarySetId(anyString())).thenReturn(Optional.of(librarySet));
+    LibrarySet set = librarySetService.findByLibrarySetId("1");
+    Assertions.assertEquals(set.getId(), librarySet.getId());
+    Assertions.assertEquals(set.getLibrarySetId(), librarySet.getLibrarySetId());
     librarySet = LibrarySet.builder().librarySetId("id-2").owner("user-1").build();
   }
 

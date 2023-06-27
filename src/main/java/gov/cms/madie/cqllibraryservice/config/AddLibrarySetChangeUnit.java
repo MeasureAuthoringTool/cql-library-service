@@ -18,12 +18,10 @@ public class AddLibrarySetChangeUnit {
   public void addLibrarySetValues(
       LibrarySetRepository librarySetRepository, CqlLibraryRepository libraryRepository) {
 
-    // group by librarySetId and createdBy
     List<CqlLibrary> cqlLibraries = libraryRepository.findByCqlLibrarySetId();
     cqlLibraries.forEach(
         cqlLibrary -> {
           if (!librarySetRepository.existsByLibrarySetId(cqlLibrary.getLibrarySetId())) {
-            // create LibrarySet
             LibrarySet librarySet =
                 LibrarySet.builder()
                     .librarySetId(cqlLibrary.getLibrarySetId())
