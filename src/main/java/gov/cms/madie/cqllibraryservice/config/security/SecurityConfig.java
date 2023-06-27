@@ -10,12 +10,18 @@ import org.springframework.security.web.SecurityFilterChain;
 @Configuration
 public class SecurityConfig {
 
+  private static final String[] CSRF_WHITELIST = {"/cql-libraries/*/ownership"};
+  private static final String[] AUTH_WHITELIST = {"/actuator/**", "/cql-libraries/*/ownership"};
+
   @Bean
   protected SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
     http.cors()
         .and()
+        .csrf()
+        .ignoringRequestMatchers(CSRF_WHITELIST)
+        .and()
         .authorizeHttpRequests()
-        .requestMatchers("/actuator/**")
+        .requestMatchers(AUTH_WHITELIST)
         .permitAll()
         .and()
         .authorizeHttpRequests()

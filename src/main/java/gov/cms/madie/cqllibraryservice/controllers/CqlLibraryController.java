@@ -19,12 +19,16 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+import jakarta.servlet.http.HttpServletRequest;
+
 import gov.cms.madie.models.library.LibrarySet;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
@@ -166,5 +170,26 @@ public class CqlLibraryController {
             id, cqlLibrary.getCqlLibraryName(), cqlLibrary.getCql(), principal.getName());
     log.info("output: {}", output);
     return ResponseEntity.status(HttpStatus.CREATED).body(output);
+  }
+
+  @PutMapping("/{id}/ownership")
+  @PreAuthorize("#request.getHeader('api-key') == #apiKey")
+  public ResponseEntity<String> changeOwnership(
+      HttpServletRequest request,
+      @PathVariable("id") String id,
+      @RequestParam(required = true, name = "userid") String userid,
+      @Value("${lambda-api-key}") String apiKey) {
+    ResponseEntity<String> response = ResponseEntity.badRequest().body("Library does not exist.");
+
+    log.info("getLibraryId [{}] using apiKey ", id, "apikey");
+
+    if (cqlLibraryService.changeOwnership(id, userid)) {
+      response =
+          ResponseEntity.ok()
+              .body(String.format("%s granted ownership to Library successfully.", userid));
+      actionLogService.logAction(id, ActionType.UPDATED, "apiKey");
+    }
+
+    return response;
   }
 }

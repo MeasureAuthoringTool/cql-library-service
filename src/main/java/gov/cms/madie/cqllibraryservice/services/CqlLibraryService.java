@@ -107,4 +107,15 @@ public class CqlLibraryService {
     }
     return true;
   }
+
+  public boolean changeOwnership(String id, String userid) {
+    boolean result = false;
+    Optional<CqlLibrary> persistedCqlLibrary = cqlLibraryRepository.findById(id);
+    if (persistedCqlLibrary.isPresent()) {
+      CqlLibrary cqlLibrary = persistedCqlLibrary.get();
+      librarySetService.updateOwnership(cqlLibrary.getLibrarySetId(), userid);
+      result = true;
+    }
+    return result;
+  }
 }

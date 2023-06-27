@@ -277,4 +277,17 @@ class CqlLibraryServiceTest {
     boolean access = cqlLibraryService.checkAccessPermissions(null, owner);
     assertFalse(access);
   }
+
+  @Test
+  public void testChangeOwnership() {
+    LibrarySet librarySet = LibrarySet.builder().librarySetId("123").owner("testUser").build();
+    CqlLibrary library =
+        CqlLibrary.builder().id("123").librarySetId("123").librarySet(librarySet).build();
+    Optional<CqlLibrary> persistedLibrary = Optional.of(library);
+    when(cqlLibraryRepository.findById(anyString())).thenReturn(persistedLibrary);
+    when(librarySetService.updateOwnership(anyString(), anyString())).thenReturn(new LibrarySet());
+
+    boolean result = cqlLibraryService.changeOwnership(library.getId(), "user123");
+    assertTrue(result);
+  }
 }
