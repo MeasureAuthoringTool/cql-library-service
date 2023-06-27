@@ -178,7 +178,7 @@ public class CqlLibraryController {
       HttpServletRequest request,
       @PathVariable("id") String id,
       @RequestParam(required = true, name = "userid") String userid,
-      @Value("${api-key}") String apiKey) {
+      @Value("${lambda-api-key}") String apiKey) {
     ResponseEntity<String> response = ResponseEntity.badRequest().body("Library does not exist.");
 
     log.info("getLibraryId [{}] using apiKey ", id, "apikey");

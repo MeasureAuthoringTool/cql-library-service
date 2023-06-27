@@ -305,8 +305,8 @@ class VersionServiceTest {
   @Test
   void testCreateDraftThrowsExceptionForResourceNotFound() {
     doThrow(new ResourceNotFoundException("CQL Library", "Library1"))
-            .when(cqlLibraryService)
-            .findCqlLibraryById(anyString());
+        .when(cqlLibraryService)
+        .findCqlLibraryById(anyString());
     assertThrows(
         ResourceNotFoundException.class,
         () ->
