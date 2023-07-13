@@ -1,20 +1,17 @@
 package gov.cms.madie.cqllibraryservice.services;
 
 import gov.cms.madie.cqllibraryservice.exceptions.*;
-import gov.cms.madie.models.access.RoleEnum;
 import gov.cms.madie.models.common.Version;
 import gov.cms.madie.models.library.CqlLibrary;
 import gov.cms.madie.cqllibraryservice.repositories.CqlLibraryRepository;
 import gov.cms.madie.models.library.LibrarySet;
 import gov.cms.madie.models.measure.ElmJson;
-import io.micrometer.core.instrument.util.StringUtils;
-
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
-
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
 
@@ -83,29 +80,6 @@ public class CqlLibraryService {
     }
     log.error("CqlLibrary with library ID [{}] was not found", id);
     throw new ResourceNotFoundException("CQL Library", id);
-  }
-
-  public boolean checkAccessPermissions(CqlLibrary cqlLibrary, String username) {
-    if (cqlLibrary == null) {
-      return false;
-    }
-
-    // TODO: hardcoded allowed ACLs for now
-    List<RoleEnum> allowedRoles = List.of(RoleEnum.SHARED_WITH);
-    if (!username.equalsIgnoreCase(cqlLibrary.getLibrarySet().getOwner())
-        && (CollectionUtils.isEmpty(cqlLibrary.getLibrarySet().getAcls())
-            || cqlLibrary.getLibrarySet().getAcls().stream()
-                .noneMatch(
-                    acl ->
-                        acl.getUserId().equalsIgnoreCase(username)
-                            && acl.getRoles().stream().anyMatch(allowedRoles::contains)))) {
-      log.error(
-          "User [{}] does not have permission to create a version of CQL Library with id [{}]",
-          username,
-          cqlLibrary.getId());
-      throw new PermissionDeniedException("CQL Library", cqlLibrary.getId(), username);
-    }
-    return true;
   }
 
   public boolean changeOwnership(String id, String userid) {
