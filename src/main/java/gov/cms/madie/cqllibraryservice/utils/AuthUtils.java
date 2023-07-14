@@ -22,7 +22,7 @@ public class AuthUtils {
                         acl.getUserId().equalsIgnoreCase(username)
                             && acl.getRoles().stream().anyMatch(allowedRoles::contains)))) {
       log.error(
-          "User [{}] does not have permission to create a version of CQL Library with id [{}]",
+          "User [{}] does not have permission to modify CQL Library with id [{}]",
           username,
           cqlLibrary.getId());
       throw new PermissionDeniedException("CQL Library", cqlLibrary.getId(), username);
