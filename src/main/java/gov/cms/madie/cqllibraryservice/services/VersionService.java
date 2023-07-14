@@ -1,7 +1,7 @@
 package gov.cms.madie.cqllibraryservice.services;
 
 import gov.cms.madie.cqllibraryservice.exceptions.*;
-import gov.cms.madie.cqllibraryservice.repositories.CqlLibraryActionLogRepository;
+import gov.cms.madie.cqllibraryservice.utils.AuthUtils;
 import gov.cms.madie.models.common.ActionType;
 import gov.cms.madie.models.library.CqlLibrary;
 import gov.cms.madie.models.measure.ElmJson;
@@ -21,10 +21,7 @@ public class VersionService {
   private final CqlLibraryService cqlLibraryService;
   private final ActionLogService actionLogService;
   private final CqlLibraryRepository cqlLibraryRepository;
-  private final CqlLibraryActionLogRepository cqlLibraryHistoryRepository;
-
   private final ElmTranslatorClient elmTranslatorClient;
-  private final LibrarySetService librarySetService;
 
   public CqlLibrary createVersion(String id, boolean isMajor, String username, String accessToken) {
     CqlLibrary cqlLibrary = cqlLibraryService.findCqlLibraryById(id);
@@ -80,7 +77,7 @@ public class VersionService {
   }
 
   private void validateCqlLibrary(CqlLibrary cqlLibrary, String username) {
-    cqlLibraryService.checkAccessPermissions(cqlLibrary, username);
+    AuthUtils.checkAccessPermissions(cqlLibrary, username);
 
     if (!cqlLibrary.isDraft()) {
       log.error(
@@ -122,13 +119,7 @@ public class VersionService {
       cqlLibraryService.checkDuplicateCqlLibraryName(cqlLibraryName);
     }
 
-    if (!username.equalsIgnoreCase(cqlLibrary.getCreatedBy())) {
-      log.info(
-          "User [{}] doest not have permission to create a draft of CQL Library with id [{}]",
-          username,
-          cqlLibrary.getId());
-      throw new PermissionDeniedException("CQL Library", cqlLibrary.getId(), username);
-    }
+    AuthUtils.checkAccessPermissions(cqlLibrary, username);
 
     if (!isDraftable(cqlLibrary)) {
       throw new ResourceNotDraftableException("CQL Library");

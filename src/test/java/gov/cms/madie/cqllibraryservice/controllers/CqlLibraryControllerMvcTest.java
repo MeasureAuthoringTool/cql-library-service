@@ -44,6 +44,8 @@ import gov.cms.madie.cqllibraryservice.services.VersionService;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.Optional;
+
+import gov.cms.madie.models.library.LibrarySet;
 import org.bson.types.ObjectId;
 import org.hamcrest.CustomMatcher;
 import org.junit.jupiter.api.Test;
@@ -347,6 +349,7 @@ public class CqlLibraryControllerMvcTest {
 
     String json = toJsonString(library);
     doNothing().when(cqlLibraryService).checkDuplicateCqlLibraryName(anyString());
+    doNothing().when(librarySetService).createLibrarySet(anyString(), anyString(), anyString());
     String objectId = ObjectId.get().toHexString();
     when(repository.save(any(CqlLibrary.class)))
         .then(
@@ -416,6 +419,7 @@ public class CqlLibraryControllerMvcTest {
 
     String json = toJsonString(library);
     doNothing().when(cqlLibraryService).checkDuplicateCqlLibraryName(anyString());
+    doNothing().when(librarySetService).createLibrarySet(anyString(), anyString(), anyString());
     String objectId = ObjectId.get().toHexString();
     when(repository.save(any(CqlLibrary.class)))
         .then(
@@ -721,13 +725,13 @@ public class CqlLibraryControllerMvcTest {
             .lastModifiedAt(createdTime)
             .lastModifiedBy("User1")
             .librarySetId(TEST_LIBRARYSET_ID)
+            .librarySet(
+                LibrarySet.builder().librarySetId(TEST_LIBRARYSET_ID).owner(TEST_USER_ID).build())
             .build();
     final CqlLibrary updatingLibrary =
         existingLibrary.toBuilder().id("Library1_ID").cqlLibraryName("NewName").build();
     String json = toJsonString(updatingLibrary);
     when(cqlLibraryService.findCqlLibraryById(anyString())).thenReturn(existingLibrary);
-    when(cqlLibraryService.checkAccessPermissions(any(CqlLibrary.class), anyString()))
-        .thenReturn(true);
     when(cqlLibraryService.isCqlLibraryNameChanged(any(CqlLibrary.class), any(CqlLibrary.class)))
         .thenReturn(true);
     doThrow(new DuplicateKeyException("cqlLibraryName", "Library name must be unique."))
@@ -763,13 +767,13 @@ public class CqlLibraryControllerMvcTest {
             .lastModifiedAt(createdTime)
             .lastModifiedBy("User1")
             .librarySetId(TEST_LIBRARYSET_ID)
+            .librarySet(
+                LibrarySet.builder().librarySetId("testLibrarySetId").owner(TEST_USER_ID).build())
             .build();
     final CqlLibrary updatingLibrary =
         existingLibrary.toBuilder().id("Library1_ID").cqlLibraryName("NewName").build();
     String json = toJsonString(updatingLibrary);
     when(cqlLibraryService.findCqlLibraryById(anyString())).thenReturn(existingLibrary);
-    when(cqlLibraryService.checkAccessPermissions(any(CqlLibrary.class), anyString()))
-        .thenReturn(true);
 
     mockMvc
         .perform(
@@ -796,22 +800,22 @@ public class CqlLibraryControllerMvcTest {
             .model(ModelType.QI_CORE.getValue())
             .draft(true)
             .createdAt(createdTime)
-            .createdBy("Non-Owner-User")
+            .createdBy(TEST_USER_ID)
             .lastModifiedAt(createdTime)
             .lastModifiedBy("User1")
             .librarySetId(TEST_LIBRARYSET_ID)
+            .librarySet(
+                LibrarySet.builder().librarySetId("testLibrarySetId").owner(TEST_USER_ID).build())
             .build();
     final CqlLibrary updatingLibrary =
         existingLibrary.toBuilder().id("Library1_ID").cqlLibraryName("NewName").build();
     String json = toJsonString(updatingLibrary);
     when(cqlLibraryService.findCqlLibraryById(anyString())).thenReturn(existingLibrary);
-    when(cqlLibraryService.checkAccessPermissions(any(CqlLibrary.class), anyString()))
-        .thenReturn(false);
 
     mockMvc
         .perform(
             put("/cql-libraries/Library1_ID")
-                .with(user(TEST_USER_ID))
+                .with(user("random.user"))
                 .with(csrf())
                 .content(json)
                 .contentType(MediaType.APPLICATION_JSON_VALUE))
@@ -833,6 +837,8 @@ public class CqlLibraryControllerMvcTest {
             .lastModifiedAt(createdTime)
             .lastModifiedBy("User1")
             .librarySetId(TEST_LIBRARYSET_ID)
+            .librarySet(
+                LibrarySet.builder().librarySetId(TEST_LIBRARYSET_ID).owner(TEST_USER_ID).build())
             .build();
     final CqlLibrary updatingLibrary =
         existingLibrary
@@ -844,8 +850,6 @@ public class CqlLibraryControllerMvcTest {
             .build();
     String json = toJsonString(updatingLibrary);
     when(cqlLibraryService.findCqlLibraryById(anyString())).thenReturn(existingLibrary);
-    when(cqlLibraryService.checkAccessPermissions(any(CqlLibrary.class), anyString()))
-        .thenReturn(true);
     when(cqlLibraryService.isCqlLibraryNameChanged(any(CqlLibrary.class), any(CqlLibrary.class)))
         .thenReturn(false);
     when(repository.save(any(CqlLibrary.class))).thenReturn(updatingLibrary);

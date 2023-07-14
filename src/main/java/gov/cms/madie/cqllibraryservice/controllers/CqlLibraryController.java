@@ -2,10 +2,10 @@ package gov.cms.madie.cqllibraryservice.controllers;
 
 import gov.cms.madie.cqllibraryservice.exceptions.InvalidIdException;
 import gov.cms.madie.cqllibraryservice.exceptions.InvalidResourceStateException;
-import gov.cms.madie.cqllibraryservice.exceptions.PermissionDeniedException;
 import gov.cms.madie.cqllibraryservice.repositories.LibrarySetRepository;
 import gov.cms.madie.cqllibraryservice.services.ActionLogService;
 import gov.cms.madie.cqllibraryservice.services.LibrarySetService;
+import gov.cms.madie.cqllibraryservice.utils.AuthUtils;
 import gov.cms.madie.models.common.ActionType;
 import gov.cms.madie.models.library.CqlLibrary;
 import gov.cms.madie.models.library.CqlLibraryDraft;
@@ -123,9 +123,7 @@ public class CqlLibraryController {
     }
 
     CqlLibrary persistedLibrary = cqlLibraryService.findCqlLibraryById(cqlLibrary.getId());
-    if (!cqlLibraryService.checkAccessPermissions(persistedLibrary, username)) {
-      throw new PermissionDeniedException("CQL Library", cqlLibrary.getId(), username);
-    }
+    AuthUtils.checkAccessPermissions(persistedLibrary, username);
     if (!persistedLibrary.isDraft()) {
       throw new InvalidResourceStateException("CQL Library", id);
     }
@@ -177,11 +175,9 @@ public class CqlLibraryController {
   public ResponseEntity<String> changeOwnership(
       HttpServletRequest request,
       @PathVariable("id") String id,
-      @RequestParam(required = true, name = "userid") String userid,
+      @RequestParam(name = "userid") String userid,
       @Value("${lambda-api-key}") String apiKey) {
     ResponseEntity<String> response = ResponseEntity.badRequest().body("Library does not exist.");
-
-    log.info("getLibraryId [{}] using apiKey ", id, "apikey");
 
     if (cqlLibraryService.changeOwnership(id, userid)) {
       response =
