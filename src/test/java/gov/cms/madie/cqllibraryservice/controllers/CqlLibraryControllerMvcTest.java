@@ -239,7 +239,7 @@ public class CqlLibraryControllerMvcTest {
   }
 
   @Test
-  public void testCreateCqlLibraryReturnsValidationErrorForLengthOver255Chars() throws Exception {
+  public void testCreateCqlLibraryReturnsValidationErrorForLengthOver64Chars() throws Exception {
     final String reallyLongName =
         "Reallylongnamethatisover255charactersbutwouldotherwisebevalidifitwereunder255charactersandisjustanattempttogetthevalidatortoblowupwiththisstupidlylongnamethatnobodywouldeveractuallyusebecausereallywhowouldtypeareallylongnamelikethiswithoutspacesorunderscorestoseparatewords";
     String json =
@@ -921,7 +921,7 @@ public class CqlLibraryControllerMvcTest {
   }
 
   @Test
-  public void testCreateDraftReturnsValidationErrorForLengthOver255Chars() throws Exception {
+  public void testCreateDraftReturnsValidationErrorForLengthOver64Chars() throws Exception {
     final String reallyLongName =
         "Reallylongnamethatisover255charactersbutwouldotherwisebevalidifitwereunder255charactersandisjustanattempttogetthevalidatortoblowupwiththisstupidlylongnamethatnobodywouldeveractuallyusebecausereallywhowouldtypeareallylongnamelikethiswithoutspacesorunderscorestoseparatewords";
     final CqlLibraryDraft draft = CqlLibraryDraft.builder().cqlLibraryName(reallyLongName).build();
