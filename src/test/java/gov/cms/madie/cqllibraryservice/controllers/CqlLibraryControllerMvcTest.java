@@ -260,7 +260,7 @@ public class CqlLibraryControllerMvcTest {
         .andExpect(status().isBadRequest())
         .andExpect(
             jsonPath("$.validationErrors.cqlLibraryName")
-                .value("Library name cannot be more than 255 characters."));
+                .value("Library name cannot be more than 64 characters."));
     verifyNoInteractions(repository);
   }
 
@@ -936,7 +936,7 @@ public class CqlLibraryControllerMvcTest {
         .andExpect(content().contentType(MediaType.APPLICATION_JSON_VALUE))
         .andExpect(
             jsonPath("$.validationErrors.cqlLibraryName")
-                .value("Library name cannot be more than 255 characters."));
+                .value("Library name cannot be more than 64 characters."));
     verifyNoInteractions(repository);
   }
 
