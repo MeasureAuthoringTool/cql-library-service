@@ -103,8 +103,9 @@ public class CqlLibraryService {
       cqlLibraryRepository.delete(cqlLibrary);
     } else {
       throw new GeneralConflictException(
-              String.format("Could not update resource %s with id: %s. Resource is not a Draft.", "CQL Library", id)
-      );
+          String.format(
+              "Could not update resource %s with id: %s. Resource is not a Draft.",
+              "CQL Library", id));
     }
     return cqlLibrary;
   }

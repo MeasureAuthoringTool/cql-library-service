@@ -224,12 +224,15 @@ class CqlLibraryServiceTest {
   public void testDeleteDraftLibraryWithIdNotFound() {
     when(cqlLibraryRepository.findById(anyString())).thenReturn(Optional.empty());
 
-    assertThrows(ResourceNotFoundException.class, () -> cqlLibraryService.deleteDraftLibrary("MISSING", "TEST_USER"));
+    assertThrows(
+        ResourceNotFoundException.class,
+        () -> cqlLibraryService.deleteDraftLibrary("MISSING", "TEST_USER"));
   }
 
   @Test
   public void testDeleteDraftLibraryWithVersionedLibrary() {
-    CqlLibrary library = CqlLibrary.builder()
+    CqlLibrary library =
+        CqlLibrary.builder()
             .draft(false)
             .id("LibID")
             .librarySetId("LibSetID")
@@ -238,14 +241,17 @@ class CqlLibraryServiceTest {
     when(cqlLibraryRepository.findById(anyString())).thenReturn(Optional.of(library));
 
     when(librarySetService.findByLibrarySetId(anyString()))
-            .thenReturn(LibrarySet.builder().librarySetId("LibSetID").owner("TEST_USER").build());
+        .thenReturn(LibrarySet.builder().librarySetId("LibSetID").owner("TEST_USER").build());
 
-    assertThrows(GeneralConflictException.class, () -> cqlLibraryService.deleteDraftLibrary("LibID", "TEST_USER"));
+    assertThrows(
+        GeneralConflictException.class,
+        () -> cqlLibraryService.deleteDraftLibrary("LibID", "TEST_USER"));
   }
 
   @Test
   public void testDeleteDraftLibraryWithDraftLibraryNonOwner() {
-    CqlLibrary library = CqlLibrary.builder()
+    CqlLibrary library =
+        CqlLibrary.builder()
             .draft(true)
             .id("LibID")
             .librarySetId("LibSetID")
@@ -253,14 +259,17 @@ class CqlLibraryServiceTest {
             .build();
     when(cqlLibraryRepository.findById(anyString())).thenReturn(Optional.of(library));
     when(librarySetService.findByLibrarySetId(anyString()))
-            .thenReturn(LibrarySet.builder().librarySetId("LibSetID").owner("SOME_OTHER_USER").build());
+        .thenReturn(LibrarySet.builder().librarySetId("LibSetID").owner("SOME_OTHER_USER").build());
 
-    assertThrows(PermissionDeniedException.class, () -> cqlLibraryService.deleteDraftLibrary("LibID", "TEST_USER"));
+    assertThrows(
+        PermissionDeniedException.class,
+        () -> cqlLibraryService.deleteDraftLibrary("LibID", "TEST_USER"));
   }
 
   @Test
   public void testDeleteDraftLibraryWithDraftLibrary() {
-    CqlLibrary library = CqlLibrary.builder()
+    CqlLibrary library =
+        CqlLibrary.builder()
             .draft(true)
             .id("LibID")
             .librarySetId("LibSetID")
@@ -268,7 +277,7 @@ class CqlLibraryServiceTest {
             .build();
     when(cqlLibraryRepository.findById(anyString())).thenReturn(Optional.of(library));
     when(librarySetService.findByLibrarySetId(anyString()))
-            .thenReturn(LibrarySet.builder().librarySetId("LibSetID").owner("TEST_USER").build());
+        .thenReturn(LibrarySet.builder().librarySetId("LibSetID").owner("TEST_USER").build());
     doNothing().when(cqlLibraryRepository).delete(any(CqlLibrary.class));
 
     CqlLibrary output = cqlLibraryService.deleteDraftLibrary("LibID", "TEST_USER");
