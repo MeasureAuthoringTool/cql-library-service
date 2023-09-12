@@ -33,7 +33,6 @@ import gov.cms.madie.cqllibraryservice.exceptions.ResourceNotDraftableException;
 import gov.cms.madie.cqllibraryservice.exceptions.ResourceNotFoundException;
 import gov.cms.madie.cqllibraryservice.services.ActionLogService;
 import gov.cms.madie.models.common.ActionType;
-import gov.cms.madie.models.common.ProgramUseContext;
 import gov.cms.madie.models.library.CqlLibrary;
 import gov.cms.madie.models.library.CqlLibraryDraft;
 import gov.cms.madie.models.common.Version;
@@ -240,7 +239,7 @@ public class CqlLibraryControllerMvcTest {
   }
 
   @Test
-  public void testCreateCqlLibraryReturnsValidationErrorForLengthOver255Chars() throws Exception {
+  public void testCreateCqlLibraryReturnsValidationErrorForLengthOver64Chars() throws Exception {
     final String reallyLongName =
         "Reallylongnamethatisover255charactersbutwouldotherwisebevalidifitwereunder255charactersandisjustanattempttogetthevalidatortoblowupwiththisstupidlylongnamethatnobodywouldeveractuallyusebecausereallywhowouldtypeareallylongnamelikethiswithoutspacesorunderscorestoseparatewords";
     String json =
@@ -261,7 +260,7 @@ public class CqlLibraryControllerMvcTest {
         .andExpect(status().isBadRequest())
         .andExpect(
             jsonPath("$.validationErrors.cqlLibraryName")
-                .value("Library name cannot be more than 255 characters."));
+                .value("Library name cannot be more than 64 characters."));
     verifyNoInteractions(repository);
   }
 
@@ -340,12 +339,6 @@ public class CqlLibraryControllerMvcTest {
             .model(MODEL)
             .cql(cql)
             .librarySetId(TEST_LIBRARYSET_ID)
-            .programUseContext(
-                ProgramUseContext.builder()
-                    .code("mips")
-                    .display("MIPS")
-                    .codeSystem("http://hl7.org/fhir/us/cqfmeasures/CodeSystem/quality-programs")
-                    .build())
             .build();
 
     String json = toJsonString(library);
@@ -381,12 +374,6 @@ public class CqlLibraryControllerMvcTest {
         .andExpect(jsonPath("$.cqlLibraryName").value("NewValidName1"))
         .andExpect(jsonPath("$.id").isNotEmpty())
         .andExpect(jsonPath("$.cql").value(cql))
-        .andExpect(jsonPath("$.programUseContext").isNotEmpty())
-        .andExpect(jsonPath("$.programUseContext.code").value("mips"))
-        .andExpect(jsonPath("$.programUseContext.display").value("MIPS"))
-        .andExpect(
-            jsonPath("$.programUseContext.codeSystem")
-                .value("http://hl7.org/fhir/us/cqfmeasures/CodeSystem/quality-programs"))
         .andExpect(jsonPath("$.createdBy").value(TEST_USER_ID))
         .andExpect(jsonPath("$.lastModifiedBy").value(TEST_USER_ID))
         .andExpect(jsonPath("$.createdAt").value(fiveMinMatcher))
@@ -410,12 +397,6 @@ public class CqlLibraryControllerMvcTest {
             .model(ModelType.QDM_5_6.toString())
             .cql(cql)
             .librarySetId(TEST_LIBRARYSET_ID)
-            .programUseContext(
-                ProgramUseContext.builder()
-                    .code("mips")
-                    .display("MIPS")
-                    .codeSystem("http://hl7.org/fhir/us/cqfmeasures/CodeSystem/quality-programs")
-                    .build())
             .build();
 
     String json = toJsonString(library);
@@ -452,12 +433,6 @@ public class CqlLibraryControllerMvcTest {
         .andExpect(jsonPath("$.id").isNotEmpty())
         .andExpect(jsonPath("$.cql").value(cql))
         .andExpect(jsonPath("$.model").value(ModelType.QDM_5_6.toString()))
-        .andExpect(jsonPath("$.programUseContext").isNotEmpty())
-        .andExpect(jsonPath("$.programUseContext.code").value("mips"))
-        .andExpect(jsonPath("$.programUseContext.display").value("MIPS"))
-        .andExpect(
-            jsonPath("$.programUseContext.codeSystem")
-                .value("http://hl7.org/fhir/us/cqfmeasures/CodeSystem/quality-programs"))
         .andExpect(jsonPath("$.createdBy").value(TEST_USER_ID))
         .andExpect(jsonPath("$.lastModifiedBy").value(TEST_USER_ID))
         .andExpect(jsonPath("$.createdAt").value(fiveMinMatcher))
@@ -922,7 +897,7 @@ public class CqlLibraryControllerMvcTest {
   }
 
   @Test
-  public void testCreateDraftReturnsValidationErrorForLengthOver255Chars() throws Exception {
+  public void testCreateDraftReturnsValidationErrorForLengthOver64Chars() throws Exception {
     final String reallyLongName =
         "Reallylongnamethatisover255charactersbutwouldotherwisebevalidifitwereunder255charactersandisjustanattempttogetthevalidatortoblowupwiththisstupidlylongnamethatnobodywouldeveractuallyusebecausereallywhowouldtypeareallylongnamelikethiswithoutspacesorunderscorestoseparatewords";
     final CqlLibraryDraft draft = CqlLibraryDraft.builder().cqlLibraryName(reallyLongName).build();
@@ -937,7 +912,7 @@ public class CqlLibraryControllerMvcTest {
         .andExpect(content().contentType(MediaType.APPLICATION_JSON_VALUE))
         .andExpect(
             jsonPath("$.validationErrors.cqlLibraryName")
-                .value("Library name cannot be more than 255 characters."));
+                .value("Library name cannot be more than 64 characters."));
     verifyNoInteractions(repository);
   }
 
