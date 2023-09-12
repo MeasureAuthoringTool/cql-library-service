@@ -92,4 +92,20 @@ public class CqlLibraryService {
     }
     return result;
   }
+
+  public CqlLibrary deleteDraftLibrary(final String id, final String userId) {
+    CqlLibrary cqlLibrary = findCqlLibraryById(id);
+    if (!userId.equalsIgnoreCase(cqlLibrary.getLibrarySet().getOwner())) {
+      throw new PermissionDeniedException("CQL Library", cqlLibrary.getId(), userId);
+    }
+
+    if (cqlLibrary.isDraft()) {
+      cqlLibraryRepository.delete(cqlLibrary);
+    } else {
+      throw new GeneralConflictException(
+              String.format("Could not update resource %s with id: %s. Resource is not a Draft.", "CQL Library", id)
+      );
+    }
+    return cqlLibrary;
+  }
 }
