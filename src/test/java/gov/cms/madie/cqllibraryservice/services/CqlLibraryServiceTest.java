@@ -1,15 +1,19 @@
 package gov.cms.madie.cqllibraryservice.services;
 
+import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.CoreMatchers.notNullValue;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import gov.cms.madie.cqllibraryservice.exceptions.DuplicateKeyException;
 import gov.cms.madie.cqllibraryservice.exceptions.GeneralConflictException;
+import gov.cms.madie.cqllibraryservice.exceptions.PermissionDeniedException;
 import gov.cms.madie.cqllibraryservice.exceptions.ResourceNotFoundException;
 import gov.cms.madie.models.common.Version;
 import gov.cms.madie.models.library.CqlLibrary;
@@ -214,5 +218,71 @@ class CqlLibraryServiceTest {
 
     boolean result = cqlLibraryService.changeOwnership(library.getId(), "user123");
     assertTrue(result);
+  }
+
+  @Test
+  public void testDeleteDraftLibraryWithIdNotFound() {
+    when(cqlLibraryRepository.findById(anyString())).thenReturn(Optional.empty());
+
+    assertThrows(
+        ResourceNotFoundException.class,
+        () -> cqlLibraryService.deleteDraftLibrary("MISSING", "TEST_USER"));
+  }
+
+  @Test
+  public void testDeleteDraftLibraryWithVersionedLibrary() {
+    CqlLibrary library =
+        CqlLibrary.builder()
+            .draft(false)
+            .id("LibID")
+            .librarySetId("LibSetID")
+            .version(Version.parse("1.0.0"))
+            .build();
+    when(cqlLibraryRepository.findById(anyString())).thenReturn(Optional.of(library));
+
+    when(librarySetService.findByLibrarySetId(anyString()))
+        .thenReturn(LibrarySet.builder().librarySetId("LibSetID").owner("TEST_USER").build());
+
+    assertThrows(
+        GeneralConflictException.class,
+        () -> cqlLibraryService.deleteDraftLibrary("LibID", "TEST_USER"));
+  }
+
+  @Test
+  public void testDeleteDraftLibraryWithDraftLibraryNonOwner() {
+    CqlLibrary library =
+        CqlLibrary.builder()
+            .draft(true)
+            .id("LibID")
+            .librarySetId("LibSetID")
+            .version(Version.parse("1.0.0"))
+            .build();
+    when(cqlLibraryRepository.findById(anyString())).thenReturn(Optional.of(library));
+    when(librarySetService.findByLibrarySetId(anyString()))
+        .thenReturn(LibrarySet.builder().librarySetId("LibSetID").owner("SOME_OTHER_USER").build());
+
+    assertThrows(
+        PermissionDeniedException.class,
+        () -> cqlLibraryService.deleteDraftLibrary("LibID", "TEST_USER"));
+  }
+
+  @Test
+  public void testDeleteDraftLibraryWithDraftLibrary() {
+    CqlLibrary library =
+        CqlLibrary.builder()
+            .draft(true)
+            .id("LibID")
+            .librarySetId("LibSetID")
+            .version(Version.parse("1.0.0"))
+            .build();
+    when(cqlLibraryRepository.findById(anyString())).thenReturn(Optional.of(library));
+    when(librarySetService.findByLibrarySetId(anyString()))
+        .thenReturn(LibrarySet.builder().librarySetId("LibSetID").owner("TEST_USER").build());
+    doNothing().when(cqlLibraryRepository).delete(any(CqlLibrary.class));
+
+    CqlLibrary output = cqlLibraryService.deleteDraftLibrary("LibID", "TEST_USER");
+
+    assertThat(output, is(notNullValue()));
+    assertThat(output, is(equalTo(library)));
   }
 }

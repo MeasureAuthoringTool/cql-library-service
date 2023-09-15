@@ -188,4 +188,10 @@ public class CqlLibraryController {
 
     return response;
   }
+
+  @DeleteMapping("/{id}")
+  public ResponseEntity<CqlLibrary> hardDeleteLibrary(
+      @PathVariable("id") String id, Principal principal) {
+    return ResponseEntity.ok(cqlLibraryService.deleteDraftLibrary(id, principal.getName()));
+  }
 }
