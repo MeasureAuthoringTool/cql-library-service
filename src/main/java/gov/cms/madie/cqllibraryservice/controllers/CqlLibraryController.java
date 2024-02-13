@@ -170,7 +170,7 @@ public class CqlLibraryController {
     return ResponseEntity.status(HttpStatus.CREATED).body(output);
   }
 
-  @PutMapping("/{id}/ownership")
+  @PutMapping(value = "/{id}/ownership", produces = {MediaType.TEXT_PLAIN_VALUE})
   @PreAuthorize("#request.getHeader('api-key') == #apiKey")
   public ResponseEntity<String> changeOwnership(
       HttpServletRequest request,
@@ -182,6 +182,7 @@ public class CqlLibraryController {
     if (cqlLibraryService.changeOwnership(id, userid)) {
       response =
           ResponseEntity.ok()
+              .contentType(MediaType.TEXT_PLAIN)
               .body(String.format("%s granted ownership to Library successfully.", userid));
       actionLogService.logAction(id, ActionType.UPDATED, "apiKey");
     }
