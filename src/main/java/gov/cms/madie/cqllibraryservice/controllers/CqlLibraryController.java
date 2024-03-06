@@ -202,7 +202,7 @@ public class CqlLibraryController {
     ResponseEntity<String> response =
         ResponseEntity.badRequest().body("Cql Library does not exist.");
 
-    log.info("getLibraryId [{}] using apiKey ", id, "apikey");
+    log.info("getLibraryId [{}] using apiKey ", id);
 
     if (cqlLibraryService.grantAccess(id, userid)) {
       response =

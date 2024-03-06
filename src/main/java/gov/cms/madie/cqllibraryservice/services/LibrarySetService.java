@@ -45,7 +45,7 @@ public class LibrarySetService {
         librarySet.getAcls().add(aclSpec);
       }
       LibrarySet updatedLibrarySet = librarySetRepository.save(librarySet);
-      log.info("SHARED acl added to Cql Library set [{}]", updatedLibrarySet.getId());
+      log.info("SHARED acl added to library set [{}]", updatedLibrarySet.getId());
       return updatedLibrarySet;
     } else {
       String error =
