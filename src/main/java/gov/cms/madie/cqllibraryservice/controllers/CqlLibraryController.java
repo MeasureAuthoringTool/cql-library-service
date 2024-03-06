@@ -170,7 +170,9 @@ public class CqlLibraryController {
     return ResponseEntity.status(HttpStatus.CREATED).body(output);
   }
 
-  @PutMapping(value = "/{id}/ownership", produces = {MediaType.TEXT_PLAIN_VALUE})
+  @PutMapping(
+      value = "/{id}/ownership",
+      produces = {MediaType.TEXT_PLAIN_VALUE})
   @PreAuthorize("#request.getHeader('api-key') == #apiKey")
   public ResponseEntity<String> changeOwnership(
       HttpServletRequest request,
@@ -187,6 +189,27 @@ public class CqlLibraryController {
       actionLogService.logAction(id, ActionType.UPDATED, "apiKey");
     }
 
+    return response;
+  }
+
+  @PutMapping("/{id}/grant")
+  @PreAuthorize("#request.getHeader('api-key') == #apiKey")
+  public ResponseEntity<String> grantAccess(
+      HttpServletRequest request,
+      @PathVariable("id") String id,
+      @RequestParam(required = true, name = "userid") String userid,
+      @Value("${lambda-api-key}") String apiKey) {
+    ResponseEntity<String> response =
+        ResponseEntity.badRequest().body("Cql Library does not exist.");
+
+    log.info("getLibraryId [{}] using apiKey ", id, "apikey");
+
+    if (cqlLibraryService.grantAccess(id, userid)) {
+      response =
+          ResponseEntity.ok()
+              .body(String.format("%s granted access to Cql Library successfully.", userid));
+      actionLogService.logAction(id, ActionType.UPDATED, "apiKey");
+    }
     return response;
   }
 
