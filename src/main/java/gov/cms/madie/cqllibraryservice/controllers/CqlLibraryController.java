@@ -192,7 +192,7 @@ public class CqlLibraryController {
     return response;
   }
 
-  @PutMapping("/{id}/grant")
+  @PutMapping( value ="/{id}/grant", produces = {MediaType.TEXT_PLAIN_VALUE})
   @PreAuthorize("#request.getHeader('api-key') == #apiKey")
   public ResponseEntity<String> grantAccess(
       HttpServletRequest request,
@@ -207,7 +207,7 @@ public class CqlLibraryController {
     if (cqlLibraryService.grantAccess(id, userid)) {
       response =
           ResponseEntity.ok()
-              .body(String.format("%s granted access to Cql Library successfully.", userid));
+              .body(String.format("%s granted access to Library successfully.", userid));
       actionLogService.logAction(id, ActionType.UPDATED, "apiKey");
     }
     return response;
