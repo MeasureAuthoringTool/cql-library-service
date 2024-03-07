@@ -3,6 +3,7 @@ package gov.cms.madie.cqllibraryservice.services;
 import gov.cms.madie.cqllibraryservice.exceptions.ResourceNotFoundException;
 import gov.cms.madie.cqllibraryservice.repositories.LibrarySetRepository;
 import gov.cms.madie.models.access.AclSpecification;
+import gov.cms.madie.models.access.RoleEnum;
 import gov.cms.madie.models.common.ActionType;
 import gov.cms.madie.models.library.LibrarySet;
 import lombok.RequiredArgsConstructor;
@@ -35,15 +36,21 @@ public class LibrarySetService {
     }
   }
 
-  public LibrarySet updateLibrarySetAcls(String librarySetId, AclSpecification aclSpec) {
+  public LibrarySet updateLibrarySetAcls(String librarySetId, String userId, RoleEnum role) {
     Optional<LibrarySet> optionalLibrarySet = librarySetRepository.findByLibrarySetId(librarySetId);
     if (optionalLibrarySet.isPresent()) {
       LibrarySet librarySet = optionalLibrarySet.get();
       if (CollectionUtils.isEmpty(librarySet.getAcls())) {
-        librarySet.setAcls(List.of(aclSpec));
+        librarySet.setAcls(List.of(addAcl(userId, role)));
       } else {
-        if(!checKIfAlreadyShared(aclSpec.getUserId(),librarySet)){
-          librarySet.getAcls().add(aclSpec);
+        Optional<AclSpecification> aclSpecification = getAclSpecification(userId, librarySet);
+        if (aclSpecification.isPresent()) {
+          AclSpecification specification = aclSpecification.get();
+          if (!specification.getRoles().contains(role)) {
+            specification.getRoles().add(role);
+          }
+        } else {
+          librarySet.getAcls().add(addAcl(userId, role));
         }
       }
       LibrarySet updatedLibrarySet = librarySetRepository.save(librarySet);
@@ -53,14 +60,24 @@ public class LibrarySetService {
       String error =
           String.format(
               "Library with set id `%s` can not be shared. Library set may not exists.",
-              librarySetId, aclSpec.getUserId());
+              librarySetId, userId);
       log.error(error);
       throw new ResourceNotFoundException("LibrarySet", "id", librarySetId);
     }
   }
 
-  public boolean checKIfAlreadyShared(String userid,LibrarySet librarySet){
-    return librarySet.getAcls().stream().anyMatch(acl -> acl.getUserId().equals(userid));
+  public AclSpecification addAcl(String userId, RoleEnum role) {
+    AclSpecification spec = new AclSpecification();
+    spec.setUserId(userId);
+    spec.setRoles(List.of(role));
+
+    return spec;
+  }
+
+  public Optional<AclSpecification> getAclSpecification(String userId, LibrarySet librarySet) {
+    return librarySet.getAcls().stream()
+        .filter(acl -> userId.equalsIgnoreCase(acl.getUserId()))
+        .findFirst();
   }
 
   public LibrarySet findByLibrarySetId(final String librarySetId) {

@@ -192,7 +192,9 @@ public class CqlLibraryController {
     return response;
   }
 
-  @PutMapping( value ="/{id}/grant", produces = {MediaType.TEXT_PLAIN_VALUE})
+  @PutMapping(
+      value = "/{id}/grant",
+      produces = {MediaType.TEXT_PLAIN_VALUE})
   @PreAuthorize("#request.getHeader('api-key') == #apiKey")
   public ResponseEntity<String> grantAccess(
       HttpServletRequest request,
