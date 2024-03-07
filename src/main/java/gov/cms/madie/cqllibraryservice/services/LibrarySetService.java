@@ -42,7 +42,9 @@ public class LibrarySetService {
       if (CollectionUtils.isEmpty(librarySet.getAcls())) {
         librarySet.setAcls(List.of(aclSpec));
       } else {
-        librarySet.getAcls().add(aclSpec);
+        if(!checKIfAlreadyShared(aclSpec.getUserId(),librarySet)){
+          librarySet.getAcls().add(aclSpec);
+        }
       }
       LibrarySet updatedLibrarySet = librarySetRepository.save(librarySet);
       log.info("SHARED acl added to library set [{}]", updatedLibrarySet.getId());
@@ -55,6 +57,10 @@ public class LibrarySetService {
       log.error(error);
       throw new ResourceNotFoundException("LibrarySet", "id", librarySetId);
     }
+  }
+
+  public boolean checKIfAlreadyShared(String userid,LibrarySet librarySet){
+    return librarySet.getAcls().stream().anyMatch(acl -> acl.getUserId().equals(userid));
   }
 
   public LibrarySet findByLibrarySetId(final String librarySetId) {
