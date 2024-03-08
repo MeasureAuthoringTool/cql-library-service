@@ -41,7 +41,7 @@ public class LibrarySetService {
     if (optionalLibrarySet.isPresent()) {
       LibrarySet librarySet = optionalLibrarySet.get();
       if (CollectionUtils.isEmpty(librarySet.getAcls())) {
-        librarySet.setAcls(List.of(addAcl(userId, role)));
+        librarySet.setAcls(List.of(createAcl(userId, role)));
       } else {
         Optional<AclSpecification> aclSpecification = getAclSpecification(userId, librarySet);
         if (aclSpecification.isPresent()) {
@@ -50,7 +50,7 @@ public class LibrarySetService {
             specification.getRoles().add(role);
           }
         } else {
-          librarySet.getAcls().add(addAcl(userId, role));
+          librarySet.getAcls().add(createAcl(userId, role));
         }
       }
       LibrarySet updatedLibrarySet = librarySetRepository.save(librarySet);
@@ -66,7 +66,7 @@ public class LibrarySetService {
     }
   }
 
-  public AclSpecification addAcl(String userId, RoleEnum role) {
+  private AclSpecification createAcl(String userId, RoleEnum role) {
     AclSpecification spec = new AclSpecification();
     spec.setUserId(userId);
     spec.setRoles(List.of(role));
