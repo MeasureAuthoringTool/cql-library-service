@@ -1,6 +1,7 @@
 package gov.cms.madie.cqllibraryservice.services;
 
 import gov.cms.madie.cqllibraryservice.exceptions.*;
+import gov.cms.madie.models.access.RoleEnum;
 import gov.cms.madie.models.common.Version;
 import gov.cms.madie.models.library.CqlLibrary;
 import gov.cms.madie.cqllibraryservice.repositories.CqlLibraryRepository;
@@ -88,6 +89,18 @@ public class CqlLibraryService {
     if (persistedCqlLibrary.isPresent()) {
       CqlLibrary cqlLibrary = persistedCqlLibrary.get();
       librarySetService.updateOwnership(cqlLibrary.getLibrarySetId(), userid);
+      result = true;
+    }
+    return result;
+  }
+
+  public boolean grantAccess(String cqlLibraryId, String userid) {
+    boolean result = false;
+    Optional<CqlLibrary> persistedCqlLibrary = cqlLibraryRepository.findById(cqlLibraryId);
+    if (persistedCqlLibrary.isPresent()) {
+      CqlLibrary cqlLibrary = persistedCqlLibrary.get();
+      librarySetService.updateLibrarySetAcls(
+          cqlLibrary.getLibrarySetId(), userid, RoleEnum.SHARED_WITH);
       result = true;
     }
     return result;

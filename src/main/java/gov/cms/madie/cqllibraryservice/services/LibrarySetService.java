@@ -2,12 +2,15 @@ package gov.cms.madie.cqllibraryservice.services;
 
 import gov.cms.madie.cqllibraryservice.exceptions.ResourceNotFoundException;
 import gov.cms.madie.cqllibraryservice.repositories.LibrarySetRepository;
+import gov.cms.madie.models.access.AclSpecification;
+import gov.cms.madie.models.access.RoleEnum;
 import gov.cms.madie.models.common.ActionType;
 import gov.cms.madie.models.library.LibrarySet;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.collections4.CollectionUtils;
 import org.springframework.stereotype.Service;
-
+import java.util.List;
 import java.util.Optional;
 
 @Slf4j
@@ -33,29 +36,49 @@ public class LibrarySetService {
     }
   }
 
-  //  toDo: , add when needed
-  //  public LibrarySet updateLibrarySetAcls(String librarySetId, AclSpecification aclSpec) {
-  //    Optional<LibrarySet> optionalLibrarySet =
-  // librarySetRepository.findByLibrarySetId(librarySetId);
-  //    if (optionalLibrarySet.isPresent()) {
-  //      LibrarySet librarySet = optionalLibrarySet.get();
-  //      if (CollectionUtils.isEmpty(librarySet.getAcls())) {
-  //        librarySet.setAcls(List.of(aclSpec));
-  //      } else {
-  //        librarySet.getAcls().add(aclSpec);
-  //      }
-  //      LibrarySet updatedLibrarySet = librarySetRepository.save(librarySet);
-  //      log.info("SHARED acl added to Measure set [{}]", updatedLibrarySet.getId());
-  //      return updatedLibrarySet;
-  //    } else {
-  //      String error =
-  //          String.format(
-  //              "Library with set id `%s` can not be shared. Library set may not exists.",
-  //              librarySetId, aclSpec.getUserId());
-  //      log.error(error);
-  //      throw new ResourceNotFoundException("LibrarySet", "id", librarySetId);
-  //    }
-  //  }
+  public LibrarySet updateLibrarySetAcls(String librarySetId, String userId, RoleEnum role) {
+    Optional<LibrarySet> optionalLibrarySet = librarySetRepository.findByLibrarySetId(librarySetId);
+    if (optionalLibrarySet.isPresent()) {
+      LibrarySet librarySet = optionalLibrarySet.get();
+      if (CollectionUtils.isEmpty(librarySet.getAcls())) {
+        librarySet.setAcls(List.of(createAcl(userId, role)));
+      } else {
+        Optional<AclSpecification> aclSpecification = getAclSpecification(userId, librarySet);
+        if (aclSpecification.isPresent()) {
+          AclSpecification specification = aclSpecification.get();
+          if (!specification.getRoles().contains(role)) {
+            specification.getRoles().add(role);
+          }
+        } else {
+          librarySet.getAcls().add(createAcl(userId, role));
+        }
+      }
+      LibrarySet updatedLibrarySet = librarySetRepository.save(librarySet);
+      log.info("SHARED acl added to library set [{}]", updatedLibrarySet.getId());
+      return updatedLibrarySet;
+    } else {
+      String error =
+          String.format(
+              "Library with set id `%s` can not be shared. Library set may not exists.",
+              librarySetId, userId);
+      log.error(error);
+      throw new ResourceNotFoundException("LibrarySet", "id", librarySetId);
+    }
+  }
+
+  private AclSpecification createAcl(String userId, RoleEnum role) {
+    AclSpecification spec = new AclSpecification();
+    spec.setUserId(userId);
+    spec.setRoles(List.of(role));
+
+    return spec;
+  }
+
+  public Optional<AclSpecification> getAclSpecification(String userId, LibrarySet librarySet) {
+    return librarySet.getAcls().stream()
+        .filter(acl -> userId.equalsIgnoreCase(acl.getUserId()))
+        .findFirst();
+  }
 
   public LibrarySet findByLibrarySetId(final String librarySetId) {
     return librarySetRepository.findByLibrarySetId(librarySetId).orElse(null);
