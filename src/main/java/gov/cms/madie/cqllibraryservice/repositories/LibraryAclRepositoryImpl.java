@@ -38,7 +38,7 @@ public class LibraryAclRepositoryImpl implements LibraryAclRepository {
             .orOperator(
                 Criteria.where("librarySet.owner").is(userId),
                 Criteria.where("librarySet.acls.userId")
-                    .is(userId)
+                    .regex("^\\Q" + userId + "\\E$", "i")
                     .and("librarySet.acls.roles")
                     .in(RoleEnum.SHARED_WITH));
     MatchOperation matchOperation = match(librarySetCriteria);
