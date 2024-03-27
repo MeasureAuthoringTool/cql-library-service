@@ -4,7 +4,8 @@ import gov.cms.madie.cqllibraryservice.exceptions.*;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
-import javax.validation.ConstraintViolationException;
+
+import jakarta.validation.ConstraintViolationException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.web.error.ErrorAttributeOptions;
