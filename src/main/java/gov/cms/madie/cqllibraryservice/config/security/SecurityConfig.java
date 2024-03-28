@@ -12,8 +12,9 @@ import org.springframework.security.web.SecurityFilterChain;
 @EnableMethodSecurity
 public class SecurityConfig {
 
-  private static final String[] CSRF_WHITELIST = {"/cql-libraries/*/ownership"};
-  private static final String[] AUTH_WHITELIST = {"/actuator/**", "/cql-libraries/*/ownership"};
+  private static final String[] CSRF_WHITELIST = {"/cql-libraries/*/ownership", "cql-libraries/cql"};
+  private static final String[] AUTH_WHITELIST = {"/actuator/**", "/cql-libraries/*/ownership", "cql-libraries/cql"};
+
 
   @Bean
   protected SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
