@@ -52,9 +52,13 @@ public class ErrorHandlingControllerAdvice {
         .getAllErrors()
         .forEach(
             (error) -> {
-              String fieldName = ((FieldError) error).getField();
-              String errorMessage = error.getDefaultMessage();
-              validationErrors.put(fieldName, errorMessage);
+              if (error instanceof FieldError) {
+                String fieldName = ((FieldError) error).getField();
+                String errorMessage = error.getDefaultMessage();
+                validationErrors.put(fieldName, errorMessage);
+              } else {
+                validationErrors.put(error.getObjectName(), error.getDefaultMessage());
+              }
             });
     Map<String, Object> errorAttributes = getErrorAttributes(request, HttpStatus.BAD_REQUEST);
     errorAttributes.put("validationErrors", validationErrors);
