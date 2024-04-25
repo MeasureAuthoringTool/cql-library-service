@@ -1,6 +1,6 @@
 package gov.cms.madie.cqllibraryservice.repositories;
 
-import gov.cms.madie.models.dto.LibraryList;
+import gov.cms.madie.cqllibraryservice.dto.LibraryListDTO;
 
 import java.util.List;
 
@@ -11,5 +11,5 @@ public interface LibraryAclRepository {
    * @param userId- current user
    * @return List of cqlLibraries
    */
-  List<LibraryList> findAllLibrariesByUser(String userId);
+  List<LibraryListDTO> findAllLibrariesByUser(String userId);
 }

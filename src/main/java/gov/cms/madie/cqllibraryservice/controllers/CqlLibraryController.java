@@ -1,12 +1,12 @@
 package gov.cms.madie.cqllibraryservice.controllers;
 
+import gov.cms.madie.cqllibraryservice.dto.LibraryListDTO;
 import gov.cms.madie.cqllibraryservice.exceptions.InvalidIdException;
 import gov.cms.madie.cqllibraryservice.exceptions.InvalidResourceStateException;
 import gov.cms.madie.cqllibraryservice.services.ActionLogService;
 import gov.cms.madie.cqllibraryservice.services.LibrarySetService;
 import gov.cms.madie.cqllibraryservice.utils.AuthUtils;
 import gov.cms.madie.models.common.ActionType;
-import gov.cms.madie.models.dto.LibraryList;
 import gov.cms.madie.models.library.CqlLibrary;
 import gov.cms.madie.models.library.CqlLibraryDraft;
 import gov.cms.madie.models.common.Version;
@@ -44,12 +44,12 @@ public class CqlLibraryController {
   private final LibrarySetService librarySetService;
 
   @GetMapping
-  public ResponseEntity<List<LibraryList>> getCqlLibraries(
+  public ResponseEntity<List<LibraryListDTO>> getCqlLibraries(
       Principal principal,
       @RequestParam(required = false, defaultValue = "false", name = "currentUser")
           boolean filterByCurrentUser) {
     final String username = principal.getName();
-    List<LibraryList> cqlLibraries =
+    List<LibraryListDTO> cqlLibraries =
         filterByCurrentUser
             ? cqlLibraryRepository.findAllLibrariesByUser(username)
             : cqlLibraryRepository.findAllProjected();

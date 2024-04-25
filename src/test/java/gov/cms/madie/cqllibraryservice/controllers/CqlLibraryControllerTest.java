@@ -11,6 +11,7 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
+import gov.cms.madie.cqllibraryservice.dto.LibraryListDTO;
 import gov.cms.madie.cqllibraryservice.exceptions.DuplicateKeyException;
 import gov.cms.madie.cqllibraryservice.exceptions.InvalidIdException;
 import gov.cms.madie.cqllibraryservice.exceptions.InvalidResourceStateException;
@@ -21,7 +22,6 @@ import gov.cms.madie.cqllibraryservice.repositories.LibrarySetRepository;
 import gov.cms.madie.cqllibraryservice.services.ActionLogService;
 import gov.cms.madie.cqllibraryservice.services.LibrarySetService;
 import gov.cms.madie.models.common.ActionType;
-import gov.cms.madie.models.dto.LibraryList;
 import gov.cms.madie.models.library.CqlLibrary;
 import gov.cms.madie.models.library.CqlLibraryDraft;
 import gov.cms.madie.models.common.ModelType;
@@ -73,7 +73,7 @@ class CqlLibraryControllerTest {
   @Captor private ArgumentCaptor<String> targetIdArgumentCaptor;
 
   private CqlLibrary cqlLibrary;
-  private LibraryList libraryList;
+  private LibraryListDTO libraryList;
 
   @BeforeEach
   public void setUp() {
@@ -85,7 +85,7 @@ class CqlLibraryControllerTest {
             .build();
 
     libraryList =
-        LibraryList.builder()
+        LibraryListDTO.builder()
             .id("testCqlLibraryId")
             .cqlLibraryName("testCqlLibraryName")
             .librarySetId("testCqlLibrarySetId")
@@ -94,11 +94,11 @@ class CqlLibraryControllerTest {
 
   @Test
   void getCqlLibrariesWithoutCurrentUserFilter() {
-    List<LibraryList> cqlLibraries = List.of(libraryList);
+    List<LibraryListDTO> cqlLibraries = List.of(libraryList);
     when(cqlLibraryRepository.findAllProjected()).thenReturn(cqlLibraries);
     Principal principal = mock(Principal.class);
     when(principal.getName()).thenReturn("test.user");
-    ResponseEntity<List<LibraryList>> response =
+    ResponseEntity<List<LibraryListDTO>> response =
         cqlLibraryController.getCqlLibraries(principal, false);
     verify(cqlLibraryRepository, times(1)).findAllProjected();
     verifyNoMoreInteractions(cqlLibraryRepository);
@@ -109,12 +109,12 @@ class CqlLibraryControllerTest {
 
   @Test
   void getCqlLibrariesWithCurrentUserFilter() {
-    List<LibraryList> cqlLibraries = List.of(libraryList);
+    List<LibraryListDTO> cqlLibraries = List.of(libraryList);
     when(cqlLibraryRepository.findAllLibrariesByUser(anyString())).thenReturn(cqlLibraries);
     Principal principal = mock(Principal.class);
     when(principal.getName()).thenReturn("test.user");
 
-    ResponseEntity<List<LibraryList>> response =
+    ResponseEntity<List<LibraryListDTO>> response =
         cqlLibraryController.getCqlLibraries(principal, true);
     verify(cqlLibraryRepository, times(1)).findAllLibrariesByUser(eq("test.user"));
     verifyNoMoreInteractions(cqlLibraryRepository);

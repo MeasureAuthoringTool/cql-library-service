@@ -1,7 +1,7 @@
 package gov.cms.madie.cqllibraryservice.repositories;
 
+import gov.cms.madie.cqllibraryservice.dto.LibraryListDTO;
 import gov.cms.madie.models.access.RoleEnum;
-import gov.cms.madie.models.dto.LibraryList;
 import gov.cms.madie.models.library.CqlLibrary;
 
 import org.springframework.data.mongodb.core.MongoTemplate;
@@ -32,7 +32,7 @@ public class LibraryAclRepositoryImpl implements LibraryAclRepository {
   }
 
   @Override
-  public List<LibraryList> findAllLibrariesByUser(String userId) {
+  public List<LibraryListDTO> findAllLibrariesByUser(String userId) {
     Criteria librarySetCriteria =
         new Criteria()
             .orOperator(
@@ -43,11 +43,11 @@ public class LibraryAclRepositoryImpl implements LibraryAclRepository {
                     .in(RoleEnum.SHARED_WITH));
     MatchOperation matchOperation = match(librarySetCriteria);
     Aggregation libraryAggregation =
-        newAggregation(getLookupOperation(), matchOperation, project(LibraryList.class));
+        newAggregation(getLookupOperation(), matchOperation, project(LibraryListDTO.class));
 
-    List<LibraryList> results =
+    List<LibraryListDTO> results =
         mongoTemplate
-            .aggregate(libraryAggregation, CqlLibrary.class, LibraryList.class)
+            .aggregate(libraryAggregation, CqlLibrary.class, LibraryListDTO.class)
             .getMappedResults();
     return results;
   }

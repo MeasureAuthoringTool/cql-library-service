@@ -1,7 +1,7 @@
 package gov.cms.madie.cqllibraryservice.repositories;
 
+import gov.cms.madie.cqllibraryservice.dto.LibraryListDTO;
 import gov.cms.madie.models.common.Version;
-import gov.cms.madie.models.dto.LibraryList;
 import gov.cms.madie.models.library.CqlLibrary;
 
 import java.util.List;
@@ -40,5 +40,5 @@ public interface CqlLibraryRepository
             + "foreignField: 'librarySetId',"
             + "as: 'librarySet'}}"
       })
-  List<LibraryList> findAllProjected();
+  List<LibraryListDTO> findAllProjected();
 }
