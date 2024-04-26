@@ -1,8 +1,8 @@
 package gov.cms.madie.cqllibraryservice.controllers;
 
+import gov.cms.madie.cqllibraryservice.dto.LibraryListDTO;
 import gov.cms.madie.cqllibraryservice.exceptions.InvalidIdException;
 import gov.cms.madie.cqllibraryservice.exceptions.InvalidResourceStateException;
-import gov.cms.madie.cqllibraryservice.repositories.LibrarySetRepository;
 import gov.cms.madie.cqllibraryservice.services.ActionLogService;
 import gov.cms.madie.cqllibraryservice.services.LibrarySetService;
 import gov.cms.madie.cqllibraryservice.utils.AuthUtils;
@@ -21,7 +21,6 @@ import java.util.UUID;
 
 import jakarta.servlet.http.HttpServletRequest;
 
-import gov.cms.madie.models.library.LibrarySet;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -43,24 +42,17 @@ public class CqlLibraryController {
   private final VersionService versionService;
   private final CqlLibraryService cqlLibraryService;
   private final LibrarySetService librarySetService;
-  private final LibrarySetRepository librarySetRepository;
 
   @GetMapping
-  public ResponseEntity<List<CqlLibrary>> getCqlLibraries(
+  public ResponseEntity<List<LibraryListDTO>> getCqlLibraries(
       Principal principal,
       @RequestParam(required = false, defaultValue = "false", name = "currentUser")
           boolean filterByCurrentUser) {
     final String username = principal.getName();
-    List<CqlLibrary> cqlLibraries =
+    List<LibraryListDTO> cqlLibraries =
         filterByCurrentUser
             ? cqlLibraryRepository.findAllLibrariesByUser(username)
-            : cqlLibraryRepository.findAll();
-    cqlLibraries.forEach(
-        l -> {
-          LibrarySet librarySet =
-              librarySetRepository.findByLibrarySetId(l.getLibrarySetId()).orElse(null);
-          l.setLibrarySet(librarySet);
-        });
+            : cqlLibraryRepository.findAllProjected();
     return ResponseEntity.ok(cqlLibraries);
   }
 

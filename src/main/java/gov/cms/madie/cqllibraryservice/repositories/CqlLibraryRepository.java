@@ -1,5 +1,6 @@
 package gov.cms.madie.cqllibraryservice.repositories;
 
+import gov.cms.madie.cqllibraryservice.dto.LibraryListDTO;
 import gov.cms.madie.models.common.Version;
 import gov.cms.madie.models.library.CqlLibrary;
 
@@ -31,4 +32,13 @@ public interface CqlLibraryRepository
         "{'$sort': {'createdAt':1}}"
       })
   List<CqlLibrary> findByCqlLibrarySetId();
+
+  @Aggregation(
+      pipeline = {
+        "{'$lookup' :  {from: 'librarySet',"
+            + "localField: 'librarySetId',"
+            + "foreignField: 'librarySetId',"
+            + "as: 'librarySet'}}"
+      })
+  List<LibraryListDTO> findAllProjected();
 }

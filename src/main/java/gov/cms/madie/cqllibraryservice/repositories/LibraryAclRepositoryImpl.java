@@ -1,5 +1,6 @@
 package gov.cms.madie.cqllibraryservice.repositories;
 
+import gov.cms.madie.cqllibraryservice.dto.LibraryListDTO;
 import gov.cms.madie.models.access.RoleEnum;
 import gov.cms.madie.models.library.CqlLibrary;
 
@@ -12,8 +13,7 @@ import org.springframework.stereotype.Repository;
 
 import java.util.List;
 
-import static org.springframework.data.mongodb.core.aggregation.Aggregation.match;
-import static org.springframework.data.mongodb.core.aggregation.Aggregation.newAggregation;
+import static org.springframework.data.mongodb.core.aggregation.Aggregation.*;
 
 @Repository
 public class LibraryAclRepositoryImpl implements LibraryAclRepository {
@@ -32,7 +32,7 @@ public class LibraryAclRepositoryImpl implements LibraryAclRepository {
   }
 
   @Override
-  public List<CqlLibrary> findAllLibrariesByUser(String userId) {
+  public List<LibraryListDTO> findAllLibrariesByUser(String userId) {
     Criteria librarySetCriteria =
         new Criteria()
             .orOperator(
@@ -42,11 +42,12 @@ public class LibraryAclRepositoryImpl implements LibraryAclRepository {
                     .and("librarySet.acls.roles")
                     .in(RoleEnum.SHARED_WITH));
     MatchOperation matchOperation = match(librarySetCriteria);
-    Aggregation libraryAggregation = newAggregation(getLookupOperation(), matchOperation);
+    Aggregation libraryAggregation =
+        newAggregation(getLookupOperation(), matchOperation, project(LibraryListDTO.class));
 
-    List<CqlLibrary> results =
+    List<LibraryListDTO> results =
         mongoTemplate
-            .aggregate(libraryAggregation, CqlLibrary.class, CqlLibrary.class)
+            .aggregate(libraryAggregation, CqlLibrary.class, LibraryListDTO.class)
             .getMappedResults();
     return results;
   }

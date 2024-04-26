@@ -1,7 +1,7 @@
 package gov.cms.madie.cqllibraryservice.repositories;
 
+import gov.cms.madie.cqllibraryservice.dto.LibraryListDTO;
 import gov.cms.madie.models.common.Version;
-import gov.cms.madie.models.library.CqlLibrary;
 import gov.cms.madie.models.library.LibrarySet;
 import org.bson.Document;
 
@@ -31,19 +31,18 @@ public class LibraryAclRepositoryImplTest {
 
   @InjectMocks LibraryAclRepositoryImpl libraryAclRepository;
 
-  private CqlLibrary library1;
-  private CqlLibrary library2;
-  private CqlLibrary library3;
-  private CqlLibrary library4;
-  private CqlLibrary library5;
+  private LibraryListDTO library1;
+  private LibraryListDTO library2;
+  private LibraryListDTO library3;
+  private LibraryListDTO library4;
+  private LibraryListDTO library5;
 
   @BeforeEach
   void setup() {
     LibrarySet librarySet1 = LibrarySet.builder().owner("p1").librarySetId("id-1").build();
     LibrarySet librarySet2 = LibrarySet.builder().owner("p2").librarySetId("id-1").build();
     library1 =
-        CqlLibrary.builder()
-            .createdBy("p1")
+        LibraryListDTO.builder()
             .id("1")
             .cqlLibraryName("test measure 1")
             .librarySetId("1-1")
@@ -52,8 +51,7 @@ public class LibraryAclRepositoryImplTest {
             .draft(true)
             .build();
     library2 =
-        CqlLibrary.builder()
-            .createdBy("p1")
+        LibraryListDTO.builder()
             .id("2")
             .cqlLibraryName("test measure 2")
             .librarySetId("2-2")
@@ -62,8 +60,7 @@ public class LibraryAclRepositoryImplTest {
             .draft(true)
             .build();
     library3 =
-        CqlLibrary.builder()
-            .createdBy("p1")
+        LibraryListDTO.builder()
             .id("3")
             .cqlLibraryName("library3")
             .librarySetId("id-2")
@@ -72,8 +69,7 @@ public class LibraryAclRepositoryImplTest {
             .draft(false)
             .build();
     library4 =
-        CqlLibrary.builder()
-            .createdBy("p2")
+        LibraryListDTO.builder()
             .id("4")
             .cqlLibraryName("library4")
             .librarySetId("id-2")
@@ -82,8 +78,7 @@ public class LibraryAclRepositoryImplTest {
             .draft(false)
             .build();
     library5 =
-        CqlLibrary.builder()
-            .createdBy("p2")
+        LibraryListDTO.builder()
             .id("5")
             .cqlLibraryName("library5")
             .librarySetId("id-2")
@@ -105,10 +100,9 @@ public class LibraryAclRepositoryImplTest {
         new AggregationResults<>(List.of(library1, library2, library3), new Document());
 
     when(mongoTemplate.aggregate(any(Aggregation.class), (Class<?>) any(), any()))
-        .thenReturn(allResults)
         .thenReturn(allResults);
 
-    List<CqlLibrary> list = libraryAclRepository.findAllLibrariesByUser("p1");
+    List<LibraryListDTO> list = libraryAclRepository.findAllLibrariesByUser("p1");
     assertEquals(list.size(), 3);
   }
 }
