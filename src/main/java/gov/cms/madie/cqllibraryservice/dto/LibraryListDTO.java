@@ -14,9 +14,9 @@ import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder;
 import org.springframework.data.mongodb.core.mapping.DBRef;
 import org.springframework.data.mongodb.core.mapping.Document;
+import org.springframework.data.mongodb.core.mapping.DocumentReference;
 
 @Data
-@Document
 @SuperBuilder(toBuilder = true)
 @NoArgsConstructor
 public class LibraryListDTO {
@@ -37,7 +37,7 @@ public class LibraryListDTO {
   @JsonDeserialize(using = VersionJsonSerializer.VersionDeserializer.class)
   private Version version;
 
-  @DBRef private LibrarySet librarySet;
+  @DocumentReference private LibrarySet librarySet;
 
   private boolean draft;
 }
