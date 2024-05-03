@@ -14,6 +14,7 @@ import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder;
 import org.springframework.data.mongodb.core.mapping.Document;
 import org.springframework.data.mongodb.core.mapping.DocumentReference;
+import java.time.Instant;
 
 @Data
 @Document
@@ -25,6 +26,8 @@ public class LibraryListDTO {
   private String librarySetId;
 
   private String cqlLibraryName;
+
+  private Instant createdAt;
 
   @NotBlank(message = "Model is required")
   @EnumValidator(
