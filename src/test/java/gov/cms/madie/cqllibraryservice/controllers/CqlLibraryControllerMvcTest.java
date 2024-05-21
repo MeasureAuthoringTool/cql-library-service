@@ -817,8 +817,7 @@ public class CqlLibraryControllerMvcTest {
                 LibrarySet.builder().librarySetId(TEST_LIBRARYSET_ID).owner(TEST_USER_ID).build())
             .build();
     final CqlLibrary updatingLibrary =
-        existingLibrary
-            .toBuilder()
+        existingLibrary.toBuilder()
             .id("Library1_ID")
             .cqlLibraryName("NewName")
             .cql("library testCql version '2.1.000'")
@@ -933,8 +932,7 @@ public class CqlLibraryControllerMvcTest {
             .build();
     final String json =
         toJsonString(
-            existingLibrary
-                .toBuilder()
+            existingLibrary.toBuilder()
                 .draft(false)
                 .version(new Version(2, 1, 0))
                 .cql("library Library1 version '1.0.000'")
@@ -976,8 +974,7 @@ public class CqlLibraryControllerMvcTest {
             .build();
     final String json =
         toJsonString(
-            existingLibrary
-                .toBuilder()
+            existingLibrary.toBuilder()
                 .draft(false)
                 .version(new Version(2, 1, 0))
                 .cql("library Library1 version '1.0.000'")
@@ -1019,8 +1016,7 @@ public class CqlLibraryControllerMvcTest {
             .build();
     final String json =
         toJsonString(
-            existingLibrary
-                .toBuilder()
+            existingLibrary.toBuilder()
                 .cqlLibraryName("ChangedName")
                 .cql("library ChangedName version '1.0.000'")
                 .draft(false)
@@ -1064,8 +1060,7 @@ public class CqlLibraryControllerMvcTest {
             .build();
     final String json =
         toJsonString(
-            draftLibrary
-                .toBuilder()
+            draftLibrary.toBuilder()
                 .draft(false)
                 .cql("library Library1 version '1.2.000'")
                 .build());

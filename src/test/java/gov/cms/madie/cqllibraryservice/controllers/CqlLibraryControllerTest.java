@@ -364,8 +364,7 @@ class CqlLibraryControllerTest {
             .lastModifiedBy("User1")
             .build();
     final CqlLibrary updatingLibrary =
-        existingLibrary
-            .toBuilder()
+        existingLibrary.toBuilder()
             .id("Library1_ID")
             .cqlLibraryName("NewName")
             .cql("library testCql version '2.1.000'")
