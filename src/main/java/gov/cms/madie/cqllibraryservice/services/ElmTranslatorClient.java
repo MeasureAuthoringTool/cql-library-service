@@ -4,10 +4,12 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import gov.cms.madie.cqllibraryservice.config.EnvironmentConfig;
 import gov.cms.madie.cqllibraryservice.exceptions.CqlElmTranslationServiceException;
+import gov.cms.madie.models.common.ModelType;
 import gov.cms.madie.models.measure.ElmJson;
 import java.net.URI;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
@@ -23,11 +25,14 @@ public class ElmTranslatorClient {
   private EnvironmentConfig environmentConfig;
   private RestTemplate elmTranslatorRestTemplate;
 
-  public ElmJson getElmJson(final String cql, String accessToken) {
+  public ElmJson getElmJson(final String cql, String libraryModel, String accessToken) {
     try {
       URI uri =
           URI.create(
               environmentConfig.getCqlElmServiceBaseUrl()
+                  + (StringUtils.equals(libraryModel, ModelType.QDM_5_6.getValue())
+                      ? "/qdm"
+                      : "/fhir")
                   + environmentConfig.getCqlElmServiceElmJsonUri());
       HttpHeaders headers = new HttpHeaders();
       headers.setContentType(MediaType.TEXT_PLAIN);

@@ -57,7 +57,9 @@ public class CqlLibraryService {
       CqlLibrary cqlLibrary = libs.get(0);
       if (StringUtils.isNotBlank(accessToken)) {
         try {
-          final ElmJson elmJson = elmTranslatorClient.getElmJson(cqlLibrary.getCql(), accessToken);
+          final ElmJson elmJson =
+              elmTranslatorClient.getElmJson(
+                  cqlLibrary.getCql(), cqlLibrary.getModel(), accessToken);
           if (elmTranslatorClient.hasErrors(elmJson)) {
             throw new CqlElmTranslationErrorException(cqlLibrary.getCqlLibraryName());
           }
