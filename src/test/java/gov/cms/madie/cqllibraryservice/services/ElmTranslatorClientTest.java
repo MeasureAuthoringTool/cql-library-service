@@ -36,7 +36,7 @@ class ElmTranslatorClientTest {
 
   @BeforeEach
   void beforeEach() {
-    lenient().when(environmentConfig.getCqlElmServiceBaseUrl()).thenReturn("http://test");
+    lenient().when(environmentConfig.getQdmCqlElmServiceBaseUrl()).thenReturn("http://test");
     lenient()
         .when(environmentConfig.getCqlElmServiceElmJsonUri())
         .thenReturn("/cql/translator/cql");

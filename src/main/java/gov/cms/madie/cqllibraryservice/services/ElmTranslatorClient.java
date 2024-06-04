@@ -27,13 +27,7 @@ public class ElmTranslatorClient {
 
   public ElmJson getElmJson(final String cql, String libraryModel, String accessToken) {
     try {
-      URI uri =
-          URI.create(
-              environmentConfig.getCqlElmServiceBaseUrl()
-                  + (StringUtils.equals(libraryModel, ModelType.QDM_5_6.getValue())
-                      ? "/qdm"
-                      : "/fhir")
-                  + environmentConfig.getCqlElmServiceElmJsonUri());
+      URI uri = getCqlElmTranslationSerivceUri(libraryModel);
       HttpHeaders headers = new HttpHeaders();
       headers.setContentType(MediaType.TEXT_PLAIN);
       headers.set(HttpHeaders.AUTHORIZATION, accessToken);
@@ -46,6 +40,16 @@ public class ElmTranslatorClient {
       throw new CqlElmTranslationServiceException(
           "There was an error calling CQL-ELM translation service", ex);
     }
+  }
+
+  private URI getCqlElmTranslationSerivceUri(String libraryModel) {
+    var isQdm = StringUtils.equals(libraryModel, ModelType.QDM_5_6.getValue());
+    String baseUrl =
+        isQdm
+            ? environmentConfig.getQdmCqlElmServiceBaseUrl()
+            : environmentConfig.getFhirCqlElmServiceBaseUrl();
+    return URI.create(
+        baseUrl + (isQdm ? "/qdm" : "/fhir") + environmentConfig.getCqlElmServiceElmJsonUri());
   }
 
   public boolean hasErrors(ElmJson elmJson) {
