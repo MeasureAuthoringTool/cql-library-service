@@ -11,6 +11,7 @@ import static org.mockito.Mockito.when;
 
 import gov.cms.madie.cqllibraryservice.config.EnvironmentConfig;
 import gov.cms.madie.cqllibraryservice.exceptions.CqlElmTranslationServiceException;
+import gov.cms.madie.models.common.ModelType;
 import gov.cms.madie.models.measure.ElmJson;
 import java.net.URI;
 import org.junit.jupiter.api.BeforeEach;
@@ -36,7 +37,12 @@ class ElmTranslatorClientTest {
 
   @BeforeEach
   void beforeEach() {
-    lenient().when(environmentConfig.getCqlElmServiceBaseUrl()).thenReturn("http://test");
+    lenient()
+        .when(environmentConfig.getQdmCqlElmServiceBaseUrl())
+        .thenReturn("http://test/api/qdm");
+    lenient()
+        .when(environmentConfig.getFhirCqlElmServiceBaseUrl())
+        .thenReturn("http://test/api/fhir");
     lenient()
         .when(environmentConfig.getCqlElmServiceElmJsonUri())
         .thenReturn("/cql/translator/cql");
@@ -58,7 +64,8 @@ class ElmTranslatorClientTest {
     when(restTemplate.exchange(
             any(URI.class), eq(HttpMethod.PUT), any(HttpEntity.class), any(Class.class)))
         .thenReturn(ResponseEntity.ok(elmJson));
-    ElmJson output = elmTranslatorClient.getElmJson("TEST_CQL", "QDM v5.6", "TEST_TOKEN");
+    ElmJson output =
+        elmTranslatorClient.getElmJson("TEST_CQL", ModelType.QI_CORE.getValue(), "TEST_TOKEN");
     assertThat(output, is(equalTo(elmJson)));
   }
 

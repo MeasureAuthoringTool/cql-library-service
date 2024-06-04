@@ -13,7 +13,8 @@ madie:
   allowedApi: http://localhost:9000
   cql-elm:
     service:
-      base-url: ${ELM_TRANSLATOR_SERVICE_URL:http://localhost:8084/api}
+      qdm-base-url: ${QDM_ELM_TRANSLATOR_SERVICE_URL:http://localhost:8084/api}
+      fhir-base-url: ${FHIR_ELM_TRANSLATOR_SERVICE_URL:http://localhost:8083/api}
       elm-json-uri: /cql/translator/cql
 management:
   endpoints:
@@ -28,7 +29,7 @@ okta:
     audience: ${OKTA_AUDIENCE:api://default}
 
 lambda-api-key: ${LAMBDA_API_KEY:9202c9fa}
-    
+
 mongock:
   migration-scan-package:
     - gov.cms.madie.cqllibraryservice.config
