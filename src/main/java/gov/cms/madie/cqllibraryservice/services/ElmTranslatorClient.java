@@ -48,8 +48,7 @@ public class ElmTranslatorClient {
         isQdm
             ? environmentConfig.getQdmCqlElmServiceBaseUrl()
             : environmentConfig.getFhirCqlElmServiceBaseUrl();
-    return URI.create(
-        baseUrl + (isQdm ? "/qdm" : "/fhir") + environmentConfig.getCqlElmServiceElmJsonUri());
+    return URI.create(baseUrl + environmentConfig.getCqlElmServiceElmJsonUri());
   }
 
   public boolean hasErrors(ElmJson elmJson) {

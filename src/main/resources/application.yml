@@ -13,8 +13,8 @@ madie:
   allowedApi: http://localhost:9000
   cql-elm:
     service:
-      qdm-base-url: ${QDM_ELM_TRANSLATOR_SERVICE_URL:http://localhost:8084/api}
-      fhir-base-url: ${FHIR_ELM_TRANSLATOR_SERVICE_URL:http://localhost:8083/api}
+      qdm-base-url: ${QDM_ELM_TRANSLATOR_SERVICE_URL:http://localhost:8084/api/qdm}
+      fhir-base-url: ${FHIR_ELM_TRANSLATOR_SERVICE_URL:http://localhost:8083/api/fhir}
       elm-json-uri: /cql/translator/cql
 management:
   endpoints:
