@@ -1128,6 +1128,34 @@ public class CqlLibraryControllerMvcTest {
   }
 
   @Test
+  public void testAdminMultipleMeasuresGetSharedWith() throws Exception {
+    CqlLibrary lib1 = CqlLibrary.builder().id("12345").build();
+    CqlLibrary lib2 = CqlLibrary.builder().id("6789").build();
+    AclSpecification acl1 = new AclSpecification();
+    acl1.setUserId("raoulduke");
+    acl1.setRoles(List.of(RoleEnum.SHARED_WITH));
+
+    List<AclSpecification> acls = List.of(acl1);
+    LibrarySet librarySet = LibrarySet.builder().acls(acls).build();
+    lib1.setLibrarySet(librarySet);
+    lib2.setLibrarySet(librarySet);
+    when(cqlLibraryService.findCqlLibraryById(eq("12345"))).thenReturn(lib1);
+    when(cqlLibraryService.findCqlLibraryById(eq("6789"))).thenReturn(lib2);
+
+    mockMvc
+        .perform(
+            MockMvcRequestBuilders.get("/cql-libraries/sharedWith?measureids=12345,6789")
+                .with(csrf())
+                .with(user(TEST_USER_ID))
+                .header(TEST_API_KEY_HEADER, TEST_API_KEY_HEADER_VALUE)
+                .header("Authorization", "test-okta"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$[0].libraryId", equalTo("12345")))
+        .andExpect(jsonPath("$[1].libraryId", equalTo("6789")))
+        .andExpect(jsonPath("$[0].sharedWith.[0]userId", equalTo("raoulduke")));
+  }
+
+  @Test
   public void testAdminMeasureGetSharedWith() throws Exception {
     CqlLibrary testLibrary = CqlLibrary.builder().id("12345").build();
     AclSpecification acl1 = new AclSpecification();
@@ -1141,14 +1169,14 @@ public class CqlLibraryControllerMvcTest {
 
     mockMvc
         .perform(
-            MockMvcRequestBuilders.get("/cql-libraries/{id}/sharedWith", "12345")
+            MockMvcRequestBuilders.get("/cql-libraries/sharedWith?measureids=12345")
                 .with(csrf())
                 .with(user(TEST_USER_ID))
                 .header(TEST_API_KEY_HEADER, TEST_API_KEY_HEADER_VALUE)
                 .header("Authorization", "test-okta"))
         .andExpect(status().isOk())
-        .andExpect(jsonPath("$.libraryId", equalTo("12345")))
-        .andExpect(jsonPath("$.sharedWith.[0]userId", equalTo("raoulduke")));
+        .andExpect(jsonPath("$[0].libraryId", equalTo("12345")))
+        .andExpect(jsonPath("$[0].sharedWith.[0]userId", equalTo("raoulduke")));
   }
 
   @Test
@@ -1161,14 +1189,14 @@ public class CqlLibraryControllerMvcTest {
 
     mockMvc
         .perform(
-            MockMvcRequestBuilders.get("/cql-libraries/{id}/sharedWith", "12345")
+            MockMvcRequestBuilders.get("/cql-libraries/sharedWith?measureids=12345")
                 .with(csrf())
                 .with(user(TEST_USER_ID))
                 .header(TEST_API_KEY_HEADER, TEST_API_KEY_HEADER_VALUE)
                 .header("Authorization", "test-okta"))
         .andExpect(status().isOk())
-        .andExpect(jsonPath("$.libraryId", equalTo("12345")))
-        .andExpect(jsonPath("$.sharedWith", equalTo(null)));
+        .andExpect(jsonPath("$[0].libraryId", equalTo("12345")))
+        .andExpect(jsonPath("$[0].sharedWith", equalTo(null)));
   }
 
   @Test
