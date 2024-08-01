@@ -16,7 +16,9 @@ import gov.cms.madie.cqllibraryservice.services.CqlLibraryService;
 import gov.cms.madie.cqllibraryservice.services.VersionService;
 import java.security.Principal;
 import java.time.Instant;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -32,6 +34,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
+
+import gov.cms.madie.cqllibraryservice.exceptions.ResourceNotFoundException;
 
 @Slf4j
 @RestController
@@ -214,6 +218,30 @@ public class CqlLibraryController {
       actionLogService.logAction(id, ActionType.UPDATED, "apiKey");
     }
     return response;
+  }
+
+  @GetMapping("/{id}/sharedWith")
+  @PreAuthorize("#request.getHeader('api-key') == #apiKey")
+  public ResponseEntity<Map<String, Object>> getMeasureSharedWith(
+      HttpServletRequest request,
+      @Value("${lambda-api-key}") String apiKey,
+      Principal principal,
+      @RequestHeader("Authorization") String accessToken,
+      @PathVariable String id) {
+
+    CqlLibrary library = cqlLibraryService.findCqlLibraryById(id);
+    if (library != null) {
+
+      Map<String, Object> result = new LinkedHashMap<>();
+
+      result.put("libraryName", library.getCqlLibraryName());
+      result.put("libraryId", library.getId());
+      result.put("libraryOwner", library.getLibrarySet().getOwner());
+      result.put("sharedWith", library.getLibrarySet().getAcls());
+
+      return ResponseEntity.ok(result);
+    }
+    throw new ResourceNotFoundException(id);
   }
 
   @DeleteMapping("/{id}")
