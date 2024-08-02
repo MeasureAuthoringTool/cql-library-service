@@ -1,16 +1,14 @@
 package gov.cms.madie.cqllibraryservice.config;
 
 import gov.cms.madie.cqllibraryservice.repositories.CqlLibraryRepository;
+import gov.cms.madie.cqllibraryservice.utils.LibraryUtils;
 import gov.cms.madie.models.common.IncludedLibrary;
 import gov.cms.madie.models.library.CqlLibrary;
-import gov.cms.mat.cql.CqlTextParser;
-import gov.cms.mat.cql.elements.IncludeProperties;
 import io.mongock.api.annotations.ChangeUnit;
 import io.mongock.api.annotations.Execution;
 import io.mongock.api.annotations.RollbackExecution;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections4.CollectionUtils;
-import org.apache.commons.lang3.StringUtils;
 import org.springframework.data.mongodb.core.BulkOperations;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.Query;
@@ -32,7 +30,7 @@ public class AddIncludedLibrariesPropChangeUnit {
               .map(
                   library -> {
                     List<IncludedLibrary> includedLibraries =
-                        getIncludedLibraries(library.getCql());
+                        LibraryUtils.getIncludedLibraries(library.getCql());
                     return library.toBuilder().includedLibraries(includedLibraries).build();
                   })
               .toList();
@@ -51,22 +49,5 @@ public class AddIncludedLibrariesPropChangeUnit {
     bulkOperations.updateMulti(query, update);
     bulkOperations.execute();
     log.info("Rollback included libraries update changelog complete");
-  }
-
-  private List<IncludedLibrary> getIncludedLibraries(String cql) {
-    if (StringUtils.isBlank(cql)) {
-      return List.of();
-    }
-    CqlTextParser cqlTextParser = new CqlTextParser(cql);
-    List<IncludeProperties> includeProperties = cqlTextParser.getIncludes();
-
-    return includeProperties.stream()
-        .map(
-            include ->
-                IncludedLibrary.builder()
-                    .name(include.getName())
-                    .version(include.getVersion())
-                    .build())
-        .toList();
   }
 }
