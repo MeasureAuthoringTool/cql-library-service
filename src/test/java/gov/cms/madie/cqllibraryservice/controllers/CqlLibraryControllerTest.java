@@ -348,6 +348,10 @@ class CqlLibraryControllerTest {
   @Test
   public void testUpdateCqlLibrarySuccessfullyUpdates() {
     final String pathId = "Library1_ID";
+    final String cql =
+        "library testCql version '2.1.000'\n"
+            + "using QICore version '4.1.1'\n"
+            + "include TestLibrary17194110463836086082 version '1.0.000' called Test";
     final Instant createdTime = Instant.now().minus(100, ChronoUnit.MINUTES);
     final CqlLibrary existingLibrary =
         CqlLibrary.builder()
@@ -367,7 +371,7 @@ class CqlLibraryControllerTest {
         existingLibrary.toBuilder()
             .id("Library1_ID")
             .cqlLibraryName("NewName")
-            .cql("library testCql version '2.1.000'")
+            .cql(cql)
             .draft(false)
             .build();
 
@@ -382,16 +386,17 @@ class CqlLibraryControllerTest {
         cqlLibraryController.updateCqlLibrary(pathId, updatingLibrary, principal);
     assertThat(output.getBody(), is(equalTo(updatingLibrary)));
     verify(cqlLibraryRepository, times(1)).save(cqlLibraryArgumentCaptor.capture());
-    CqlLibrary savedValue = cqlLibraryArgumentCaptor.getValue();
-    assertThat(savedValue, is(notNullValue()));
-    assertThat(savedValue.getId(), is(equalTo("Library1_ID")));
-    assertThat(savedValue.getCqlLibraryName(), is(equalTo("NewName")));
-    assertThat(savedValue.getCql(), is(equalTo("library testCql version '2.1.000'")));
-    assertThat(savedValue.getCreatedAt(), is(equalTo(createdTime)));
-    assertThat(savedValue.getCreatedBy(), is(equalTo("User2")));
-    assertThat(savedValue.getLastModifiedAt(), is(notNullValue()));
-    assertThat(savedValue.getLastModifiedAt().isAfter(createdTime), is(true));
-    assertThat(savedValue.getLastModifiedBy(), is(equalTo("User2")));
+    CqlLibrary updatedLibrary = cqlLibraryArgumentCaptor.getValue();
+    assertThat(updatedLibrary, is(notNullValue()));
+    assertThat(updatedLibrary.getId(), is(equalTo("Library1_ID")));
+    assertThat(updatedLibrary.getCqlLibraryName(), is(equalTo("NewName")));
+    assertThat(updatedLibrary.getCql(), is(equalTo(cql)));
+    assertThat(updatedLibrary.getCreatedAt(), is(equalTo(createdTime)));
+    assertThat(updatedLibrary.getCreatedBy(), is(equalTo("User2")));
+    assertThat(updatedLibrary.getLastModifiedAt(), is(notNullValue()));
+    assertThat(updatedLibrary.getLastModifiedAt().isAfter(createdTime), is(true));
+    assertThat(updatedLibrary.getLastModifiedBy(), is(equalTo("User2")));
+    assertThat(updatedLibrary.getIncludedLibraries().size(), is(equalTo(1)));
   }
 
   @Test
