@@ -1,6 +1,7 @@
 package gov.cms.madie.cqllibraryservice.repositories;
 
 import gov.cms.madie.cqllibraryservice.dto.LibraryListDTO;
+import gov.cms.madie.cqllibraryservice.dto.LibraryUsage;
 import gov.cms.madie.models.common.Version;
 import gov.cms.madie.models.library.LibrarySet;
 import org.bson.Document;
@@ -19,6 +20,9 @@ import org.springframework.data.mongodb.repository.config.EnableMongoRepositorie
 
 import java.util.List;
 
+import static org.hamcrest.CoreMatchers.equalTo;
+import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
@@ -104,5 +108,20 @@ public class LibraryAclRepositoryImplTest {
 
     List<LibraryListDTO> list = libraryAclRepository.findAllLibrariesByUser("p1");
     assertEquals(list.size(), 3);
+  }
+
+  @Test
+  void testFindLibraryUsageByLibraryName() {
+    String libraryName = "test";
+    String owner = "john";
+    LibraryUsage usage = LibraryUsage.builder().name(libraryName).owner(owner).build();
+    AggregationResults result = new AggregationResults<>(List.of(usage), new Document());
+
+    when(mongoTemplate.aggregate(any(Aggregation.class), (Class<?>) any(), any()))
+        .thenReturn(result);
+    List<LibraryUsage> libraryUsages = libraryAclRepository.findLibraryUsageByLibraryName("");
+    assertThat(libraryUsages.size(), is(equalTo(1)));
+    assertThat(libraryUsages.get(0).getName(), is(equalTo(libraryName)));
+    assertThat(libraryUsages.get(0).getOwner(), is(equalTo(owner)));
   }
 }

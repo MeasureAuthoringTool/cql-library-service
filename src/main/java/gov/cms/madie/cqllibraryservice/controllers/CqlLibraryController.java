@@ -19,7 +19,7 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
-
+import org.apache.commons.lang3.StringUtils;
 import gov.cms.madie.models.library.LibrarySet;
 import jakarta.servlet.http.HttpServletRequest;
 
@@ -130,6 +130,9 @@ public class CqlLibraryController {
     }
     if (cqlLibraryService.isCqlLibraryNameChanged(cqlLibrary, persistedLibrary)) {
       cqlLibraryService.checkDuplicateCqlLibraryName(cqlLibrary.getCqlLibraryName());
+    }
+    if (!StringUtils.equals(cqlLibrary.getCql(), persistedLibrary.getCql())) {
+      // get the elm
     }
     cqlLibrary.setLibrarySet(persistedLibrary.getLibrarySet());
     cqlLibrary.setDraft(persistedLibrary.isDraft());

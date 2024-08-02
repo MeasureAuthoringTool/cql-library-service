@@ -1,5 +1,6 @@
 package gov.cms.madie.cqllibraryservice.services;
 
+import gov.cms.madie.cqllibraryservice.dto.LibraryUsage;
 import gov.cms.madie.cqllibraryservice.exceptions.*;
 import gov.cms.madie.models.access.RoleEnum;
 import gov.cms.madie.models.common.Version;
@@ -7,6 +8,7 @@ import gov.cms.madie.models.library.CqlLibrary;
 import gov.cms.madie.cqllibraryservice.repositories.CqlLibraryRepository;
 import gov.cms.madie.models.library.LibrarySet;
 import gov.cms.madie.models.measure.ElmJson;
+
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -123,5 +125,12 @@ public class CqlLibraryService {
               "CQL Library", id));
     }
     return cqlLibrary;
+  }
+
+  public List<LibraryUsage> findLibraryUsage(String libraryName) {
+    if (StringUtils.isBlank(libraryName)) {
+      throw new BadRequestObjectException("Please provide library name.");
+    }
+    return cqlLibraryRepository.findLibraryUsageByLibraryName(libraryName);
   }
 }

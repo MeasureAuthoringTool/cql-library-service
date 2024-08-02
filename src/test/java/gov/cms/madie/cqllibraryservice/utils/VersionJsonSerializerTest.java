@@ -28,6 +28,7 @@ class VersionJsonSerializerTest {
         CqlLibrary.builder()
             .version(Version.builder().major(1).minor(2).revisionNumber(0).build())
             .librarySetId("testid")
+            .active(true)
             .build();
     String output = objectMapper.writeValueAsString(library);
     log.info("output: {}", output);
@@ -35,7 +36,7 @@ class VersionJsonSerializerTest {
         output,
         is(
             equalTo(
-                "{\"id\":null,\"librarySetId\":\"testid\",\"cqlLibraryName\":null,\"model\":null,\"version\":\"1.2.000\",\"draft\":false,\"cqlErrors\":false,\"cql\":null,\"elmJson\":null,\"elmXml\":null,\"createdAt\":null,\"createdBy\":null,\"lastModifiedAt\":null,\"lastModifiedBy\":null,\"publisher\":null,\"description\":null,\"experimental\":false,\"librarySet\":null}")));
+                "{\"id\":null,\"librarySetId\":\"testid\",\"cqlLibraryName\":null,\"model\":null,\"version\":\"1.2.000\",\"includedLibraries\":null,\"draft\":false,\"active\":true,\"cqlErrors\":false,\"cql\":null,\"elmJson\":null,\"elmXml\":null,\"createdAt\":null,\"createdBy\":null,\"lastModifiedAt\":null,\"lastModifiedBy\":null,\"publisher\":null,\"description\":null,\"experimental\":false,\"librarySet\":null}")));
   }
 
   @Test

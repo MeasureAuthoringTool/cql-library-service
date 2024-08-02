@@ -1,6 +1,7 @@
 package gov.cms.madie.cqllibraryservice.repositories;
 
 import gov.cms.madie.cqllibraryservice.dto.LibraryListDTO;
+import gov.cms.madie.cqllibraryservice.dto.LibraryUsage;
 import gov.cms.madie.models.access.RoleEnum;
 import gov.cms.madie.models.library.CqlLibrary;
 
@@ -8,6 +9,8 @@ import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.aggregation.Aggregation;
 import org.springframework.data.mongodb.core.aggregation.LookupOperation;
 import org.springframework.data.mongodb.core.aggregation.MatchOperation;
+import org.springframework.data.mongodb.core.aggregation.ProjectionOperation;
+import org.springframework.data.mongodb.core.aggregation.UnwindOperation;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.stereotype.Repository;
 
@@ -50,5 +53,24 @@ public class LibraryAclRepositoryImpl implements LibraryAclRepository {
             .aggregate(libraryAggregation, CqlLibrary.class, LibraryListDTO.class)
             .getMappedResults();
     return results;
+  }
+
+  @Override
+  public List<LibraryUsage> findLibraryUsageByLibraryName(String name) {
+    MatchOperation matchOperation = match(Criteria.where("includedLibraries.name").is(name));
+    LookupOperation lookupOperation = getLookupOperation();
+    ProjectionOperation projectionOperation =
+        project("version")
+            .and("cqlLibraryName")
+            .as("name")
+            .and("librarySet.owner")
+            .as("owner")
+            .andExclude("_id");
+    UnwindOperation unwindOperation = unwind("owner");
+    Aggregation aggregation =
+        newAggregation(matchOperation, lookupOperation, projectionOperation, unwindOperation);
+    return mongoTemplate
+        .aggregate(aggregation, CqlLibrary.class, LibraryUsage.class)
+        .getMappedResults();
   }
 }

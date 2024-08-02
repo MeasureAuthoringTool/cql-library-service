@@ -11,6 +11,8 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import gov.cms.madie.cqllibraryservice.dto.LibraryUsage;
+import gov.cms.madie.cqllibraryservice.exceptions.BadRequestObjectException;
 import gov.cms.madie.cqllibraryservice.exceptions.DuplicateKeyException;
 import gov.cms.madie.cqllibraryservice.exceptions.GeneralConflictException;
 import gov.cms.madie.cqllibraryservice.exceptions.PermissionDeniedException;
@@ -284,5 +286,26 @@ class CqlLibraryServiceTest {
 
     assertThat(output, is(notNullValue()));
     assertThat(output, is(equalTo(library)));
+  }
+
+  @Test
+  void testFindLibraryUsage() {
+    String libraryName = "test";
+    String owner = "john";
+    LibraryUsage usage = LibraryUsage.builder().name(libraryName).owner(owner).build();
+    when(cqlLibraryRepository.findLibraryUsageByLibraryName(anyString()))
+        .thenReturn(List.of(usage));
+    List<LibraryUsage> libraryUsages = cqlLibraryService.findLibraryUsage(libraryName);
+    assertThat(libraryUsages.size(), is(equalTo(1)));
+    assertThat(libraryUsages.get(0).getName(), is(equalTo(libraryName)));
+    assertThat(libraryUsages.get(0).getOwner(), is(equalTo(owner)));
+  }
+
+  @Test
+  void testFindLibraryUsageWhenLibraryNameBlank() {
+    Exception ex =
+        assertThrows(
+            BadRequestObjectException.class, () -> cqlLibraryService.findLibraryUsage(null));
+    assertThat(ex.getMessage(), is(equalTo("Please provide library name.")));
   }
 }
