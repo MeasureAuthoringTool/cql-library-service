@@ -407,8 +407,7 @@ class CqlLibraryControllerTest {
             .createdBy("User1")
             .lastModifiedBy("User1")
             .build();
-    when(versionService.createDraft(anyString(), anyString(), anyString(), anyString()))
-        .thenReturn(draft);
+    when(versionService.createDraft(anyString(), anyString(), anyString())).thenReturn(draft);
     when(principal.getName()).thenReturn("test.user");
     ResponseEntity<CqlLibrary> output =
         cqlLibraryController.createDraft(
@@ -425,7 +424,7 @@ class CqlLibraryControllerTest {
 
   @Test
   public void testCreateDraftReturnsException() {
-    when(versionService.createDraft(anyString(), anyString(), anyString(), anyString()))
+    when(versionService.createDraft(anyString(), anyString(), anyString()))
         .thenThrow(new ResourceNotDraftableException("CqlLibrary"));
     when(principal.getName()).thenReturn("test.user");
     assertThrows(
