@@ -57,8 +57,13 @@ public class LibraryAclRepositoryImpl implements LibraryAclRepository {
 
   @Override
   public List<LibraryUsage> findLibraryUsageByLibraryName(String name) {
-    MatchOperation matchOperation = match(Criteria.where("includedLibraries.name").is(name));
     LookupOperation lookupOperation = getLookupOperation();
+    MatchOperation matchOperation =
+        match(
+            new Criteria()
+                .andOperator(
+                    Criteria.where("includedLibraries.name").is(name),
+                    Criteria.where("active").is(true)));
     ProjectionOperation projectionOperation =
         project("version")
             .and("cqlLibraryName")
