@@ -12,6 +12,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 import gov.cms.madie.cqllibraryservice.dto.LibraryListDTO;
+import gov.cms.madie.cqllibraryservice.dto.LibraryUsage;
 import gov.cms.madie.cqllibraryservice.exceptions.DuplicateKeyException;
 import gov.cms.madie.cqllibraryservice.exceptions.InvalidIdException;
 import gov.cms.madie.cqllibraryservice.exceptions.InvalidResourceStateException;
@@ -498,5 +499,18 @@ class CqlLibraryControllerTest {
 
     verify(cqlLibraryService, times(1)).getVersionedCqlLibrary(anyString(), any(), any(), any());
     assertEquals(HttpStatus.OK, versionedCqlLibrary.getStatusCode());
+  }
+
+  @Test
+  void testGetLibraryUsage() {
+    String libraryName = "Helper";
+    String owner = "john";
+    LibraryUsage libraryUsage = LibraryUsage.builder().name(libraryName).owner(owner).build();
+    when(cqlLibraryService.findLibraryUsage(anyString())).thenReturn(List.of(libraryUsage));
+    ResponseEntity<List<LibraryUsage>> response = cqlLibraryController.getLibraryUsage(libraryName);
+    List<LibraryUsage> usage = response.getBody();
+    assertThat(usage.size(), is(equalTo(1)));
+    assertThat(usage.get(0).getName(), is(equalTo(libraryName)));
+    assertThat(usage.get(0).getOwner(), is(equalTo(owner)));
   }
 }

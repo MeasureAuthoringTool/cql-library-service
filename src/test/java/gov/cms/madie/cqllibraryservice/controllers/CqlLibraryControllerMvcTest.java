@@ -1,6 +1,7 @@
 package gov.cms.madie.cqllibraryservice.controllers;
 
 import gov.cms.madie.cqllibraryservice.config.security.SecurityConfig;
+import gov.cms.madie.cqllibraryservice.dto.LibraryUsage;
 import gov.cms.madie.cqllibraryservice.exceptions.GeneralConflictException;
 import gov.cms.madie.models.common.ModelType;
 
@@ -8,6 +9,7 @@ import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.notNullValue;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -43,6 +45,7 @@ import gov.cms.madie.cqllibraryservice.services.LibrarySetService;
 import gov.cms.madie.cqllibraryservice.services.VersionService;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.List;
 import java.util.Optional;
 
 import gov.cms.madie.models.library.LibrarySet;
@@ -55,9 +58,11 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.context.annotation.Import;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.MvcResult;
 
 @ActiveProfiles("test")
 @WebMvcTest({CqlLibraryController.class})
@@ -1473,5 +1478,22 @@ public class CqlLibraryControllerMvcTest {
         .andExpect(status().isOk());
 
     verify(cqlLibraryService, times(1)).deleteDraftLibrary(eq(libraryId), eq(TEST_USER_ID));
+  }
+
+  @Test
+  void testGetLibraryUsage() throws Exception {
+    String libraryName = "Helper";
+    String owner = "john";
+    LibraryUsage libraryUsage = LibraryUsage.builder().name(libraryName).owner(owner).build();
+    when(cqlLibraryService.findLibraryUsage(anyString())).thenReturn(List.of(libraryUsage));
+    MvcResult result =
+        mockMvc
+            .perform(
+                get("/cql-libraries/usage?libraryName=Test").with(user(TEST_USER_ID)).with(csrf()))
+            .andReturn();
+    assertEquals(result.getResponse().getStatus(), HttpStatus.OK.value());
+    assertEquals(
+        result.getResponse().getContentAsString(),
+        "[{\"name\":\"Helper\",\"version\":null,\"owner\":\"john\"}]");
   }
 }

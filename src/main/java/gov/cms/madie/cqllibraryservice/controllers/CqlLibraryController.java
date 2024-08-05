@@ -1,6 +1,7 @@
 package gov.cms.madie.cqllibraryservice.controllers;
 
 import gov.cms.madie.cqllibraryservice.dto.LibraryListDTO;
+import gov.cms.madie.cqllibraryservice.dto.LibraryUsage;
 import gov.cms.madie.cqllibraryservice.exceptions.InvalidIdException;
 import gov.cms.madie.cqllibraryservice.exceptions.InvalidResourceStateException;
 import gov.cms.madie.cqllibraryservice.repositories.LibrarySetRepository;
@@ -175,6 +176,14 @@ public class CqlLibraryController {
             id, cqlLibrary.getCqlLibraryName(), cqlLibrary.getCql(), principal.getName());
     log.info("output: {}", output);
     return ResponseEntity.status(HttpStatus.CREATED).body(output);
+  }
+
+  @GetMapping(
+      value = "/usage",
+      produces = {MediaType.APPLICATION_JSON_VALUE})
+  public ResponseEntity<List<LibraryUsage>> getLibraryUsage(
+      @RequestParam("libraryName") String libraryName) {
+    return ResponseEntity.ok().body(cqlLibraryService.findLibraryUsage(libraryName));
   }
 
   @PutMapping(
