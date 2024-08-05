@@ -19,7 +19,7 @@ public class LibraryUtils {
         .map(
             include ->
                 IncludedLibrary.builder()
-                    .name(include.getName())
+                    .name(StringUtils.trim(include.getName()))
                     .version(include.getVersion())
                     .build())
         .toList();
