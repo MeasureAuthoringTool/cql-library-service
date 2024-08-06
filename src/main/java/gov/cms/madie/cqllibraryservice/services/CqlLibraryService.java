@@ -1,9 +1,9 @@
 package gov.cms.madie.cqllibraryservice.services;
 
-import gov.cms.madie.cqllibraryservice.dto.LibraryUsage;
 import gov.cms.madie.cqllibraryservice.exceptions.*;
 import gov.cms.madie.models.access.RoleEnum;
 import gov.cms.madie.models.common.Version;
+import gov.cms.madie.models.dto.LibraryUsage;
 import gov.cms.madie.models.library.CqlLibrary;
 import gov.cms.madie.cqllibraryservice.repositories.CqlLibraryRepository;
 import gov.cms.madie.models.library.LibrarySet;
@@ -144,7 +144,6 @@ public class CqlLibraryService {
    *
    * @param name - library name
    * @param accessToken
-   * @param apiKey
    * @return true/false
    */
   public boolean isLibraryBeinUsed(String name, String accessToken) {

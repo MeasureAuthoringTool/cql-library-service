@@ -1,7 +1,7 @@
 package gov.cms.madie.cqllibraryservice.repositories;
 
 import gov.cms.madie.cqllibraryservice.dto.LibraryListDTO;
-import gov.cms.madie.cqllibraryservice.dto.LibraryUsage;
+import gov.cms.madie.models.dto.LibraryUsage;
 
 import java.util.List;
 

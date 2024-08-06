@@ -1,8 +1,8 @@
 package gov.cms.madie.cqllibraryservice.services;
 
 import gov.cms.madie.cqllibraryservice.config.EnvironmentConfig;
-import gov.cms.madie.cqllibraryservice.dto.LibraryUsage;
 import gov.cms.madie.cqllibraryservice.exceptions.MeasureServiceException;
+import gov.cms.madie.models.dto.LibraryUsage;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.ParameterizedTypeReference;

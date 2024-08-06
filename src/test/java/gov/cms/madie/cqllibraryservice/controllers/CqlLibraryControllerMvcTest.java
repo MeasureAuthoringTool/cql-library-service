@@ -1,7 +1,6 @@
 package gov.cms.madie.cqllibraryservice.controllers;
 
 import gov.cms.madie.cqllibraryservice.config.security.SecurityConfig;
-import gov.cms.madie.cqllibraryservice.dto.LibraryUsage;
 import gov.cms.madie.cqllibraryservice.exceptions.GeneralConflictException;
 import gov.cms.madie.models.common.ModelType;
 
@@ -37,6 +36,7 @@ import gov.cms.madie.cqllibraryservice.services.ActionLogService;
 import gov.cms.madie.models.access.AclSpecification;
 import gov.cms.madie.models.access.RoleEnum;
 import gov.cms.madie.models.common.ActionType;
+import gov.cms.madie.models.dto.LibraryUsage;
 import gov.cms.madie.models.library.CqlLibrary;
 import gov.cms.madie.models.library.CqlLibraryDraft;
 import gov.cms.madie.models.common.Version;

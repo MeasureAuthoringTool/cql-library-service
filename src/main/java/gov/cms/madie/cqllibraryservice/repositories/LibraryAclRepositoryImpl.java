@@ -1,8 +1,8 @@
 package gov.cms.madie.cqllibraryservice.repositories;
 
 import gov.cms.madie.cqllibraryservice.dto.LibraryListDTO;
-import gov.cms.madie.cqllibraryservice.dto.LibraryUsage;
 import gov.cms.madie.models.access.RoleEnum;
+import gov.cms.madie.models.dto.LibraryUsage;
 import gov.cms.madie.models.library.CqlLibrary;
 
 import org.springframework.data.mongodb.core.MongoTemplate;
