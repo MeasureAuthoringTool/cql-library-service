@@ -4,6 +4,7 @@ import gov.cms.madie.cqllibraryservice.dto.LibraryListDTO;
 import gov.cms.madie.cqllibraryservice.dto.LibraryUsage;
 import gov.cms.madie.cqllibraryservice.exceptions.InvalidIdException;
 import gov.cms.madie.cqllibraryservice.exceptions.InvalidResourceStateException;
+import gov.cms.madie.cqllibraryservice.exceptions.UnauthorizedException;
 import gov.cms.madie.cqllibraryservice.repositories.LibrarySetRepository;
 import gov.cms.madie.cqllibraryservice.services.ActionLogService;
 import gov.cms.madie.cqllibraryservice.services.LibrarySetService;
@@ -181,8 +182,7 @@ public class CqlLibraryController {
   @GetMapping(
       value = "/usage",
       produces = {MediaType.APPLICATION_JSON_VALUE})
-  public ResponseEntity<List<LibraryUsage>> getLibraryUsage(
-      @RequestParam("libraryName") String libraryName) {
+  public ResponseEntity<List<LibraryUsage>> getLibraryUsage(@RequestParam String libraryName) {
     return ResponseEntity.ok().body(cqlLibraryService.findLibraryUsage(libraryName));
   }
 
@@ -235,5 +235,19 @@ public class CqlLibraryController {
   public ResponseEntity<CqlLibrary> hardDeleteLibrary(
       @PathVariable("id") String id, Principal principal) {
     return ResponseEntity.ok(cqlLibraryService.deleteDraftLibrary(id, principal.getName()));
+  }
+
+  @DeleteMapping("/{libraryName}/delete-all-versions")
+  public ResponseEntity<String> deleteLibraryAlongWithVersions(
+      HttpServletRequest request,
+      @PathVariable String libraryName,
+      @RequestHeader("Authorization") String accessToken,
+      @Value("${admin-api-key}") String apiKey) {
+    if (StringUtils.equals(request.getHeader("api-key"), apiKey)) {
+      cqlLibraryService.deleteLibraryAlongWithVersions(libraryName, accessToken, apiKey);
+      return ResponseEntity.ok()
+          .body("The library and all its associated versions have been removed successfully.");
+    }
+    throw new UnauthorizedException("Unauthorized");
   }
 }

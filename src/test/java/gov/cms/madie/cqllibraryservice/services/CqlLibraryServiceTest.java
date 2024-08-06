@@ -38,6 +38,7 @@ class CqlLibraryServiceTest {
   @InjectMocks private CqlLibraryService cqlLibraryService;
   @Mock private CqlLibraryRepository cqlLibraryRepository;
   @Mock private LibrarySetService librarySetService;
+  @Mock private MeasureServiceClient measureServiceClient;
 
   @Mock private ElmTranslatorClient elmTranslatorClient;
 
@@ -307,5 +308,64 @@ class CqlLibraryServiceTest {
         assertThrows(
             BadRequestObjectException.class, () -> cqlLibraryService.findLibraryUsage(null));
     assertThat(ex.getMessage(), is(equalTo("Please provide library name.")));
+  }
+
+  @Test
+  void testDeleteLibraryAlongWithVersionsSuccess() {
+    String libraryName = "test";
+    CqlLibrary cqlLibrary = CqlLibrary.builder().cqlLibraryName(libraryName).build();
+    when(cqlLibraryRepository.existsByCqlLibraryName(anyString())).thenReturn(true);
+    when(cqlLibraryRepository.findLibraryUsageByLibraryName(anyString())).thenReturn(List.of());
+    when(measureServiceClient.getLibraryUsageInMeasures(anyString(), anyString(), anyString()))
+        .thenReturn(List.of());
+    when(cqlLibraryRepository.findAllByCqlLibraryName(anyString())).thenReturn(List.of(cqlLibrary));
+
+    cqlLibraryService.deleteLibraryAlongWithVersions(libraryName, "token", "key");
+    verify(cqlLibraryRepository, times(1)).deleteAll(List.of(cqlLibrary));
+  }
+
+  @Test
+  void testDeleteLibraryAlongWithVersionsIfUsedInLibrary() {
+    String libraryName = "test";
+    String owner = "john";
+    LibraryUsage usage = LibraryUsage.builder().name(libraryName).owner(owner).build();
+    when(cqlLibraryRepository.existsByCqlLibraryName(anyString())).thenReturn(true);
+    when(cqlLibraryRepository.findLibraryUsageByLibraryName(anyString()))
+        .thenReturn(List.of(usage));
+    Exception ex =
+        assertThrows(
+            GeneralConflictException.class,
+            () -> cqlLibraryService.deleteLibraryAlongWithVersions(libraryName, "token", "key"));
+    assertThat(
+        ex.getMessage(), is(equalTo("Library is being used actively, hence can not be deleted.")));
+  }
+
+  @Test
+  void testDeleteLibraryAlongWithVersionsIfUsedInMeasure() {
+    String libraryName = "test";
+    String owner = "john";
+    LibraryUsage usage = LibraryUsage.builder().name(libraryName).owner(owner).build();
+    when(cqlLibraryRepository.existsByCqlLibraryName(anyString())).thenReturn(true);
+    when(cqlLibraryRepository.findLibraryUsageByLibraryName(anyString())).thenReturn(List.of());
+    when(measureServiceClient.getLibraryUsageInMeasures(anyString(), anyString(), anyString()))
+        .thenReturn(List.of(usage));
+    Exception ex =
+        assertThrows(
+            GeneralConflictException.class,
+            () -> cqlLibraryService.deleteLibraryAlongWithVersions(libraryName, "token", "key"));
+    assertThat(
+        ex.getMessage(), is(equalTo("Library is being used actively, hence can not be deleted.")));
+  }
+
+  @Test
+  void testDeleteLibraryAlongWithVersionsIfOneNotExists() {
+    String libraryName = "test";
+    when(cqlLibraryRepository.existsByCqlLibraryName(anyString())).thenReturn(false);
+    Exception ex =
+        assertThrows(
+            ResourceNotFoundException.class,
+            () -> cqlLibraryService.deleteLibraryAlongWithVersions(libraryName, "token", "key"));
+    assertThat(
+        ex.getMessage(), is(equalTo("Could not find resource Library with name: " + libraryName)));
   }
 }

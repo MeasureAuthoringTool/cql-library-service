@@ -134,7 +134,8 @@ public class ErrorHandlingControllerAdvice {
     InternalServerErrorException.class,
     PersistHapiFhirCqlLibraryException.class,
     CqlElmTranslationErrorException.class,
-    CqlElmTranslationServiceException.class
+    CqlElmTranslationServiceException.class,
+    MeasureServiceException.class
   })
   @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
   @ResponseBody

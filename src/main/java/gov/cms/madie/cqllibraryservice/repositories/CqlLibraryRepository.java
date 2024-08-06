@@ -18,6 +18,8 @@ public interface CqlLibraryRepository
 
   boolean existsByLibrarySetIdAndDraft(String librarySetId, boolean draft);
 
+  List<CqlLibrary> findAllByCqlLibraryName(String libraryName);
+
   List<CqlLibrary> findAllByCqlLibraryNameAndDraftAndVersion(
       String cqlLibraryName, boolean draft, Version version);
 
