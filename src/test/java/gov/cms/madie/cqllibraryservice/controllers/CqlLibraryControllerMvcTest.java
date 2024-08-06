@@ -4,10 +4,10 @@ import gov.cms.madie.cqllibraryservice.config.security.SecurityConfig;
 import gov.cms.madie.cqllibraryservice.exceptions.GeneralConflictException;
 import gov.cms.madie.models.common.ModelType;
 
-import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.notNullValue;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -32,6 +32,8 @@ import gov.cms.madie.cqllibraryservice.exceptions.PermissionDeniedException;
 import gov.cms.madie.cqllibraryservice.exceptions.ResourceNotDraftableException;
 import gov.cms.madie.cqllibraryservice.exceptions.ResourceNotFoundException;
 import gov.cms.madie.cqllibraryservice.services.ActionLogService;
+import gov.cms.madie.models.access.AclSpecification;
+import gov.cms.madie.models.access.RoleEnum;
 import gov.cms.madie.models.common.ActionType;
 import gov.cms.madie.models.library.CqlLibrary;
 import gov.cms.madie.models.library.CqlLibraryDraft;
@@ -43,9 +45,11 @@ import gov.cms.madie.cqllibraryservice.services.LibrarySetService;
 import gov.cms.madie.cqllibraryservice.services.VersionService;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.List;
 import java.util.Optional;
 
 import gov.cms.madie.models.library.LibrarySet;
+
 import org.bson.types.ObjectId;
 import org.hamcrest.CustomMatcher;
 import org.junit.jupiter.api.Test;
@@ -58,6 +62,7 @@ import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 
 @ActiveProfiles("test")
 @WebMvcTest({CqlLibraryController.class})
@@ -1120,6 +1125,78 @@ public class CqlLibraryControllerMvcTest {
         .andExpect(content().contentType(MediaType.APPLICATION_JSON_VALUE));
     verify(versionService, times(1))
         .createVersion(eq("Library1_ID"), eq(false), eq(TEST_USER_ID), eq("test-okta"));
+  }
+
+  @Test
+  public void testAdminMultipleMeasuresGetSharedWith() throws Exception {
+    CqlLibrary lib1 = CqlLibrary.builder().id("12345").build();
+    CqlLibrary lib2 = CqlLibrary.builder().id("6789").build();
+    AclSpecification acl1 = new AclSpecification();
+    acl1.setUserId("raoulduke");
+    acl1.setRoles(List.of(RoleEnum.SHARED_WITH));
+
+    List<AclSpecification> acls = List.of(acl1);
+    LibrarySet librarySet = LibrarySet.builder().acls(acls).build();
+    lib1.setLibrarySet(librarySet);
+    lib2.setLibrarySet(librarySet);
+    when(cqlLibraryService.findCqlLibraryById(eq("12345"))).thenReturn(lib1);
+    when(cqlLibraryService.findCqlLibraryById(eq("6789"))).thenReturn(lib2);
+
+    mockMvc
+        .perform(
+            MockMvcRequestBuilders.get("/cql-libraries/sharedWith?measureids=12345,6789")
+                .with(csrf())
+                .with(user(TEST_USER_ID))
+                .header(TEST_API_KEY_HEADER, TEST_API_KEY_HEADER_VALUE)
+                .header("Authorization", "test-okta"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$[0].libraryId", equalTo("12345")))
+        .andExpect(jsonPath("$[1].libraryId", equalTo("6789")))
+        .andExpect(jsonPath("$[0].sharedWith.[0]userId", equalTo("raoulduke")));
+  }
+
+  @Test
+  public void testAdminMeasureGetSharedWith() throws Exception {
+    CqlLibrary testLibrary = CqlLibrary.builder().id("12345").build();
+    AclSpecification acl1 = new AclSpecification();
+    acl1.setUserId("raoulduke");
+    acl1.setRoles(List.of(RoleEnum.SHARED_WITH));
+
+    List<AclSpecification> acls = List.of(acl1);
+    LibrarySet librarySet = LibrarySet.builder().acls(acls).build();
+    testLibrary.setLibrarySet(librarySet);
+    when(cqlLibraryService.findCqlLibraryById(anyString())).thenReturn(testLibrary);
+
+    mockMvc
+        .perform(
+            MockMvcRequestBuilders.get("/cql-libraries/sharedWith?measureids=12345")
+                .with(csrf())
+                .with(user(TEST_USER_ID))
+                .header(TEST_API_KEY_HEADER, TEST_API_KEY_HEADER_VALUE)
+                .header("Authorization", "test-okta"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$[0].libraryId", equalTo("12345")))
+        .andExpect(jsonPath("$[0].sharedWith.[0]userId", equalTo("raoulduke")));
+  }
+
+  @Test
+  public void testAdminMeasureGetSharedWithNoone() throws Exception {
+    CqlLibrary testLibrary = CqlLibrary.builder().id("12345").build();
+
+    LibrarySet librarySet = LibrarySet.builder().acls(null).build();
+    testLibrary.setLibrarySet(librarySet);
+    when(cqlLibraryService.findCqlLibraryById(anyString())).thenReturn(testLibrary);
+
+    mockMvc
+        .perform(
+            MockMvcRequestBuilders.get("/cql-libraries/sharedWith?measureids=12345")
+                .with(csrf())
+                .with(user(TEST_USER_ID))
+                .header(TEST_API_KEY_HEADER, TEST_API_KEY_HEADER_VALUE)
+                .header("Authorization", "test-okta"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$[0].libraryId", equalTo("12345")))
+        .andExpect(jsonPath("$[0].sharedWith", equalTo(null)));
   }
 
   @Test
