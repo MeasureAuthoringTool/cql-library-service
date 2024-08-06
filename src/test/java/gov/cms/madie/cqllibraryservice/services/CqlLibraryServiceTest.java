@@ -294,6 +294,7 @@ class CqlLibraryServiceTest {
     String libraryName = "test";
     String owner = "john";
     LibraryUsage usage = LibraryUsage.builder().name(libraryName).owner(owner).build();
+    when(cqlLibraryRepository.existsByCqlLibraryName(anyString())).thenReturn(true);
     when(cqlLibraryRepository.findLibraryUsageByLibraryName(anyString()))
         .thenReturn(List.of(usage));
     List<LibraryUsage> libraryUsages = cqlLibraryService.findLibraryUsage(libraryName);

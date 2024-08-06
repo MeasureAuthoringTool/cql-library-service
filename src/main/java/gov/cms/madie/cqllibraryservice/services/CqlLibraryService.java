@@ -132,6 +132,10 @@ public class CqlLibraryService {
     if (StringUtils.isBlank(libraryName)) {
       throw new BadRequestObjectException("Please provide library name.");
     }
+    // check if library exists before finding usage and delete
+    if (!cqlLibraryRepository.existsByCqlLibraryName(libraryName)) {
+      throw new ResourceNotFoundException("Library", "name", libraryName);
+    }
     return cqlLibraryRepository.findLibraryUsageByLibraryName(libraryName);
   }
 
@@ -163,10 +167,6 @@ public class CqlLibraryService {
    * @param apiKey
    */
   public void deleteLibraryAlongWithVersions(String name, String accessToken, String apiKey) {
-    // check if library exists before finding usage and delete
-    if (!cqlLibraryRepository.existsByCqlLibraryName(name)) {
-      throw new ResourceNotFoundException("Library", "name", name);
-    }
     if (isLibraryBeinUsed(name, accessToken, apiKey)) {
       throw new GeneralConflictException(
           "Library is being used actively, hence can not be deleted.");
