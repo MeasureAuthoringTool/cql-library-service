@@ -16,7 +16,10 @@ import gov.cms.madie.cqllibraryservice.services.CqlLibraryService;
 import gov.cms.madie.cqllibraryservice.services.VersionService;
 import java.security.Principal;
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -25,6 +28,8 @@ import jakarta.servlet.http.HttpServletRequest;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+
+import org.codehaus.plexus.util.StringUtils;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -32,6 +37,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
+
+import gov.cms.madie.cqllibraryservice.exceptions.ResourceNotFoundException;
 
 @Slf4j
 @RestController
@@ -213,6 +220,33 @@ public class CqlLibraryController {
       actionLogService.logAction(id, ActionType.UPDATED, "apiKey");
     }
     return response;
+  }
+
+  @GetMapping("/sharedWith")
+  @PreAuthorize("#request.getHeader('api-key') == #apiKey")
+  public ResponseEntity<List<Map<String, Object>>> getMeasureSharedWith(
+      HttpServletRequest request,
+      @Value("${lambda-api-key}") String apiKey,
+      @RequestHeader("Authorization") String accessToken,
+      @RequestParam(required = true, name = "measureids") String measureids) {
+    List<Map<String, Object>> results = new ArrayList<Map<String, Object>>();
+    String[] ids = StringUtils.split(measureids, ",");
+    for (String id : ids) {
+      CqlLibrary library = cqlLibraryService.findCqlLibraryById(id);
+      if (library != null) {
+
+        Map<String, Object> result = new LinkedHashMap<>();
+
+        result.put("libraryName", library.getCqlLibraryName());
+        result.put("libraryId", library.getId());
+        result.put("libraryOwner", library.getLibrarySet().getOwner());
+        result.put("sharedWith", library.getLibrarySet().getAcls());
+        results.add(result);
+      } else {
+        throw new ResourceNotFoundException(id);
+      }
+    }
+    return ResponseEntity.ok(results);
   }
 
   @DeleteMapping("/{id}")
