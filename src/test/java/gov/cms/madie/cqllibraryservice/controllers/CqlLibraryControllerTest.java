@@ -520,9 +520,7 @@ class CqlLibraryControllerTest {
     MockHttpServletRequest request = new MockHttpServletRequest();
     request.addHeader("api-key", "key");
     String libraryName = "Helper";
-    doNothing()
-        .when(cqlLibraryService)
-        .deleteLibraryAlongWithVersions(anyString(), anyString(), anyString());
+    doNothing().when(cqlLibraryService).deleteLibraryAlongWithVersions(anyString(), anyString());
     ResponseEntity<String> response =
         cqlLibraryController.deleteLibraryAlongWithVersions(request, libraryName, "token", "key");
     assertThat(

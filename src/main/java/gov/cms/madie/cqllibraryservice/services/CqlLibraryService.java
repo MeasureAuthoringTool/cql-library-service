@@ -147,13 +147,13 @@ public class CqlLibraryService {
    * @param apiKey
    * @return true/false
    */
-  public boolean isLibraryBeinUsed(String name, String accessToken, String apiKey) {
+  public boolean isLibraryBeinUsed(String name, String accessToken) {
     // check usage in libraries
     List<LibraryUsage> usageInLibraries = findLibraryUsage(name);
     if (CollectionUtils.isEmpty(usageInLibraries)) {
       // check usage in measures
       List<LibraryUsage> usageInMeasures =
-          measureServiceClient.getLibraryUsageInMeasures(name, accessToken, apiKey);
+          measureServiceClient.getLibraryUsageInMeasures(name, accessToken);
       return CollectionUtils.isNotEmpty(usageInMeasures);
     }
     return true;
@@ -166,8 +166,8 @@ public class CqlLibraryService {
    * @param name
    * @param apiKey
    */
-  public void deleteLibraryAlongWithVersions(String name, String accessToken, String apiKey) {
-    if (isLibraryBeinUsed(name, accessToken, apiKey)) {
+  public void deleteLibraryAlongWithVersions(String name, String accessToken) {
+    if (isLibraryBeinUsed(name, accessToken)) {
       throw new GeneralConflictException(
           "Library is being used actively, hence can not be deleted.");
     }

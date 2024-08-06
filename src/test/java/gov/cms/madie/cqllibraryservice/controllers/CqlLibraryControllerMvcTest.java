@@ -1575,9 +1575,7 @@ public class CqlLibraryControllerMvcTest {
 
   @Test
   void testDeleteLibraryAlongWithVersions() throws Exception {
-    doNothing()
-        .when(cqlLibraryService)
-        .deleteLibraryAlongWithVersions(anyString(), anyString(), anyString());
+    doNothing().when(cqlLibraryService).deleteLibraryAlongWithVersions(anyString(), anyString());
     MvcResult result =
         mockMvc
             .perform(
@@ -1595,9 +1593,7 @@ public class CqlLibraryControllerMvcTest {
 
   @Test
   void testDeleteLibraryAlongWithVersionsMissingAdminKey() throws Exception {
-    doNothing()
-        .when(cqlLibraryService)
-        .deleteLibraryAlongWithVersions(anyString(), anyString(), anyString());
+    doNothing().when(cqlLibraryService).deleteLibraryAlongWithVersions(anyString(), anyString());
     MvcResult result =
         mockMvc
             .perform(

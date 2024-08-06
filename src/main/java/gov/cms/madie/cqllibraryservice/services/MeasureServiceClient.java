@@ -24,8 +24,7 @@ public class MeasureServiceClient {
   private EnvironmentConfig environmentConfig;
   private RestTemplate restTemplate;
 
-  public List<LibraryUsage> getLibraryUsageInMeasures(
-      String libraryName, String accessToken, String apiKey) {
+  public List<LibraryUsage> getLibraryUsageInMeasures(String libraryName, String accessToken) {
     try {
       URI uri =
           URI.create(
@@ -35,7 +34,6 @@ public class MeasureServiceClient {
       HttpHeaders headers = new HttpHeaders();
       headers.setContentType(MediaType.TEXT_PLAIN);
       headers.set(HttpHeaders.AUTHORIZATION, accessToken);
-      headers.set("api-key", apiKey);
       ResponseEntity<List<LibraryUsage>> responseEntity =
           restTemplate.exchange(
               new RequestEntity<>(headers, HttpMethod.GET, uri),

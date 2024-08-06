@@ -317,11 +317,11 @@ class CqlLibraryServiceTest {
     CqlLibrary cqlLibrary = CqlLibrary.builder().cqlLibraryName(libraryName).build();
     when(cqlLibraryRepository.existsByCqlLibraryName(anyString())).thenReturn(true);
     when(cqlLibraryRepository.findLibraryUsageByLibraryName(anyString())).thenReturn(List.of());
-    when(measureServiceClient.getLibraryUsageInMeasures(anyString(), anyString(), anyString()))
+    when(measureServiceClient.getLibraryUsageInMeasures(anyString(), anyString()))
         .thenReturn(List.of());
     when(cqlLibraryRepository.findAllByCqlLibraryName(anyString())).thenReturn(List.of(cqlLibrary));
 
-    cqlLibraryService.deleteLibraryAlongWithVersions(libraryName, "token", "key");
+    cqlLibraryService.deleteLibraryAlongWithVersions(libraryName, "token");
     verify(cqlLibraryRepository, times(1)).deleteAll(List.of(cqlLibrary));
   }
 
@@ -336,7 +336,7 @@ class CqlLibraryServiceTest {
     Exception ex =
         assertThrows(
             GeneralConflictException.class,
-            () -> cqlLibraryService.deleteLibraryAlongWithVersions(libraryName, "token", "key"));
+            () -> cqlLibraryService.deleteLibraryAlongWithVersions(libraryName, "token"));
     assertThat(
         ex.getMessage(), is(equalTo("Library is being used actively, hence can not be deleted.")));
   }
@@ -348,12 +348,12 @@ class CqlLibraryServiceTest {
     LibraryUsage usage = LibraryUsage.builder().name(libraryName).owner(owner).build();
     when(cqlLibraryRepository.existsByCqlLibraryName(anyString())).thenReturn(true);
     when(cqlLibraryRepository.findLibraryUsageByLibraryName(anyString())).thenReturn(List.of());
-    when(measureServiceClient.getLibraryUsageInMeasures(anyString(), anyString(), anyString()))
+    when(measureServiceClient.getLibraryUsageInMeasures(anyString(), anyString()))
         .thenReturn(List.of(usage));
     Exception ex =
         assertThrows(
             GeneralConflictException.class,
-            () -> cqlLibraryService.deleteLibraryAlongWithVersions(libraryName, "token", "key"));
+            () -> cqlLibraryService.deleteLibraryAlongWithVersions(libraryName, "token"));
     assertThat(
         ex.getMessage(), is(equalTo("Library is being used actively, hence can not be deleted.")));
   }
@@ -365,7 +365,7 @@ class CqlLibraryServiceTest {
     Exception ex =
         assertThrows(
             ResourceNotFoundException.class,
-            () -> cqlLibraryService.deleteLibraryAlongWithVersions(libraryName, "token", "key"));
+            () -> cqlLibraryService.deleteLibraryAlongWithVersions(libraryName, "token"));
     assertThat(
         ex.getMessage(), is(equalTo("Could not find resource Library with name: " + libraryName)));
   }

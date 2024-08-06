@@ -275,7 +275,7 @@ public class CqlLibraryController {
       @PathVariable String libraryName,
       @RequestHeader("Authorization") String accessToken,
       @Value("${admin-api-key}") String apiKey) {
-    cqlLibraryService.deleteLibraryAlongWithVersions(libraryName, accessToken, apiKey);
+    cqlLibraryService.deleteLibraryAlongWithVersions(libraryName, accessToken);
     return ResponseEntity.ok()
         .body("The library and all its associated versions have been removed successfully.");
   }

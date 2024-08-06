@@ -32,7 +32,6 @@ public class MeasureServiceClientTest {
   @InjectMocks private MeasureServiceClient measureServiceClient;
 
   private final String token = "124";
-  private final String apiKey = "key";
   private final String libraryName = "Test";
 
   @Test
@@ -43,7 +42,7 @@ public class MeasureServiceClientTest {
     when(restTemplate.exchange(any(RequestEntity.class), any(ParameterizedTypeReference.class)))
         .thenReturn(ResponseEntity.ok(List.of(libraryUsage)));
     List<LibraryUsage> libraryUsages =
-        measureServiceClient.getLibraryUsageInMeasures(libraryName, token, apiKey);
+        measureServiceClient.getLibraryUsageInMeasures(libraryName, token);
     assertThat(libraryUsages.size(), is(equalTo(1)));
     assertThat(libraryUsages.get(0).getName(), is(equalTo(libraryName)));
     assertThat(libraryUsages.get(0).getOwner(), is(equalTo(owner)));
@@ -59,7 +58,7 @@ public class MeasureServiceClientTest {
     Exception ex =
         assertThrows(
             MeasureServiceException.class,
-            () -> measureServiceClient.getLibraryUsageInMeasures(libraryName, token, apiKey));
+            () -> measureServiceClient.getLibraryUsageInMeasures(libraryName, token));
     assertThat(ex.getMessage(), is(equalTo(message)));
   }
 }
