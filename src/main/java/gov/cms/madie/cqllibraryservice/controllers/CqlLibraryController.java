@@ -248,6 +248,6 @@ public class CqlLibraryController {
       return ResponseEntity.ok()
           .body("The library and all its associated versions have been removed successfully.");
     }
-    throw new UnauthorizedException("Unauthorized");
+    throw new UnauthorizedException("Missing API key");
   }
 }

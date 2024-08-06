@@ -146,16 +146,13 @@ public class CqlLibraryService {
   public boolean isLibraryBeinUsed(String name, String accessToken, String apiKey) {
     // check usage in libraries
     List<LibraryUsage> usageInLibraries = findLibraryUsage(name);
-    if (CollectionUtils.isNotEmpty(usageInLibraries)) {
-      return true;
+    if (CollectionUtils.isEmpty(usageInLibraries)) {
+      // check usage in measures
+      List<LibraryUsage> usageInMeasures =
+          measureServiceClient.getLibraryUsageInMeasures(name, accessToken, apiKey);
+      return CollectionUtils.isNotEmpty(usageInMeasures);
     }
-    // check usage in measures
-    List<LibraryUsage> usageInMeasures =
-        measureServiceClient.getLibraryUsageInMeasures(name, accessToken, apiKey);
-    if (CollectionUtils.isNotEmpty(usageInMeasures)) {
-      return true;
-    }
-    return false;
+    return true;
   }
 
   /**
