@@ -4,7 +4,6 @@ import gov.cms.madie.cqllibraryservice.dto.LibraryListDTO;
 import gov.cms.madie.cqllibraryservice.dto.LibraryUsage;
 import gov.cms.madie.cqllibraryservice.exceptions.InvalidIdException;
 import gov.cms.madie.cqllibraryservice.exceptions.InvalidResourceStateException;
-import gov.cms.madie.cqllibraryservice.exceptions.UnauthorizedException;
 import gov.cms.madie.cqllibraryservice.repositories.LibrarySetRepository;
 import gov.cms.madie.cqllibraryservice.services.ActionLogService;
 import gov.cms.madie.cqllibraryservice.services.LibrarySetService;
@@ -238,16 +237,14 @@ public class CqlLibraryController {
   }
 
   @DeleteMapping("/{libraryName}/delete-all-versions")
+  @PreAuthorize("#request.getHeader('api-key') == #apiKey")
   public ResponseEntity<String> deleteLibraryAlongWithVersions(
       HttpServletRequest request,
       @PathVariable String libraryName,
       @RequestHeader("Authorization") String accessToken,
       @Value("${admin-api-key}") String apiKey) {
-    if (StringUtils.equals(request.getHeader("api-key"), apiKey)) {
-      cqlLibraryService.deleteLibraryAlongWithVersions(libraryName, accessToken, apiKey);
-      return ResponseEntity.ok()
-          .body("The library and all its associated versions have been removed successfully.");
-    }
-    throw new UnauthorizedException("Missing API key");
+    cqlLibraryService.deleteLibraryAlongWithVersions(libraryName, accessToken, apiKey);
+    return ResponseEntity.ok()
+        .body("The library and all its associated versions have been removed successfully.");
   }
 }

@@ -1496,4 +1496,40 @@ public class CqlLibraryControllerMvcTest {
         result.getResponse().getContentAsString(),
         "[{\"name\":\"Helper\",\"version\":null,\"owner\":\"john\"}]");
   }
+
+  @Test
+  void testDeleteLibraryAlongWithVersions() throws Exception {
+    doNothing()
+        .when(cqlLibraryService)
+        .deleteLibraryAlongWithVersions(anyString(), anyString(), anyString());
+    MvcResult result =
+        mockMvc
+            .perform(
+                delete("/cql-libraries/Test/delete-all-versions")
+                    .with(user(TEST_USER_ID))
+                    .with(csrf())
+                    .header("Authorization", "test-okta")
+                    .header("api-key", "0a51991c"))
+            .andReturn();
+    assertEquals(result.getResponse().getStatus(), HttpStatus.OK.value());
+    assertEquals(
+        result.getResponse().getContentAsString(),
+        "The library and all its associated versions have been removed successfully.");
+  }
+
+  @Test
+  void testDeleteLibraryAlongWithVersionsMissingAdminKey() throws Exception {
+    doNothing()
+        .when(cqlLibraryService)
+        .deleteLibraryAlongWithVersions(anyString(), anyString(), anyString());
+    MvcResult result =
+        mockMvc
+            .perform(
+                delete("/cql-libraries/Test/delete-all-versions")
+                    .with(user(TEST_USER_ID))
+                    .with(csrf())
+                    .header("Authorization", "test-okta"))
+            .andReturn();
+    assertEquals(result.getResponse().getStatus(), HttpStatus.FORBIDDEN.value());
+  }
 }
