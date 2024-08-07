@@ -27,7 +27,7 @@ public class ElmTranslatorClient {
 
   public ElmJson getElmJson(final String cql, String libraryModel, String accessToken) {
     try {
-      URI uri = getCqlElmTranslationSerivceUri(libraryModel);
+      URI uri = getCqlElmTranslationServiceUri(libraryModel);
       HttpHeaders headers = new HttpHeaders();
       headers.setContentType(MediaType.TEXT_PLAIN);
       headers.set(HttpHeaders.AUTHORIZATION, accessToken);
@@ -42,7 +42,7 @@ public class ElmTranslatorClient {
     }
   }
 
-  private URI getCqlElmTranslationSerivceUri(String libraryModel) {
+  private URI getCqlElmTranslationServiceUri(String libraryModel) {
     var isQdm = StringUtils.equals(libraryModel, ModelType.QDM_5_6.getValue());
     String baseUrl =
         isQdm

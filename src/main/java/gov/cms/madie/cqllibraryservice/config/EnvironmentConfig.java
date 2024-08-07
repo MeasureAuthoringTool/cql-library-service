@@ -16,4 +16,7 @@ public class EnvironmentConfig {
 
   @Value("${madie.cql-elm.service.elm-json-uri}")
   private String cqlElmServiceElmJsonUri;
+
+  @Value("${madie.measure-service.base-url}")
+  private String measureServiceBaseUrl;
 }

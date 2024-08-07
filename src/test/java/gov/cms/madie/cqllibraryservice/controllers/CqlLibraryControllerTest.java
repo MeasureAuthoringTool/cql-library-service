@@ -22,6 +22,7 @@ import gov.cms.madie.cqllibraryservice.repositories.LibrarySetRepository;
 import gov.cms.madie.cqllibraryservice.services.ActionLogService;
 import gov.cms.madie.cqllibraryservice.services.LibrarySetService;
 import gov.cms.madie.models.common.ActionType;
+import gov.cms.madie.models.dto.LibraryUsage;
 import gov.cms.madie.models.library.CqlLibrary;
 import gov.cms.madie.models.library.CqlLibraryDraft;
 import gov.cms.madie.models.common.ModelType;
@@ -46,6 +47,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.mock.web.MockHttpServletRequest;
 
 @ExtendWith(MockitoExtension.class)
 class CqlLibraryControllerTest {
@@ -348,6 +350,10 @@ class CqlLibraryControllerTest {
   @Test
   public void testUpdateCqlLibrarySuccessfullyUpdates() {
     final String pathId = "Library1_ID";
+    final String cql =
+        "library testCql version '2.1.000'\n"
+            + "using QICore version '4.1.1'\n"
+            + "include TestLibrary17194110463836086082 version '1.0.000' called Test";
     final Instant createdTime = Instant.now().minus(100, ChronoUnit.MINUTES);
     final CqlLibrary existingLibrary =
         CqlLibrary.builder()
@@ -367,7 +373,7 @@ class CqlLibraryControllerTest {
         existingLibrary.toBuilder()
             .id("Library1_ID")
             .cqlLibraryName("NewName")
-            .cql("library testCql version '2.1.000'")
+            .cql(cql)
             .draft(false)
             .build();
 
@@ -382,16 +388,17 @@ class CqlLibraryControllerTest {
         cqlLibraryController.updateCqlLibrary(pathId, updatingLibrary, principal);
     assertThat(output.getBody(), is(equalTo(updatingLibrary)));
     verify(cqlLibraryRepository, times(1)).save(cqlLibraryArgumentCaptor.capture());
-    CqlLibrary savedValue = cqlLibraryArgumentCaptor.getValue();
-    assertThat(savedValue, is(notNullValue()));
-    assertThat(savedValue.getId(), is(equalTo("Library1_ID")));
-    assertThat(savedValue.getCqlLibraryName(), is(equalTo("NewName")));
-    assertThat(savedValue.getCql(), is(equalTo("library testCql version '2.1.000'")));
-    assertThat(savedValue.getCreatedAt(), is(equalTo(createdTime)));
-    assertThat(savedValue.getCreatedBy(), is(equalTo("User2")));
-    assertThat(savedValue.getLastModifiedAt(), is(notNullValue()));
-    assertThat(savedValue.getLastModifiedAt().isAfter(createdTime), is(true));
-    assertThat(savedValue.getLastModifiedBy(), is(equalTo("User2")));
+    CqlLibrary updatedLibrary = cqlLibraryArgumentCaptor.getValue();
+    assertThat(updatedLibrary, is(notNullValue()));
+    assertThat(updatedLibrary.getId(), is(equalTo("Library1_ID")));
+    assertThat(updatedLibrary.getCqlLibraryName(), is(equalTo("NewName")));
+    assertThat(updatedLibrary.getCql(), is(equalTo(cql)));
+    assertThat(updatedLibrary.getCreatedAt(), is(equalTo(createdTime)));
+    assertThat(updatedLibrary.getCreatedBy(), is(equalTo("User2")));
+    assertThat(updatedLibrary.getLastModifiedAt(), is(notNullValue()));
+    assertThat(updatedLibrary.getLastModifiedAt().isAfter(createdTime), is(true));
+    assertThat(updatedLibrary.getLastModifiedBy(), is(equalTo("User2")));
+    assertThat(updatedLibrary.getIncludedLibraries().size(), is(equalTo(1)));
   }
 
   @Test
@@ -493,5 +500,31 @@ class CqlLibraryControllerTest {
 
     verify(cqlLibraryService, times(1)).getVersionedCqlLibrary(anyString(), any(), any(), any());
     assertEquals(HttpStatus.OK, versionedCqlLibrary.getStatusCode());
+  }
+
+  @Test
+  void testGetLibraryUsage() {
+    String libraryName = "Helper";
+    String owner = "john";
+    LibraryUsage libraryUsage = LibraryUsage.builder().name(libraryName).owner(owner).build();
+    when(cqlLibraryService.findLibraryUsage(anyString())).thenReturn(List.of(libraryUsage));
+    ResponseEntity<List<LibraryUsage>> response = cqlLibraryController.getLibraryUsage(libraryName);
+    List<LibraryUsage> usage = response.getBody();
+    assertThat(usage.size(), is(equalTo(1)));
+    assertThat(usage.get(0).getName(), is(equalTo(libraryName)));
+    assertThat(usage.get(0).getOwner(), is(equalTo(owner)));
+  }
+
+  @Test
+  void testDeleteLibraryAlongWithVersions() {
+    MockHttpServletRequest request = new MockHttpServletRequest();
+    request.addHeader("api-key", "key");
+    String libraryName = "Helper";
+    doNothing().when(cqlLibraryService).deleteLibraryAlongWithVersions(anyString(), anyString());
+    ResponseEntity<String> response =
+        cqlLibraryController.deleteLibraryAlongWithVersions(request, libraryName, "token", "key");
+    assertThat(
+        response.getBody(),
+        is(equalTo("The library and all its associated versions have been removed successfully.")));
   }
 }

@@ -7,7 +7,9 @@ import gov.cms.madie.cqllibraryservice.repositories.LibrarySetRepository;
 import gov.cms.madie.cqllibraryservice.services.ActionLogService;
 import gov.cms.madie.cqllibraryservice.services.LibrarySetService;
 import gov.cms.madie.cqllibraryservice.utils.AuthUtils;
+import gov.cms.madie.cqllibraryservice.utils.LibraryUtils;
 import gov.cms.madie.models.common.ActionType;
+import gov.cms.madie.models.dto.LibraryUsage;
 import gov.cms.madie.models.library.CqlLibrary;
 import gov.cms.madie.models.library.CqlLibraryDraft;
 import gov.cms.madie.models.common.Version;
@@ -23,13 +25,13 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
+import org.apache.commons.lang3.StringUtils;
 import gov.cms.madie.models.library.LibrarySet;
 import jakarta.servlet.http.HttpServletRequest;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
-import org.codehaus.plexus.util.StringUtils;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -138,6 +140,10 @@ public class CqlLibraryController {
     if (cqlLibraryService.isCqlLibraryNameChanged(cqlLibrary, persistedLibrary)) {
       cqlLibraryService.checkDuplicateCqlLibraryName(cqlLibrary.getCqlLibraryName());
     }
+    // update includedLibraries if cql changed
+    if (!StringUtils.equals(cqlLibrary.getCql(), persistedLibrary.getCql())) {
+      cqlLibrary.setIncludedLibraries(LibraryUtils.getIncludedLibraries(cqlLibrary.getCql()));
+    }
     cqlLibrary.setLibrarySet(persistedLibrary.getLibrarySet());
     cqlLibrary.setDraft(persistedLibrary.isDraft());
     cqlLibrary.setVersion(persistedLibrary.getVersion());
@@ -176,6 +182,13 @@ public class CqlLibraryController {
             id, cqlLibrary.getCqlLibraryName(), cqlLibrary.getCql(), principal.getName());
     log.info("output: {}", output);
     return ResponseEntity.status(HttpStatus.CREATED).body(output);
+  }
+
+  @GetMapping(
+      value = "/usage",
+      produces = {MediaType.APPLICATION_JSON_VALUE})
+  public ResponseEntity<List<LibraryUsage>> getLibraryUsage(@RequestParam String libraryName) {
+    return ResponseEntity.ok().body(cqlLibraryService.findLibraryUsage(libraryName));
   }
 
   @PutMapping(
@@ -228,9 +241,8 @@ public class CqlLibraryController {
   public ResponseEntity<List<Map<String, Object>>> getMeasureSharedWith(
       HttpServletRequest request,
       @Value("${lambda-api-key}") String apiKey,
-      @RequestHeader("Authorization") String accessToken,
-      @RequestParam(required = true, name = "measureids") String measureids) {
-    List<Map<String, Object>> results = new ArrayList<Map<String, Object>>();
+      @RequestParam(name = "measureids") String measureids) {
+    List<Map<String, Object>> results = new ArrayList<>();
     String[] ids = StringUtils.split(measureids, ",");
     for (String id : ids) {
       CqlLibrary library = cqlLibraryService.findCqlLibraryById(id);
@@ -254,5 +266,17 @@ public class CqlLibraryController {
   public ResponseEntity<CqlLibrary> hardDeleteLibrary(
       @PathVariable("id") String id, Principal principal) {
     return ResponseEntity.ok(cqlLibraryService.deleteDraftLibrary(id, principal.getName()));
+  }
+
+  @DeleteMapping("/{libraryName}/delete-all-versions")
+  @PreAuthorize("#request.getHeader('api-key') == #apiKey")
+  public ResponseEntity<String> deleteLibraryAlongWithVersions(
+      HttpServletRequest request,
+      @PathVariable String libraryName,
+      @RequestHeader("Authorization") String accessToken,
+      @Value("${admin-api-key}") String apiKey) {
+    cqlLibraryService.deleteLibraryAlongWithVersions(libraryName, accessToken);
+    return ResponseEntity.ok()
+        .body("The library and all its associated versions have been removed successfully.");
   }
 }
