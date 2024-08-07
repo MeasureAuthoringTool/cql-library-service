@@ -138,7 +138,11 @@ public class VersionService {
     clonedCqlLibrary.setLastModifiedBy(username);
     if (!cqlLibraryName.equals(cqlLibrary.getCqlLibraryName())) {
       clonedCqlLibrary.setCql(
-          cqlLibrary.getCql().replace(cqlLibrary.getCqlLibraryName(), cqlLibraryName));
+          cqlLibrary
+              .getCql()
+              .replaceFirst(
+                  ".*?[\n\r]",
+                  "library " + cqlLibraryName + " version '" + cqlLibrary.getVersion() + "'\n"));
     }
 
     var savedCqlLibrary = cqlLibraryRepository.save(clonedCqlLibrary);

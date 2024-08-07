@@ -357,7 +357,7 @@ class VersionServiceTest {
     CqlLibrary existingCqlLibrary =
         CqlLibrary.builder()
             .id("testCqlLibraryId")
-                .cqlLibraryName("testCqlLibraryName")
+            .cqlLibraryName("testCqlLibraryName")
             .createdBy("testUser")
             .draft(false)
             .cql("library testCql version '1.0.000'")
@@ -394,7 +394,7 @@ class VersionServiceTest {
     CqlLibrary existingCqlLibrary =
         CqlLibrary.builder()
             .id("testCqlLibraryId")
-                .cqlLibraryName("testCqlLibraryName")
+            .cqlLibraryName("testCqlLibraryName")
             .createdBy("testUser")
             .cql("library testCql version '1.0.000'")
             .draft(false)
