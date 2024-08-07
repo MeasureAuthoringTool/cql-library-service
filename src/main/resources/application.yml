@@ -12,7 +12,7 @@ server:
 madie:
   allowedApi: http://localhost:9000
   measure-service:
-    base-url: ${MEASURE__SERVICE_URL:http://localhost:8080/api}
+    base-url: ${MEASURE_SERVICE_URL:http://localhost:8080/api}
   cql-elm:
     service:
       qdm-base-url: ${QDM_ELM_TRANSLATOR_SERVICE_URL:http://localhost:8084/api/qdm}
