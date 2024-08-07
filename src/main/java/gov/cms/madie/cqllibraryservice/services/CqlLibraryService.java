@@ -3,10 +3,12 @@ package gov.cms.madie.cqllibraryservice.services;
 import gov.cms.madie.cqllibraryservice.exceptions.*;
 import gov.cms.madie.models.access.RoleEnum;
 import gov.cms.madie.models.common.Version;
+import gov.cms.madie.models.dto.LibraryUsage;
 import gov.cms.madie.models.library.CqlLibrary;
 import gov.cms.madie.cqllibraryservice.repositories.CqlLibraryRepository;
 import gov.cms.madie.models.library.LibrarySet;
 import gov.cms.madie.models.measure.ElmJson;
+
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -14,7 +16,7 @@ import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
-import org.springframework.util.CollectionUtils;
+import org.apache.commons.collections4.CollectionUtils;
 
 @Slf4j
 @Service
@@ -24,6 +26,7 @@ public class CqlLibraryService {
   private final ElmTranslatorClient elmTranslatorClient;
   private CqlLibraryRepository cqlLibraryRepository;
   private LibrarySetService librarySetService;
+  private MeasureServiceClient measureServiceClient;
 
   public void checkDuplicateCqlLibraryName(String cqlLibraryName) {
     if (StringUtils.isNotEmpty(cqlLibraryName)
@@ -123,5 +126,51 @@ public class CqlLibraryService {
               "CQL Library", id));
     }
     return cqlLibrary;
+  }
+
+  public List<LibraryUsage> findLibraryUsage(String libraryName) {
+    if (StringUtils.isBlank(libraryName)) {
+      throw new BadRequestObjectException("Please provide library name.");
+    }
+    // check if library exists before finding usage and delete
+    if (!cqlLibraryRepository.existsByCqlLibraryName(libraryName)) {
+      throw new ResourceNotFoundException("Library", "name", libraryName);
+    }
+    return cqlLibraryRepository.findLibraryUsageByLibraryName(libraryName);
+  }
+
+  /**
+   * Library is being used if any of its version is either included in other library or measure
+   *
+   * @param name - library name
+   * @param accessToken
+   * @return true/false
+   */
+  public boolean isLibraryBeinUsed(String name, String accessToken) {
+    // check usage in libraries
+    List<LibraryUsage> usageInLibraries = findLibraryUsage(name);
+    if (CollectionUtils.isEmpty(usageInLibraries)) {
+      // check usage in measures
+      List<LibraryUsage> usageInMeasures =
+          measureServiceClient.getLibraryUsageInMeasures(name, accessToken);
+      return CollectionUtils.isNotEmpty(usageInMeasures);
+    }
+    return true;
+  }
+
+  /**
+   * This method deletes cql library and its versions permanently, if none of the versions is being
+   * used either in measure or another library
+   *
+   * @param name
+   * @param apiKey
+   */
+  public void deleteLibraryAlongWithVersions(String name, String accessToken) {
+    if (isLibraryBeinUsed(name, accessToken)) {
+      throw new GeneralConflictException(
+          "Library is being used actively, hence can not be deleted.");
+    }
+    List<CqlLibrary> libraries = cqlLibraryRepository.findAllByCqlLibraryName(name);
+    cqlLibraryRepository.deleteAll(libraries);
   }
 }

@@ -8,6 +8,7 @@ import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.notNullValue;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -35,6 +36,7 @@ import gov.cms.madie.cqllibraryservice.services.ActionLogService;
 import gov.cms.madie.models.access.AclSpecification;
 import gov.cms.madie.models.access.RoleEnum;
 import gov.cms.madie.models.common.ActionType;
+import gov.cms.madie.models.dto.LibraryUsage;
 import gov.cms.madie.models.library.CqlLibrary;
 import gov.cms.madie.models.library.CqlLibraryDraft;
 import gov.cms.madie.models.common.Version;
@@ -59,10 +61,12 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.context.annotation.Import;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
+import org.springframework.test.web.servlet.MvcResult;
 
 @ActiveProfiles("test")
 @WebMvcTest({CqlLibraryController.class})
@@ -1136,7 +1140,7 @@ public class CqlLibraryControllerMvcTest {
         .andExpect(status().isOk())
         .andExpect(jsonPath("$[0].libraryId", equalTo("12345")))
         .andExpect(jsonPath("$[1].libraryId", equalTo("6789")))
-        .andExpect(jsonPath("$[0].sharedWith.[0]userId", equalTo("raoulduke")));
+        .andExpect(jsonPath("$[0].sharedWith.[0].userId", equalTo("raoulduke")));
   }
 
   @Test
@@ -1160,7 +1164,7 @@ public class CqlLibraryControllerMvcTest {
                 .header("Authorization", "test-okta"))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$[0].libraryId", equalTo("12345")))
-        .andExpect(jsonPath("$[0].sharedWith.[0]userId", equalTo("raoulduke")));
+        .andExpect(jsonPath("$[0].sharedWith.[0].userId", equalTo("raoulduke")));
   }
 
   @Test
@@ -1534,5 +1538,54 @@ public class CqlLibraryControllerMvcTest {
         .andExpect(status().isOk());
 
     verify(cqlLibraryService, times(1)).deleteDraftLibrary(eq(libraryId), eq(TEST_USER_ID));
+  }
+
+  @Test
+  void testGetLibraryUsage() throws Exception {
+    String libraryName = "Helper";
+    String owner = "john";
+    LibraryUsage libraryUsage = LibraryUsage.builder().name(libraryName).owner(owner).build();
+    when(cqlLibraryService.findLibraryUsage(anyString())).thenReturn(List.of(libraryUsage));
+    MvcResult result =
+        mockMvc
+            .perform(
+                get("/cql-libraries/usage?libraryName=Test").with(user(TEST_USER_ID)).with(csrf()))
+            .andReturn();
+    assertEquals(result.getResponse().getStatus(), HttpStatus.OK.value());
+    assertEquals(
+        result.getResponse().getContentAsString(),
+        "[{\"name\":\"Helper\",\"version\":null,\"owner\":\"john\"}]");
+  }
+
+  @Test
+  void testDeleteLibraryAlongWithVersions() throws Exception {
+    doNothing().when(cqlLibraryService).deleteLibraryAlongWithVersions(anyString(), anyString());
+    MvcResult result =
+        mockMvc
+            .perform(
+                delete("/cql-libraries/Test/delete-all-versions")
+                    .with(user(TEST_USER_ID))
+                    .with(csrf())
+                    .header("Authorization", "test-okta")
+                    .header("api-key", "0a51991c"))
+            .andReturn();
+    assertEquals(result.getResponse().getStatus(), HttpStatus.OK.value());
+    assertEquals(
+        result.getResponse().getContentAsString(),
+        "The library and all its associated versions have been removed successfully.");
+  }
+
+  @Test
+  void testDeleteLibraryAlongWithVersionsMissingAdminKey() throws Exception {
+    doNothing().when(cqlLibraryService).deleteLibraryAlongWithVersions(anyString(), anyString());
+    MvcResult result =
+        mockMvc
+            .perform(
+                delete("/cql-libraries/Test/delete-all-versions")
+                    .with(user(TEST_USER_ID))
+                    .with(csrf())
+                    .header("Authorization", "test-okta"))
+            .andReturn();
+    assertEquals(result.getResponse().getStatus(), HttpStatus.FORBIDDEN.value());
   }
 }
