@@ -110,7 +110,7 @@ class VersionServiceTest {
             .createdBy("testUser")
             .librarySetId("id")
             .draft(true)
-            .cqlErrors(true)
+            .cqlErrors(false)
             .cql("")
             .librarySet(
                 LibrarySet.builder().librarySetId("testLibrarySetId").owner("testUser").build())
