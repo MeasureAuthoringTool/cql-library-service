@@ -22,4 +22,7 @@ public interface LibraryAclRepository {
    * @return List<LibraryUsage> -> LibraryUsage: name, version and owner of including library
    */
   List<LibraryUsage> findLibraryUsageByLibraryName(String name);
+
+  List<LibraryListDTO> findLibrariesByNameAndModelOrderByNameAscAndVersionDsc(
+      String name, String model);
 }

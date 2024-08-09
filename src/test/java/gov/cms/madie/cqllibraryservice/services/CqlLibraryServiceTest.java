@@ -11,6 +11,7 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import gov.cms.madie.cqllibraryservice.dto.LibraryListDTO;
 import gov.cms.madie.cqllibraryservice.exceptions.BadRequestObjectException;
 import gov.cms.madie.cqllibraryservice.exceptions.DuplicateKeyException;
 import gov.cms.madie.cqllibraryservice.exceptions.GeneralConflictException;
@@ -368,5 +369,40 @@ class CqlLibraryServiceTest {
             () -> cqlLibraryService.deleteLibraryAlongWithVersions(libraryName, "token"));
     assertThat(
         ex.getMessage(), is(equalTo("Could not find resource Library with name: " + libraryName)));
+  }
+
+  @Test
+  void testFindLibrariesByNameAndModel() {
+    String libraryName = "test";
+    String model = "QICore 4.1.1";
+    LibraryListDTO l1 =
+        LibraryListDTO.builder()
+            .cqlLibraryName("L1")
+            .version(Version.parse("0.1.000"))
+            .model("QICore 4.1.1")
+            .build();
+    when(cqlLibraryRepository.findLibrariesByNameAndModelOrderByNameAscAndVersionDsc(
+            anyString(), anyString()))
+        .thenReturn(List.of(l1));
+    List<LibraryListDTO> result = cqlLibraryService.findLibrariesByNameAndModel(libraryName, model);
+    assertThat(result.size(), equalTo(1));
+  }
+
+  @Test
+  void testFindLibrariesByNameAndModelIfModelMissing() {
+    Exception ex =
+        assertThrows(
+            BadRequestObjectException.class,
+            () -> cqlLibraryService.findLibrariesByNameAndModel("Test", null));
+    assertThat(ex.getMessage(), is(equalTo("Please provide library name and model.")));
+  }
+
+  @Test
+  void testFindLibrariesByNameAndModelIfLibraryNameMissing() {
+    Exception ex =
+        assertThrows(
+            BadRequestObjectException.class,
+            () -> cqlLibraryService.findLibrariesByNameAndModel(null, "QDM"));
+    assertThat(ex.getMessage(), is(equalTo("Please provide library name and model.")));
   }
 }

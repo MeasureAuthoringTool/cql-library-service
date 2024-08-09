@@ -1,9 +1,11 @@
 package gov.cms.madie.cqllibraryservice.controllers;
 
 import gov.cms.madie.cqllibraryservice.config.security.SecurityConfig;
+import gov.cms.madie.cqllibraryservice.dto.LibraryListDTO;
 import gov.cms.madie.cqllibraryservice.exceptions.GeneralConflictException;
 import gov.cms.madie.models.common.ModelType;
 
+import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.notNullValue;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -41,7 +43,6 @@ import gov.cms.madie.models.library.CqlLibrary;
 import gov.cms.madie.models.library.CqlLibraryDraft;
 import gov.cms.madie.models.common.Version;
 import gov.cms.madie.cqllibraryservice.repositories.CqlLibraryRepository;
-import gov.cms.madie.cqllibraryservice.repositories.LibrarySetRepository;
 import gov.cms.madie.cqllibraryservice.services.CqlLibraryService;
 import gov.cms.madie.cqllibraryservice.services.LibrarySetService;
 import gov.cms.madie.cqllibraryservice.services.VersionService;
@@ -80,8 +81,6 @@ public class CqlLibraryControllerMvcTest {
   private static final String MODEL = ModelType.QI_CORE.toString();
 
   @MockBean private CqlLibraryRepository repository;
-  @MockBean private LibrarySetRepository librarySetRepository;
-
   @MockBean private VersionService versionService;
   @MockBean private CqlLibraryService cqlLibraryService;
   @MockBean private LibrarySetService librarySetService;
@@ -1603,5 +1602,30 @@ public class CqlLibraryControllerMvcTest {
                     .header("Authorization", "test-okta"))
             .andReturn();
     assertEquals(result.getResponse().getStatus(), HttpStatus.FORBIDDEN.value());
+  }
+
+  @Test
+  void testGetLibrariesByNameAndModel() throws Exception {
+    LibraryListDTO l1 =
+        LibraryListDTO.builder()
+            .cqlLibraryName("Test")
+            .version(Version.parse("0.1.000"))
+            .model("QDM 5.6")
+            .build();
+
+    when(cqlLibraryService.findLibrariesByNameAndModel(anyString(), anyString()))
+        .thenReturn(List.of(l1));
+    MvcResult result =
+        mockMvc
+            .perform(
+                get("/cql-libraries/all-versioned?libraryName=test&model=QDM")
+                    .with(user(TEST_USER_ID))
+                    .with(csrf()))
+            .andReturn();
+    assertThat(result.getResponse().getStatus(), is(equalTo(HttpStatus.OK.value())));
+    assertThat(result.getResponse().getContentAsString(), containsString(l1.getCqlLibraryName()));
+    assertThat(result.getResponse().getContentAsString(), containsString(l1.getModel()));
+    assertThat(
+        result.getResponse().getContentAsString(), containsString(l1.getVersion().toString()));
   }
 }

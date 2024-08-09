@@ -3,7 +3,6 @@ package gov.cms.madie.cqllibraryservice.controllers;
 import gov.cms.madie.cqllibraryservice.dto.LibraryListDTO;
 import gov.cms.madie.cqllibraryservice.exceptions.InvalidIdException;
 import gov.cms.madie.cqllibraryservice.exceptions.InvalidResourceStateException;
-import gov.cms.madie.cqllibraryservice.repositories.LibrarySetRepository;
 import gov.cms.madie.cqllibraryservice.services.ActionLogService;
 import gov.cms.madie.cqllibraryservice.services.LibrarySetService;
 import gov.cms.madie.cqllibraryservice.utils.AuthUtils;
@@ -26,7 +25,6 @@ import java.util.Optional;
 import java.util.UUID;
 
 import org.apache.commons.lang3.StringUtils;
-import gov.cms.madie.models.library.LibrarySet;
 import jakarta.servlet.http.HttpServletRequest;
 
 import lombok.RequiredArgsConstructor;
@@ -53,7 +51,6 @@ public class CqlLibraryController {
   private final VersionService versionService;
   private final CqlLibraryService cqlLibraryService;
   private final LibrarySetService librarySetService;
-  private final LibrarySetRepository librarySetRepository;
 
   @GetMapping
   public ResponseEntity<List<LibraryListDTO>> getCqlLibraries(
@@ -62,15 +59,7 @@ public class CqlLibraryController {
           boolean filterByCurrentUser) {
     final String username = principal.getName();
     List<LibraryListDTO> cqlLibraries =
-        filterByCurrentUser
-            ? cqlLibraryRepository.findAllLibrariesByUser(username)
-            : cqlLibraryRepository.findAllProjected();
-    cqlLibraries.forEach(
-        l -> {
-          LibrarySet librarySet =
-              librarySetRepository.findByLibrarySetId(l.getLibrarySetId()).orElse(null);
-          l.setLibrarySet(librarySet);
-        });
+        cqlLibraryRepository.findAllLibrariesByUser(filterByCurrentUser ? username : "");
     return ResponseEntity.ok(cqlLibraries);
   }
 
@@ -189,6 +178,15 @@ public class CqlLibraryController {
       produces = {MediaType.APPLICATION_JSON_VALUE})
   public ResponseEntity<List<LibraryUsage>> getLibraryUsage(@RequestParam String libraryName) {
     return ResponseEntity.ok().body(cqlLibraryService.findLibraryUsage(libraryName));
+  }
+
+  @GetMapping(
+      value = "/all-versioned",
+      produces = {MediaType.APPLICATION_JSON_VALUE})
+  public ResponseEntity<List<LibraryListDTO>> getLibrariesByNameAndModel(
+      @RequestParam String libraryName, @RequestParam String model) {
+    return ResponseEntity.ok()
+        .body(cqlLibraryService.findLibrariesByNameAndModel(libraryName, model));
   }
 
   @PutMapping(
