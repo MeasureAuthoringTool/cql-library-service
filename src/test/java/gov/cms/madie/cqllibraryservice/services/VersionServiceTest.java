@@ -110,7 +110,7 @@ class VersionServiceTest {
             .createdBy("testUser")
             .librarySetId("id")
             .draft(true)
-            .cqlErrors(true)
+            .cqlErrors(false)
             .cql("")
             .librarySet(
                 LibrarySet.builder().librarySetId("testLibrarySetId").owner("testUser").build())
@@ -317,9 +317,7 @@ class VersionServiceTest {
         .findCqlLibraryById(anyString());
     assertThrows(
         ResourceNotFoundException.class,
-        () ->
-            versionService.createDraft(
-                "testCqlLibraryId", "Library1", "library testCql version '1.0.000'", "testUser"));
+        () -> versionService.createDraft("testCqlLibraryId", "Library1", "testUser"));
   }
 
   @Test
@@ -347,9 +345,7 @@ class VersionServiceTest {
 
     assertThrows(
         PermissionDeniedException.class,
-        () ->
-            versionService.createDraft(
-                "testCqlLibraryId", "Library1", "library testCql version '1.0.000'", "randomUser"));
+        () -> versionService.createDraft("testCqlLibraryId", "Library1", "randomUser"));
   }
 
   @Test
@@ -361,8 +357,10 @@ class VersionServiceTest {
     CqlLibrary existingCqlLibrary =
         CqlLibrary.builder()
             .id("testCqlLibraryId")
+            .cqlLibraryName("testCqlLibraryName")
             .createdBy("testUser")
             .draft(false)
+            .cql("library testCql version '1.0.000'")
             .librarySetId("testLibrarySetId")
             .version(Version.parse("1.0.000"))
             .librarySet(
@@ -380,11 +378,7 @@ class VersionServiceTest {
     when(cqlLibraryRepository.existsByLibrarySetIdAndDraft(anyString(), anyBoolean()))
         .thenReturn(false);
 
-    versionService.createDraft(
-        "testCqlLibraryId",
-        "testNewCqlLibraryName",
-        "library testCql version '1.0.000'",
-        "sharedUser");
+    versionService.createDraft("testCqlLibraryId", "testNewCqlLibraryName", "sharedUser");
     verify(cqlLibraryRepository, times(1)).save(cqlLibraryArgumentCaptor.capture());
     CqlLibrary savedValue = cqlLibraryArgumentCaptor.getValue();
 
@@ -400,7 +394,9 @@ class VersionServiceTest {
     CqlLibrary existingCqlLibrary =
         CqlLibrary.builder()
             .id("testCqlLibraryId")
+            .cqlLibraryName("testCqlLibraryName")
             .createdBy("testUser")
+            .cql("library testCql version '1.0.000'")
             .draft(false)
             .librarySetId("testLibrarySetId")
             .version(Version.parse("1.0.000"))
@@ -415,11 +411,7 @@ class VersionServiceTest {
     when(cqlLibraryRepository.existsByLibrarySetIdAndDraft(anyString(), anyBoolean()))
         .thenReturn(false);
 
-    versionService.createDraft(
-        "testCqlLibraryId",
-        "testNewCqlLibraryName",
-        "library testCql version '1.0.000'",
-        "testUser");
+    versionService.createDraft("testCqlLibraryId", "testNewCqlLibraryName", "testUser");
     verify(cqlLibraryRepository, times(1)).save(cqlLibraryArgumentCaptor.capture());
     CqlLibrary savedValue = cqlLibraryArgumentCaptor.getValue();
 
@@ -458,12 +450,7 @@ class VersionServiceTest {
 
     assertThrows(
         ResourceNotDraftableException.class,
-        () ->
-            versionService.createDraft(
-                "testCqlLibraryId",
-                "testNewCqlLibraryName",
-                "library testCql version '1.0.000'",
-                "testUser"));
+        () -> versionService.createDraft("testCqlLibraryId", "testNewCqlLibraryName", "testUser"));
   }
 
   @Test

@@ -113,7 +113,7 @@ public class VersionService {
     }
   }
 
-  public CqlLibrary createDraft(String id, String cqlLibraryName, String cql, String username) {
+  public CqlLibrary createDraft(String id, String cqlLibraryName, String username) {
     CqlLibrary cqlLibrary = cqlLibraryService.findCqlLibraryById(id);
 
     if (!Objects.equals(cqlLibraryName, cqlLibrary.getCqlLibraryName())) {
@@ -130,13 +130,20 @@ public class VersionService {
     // Clear ID so that the unique GUID from MongoDB will be applied
     clonedCqlLibrary.setId(null);
     clonedCqlLibrary.setCqlLibraryName(cqlLibraryName);
-    clonedCqlLibrary.setCql(cql);
     clonedCqlLibrary.setDraft(true);
     var now = Instant.now();
     clonedCqlLibrary.setCreatedAt(now);
     clonedCqlLibrary.setCreatedBy(username);
     clonedCqlLibrary.setLastModifiedAt(now);
     clonedCqlLibrary.setLastModifiedBy(username);
+    if (!cqlLibraryName.equals(cqlLibrary.getCqlLibraryName())) {
+      clonedCqlLibrary.setCql(
+          cqlLibrary
+              .getCql()
+              .replaceFirst(
+                  ".*?[\n\r]",
+                  "library " + cqlLibraryName + " version '" + cqlLibrary.getVersion() + "'\n"));
+    }
 
     var savedCqlLibrary = cqlLibraryRepository.save(clonedCqlLibrary);
 
