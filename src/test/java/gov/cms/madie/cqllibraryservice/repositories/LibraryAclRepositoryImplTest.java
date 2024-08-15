@@ -124,4 +124,23 @@ public class LibraryAclRepositoryImplTest {
     assertThat(libraryUsages.get(0).getName(), is(equalTo(libraryName)));
     assertThat(libraryUsages.get(0).getOwner(), is(equalTo(owner)));
   }
+
+  @Test
+  void testFindLibrariesByNameAndModelOrderByNameAscAndVersionDsc() {
+    String libraryName = "test";
+    String model = "QICore";
+    AggregationResults result =
+        new AggregationResults<>(List.of(library1, library2), new Document());
+
+    when(mongoTemplate.aggregate(any(Aggregation.class), (Class<?>) any(), any()))
+        .thenReturn(result);
+    List<LibraryListDTO> libraries =
+        libraryAclRepository.findLibrariesByNameAndModelOrderByNameAscAndVersionDsc(
+            libraryName, model);
+    assertThat(libraries.size(), is(equalTo(2)));
+    assertThat(libraries.get(0).getCqlLibraryName(), is(equalTo(library1.getCqlLibraryName())));
+    assertThat(
+        libraries.get(0).getLibrarySet().getOwner(),
+        is(equalTo(library1.getLibrarySet().getOwner())));
+  }
 }

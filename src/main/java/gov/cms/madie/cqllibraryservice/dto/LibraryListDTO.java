@@ -13,7 +13,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder;
 import org.springframework.data.mongodb.core.mapping.Document;
-import org.springframework.data.mongodb.core.mapping.DocumentReference;
+
 import java.time.Instant;
 
 @Data
@@ -21,12 +21,9 @@ import java.time.Instant;
 @SuperBuilder(toBuilder = true)
 @NoArgsConstructor
 public class LibraryListDTO {
-
   private String id;
   private String librarySetId;
-
   private String cqlLibraryName;
-
   private Instant createdAt;
 
   @NotBlank(message = "Model is required")
@@ -40,7 +37,7 @@ public class LibraryListDTO {
   @JsonDeserialize(using = VersionJsonSerializer.VersionDeserializer.class)
   private Version version;
 
-  @DocumentReference private LibrarySet librarySet;
+  private LibrarySet librarySet;
 
   private boolean draft;
 }

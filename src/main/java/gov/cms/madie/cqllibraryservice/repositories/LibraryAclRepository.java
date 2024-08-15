@@ -22,4 +22,16 @@ public interface LibraryAclRepository {
    * @return List<LibraryUsage> -> LibraryUsage: name, version and owner of including library
    */
   List<LibraryUsage> findLibraryUsageByLibraryName(String name);
+
+  /**
+   * This method queries libraries by library name and model. Library name match is a "like"
+   * comparison. It can be library name or part of the library name. Results returned are sorted in
+   * ascending order by library name and descending by version. Draft libraries are excluded.
+   *
+   * @param name -> library name
+   * @param model -> library model
+   * @return list of LibraryListDTO
+   */
+  List<LibraryListDTO> findLibrariesByNameAndModelOrderByNameAscAndVersionDsc(
+      String name, String model);
 }
