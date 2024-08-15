@@ -18,7 +18,6 @@ import gov.cms.madie.cqllibraryservice.exceptions.InvalidResourceStateException;
 import gov.cms.madie.cqllibraryservice.exceptions.PermissionDeniedException;
 import gov.cms.madie.cqllibraryservice.exceptions.ResourceNotDraftableException;
 import gov.cms.madie.cqllibraryservice.exceptions.ResourceNotFoundException;
-import gov.cms.madie.cqllibraryservice.repositories.LibrarySetRepository;
 import gov.cms.madie.cqllibraryservice.services.ActionLogService;
 import gov.cms.madie.cqllibraryservice.services.LibrarySetService;
 import gov.cms.madie.models.common.ActionType;
@@ -53,8 +52,6 @@ import org.springframework.mock.web.MockHttpServletRequest;
 class CqlLibraryControllerTest {
 
   @Mock CqlLibraryRepository cqlLibraryRepository;
-
-  @Mock LibrarySetRepository librarySetRepository;
 
   @Mock VersionService versionService;
 
@@ -97,12 +94,12 @@ class CqlLibraryControllerTest {
   @Test
   void getCqlLibrariesWithoutCurrentUserFilter() {
     List<LibraryListDTO> cqlLibraries = List.of(libraryList);
-    when(cqlLibraryRepository.findAllProjected()).thenReturn(cqlLibraries);
+    when(cqlLibraryRepository.findAllLibrariesByUser("")).thenReturn(cqlLibraries);
     Principal principal = mock(Principal.class);
     when(principal.getName()).thenReturn("test.user");
     ResponseEntity<List<LibraryListDTO>> response =
         cqlLibraryController.getCqlLibraries(principal, false);
-    verify(cqlLibraryRepository, times(1)).findAllProjected();
+    verify(cqlLibraryRepository, times(1)).findAllLibrariesByUser("");
     verifyNoMoreInteractions(cqlLibraryRepository);
     assertNotNull(response.getBody());
     assertNotNull(response.getBody().get(0));

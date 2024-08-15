@@ -1,5 +1,6 @@
 package gov.cms.madie.cqllibraryservice.services;
 
+import gov.cms.madie.cqllibraryservice.dto.LibraryListDTO;
 import gov.cms.madie.cqllibraryservice.exceptions.*;
 import gov.cms.madie.models.access.RoleEnum;
 import gov.cms.madie.models.common.Version;
@@ -172,5 +173,13 @@ public class CqlLibraryService {
     }
     List<CqlLibrary> libraries = cqlLibraryRepository.findAllByCqlLibraryName(name);
     cqlLibraryRepository.deleteAll(libraries);
+  }
+
+  public List<LibraryListDTO> findLibrariesByNameAndModel(String libraryName, String model) {
+    if (StringUtils.isBlank(libraryName) || StringUtils.isBlank(model)) {
+      throw new BadRequestObjectException("Please provide library name and model.");
+    }
+    return cqlLibraryRepository.findLibrariesByNameAndModelOrderByNameAscAndVersionDsc(
+        libraryName, model);
   }
 }
