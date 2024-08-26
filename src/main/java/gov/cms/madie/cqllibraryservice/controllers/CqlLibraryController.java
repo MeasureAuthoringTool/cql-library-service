@@ -196,7 +196,7 @@ public class CqlLibraryController {
       HttpServletRequest request,
       @PathVariable("id") String id,
       @RequestParam(name = "userid") String userid,
-      @Value("${lambda-api-key}") String apiKey) {
+      @Value("${admin-api-key}") String apiKey) {
     ResponseEntity<String> response = ResponseEntity.badRequest().body("Library does not exist.");
 
     if (cqlLibraryService.changeOwnership(id, userid)) {
@@ -218,7 +218,7 @@ public class CqlLibraryController {
       HttpServletRequest request,
       @PathVariable("id") String id,
       @RequestParam(required = true, name = "userid") String userid,
-      @Value("${lambda-api-key}") String apiKey) {
+      @Value("${admin-api-key}") String apiKey) {
     ResponseEntity<String> response =
         ResponseEntity.badRequest().body("Cql Library does not exist.");
 
@@ -237,7 +237,7 @@ public class CqlLibraryController {
   @PreAuthorize("#request.getHeader('api-key') == #apiKey")
   public ResponseEntity<List<Map<String, Object>>> getMeasureSharedWith(
       HttpServletRequest request,
-      @Value("${lambda-api-key}") String apiKey,
+      @Value("${admin-api-key}") String apiKey,
       @RequestParam(name = "measureids") String measureids) {
     List<Map<String, Object>> results = new ArrayList<>();
     String[] ids = StringUtils.split(measureids, ",");
