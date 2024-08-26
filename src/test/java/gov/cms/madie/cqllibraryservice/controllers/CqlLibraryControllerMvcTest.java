@@ -77,7 +77,7 @@ public class CqlLibraryControllerMvcTest {
   private static final String TEST_USER_ID = "test-okta-user-id-123";
   private static final String TEST_LIBRARYSET_ID = "test-okta-user-id-321";
   private static final String TEST_API_KEY_HEADER = "api-key";
-  private static final String TEST_API_KEY_HEADER_VALUE = "9202c9fa";
+  private static final String TEST_API_KEY_HEADER_VALUE = "0a51991c";
   private static final String MODEL = ModelType.QI_CORE.toString();
 
   @MockBean private CqlLibraryRepository repository;
