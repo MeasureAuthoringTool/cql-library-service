@@ -478,23 +478,25 @@ class CqlLibraryControllerTest {
 
   @Test
   public void testGetLibraryCql() {
-    when(cqlLibraryService.getVersionedCqlLibrary(anyString(), any(), any(), any()))
+    when(cqlLibraryService.getVersionedCqlLibrary(anyString(), any(), any(), anyBoolean(), any()))
         .thenReturn(CqlLibrary.builder().cql("Test Cql").build());
     String cql = cqlLibraryController.getLibraryCql("TestCqlLibrary", "1.0.000", Optional.empty());
 
-    verify(cqlLibraryService, times(1)).getVersionedCqlLibrary(anyString(), any(), any(), any());
+    verify(cqlLibraryService, times(1))
+        .getVersionedCqlLibrary(anyString(), any(), any(), anyBoolean(), any());
     assertEquals("Test Cql", cql);
   }
 
   @Test
   public void testGetVersionedCqlLibrary() {
-    when(cqlLibraryService.getVersionedCqlLibrary(anyString(), any(), any(), any()))
+    when(cqlLibraryService.getVersionedCqlLibrary(anyString(), any(), any(), anyBoolean(), any()))
         .thenReturn(CqlLibrary.builder().build());
     ResponseEntity<CqlLibrary> versionedCqlLibrary =
         cqlLibraryController.getVersionedCqlLibrary(
-            "TestCqlLibrary", "1.0.000", Optional.empty(), "test-token");
+            "TestCqlLibrary", "1.0.000", Optional.empty(), true, "test-token");
 
-    verify(cqlLibraryService, times(1)).getVersionedCqlLibrary(anyString(), any(), any(), any());
+    verify(cqlLibraryService, times(1))
+        .getVersionedCqlLibrary(anyString(), any(), any(), anyBoolean(), any());
     assertEquals(HttpStatus.OK, versionedCqlLibrary.getStatusCode());
   }
 
