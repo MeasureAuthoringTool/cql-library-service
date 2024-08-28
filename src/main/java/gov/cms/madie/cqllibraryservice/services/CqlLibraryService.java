@@ -41,7 +41,11 @@ public class CqlLibraryService {
   }
 
   public CqlLibrary getVersionedCqlLibrary(
-      String name, String version, Optional<String> model, final String accessToken) {
+      String name,
+      String version,
+      Optional<String> model,
+      boolean fetchElm,
+      final String accessToken) {
     List<CqlLibrary> libs =
         model.isPresent()
             ? cqlLibraryRepository.findAllByCqlLibraryNameAndDraftAndVersionAndModel(
@@ -59,7 +63,7 @@ public class CqlLibraryService {
               + "to narrow down the results to a single library.");
     } else {
       CqlLibrary cqlLibrary = libs.get(0);
-      if (StringUtils.isNotBlank(accessToken)) {
+      if (fetchElm) {
         try {
           final ElmJson elmJson =
               elmTranslatorClient.getElmJson(
@@ -73,7 +77,9 @@ public class CqlLibraryService {
           throw e;
         }
       }
-      return libs.get(0);
+      LibrarySet librarySet = librarySetService.findByLibrarySetId(cqlLibrary.getLibrarySetId());
+      cqlLibrary.setLibrarySet(librarySet);
+      return cqlLibrary;
     }
   }
 

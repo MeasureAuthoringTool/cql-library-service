@@ -73,9 +73,10 @@ public class CqlLibraryController {
       @RequestParam String name,
       @RequestParam String version,
       @RequestParam Optional<String> model,
+      @RequestParam(defaultValue = "true") boolean includeElm,
       @RequestHeader("Authorization") String accessToken) {
     return ResponseEntity.ok(
-        cqlLibraryService.getVersionedCqlLibrary(name, version, model, accessToken));
+        cqlLibraryService.getVersionedCqlLibrary(name, version, model, includeElm, accessToken));
   }
 
   @PostMapping
@@ -148,7 +149,7 @@ public class CqlLibraryController {
       @RequestParam String name,
       @RequestParam String version,
       @RequestParam Optional<String> model) {
-    return cqlLibraryService.getVersionedCqlLibrary(name, version, model, null).getCql();
+    return cqlLibraryService.getVersionedCqlLibrary(name, version, model, false, null).getCql();
   }
 
   @PutMapping("/version/{id}")
