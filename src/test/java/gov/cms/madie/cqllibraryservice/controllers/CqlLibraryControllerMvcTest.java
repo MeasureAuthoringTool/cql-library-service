@@ -1,6 +1,7 @@
 package gov.cms.madie.cqllibraryservice.controllers;
 
 import gov.cms.madie.cqllibraryservice.config.security.SecurityConfig;
+import gov.cms.madie.cqllibraryservice.dto.IncludedLibraryDTO;
 import gov.cms.madie.cqllibraryservice.dto.LibraryListDTO;
 import gov.cms.madie.cqllibraryservice.exceptions.GeneralConflictException;
 import gov.cms.madie.models.common.ModelType;
@@ -1614,5 +1615,29 @@ public class CqlLibraryControllerMvcTest {
     assertThat(result.getResponse().getContentAsString(), containsString(l1.getModel()));
     assertThat(
         result.getResponse().getContentAsString(), containsString(l1.getVersion().toString()));
+  }
+
+  @Test
+  void testGetVersionedCqlLibraryBySetIdAndVersion() throws Exception {
+    IncludedLibraryDTO dto =
+        IncludedLibraryDTO.builder()
+            .cqlLibraryName("Test")
+            .librarySetId("1111")
+            .version(Version.parse("1.0.000"))
+            .cql("CQL")
+            .relatedVersions(List.of("0.1.000", "1.0.000"))
+            .build();
+    when(cqlLibraryService.getLibraryBySetIdAndVersion(anyString(), anyString())).thenReturn(dto);
+    MvcResult result =
+        mockMvc
+            .perform(
+                get("/cql-libraries/with-related-versions?setId=1111&version=1.0.000")
+                    .with(user(TEST_USER_ID))
+                    .with(csrf()))
+            .andReturn();
+    assertThat(
+        result.getResponse().getContentAsString(), containsString(dto.getVersion().toString()));
+    assertThat(result.getResponse().getContentAsString(), containsString(dto.getCqlLibraryName()));
+    assertThat(result.getResponse().getContentAsString(), containsString(dto.getLibrarySetId()));
   }
 }

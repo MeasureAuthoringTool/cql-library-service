@@ -1,5 +1,6 @@
 package gov.cms.madie.cqllibraryservice.services;
 
+import gov.cms.madie.cqllibraryservice.dto.IncludedLibraryDTO;
 import gov.cms.madie.cqllibraryservice.dto.LibraryListDTO;
 import gov.cms.madie.cqllibraryservice.exceptions.*;
 import gov.cms.madie.models.access.RoleEnum;
@@ -169,8 +170,8 @@ public class CqlLibraryService {
    * This method deletes cql library and its versions permanently, if none of the versions is being
    * used either in measure or another library
    *
-   * @param name
-   * @param apiKey
+   * @param name - library name
+   * @param accessToken - auth token
    */
   public void deleteLibraryAlongWithVersions(String name, String accessToken) {
     if (isLibraryBeinUsed(name, accessToken)) {
@@ -187,5 +188,41 @@ public class CqlLibraryService {
     }
     return cqlLibraryRepository.findLibrariesByNameAndModelOrderByNameAscAndVersionDsc(
         libraryName, model);
+  }
+
+  /**
+   * Get the library with all its related versions
+   *
+   * @param librarySetId - set id of a Library
+   * @param version - string representation of library version
+   * @return IncludedLibraryDTO
+   */
+  public IncludedLibraryDTO getLibraryBySetIdAndVersion(String librarySetId, String version) {
+    if (StringUtils.isBlank(librarySetId) || StringUtils.isBlank(version)) {
+      throw new BadRequestObjectException("Please provide library set ID and version.");
+    }
+    List<CqlLibrary> libraries =
+        cqlLibraryRepository.findByLibrarySetIdAndDraftAndActive(librarySetId, false, true);
+    if (CollectionUtils.isEmpty(libraries)) {
+      return null;
+    }
+    CqlLibrary library =
+        libraries.stream()
+            .filter(l -> version.equals(l.getVersion().toString()))
+            .findFirst()
+            .orElse(null);
+    if (library == null) {
+      return null;
+    }
+    List<String> versions = libraries.stream().map(l -> l.getVersion().toString()).toList();
+    return IncludedLibraryDTO.builder()
+        .id(library.getId())
+        .cqlLibraryName(library.getCqlLibraryName())
+        .librarySetId(library.getLibrarySetId())
+        .librarySet(library.getLibrarySet())
+        .version(library.getVersion())
+        .cql(library.getCql())
+        .relatedVersions(versions)
+        .build();
   }
 }
