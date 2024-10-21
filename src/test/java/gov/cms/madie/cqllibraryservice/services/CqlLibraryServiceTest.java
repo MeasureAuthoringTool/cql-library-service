@@ -450,7 +450,6 @@ class CqlLibraryServiceTest {
   @Test
   void testGetLibrarySetBySetIdIfLibrarySetNotFound() {
     String librarySetId = "1-1-1-1";
-    String owner = "John";
     CqlLibrary lib1 =
         CqlLibrary.builder()
             .cqlLibraryName("Lib1")
