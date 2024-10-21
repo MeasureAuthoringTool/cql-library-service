@@ -467,7 +467,7 @@ class CqlLibraryServiceTest {
   }
 
   @Test
-  void testGetLibrarySetBySetIdIfSetIdNtProvided() {
+  void testGetLibrarySetBySetIdIfSetIdNotProvided() {
     Exception exception =
         assertThrows(
             BadRequestObjectException.class, () -> cqlLibraryService.getLibrarySetBySetId(null));
