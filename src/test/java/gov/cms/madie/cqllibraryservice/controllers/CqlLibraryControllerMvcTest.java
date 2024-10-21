@@ -1,7 +1,7 @@
 package gov.cms.madie.cqllibraryservice.controllers;
 
 import gov.cms.madie.cqllibraryservice.config.security.SecurityConfig;
-import gov.cms.madie.cqllibraryservice.dto.IncludedLibraryDTO;
+import gov.cms.madie.cqllibraryservice.dto.LibrarySetDTO;
 import gov.cms.madie.cqllibraryservice.dto.LibraryListDTO;
 import gov.cms.madie.cqllibraryservice.exceptions.GeneralConflictException;
 import gov.cms.madie.models.common.ModelType;
@@ -1618,26 +1618,34 @@ public class CqlLibraryControllerMvcTest {
   }
 
   @Test
-  void testGetVersionedCqlLibraryBySetIdAndVersion() throws Exception {
-    IncludedLibraryDTO dto =
-        IncludedLibraryDTO.builder()
-            .cqlLibraryName("Test")
-            .librarySetId("1111")
-            .version(Version.parse("1.0.000"))
-            .cql("CQL")
-            .relatedVersions(List.of("0.1.000", "1.0.000"))
+  void testGetLibrarySetBySetId() throws Exception {
+    String librarySetId = "1-1-1-1";
+    String owner = "John";
+    LibrarySet librarySet = LibrarySet.builder().librarySetId(librarySetId).owner(owner).build();
+    CqlLibrary library =
+        CqlLibrary.builder()
+            .cqlLibraryName("Lib1")
+            .librarySetId(librarySetId)
+            .version(Version.parse("0.1.000"))
             .build();
-    when(cqlLibraryService.getLibraryBySetIdAndVersion(anyString(), anyString())).thenReturn(dto);
+    LibrarySetDTO librarySetDTO =
+        LibrarySetDTO.builder().librarySet(librarySet).libraries(List.of(library)).build();
+    when(cqlLibraryService.getLibrarySetBySetId(anyString())).thenReturn(librarySetDTO);
     MvcResult result =
         mockMvc
             .perform(
-                get("/cql-libraries/with-related-versions?setId=1111&version=1.0.000")
+                get("/cql-libraries/library-set/" + librarySetId)
                     .with(user(TEST_USER_ID))
                     .with(csrf()))
             .andReturn();
     assertThat(
-        result.getResponse().getContentAsString(), containsString(dto.getVersion().toString()));
-    assertThat(result.getResponse().getContentAsString(), containsString(dto.getCqlLibraryName()));
-    assertThat(result.getResponse().getContentAsString(), containsString(dto.getLibrarySetId()));
+        result.getResponse().getContentAsString(),
+        containsString(librarySetDTO.getLibrarySet().getLibrarySetId()));
+    assertThat(
+        result.getResponse().getContentAsString(),
+        containsString(librarySetDTO.getLibrarySet().getOwner()));
+    assertThat(
+        result.getResponse().getContentAsString(),
+        containsString(librarySetDTO.getLibraries().get(0).getCqlLibraryName()));
   }
 }

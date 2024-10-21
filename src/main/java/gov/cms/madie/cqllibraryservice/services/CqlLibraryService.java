@@ -1,8 +1,9 @@
 package gov.cms.madie.cqllibraryservice.services;
 
-import gov.cms.madie.cqllibraryservice.dto.IncludedLibraryDTO;
+import gov.cms.madie.cqllibraryservice.dto.LibrarySetDTO;
 import gov.cms.madie.cqllibraryservice.dto.LibraryListDTO;
 import gov.cms.madie.cqllibraryservice.exceptions.*;
+import gov.cms.madie.cqllibraryservice.repositories.LibrarySetRepository;
 import gov.cms.madie.models.access.RoleEnum;
 import gov.cms.madie.models.common.Version;
 import gov.cms.madie.models.dto.LibraryUsage;
@@ -26,6 +27,7 @@ import org.apache.commons.collections4.CollectionUtils;
 public class CqlLibraryService {
 
   private final ElmTranslatorClient elmTranslatorClient;
+  private final LibrarySetRepository librarySetRepository;
   private CqlLibraryRepository cqlLibraryRepository;
   private LibrarySetService librarySetService;
   private MeasureServiceClient measureServiceClient;
@@ -191,38 +193,22 @@ public class CqlLibraryService {
   }
 
   /**
-   * Get the library with all its related versions
+   * Get the versioned libraries that belongs to given set id
    *
    * @param librarySetId - set id of a Library
-   * @param version - string representation of library version
-   * @return IncludedLibraryDTO
+   * @return LibrarySetDTO - DTO containing all the versioned libraries for a set id and library set
+   *     itself
    */
-  public IncludedLibraryDTO getLibraryBySetIdAndVersion(String librarySetId, String version) {
-    if (StringUtils.isBlank(librarySetId) || StringUtils.isBlank(version)) {
-      throw new BadRequestObjectException("Please provide library set ID and version.");
+  public LibrarySetDTO getLibrarySetBySetId(String librarySetId) {
+    if (StringUtils.isBlank(librarySetId)) {
+      throw new BadRequestObjectException("Please provide library set ID.");
     }
     List<CqlLibrary> libraries =
         cqlLibraryRepository.findByLibrarySetIdAndDraftAndActive(librarySetId, false, true);
     if (CollectionUtils.isEmpty(libraries)) {
       return null;
     }
-    CqlLibrary library =
-        libraries.stream()
-            .filter(l -> version.equals(l.getVersion().toString()))
-            .findFirst()
-            .orElse(null);
-    if (library == null) {
-      return null;
-    }
-    List<String> versions = libraries.stream().map(l -> l.getVersion().toString()).toList();
-    return IncludedLibraryDTO.builder()
-        .id(library.getId())
-        .cqlLibraryName(library.getCqlLibraryName())
-        .librarySetId(library.getLibrarySetId())
-        .librarySet(library.getLibrarySet())
-        .version(library.getVersion())
-        .cql(library.getCql())
-        .relatedVersions(versions)
-        .build();
+    LibrarySet librarySet = librarySetRepository.findByLibrarySetId(librarySetId).orElse(null);
+    return LibrarySetDTO.builder().libraries(libraries).librarySet(librarySet).build();
   }
 }

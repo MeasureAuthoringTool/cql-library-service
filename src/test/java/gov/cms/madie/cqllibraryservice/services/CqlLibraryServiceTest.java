@@ -11,13 +11,14 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import gov.cms.madie.cqllibraryservice.dto.IncludedLibraryDTO;
+import gov.cms.madie.cqllibraryservice.dto.LibrarySetDTO;
 import gov.cms.madie.cqllibraryservice.dto.LibraryListDTO;
 import gov.cms.madie.cqllibraryservice.exceptions.BadRequestObjectException;
 import gov.cms.madie.cqllibraryservice.exceptions.DuplicateKeyException;
 import gov.cms.madie.cqllibraryservice.exceptions.GeneralConflictException;
 import gov.cms.madie.cqllibraryservice.exceptions.PermissionDeniedException;
 import gov.cms.madie.cqllibraryservice.exceptions.ResourceNotFoundException;
+import gov.cms.madie.cqllibraryservice.repositories.LibrarySetRepository;
 import gov.cms.madie.models.common.Version;
 import gov.cms.madie.models.dto.LibraryUsage;
 import gov.cms.madie.models.library.CqlLibrary;
@@ -41,7 +42,7 @@ class CqlLibraryServiceTest {
   @Mock private CqlLibraryRepository cqlLibraryRepository;
   @Mock private LibrarySetService librarySetService;
   @Mock private MeasureServiceClient measureServiceClient;
-
+  @Mock private LibrarySetRepository librarySetRepository;
   @Mock private ElmTranslatorClient elmTranslatorClient;
 
   @Test
@@ -408,9 +409,11 @@ class CqlLibraryServiceTest {
   }
 
   @Test
-  void testGetLibraryBySetIdAndVersion() {
+  void testGetLibrarySetBySetId() {
     String librarySetId = "1-1-1-1";
     String libraryVersion = "1.0.000";
+    String owner = "John";
+    LibrarySet librarySet = LibrarySet.builder().librarySetId(librarySetId).owner(owner).build();
     CqlLibrary lib1 =
         CqlLibrary.builder()
             .cqlLibraryName("Lib1")
@@ -426,66 +429,48 @@ class CqlLibraryServiceTest {
     when(cqlLibraryRepository.findByLibrarySetIdAndDraftAndActive(
             anyString(), anyBoolean(), anyBoolean()))
         .thenReturn(List.of(lib1, lib2));
-    IncludedLibraryDTO libraryDTO =
-        cqlLibraryService.getLibraryBySetIdAndVersion(librarySetId, libraryVersion);
-    assertThat(libraryDTO.getCqlLibraryName(), equalTo(lib2.getCqlLibraryName()));
-    assertThat(libraryDTO.getVersion().toString(), equalTo(lib2.getVersion().toString()));
-    assertThat(libraryDTO.getLibrarySetId(), equalTo(lib2.getLibrarySetId()));
+    when(librarySetRepository.findByLibrarySetId(anyString()))
+        .thenReturn(Optional.ofNullable(librarySet));
+    LibrarySetDTO libraryDTO = cqlLibraryService.getLibrarySetBySetId(librarySetId);
+    assertThat(libraryDTO.getLibrarySet().getLibrarySetId(), equalTo(librarySetId));
+    assertThat(libraryDTO.getLibrarySet().getOwner(), equalTo(owner));
+    assertThat(libraryDTO.getLibraries().size(), equalTo(2));
   }
 
   @Test
-  void testGetLibraryBySetIdAndVersionIfLibraryNotFoundForSetId() {
+  void testGetLibrarySetBySetIdIfNoLibraryExistsWithSetId() {
     String librarySetId = "1-1-1-1";
-    String libraryVersion = "1.0.000";
     when(cqlLibraryRepository.findByLibrarySetIdAndDraftAndActive(
             anyString(), anyBoolean(), anyBoolean()))
         .thenReturn(List.of());
-    IncludedLibraryDTO libraryDTO =
-        cqlLibraryService.getLibraryBySetIdAndVersion(librarySetId, libraryVersion);
+    LibrarySetDTO libraryDTO = cqlLibraryService.getLibrarySetBySetId(librarySetId);
     assertThat(libraryDTO, equalTo(null));
   }
 
   @Test
-  void testGetLibraryBySetIdAndVersionIfLibraryNotFoundForVersion() {
+  void testGetLibrarySetBySetIdIfLibrarySetNotFound() {
     String librarySetId = "1-1-1-1";
-    String libraryVersion = "1.0.000";
+    String owner = "John";
     CqlLibrary lib1 =
         CqlLibrary.builder()
             .cqlLibraryName("Lib1")
             .librarySetId(librarySetId)
             .version(Version.parse("0.1.000"))
             .build();
-    CqlLibrary lib2 =
-        CqlLibrary.builder()
-            .cqlLibraryName("Lib1")
-            .librarySetId(librarySetId)
-            .version(Version.parse("2.1.000"))
-            .build();
     when(cqlLibraryRepository.findByLibrarySetIdAndDraftAndActive(
             anyString(), anyBoolean(), anyBoolean()))
-        .thenReturn(List.of(lib1, lib2));
-    IncludedLibraryDTO libraryDTO =
-        cqlLibraryService.getLibraryBySetIdAndVersion(librarySetId, libraryVersion);
-    assertThat(libraryDTO, equalTo(null));
+        .thenReturn(List.of(lib1));
+    when(librarySetRepository.findByLibrarySetId(anyString())).thenReturn(Optional.empty());
+    LibrarySetDTO libraryDTO = cqlLibraryService.getLibrarySetBySetId(librarySetId);
+    assertThat(libraryDTO.getLibrarySet(), equalTo(null));
+    assertThat(libraryDTO.getLibraries().size(), equalTo(1));
   }
 
   @Test
-  void testGetLibraryBySetIdAndVersionIfLibraryVersionNotProvided() {
-    String librarySetId = "1-1-1-1";
-    Exception ex =
+  void testGetLibrarySetBySetIdIfSetIdNtProvided() {
+    Exception exception =
         assertThrows(
-            BadRequestObjectException.class,
-            () -> cqlLibraryService.getLibraryBySetIdAndVersion(librarySetId, null));
-    assertThat(ex.getMessage(), equalTo("Please provide library set ID and version."));
-  }
-
-  @Test
-  void testGetLibraryBySetIdAndVersionIfLibrarySetIdNotProvided() {
-    String version = "1.0.000";
-    Exception ex =
-        assertThrows(
-            BadRequestObjectException.class,
-            () -> cqlLibraryService.getLibraryBySetIdAndVersion(null, version));
-    assertThat(ex.getMessage(), equalTo("Please provide library set ID and version."));
+            BadRequestObjectException.class, () -> cqlLibraryService.getLibrarySetBySetId(null));
+    assertThat(exception.getMessage(), equalTo("Please provide library set ID."));
   }
 }

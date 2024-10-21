@@ -1,6 +1,6 @@
 package gov.cms.madie.cqllibraryservice.controllers;
 
-import gov.cms.madie.cqllibraryservice.dto.IncludedLibraryDTO;
+import gov.cms.madie.cqllibraryservice.dto.LibrarySetDTO;
 import gov.cms.madie.cqllibraryservice.dto.LibraryListDTO;
 import gov.cms.madie.cqllibraryservice.exceptions.InvalidIdException;
 import gov.cms.madie.cqllibraryservice.exceptions.InvalidResourceStateException;
@@ -80,10 +80,9 @@ public class CqlLibraryController {
         cqlLibraryService.getVersionedCqlLibrary(name, version, model, includeElm, accessToken));
   }
 
-  @GetMapping("/with-related-versions")
-  public ResponseEntity<IncludedLibraryDTO> getVersionedCqlLibraryBySetIdAndVersion(
-      @RequestParam String setId, @RequestParam String version) {
-    return ResponseEntity.ok(cqlLibraryService.getLibraryBySetIdAndVersion(setId, version));
+  @GetMapping("/library-set/{setId}")
+  public ResponseEntity<LibrarySetDTO> getLibrarySetBySetId(@PathVariable String setId) {
+    return ResponseEntity.ok(cqlLibraryService.getLibrarySetBySetId(setId));
   }
 
   @PostMapping
