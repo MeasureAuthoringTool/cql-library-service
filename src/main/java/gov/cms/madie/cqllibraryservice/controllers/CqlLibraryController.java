@@ -1,5 +1,6 @@
 package gov.cms.madie.cqllibraryservice.controllers;
 
+import gov.cms.madie.cqllibraryservice.dto.LibrarySetDTO;
 import gov.cms.madie.cqllibraryservice.dto.LibraryListDTO;
 import gov.cms.madie.cqllibraryservice.exceptions.InvalidIdException;
 import gov.cms.madie.cqllibraryservice.exceptions.InvalidResourceStateException;
@@ -77,6 +78,11 @@ public class CqlLibraryController {
       @RequestHeader("Authorization") String accessToken) {
     return ResponseEntity.ok(
         cqlLibraryService.getVersionedCqlLibrary(name, version, model, includeElm, accessToken));
+  }
+
+  @GetMapping("/library-set/{setId}")
+  public ResponseEntity<LibrarySetDTO> getLibrarySetBySetId(@PathVariable String setId) {
+    return ResponseEntity.ok(cqlLibraryService.getLibrarySetBySetId(setId));
   }
 
   @PostMapping

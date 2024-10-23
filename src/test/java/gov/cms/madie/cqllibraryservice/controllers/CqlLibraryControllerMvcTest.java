@@ -1,6 +1,7 @@
 package gov.cms.madie.cqllibraryservice.controllers;
 
 import gov.cms.madie.cqllibraryservice.config.security.SecurityConfig;
+import gov.cms.madie.cqllibraryservice.dto.LibrarySetDTO;
 import gov.cms.madie.cqllibraryservice.dto.LibraryListDTO;
 import gov.cms.madie.cqllibraryservice.exceptions.GeneralConflictException;
 import gov.cms.madie.models.common.ModelType;
@@ -1614,5 +1615,37 @@ public class CqlLibraryControllerMvcTest {
     assertThat(result.getResponse().getContentAsString(), containsString(l1.getModel()));
     assertThat(
         result.getResponse().getContentAsString(), containsString(l1.getVersion().toString()));
+  }
+
+  @Test
+  void testGetLibrarySetBySetId() throws Exception {
+    String librarySetId = "1-1-1-1";
+    String owner = "John";
+    LibrarySet librarySet = LibrarySet.builder().librarySetId(librarySetId).owner(owner).build();
+    CqlLibrary library =
+        CqlLibrary.builder()
+            .cqlLibraryName("Lib1")
+            .librarySetId(librarySetId)
+            .version(Version.parse("0.1.000"))
+            .build();
+    LibrarySetDTO librarySetDTO =
+        LibrarySetDTO.builder().librarySet(librarySet).libraries(List.of(library)).build();
+    when(cqlLibraryService.getLibrarySetBySetId(anyString())).thenReturn(librarySetDTO);
+    MvcResult result =
+        mockMvc
+            .perform(
+                get("/cql-libraries/library-set/" + librarySetId)
+                    .with(user(TEST_USER_ID))
+                    .with(csrf()))
+            .andReturn();
+    assertThat(
+        result.getResponse().getContentAsString(),
+        containsString(librarySetDTO.getLibrarySet().getLibrarySetId()));
+    assertThat(
+        result.getResponse().getContentAsString(),
+        containsString(librarySetDTO.getLibrarySet().getOwner()));
+    assertThat(
+        result.getResponse().getContentAsString(),
+        containsString(librarySetDTO.getLibraries().get(0).getCqlLibraryName()));
   }
 }

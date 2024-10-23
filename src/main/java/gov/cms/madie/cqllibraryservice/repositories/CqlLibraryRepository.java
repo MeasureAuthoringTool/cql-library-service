@@ -33,4 +33,7 @@ public interface CqlLibraryRepository
         "{'$sort': {'createdAt':1}}"
       })
   List<CqlLibrary> findByCqlLibrarySetId();
+
+  List<CqlLibrary> findByLibrarySetIdAndDraftAndActive(
+      String librarySetId, boolean draft, boolean active);
 }

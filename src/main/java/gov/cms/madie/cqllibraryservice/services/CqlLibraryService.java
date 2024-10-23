@@ -1,7 +1,9 @@
 package gov.cms.madie.cqllibraryservice.services;
 
+import gov.cms.madie.cqllibraryservice.dto.LibrarySetDTO;
 import gov.cms.madie.cqllibraryservice.dto.LibraryListDTO;
 import gov.cms.madie.cqllibraryservice.exceptions.*;
+import gov.cms.madie.cqllibraryservice.repositories.LibrarySetRepository;
 import gov.cms.madie.models.access.RoleEnum;
 import gov.cms.madie.models.common.Version;
 import gov.cms.madie.models.dto.LibraryUsage;
@@ -25,6 +27,7 @@ import org.apache.commons.collections4.CollectionUtils;
 public class CqlLibraryService {
 
   private final ElmTranslatorClient elmTranslatorClient;
+  private final LibrarySetRepository librarySetRepository;
   private CqlLibraryRepository cqlLibraryRepository;
   private LibrarySetService librarySetService;
   private MeasureServiceClient measureServiceClient;
@@ -169,8 +172,8 @@ public class CqlLibraryService {
    * This method deletes cql library and its versions permanently, if none of the versions is being
    * used either in measure or another library
    *
-   * @param name
-   * @param apiKey
+   * @param name - library name
+   * @param accessToken - auth token
    */
   public void deleteLibraryAlongWithVersions(String name, String accessToken) {
     if (isLibraryBeinUsed(name, accessToken)) {
@@ -187,5 +190,25 @@ public class CqlLibraryService {
     }
     return cqlLibraryRepository.findLibrariesByNameAndModelOrderByNameAscAndVersionDsc(
         libraryName, model);
+  }
+
+  /**
+   * Get the versioned libraries that belongs to given set id
+   *
+   * @param librarySetId - set id of a Library
+   * @return LibrarySetDTO - DTO containing all the versioned libraries for a set id and library set
+   *     itself
+   */
+  public LibrarySetDTO getLibrarySetBySetId(String librarySetId) {
+    if (StringUtils.isBlank(librarySetId)) {
+      throw new BadRequestObjectException("Please provide library set ID.");
+    }
+    List<CqlLibrary> libraries =
+        cqlLibraryRepository.findByLibrarySetIdAndDraftAndActive(librarySetId, false, true);
+    if (CollectionUtils.isEmpty(libraries)) {
+      return null;
+    }
+    LibrarySet librarySet = librarySetRepository.findByLibrarySetId(librarySetId).orElse(null);
+    return LibrarySetDTO.builder().libraries(libraries).librarySet(librarySet).build();
   }
 }

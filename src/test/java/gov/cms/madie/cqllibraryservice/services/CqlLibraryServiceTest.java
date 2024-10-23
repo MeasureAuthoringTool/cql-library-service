@@ -11,12 +11,14 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import gov.cms.madie.cqllibraryservice.dto.LibrarySetDTO;
 import gov.cms.madie.cqllibraryservice.dto.LibraryListDTO;
 import gov.cms.madie.cqllibraryservice.exceptions.BadRequestObjectException;
 import gov.cms.madie.cqllibraryservice.exceptions.DuplicateKeyException;
 import gov.cms.madie.cqllibraryservice.exceptions.GeneralConflictException;
 import gov.cms.madie.cqllibraryservice.exceptions.PermissionDeniedException;
 import gov.cms.madie.cqllibraryservice.exceptions.ResourceNotFoundException;
+import gov.cms.madie.cqllibraryservice.repositories.LibrarySetRepository;
 import gov.cms.madie.models.common.Version;
 import gov.cms.madie.models.dto.LibraryUsage;
 import gov.cms.madie.models.library.CqlLibrary;
@@ -40,7 +42,7 @@ class CqlLibraryServiceTest {
   @Mock private CqlLibraryRepository cqlLibraryRepository;
   @Mock private LibrarySetService librarySetService;
   @Mock private MeasureServiceClient measureServiceClient;
-
+  @Mock private LibrarySetRepository librarySetRepository;
   @Mock private ElmTranslatorClient elmTranslatorClient;
 
   @Test
@@ -404,5 +406,70 @@ class CqlLibraryServiceTest {
             BadRequestObjectException.class,
             () -> cqlLibraryService.findLibrariesByNameAndModel(null, "QDM"));
     assertThat(ex.getMessage(), is(equalTo("Please provide library name and model.")));
+  }
+
+  @Test
+  void testGetLibrarySetBySetId() {
+    String librarySetId = "1-1-1-1";
+    String libraryVersion = "1.0.000";
+    String owner = "John";
+    LibrarySet librarySet = LibrarySet.builder().librarySetId(librarySetId).owner(owner).build();
+    CqlLibrary lib1 =
+        CqlLibrary.builder()
+            .cqlLibraryName("Lib1")
+            .librarySetId(librarySetId)
+            .version(Version.parse("0.1.000"))
+            .build();
+    CqlLibrary lib2 =
+        CqlLibrary.builder()
+            .cqlLibraryName("Lib1")
+            .librarySetId(librarySetId)
+            .version(Version.parse(libraryVersion))
+            .build();
+    when(cqlLibraryRepository.findByLibrarySetIdAndDraftAndActive(
+            anyString(), anyBoolean(), anyBoolean()))
+        .thenReturn(List.of(lib1, lib2));
+    when(librarySetRepository.findByLibrarySetId(anyString()))
+        .thenReturn(Optional.ofNullable(librarySet));
+    LibrarySetDTO libraryDTO = cqlLibraryService.getLibrarySetBySetId(librarySetId);
+    assertThat(libraryDTO.getLibrarySet().getLibrarySetId(), equalTo(librarySetId));
+    assertThat(libraryDTO.getLibrarySet().getOwner(), equalTo(owner));
+    assertThat(libraryDTO.getLibraries().size(), equalTo(2));
+  }
+
+  @Test
+  void testGetLibrarySetBySetIdIfNoLibraryExistsWithSetId() {
+    String librarySetId = "1-1-1-1";
+    when(cqlLibraryRepository.findByLibrarySetIdAndDraftAndActive(
+            anyString(), anyBoolean(), anyBoolean()))
+        .thenReturn(List.of());
+    LibrarySetDTO libraryDTO = cqlLibraryService.getLibrarySetBySetId(librarySetId);
+    assertThat(libraryDTO, equalTo(null));
+  }
+
+  @Test
+  void testGetLibrarySetBySetIdIfLibrarySetNotFound() {
+    String librarySetId = "1-1-1-1";
+    CqlLibrary lib1 =
+        CqlLibrary.builder()
+            .cqlLibraryName("Lib1")
+            .librarySetId(librarySetId)
+            .version(Version.parse("0.1.000"))
+            .build();
+    when(cqlLibraryRepository.findByLibrarySetIdAndDraftAndActive(
+            anyString(), anyBoolean(), anyBoolean()))
+        .thenReturn(List.of(lib1));
+    when(librarySetRepository.findByLibrarySetId(anyString())).thenReturn(Optional.empty());
+    LibrarySetDTO libraryDTO = cqlLibraryService.getLibrarySetBySetId(librarySetId);
+    assertThat(libraryDTO.getLibrarySet(), equalTo(null));
+    assertThat(libraryDTO.getLibraries().size(), equalTo(1));
+  }
+
+  @Test
+  void testGetLibrarySetBySetIdIfSetIdNotProvided() {
+    Exception exception =
+        assertThrows(
+            BadRequestObjectException.class, () -> cqlLibraryService.getLibrarySetBySetId(null));
+    assertThat(exception.getMessage(), equalTo("Please provide library set ID."));
   }
 }
