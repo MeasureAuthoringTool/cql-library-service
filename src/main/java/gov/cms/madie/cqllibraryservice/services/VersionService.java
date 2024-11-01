@@ -9,6 +9,9 @@ import gov.cms.madie.models.common.Version;
 import gov.cms.madie.cqllibraryservice.repositories.CqlLibraryRepository;
 import java.time.Instant;
 import java.util.Objects;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -113,7 +116,7 @@ public class VersionService {
     }
   }
 
-  public CqlLibrary createDraft(String id, String cqlLibraryName, String username) {
+  public CqlLibrary createDraft(String id, String cqlLibraryName, String model, String username) {
     CqlLibrary cqlLibrary = cqlLibraryService.findCqlLibraryById(id);
 
     if (!Objects.equals(cqlLibraryName, cqlLibrary.getCqlLibraryName())) {
@@ -143,6 +146,10 @@ public class VersionService {
               .replaceFirst(
                   ".*?[\n\r]",
                   "library " + cqlLibraryName + " version '" + cqlLibrary.getVersion() + "'\n"));
+    }
+    if (!model.equals(cqlLibrary.getModel())) {
+      clonedCqlLibrary.setModel(model);
+      clonedCqlLibrary.setCql(updateUsingStatement(model, cqlLibrary.getCql()));
     }
 
     var savedCqlLibrary = cqlLibraryRepository.save(clonedCqlLibrary);
@@ -189,5 +196,17 @@ public class VersionService {
       return true;
     }
     return !cqlLibraryRepository.existsByLibrarySetIdAndDraft(cqlLibrary.getLibrarySetId(), true);
+  }
+
+  private String updateUsingStatement(String model, final String cql) {
+    Pattern qicorePattern = Pattern.compile("using QICore .*version '[0-9]\\.[0-9](\\.[0-9])?'");
+    Matcher matcher = qicorePattern.matcher(cql);
+    String updatedCql = cql;
+    if (matcher.find()) {
+      updatedCql =
+          matcher.replaceAll(
+              "using QICore version '" + model.substring(model.lastIndexOf("v") + 1) + "'");
+    }
+    return updatedCql;
   }
 }
