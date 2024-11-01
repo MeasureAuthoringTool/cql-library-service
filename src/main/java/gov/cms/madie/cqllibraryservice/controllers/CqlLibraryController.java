@@ -174,8 +174,9 @@ public class CqlLibraryController {
       @Validated(CqlLibrary.ValidationSequence.class) @RequestBody final CqlLibraryDraft cqlLibrary,
       Principal principal) {
     var output =
-        versionService.createDraft(id, cqlLibrary.getCqlLibraryName(), principal.getName());
-    log.info("output: {}", output);
+        versionService.createDraft(
+            id, cqlLibrary.getCqlLibraryName(), cqlLibrary.getModel(), principal.getName());
+    log.debug("output: {}", output);
     return ResponseEntity.status(HttpStatus.CREATED).body(output);
   }
 

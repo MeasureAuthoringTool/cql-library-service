@@ -947,7 +947,7 @@ public class CqlLibraryControllerMvcTest {
                 .cql("library Library1 version '1.0.000'")
                 .build());
 
-    when(versionService.createDraft(anyString(), anyString(), anyString()))
+    when(versionService.createDraft(anyString(), anyString(), anyString(), anyString()))
         .thenThrow(new ResourceNotDraftableException("CQL Library"));
     mockMvc
         .perform(
@@ -959,7 +959,8 @@ public class CqlLibraryControllerMvcTest {
         .andExpect(status().isConflict())
         .andExpect(content().contentType(MediaType.APPLICATION_JSON_VALUE));
     verify(versionService, times(1))
-        .createDraft(eq("Library1_ID"), eq("Library1"), eq(TEST_USER_ID));
+        .createDraft(
+            eq("Library1_ID"), eq("Library1"), eq(ModelType.QI_CORE.getValue()), eq(TEST_USER_ID));
   }
 
   @Test
@@ -985,7 +986,7 @@ public class CqlLibraryControllerMvcTest {
                 .cql("library Library1 version '1.0.000'")
                 .build());
 
-    when(versionService.createDraft(anyString(), anyString(), anyString()))
+    when(versionService.createDraft(anyString(), anyString(), anyString(), anyString()))
         .thenThrow(new ResourceNotFoundException("CQL Library", "Library1_ID"));
     mockMvc
         .perform(
@@ -997,7 +998,8 @@ public class CqlLibraryControllerMvcTest {
         .andExpect(status().isNotFound())
         .andExpect(content().contentType(MediaType.APPLICATION_JSON_VALUE));
     verify(versionService, times(1))
-        .createDraft(eq("Library1_ID"), eq("Library1"), eq(TEST_USER_ID));
+        .createDraft(
+            eq("Library1_ID"), eq("Library1"), eq(ModelType.QI_CORE.getValue()), eq(TEST_USER_ID));
   }
 
   @Test
@@ -1023,8 +1025,8 @@ public class CqlLibraryControllerMvcTest {
                 .draft(false)
                 .version(new Version(2, 1, 0))
                 .build());
-
-    when(versionService.createDraft(anyString(), anyString(), anyString()))
+    System.out.println(json);
+    when(versionService.createDraft(anyString(), anyString(), anyString(), anyString()))
         .thenThrow(new DuplicateKeyException("cqlLibraryName", "Library name must be unique."));
     mockMvc
         .perform(
@@ -1037,7 +1039,11 @@ public class CqlLibraryControllerMvcTest {
         .andExpect(content().contentType(MediaType.APPLICATION_JSON_VALUE))
         .andExpect(jsonPath("$.message").value("Library name must be unique."));
     verify(versionService, times(1))
-        .createDraft(eq("Library1_ID"), eq("ChangedName"), eq(TEST_USER_ID));
+        .createDraft(
+            eq("Library1_ID"),
+            eq("ChangedName"),
+            eq(ModelType.QI_CORE.getValue()),
+            eq(TEST_USER_ID));
   }
 
   @Test
@@ -1062,7 +1068,7 @@ public class CqlLibraryControllerMvcTest {
                 .cql("library Library1 version '1.2.000'")
                 .build());
 
-    when(versionService.createDraft(anyString(), anyString(), anyString()))
+    when(versionService.createDraft(anyString(), anyString(), anyString(), anyString()))
         .thenReturn(draftLibrary);
     mockMvc
         .perform(
@@ -1078,7 +1084,8 @@ public class CqlLibraryControllerMvcTest {
         .andExpect(jsonPath("$.draft").value(true))
         .andExpect(jsonPath("$.version").value("1.2.000"));
     verify(versionService, times(1))
-        .createDraft(eq("Library1_ID"), eq("Library1"), eq(TEST_USER_ID));
+        .createDraft(
+            eq("Library1_ID"), eq("Library1"), eq(ModelType.QI_CORE.getValue()), eq(TEST_USER_ID));
   }
 
   @Test

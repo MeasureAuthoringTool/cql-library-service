@@ -411,13 +411,15 @@ class CqlLibraryControllerTest {
             .createdBy("User1")
             .lastModifiedBy("User1")
             .build();
-    when(versionService.createDraft(anyString(), anyString(), anyString())).thenReturn(draft);
+    when(versionService.createDraft(anyString(), anyString(), anyString(), anyString()))
+        .thenReturn(draft);
     when(principal.getName()).thenReturn("test.user");
     ResponseEntity<CqlLibrary> output =
         cqlLibraryController.createDraft(
             "Library1_ID",
             CqlLibraryDraft.builder()
                 .cqlLibraryName("Library1")
+                .model(ModelType.QI_CORE.getValue())
                 .cql("library Library1 version '1.0.000'")
                 .build(),
             principal);
@@ -428,7 +430,7 @@ class CqlLibraryControllerTest {
 
   @Test
   public void testCreateDraftReturnsException() {
-    when(versionService.createDraft(anyString(), anyString(), anyString()))
+    when(versionService.createDraft(anyString(), anyString(), anyString(), anyString()))
         .thenThrow(new ResourceNotDraftableException("CqlLibrary"));
     when(principal.getName()).thenReturn("test.user");
     assertThrows(
@@ -438,6 +440,7 @@ class CqlLibraryControllerTest {
                 "Library1_ID",
                 CqlLibraryDraft.builder()
                     .cqlLibraryName("Library1")
+                    .model(ModelType.QI_CORE.getValue())
                     .cql("library Library1 version '1.0.000'")
                     .build(),
                 principal));
