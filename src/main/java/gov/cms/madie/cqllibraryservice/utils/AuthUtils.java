@@ -6,14 +6,14 @@ import gov.cms.madie.models.library.CqlLibrary;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.util.CollectionUtils;
 
-import java.util.List;
+import java.util.Set;
 
 @Slf4j
 public class AuthUtils {
 
   public static void checkAccessPermissions(CqlLibrary cqlLibrary, String username) {
     // TODO: hardcoded allowed ACLs for now
-    List<RoleEnum> allowedRoles = List.of(RoleEnum.SHARED_WITH);
+    Set<RoleEnum> allowedRoles = Set.of(RoleEnum.SHARED_WITH);
     if (!username.equalsIgnoreCase(cqlLibrary.getLibrarySet().getOwner())
         && (CollectionUtils.isEmpty(cqlLibrary.getLibrarySet().getAcls())
             || cqlLibrary.getLibrarySet().getAcls().stream()

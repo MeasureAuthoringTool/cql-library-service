@@ -4,7 +4,9 @@ import gov.cms.madie.cqllibraryservice.dto.LibrarySetDTO;
 import gov.cms.madie.cqllibraryservice.dto.LibraryListDTO;
 import gov.cms.madie.cqllibraryservice.exceptions.*;
 import gov.cms.madie.cqllibraryservice.repositories.LibrarySetRepository;
-import gov.cms.madie.models.access.RoleEnum;
+import gov.cms.madie.models.access.AclOperation;
+import gov.cms.madie.models.access.AclSpecification;
+import gov.cms.madie.models.common.ActionType;
 import gov.cms.madie.models.common.Version;
 import gov.cms.madie.models.dto.LibraryUsage;
 import gov.cms.madie.models.library.CqlLibrary;
@@ -29,6 +31,7 @@ public class CqlLibraryService {
   private final ElmTranslatorClient elmTranslatorClient;
   private final LibrarySetRepository librarySetRepository;
   private CqlLibraryRepository cqlLibraryRepository;
+  private final ActionLogService actionLogService;
   private LibrarySetService librarySetService;
   private MeasureServiceClient measureServiceClient;
 
@@ -98,24 +101,26 @@ public class CqlLibraryService {
     throw new ResourceNotFoundException("CQL Library", id);
   }
 
+  public List<AclSpecification> updateAccessControlList(
+      String cqlLibraryId, AclOperation aclOperation) {
+    Optional<CqlLibrary> persistedLibrary = cqlLibraryRepository.findById(cqlLibraryId);
+    if (persistedLibrary.isEmpty()) {
+      throw new ResourceNotFoundException("Library does not exist: " + cqlLibraryId);
+    }
+
+    CqlLibrary library = persistedLibrary.get();
+    LibrarySet librarySet =
+        librarySetService.updateLibrarySetAcls(library.getLibrarySetId(), aclOperation);
+    actionLogService.logAction(cqlLibraryId, ActionType.UPDATED, "admin");
+    return librarySet.getAcls();
+  }
+
   public boolean changeOwnership(String id, String userid) {
     boolean result = false;
     Optional<CqlLibrary> persistedCqlLibrary = cqlLibraryRepository.findById(id);
     if (persistedCqlLibrary.isPresent()) {
       CqlLibrary cqlLibrary = persistedCqlLibrary.get();
       librarySetService.updateOwnership(cqlLibrary.getLibrarySetId(), userid);
-      result = true;
-    }
-    return result;
-  }
-
-  public boolean grantAccess(String cqlLibraryId, String userid) {
-    boolean result = false;
-    Optional<CqlLibrary> persistedCqlLibrary = cqlLibraryRepository.findById(cqlLibraryId);
-    if (persistedCqlLibrary.isPresent()) {
-      CqlLibrary cqlLibrary = persistedCqlLibrary.get();
-      librarySetService.updateLibrarySetAcls(
-          cqlLibrary.getLibrarySetId(), userid, RoleEnum.SHARED_WITH);
       result = true;
     }
     return result;

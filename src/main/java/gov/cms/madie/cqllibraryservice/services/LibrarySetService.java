@@ -2,15 +2,15 @@ package gov.cms.madie.cqllibraryservice.services;
 
 import gov.cms.madie.cqllibraryservice.exceptions.ResourceNotFoundException;
 import gov.cms.madie.cqllibraryservice.repositories.LibrarySetRepository;
+import gov.cms.madie.models.access.AclOperation;
 import gov.cms.madie.models.access.AclSpecification;
-import gov.cms.madie.models.access.RoleEnum;
 import gov.cms.madie.models.common.ActionType;
 import gov.cms.madie.models.library.LibrarySet;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections4.CollectionUtils;
 import org.springframework.stereotype.Service;
-import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 
 @Slf4j
@@ -36,52 +36,75 @@ public class LibrarySetService {
     }
   }
 
-  public LibrarySet updateLibrarySetAcls(String librarySetId, String userId, RoleEnum role) {
+  public LibrarySet updateLibrarySetAcls(String librarySetId, AclOperation aclOperation) {
     Optional<LibrarySet> optionalLibrarySet = librarySetRepository.findByLibrarySetId(librarySetId);
     if (optionalLibrarySet.isPresent()) {
       LibrarySet librarySet = optionalLibrarySet.get();
-      if (CollectionUtils.isEmpty(librarySet.getAcls())) {
-        librarySet.setAcls(List.of(createAcl(userId, role)));
-      } else {
-        Optional<AclSpecification> aclSpecification = getAclSpecification(userId, librarySet);
-        if (aclSpecification.isPresent()) {
-          AclSpecification specification = aclSpecification.get();
-          if (!specification.getRoles().contains(role)) {
-            specification.getRoles().add(role);
-          }
+      if (AclOperation.AclAction.GRANT == aclOperation.getAction()) {
+        if (CollectionUtils.isEmpty(librarySet.getAcls())) {
+          // if no acl present, add it
+          librarySet.setAcls(aclOperation.getAcls());
         } else {
-          librarySet.getAcls().add(createAcl(userId, role));
+          // update acl
+          aclOperation
+              .getAcls()
+              .forEach(
+                  acl -> {
+                    // check if acl already present for the user
+                    AclSpecification aclSpecification =
+                        findAclSpecificationByUserId(librarySet, acl.getUserId());
+                    // if acl does not present, add it
+                    if (aclSpecification == null) {
+                      librarySet.getAcls().add(acl);
+                    } else {
+                      aclSpecification.getRoles().addAll(acl.getRoles());
+                    }
+                  });
         }
+      } else if (AclOperation.AclAction.REVOKE == aclOperation.getAction()) {
+        aclOperation
+            .getAcls()
+            .forEach(
+                acl -> {
+                  // check if acl already present for the user
+                  AclSpecification aclSpecification =
+                      findAclSpecificationByUserId(librarySet, acl.getUserId());
+                  if (aclSpecification != null) {
+                    // remove roles from ACL
+                    aclSpecification.getRoles().removeAll(acl.getRoles());
+                    // after removing the roles if there is no role left, remove acl
+                    if (aclSpecification.getRoles().isEmpty()) {
+                      librarySet.getAcls().remove(aclSpecification);
+                    }
+                  }
+                });
       }
+
       LibrarySet updatedLibrarySet = librarySetRepository.save(librarySet);
-      log.info("SHARED acl added to library set [{}]", updatedLibrarySet.getId());
+      log.info("ACL updated for Library set [{}]", updatedLibrarySet.getId());
       return updatedLibrarySet;
     } else {
       String error =
           String.format(
               "Library with set id `%s` can not be shared. Library set may not exists.",
-              librarySetId, userId);
+              librarySetId);
       log.error(error);
       throw new ResourceNotFoundException("LibrarySet", "id", librarySetId);
     }
   }
 
-  private AclSpecification createAcl(String userId, RoleEnum role) {
-    AclSpecification spec = new AclSpecification();
-    spec.setUserId(userId);
-    spec.setRoles(List.of(role));
-
-    return spec;
-  }
-
-  public Optional<AclSpecification> getAclSpecification(String userId, LibrarySet librarySet) {
-    return librarySet.getAcls().stream()
-        .filter(acl -> userId.equalsIgnoreCase(acl.getUserId()))
-        .findFirst();
-  }
-
   public LibrarySet findByLibrarySetId(final String librarySetId) {
     return librarySetRepository.findByLibrarySetId(librarySetId).orElse(null);
+  }
+
+  private AclSpecification findAclSpecificationByUserId(LibrarySet librarySet, String userId) {
+    if (CollectionUtils.isEmpty(librarySet.getAcls())) {
+      return null;
+    }
+    return librarySet.getAcls().stream()
+        .filter(existingAcl -> Objects.equals(existingAcl.getUserId(), userId))
+        .findFirst()
+        .orElse(null);
   }
 
   public LibrarySet updateOwnership(String librarySetId, String userId) {
