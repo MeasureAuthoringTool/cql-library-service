@@ -51,6 +51,7 @@ import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 import gov.cms.madie.models.library.LibrarySet;
 
@@ -1128,7 +1129,7 @@ public class CqlLibraryControllerMvcTest {
     CqlLibrary lib2 = CqlLibrary.builder().id("6789").build();
     AclSpecification acl1 = new AclSpecification();
     acl1.setUserId("raoulduke");
-    acl1.setRoles(List.of(RoleEnum.SHARED_WITH));
+    acl1.setRoles(Set.of(RoleEnum.SHARED_WITH));
 
     List<AclSpecification> acls = List.of(acl1);
     LibrarySet librarySet = LibrarySet.builder().acls(acls).build();
@@ -1155,7 +1156,7 @@ public class CqlLibraryControllerMvcTest {
     CqlLibrary testLibrary = CqlLibrary.builder().id("12345").build();
     AclSpecification acl1 = new AclSpecification();
     acl1.setUserId("raoulduke");
-    acl1.setRoles(List.of(RoleEnum.SHARED_WITH));
+    acl1.setRoles(Set.of(RoleEnum.SHARED_WITH));
 
     List<AclSpecification> acls = List.of(acl1);
     LibrarySet librarySet = LibrarySet.builder().acls(acls).build();

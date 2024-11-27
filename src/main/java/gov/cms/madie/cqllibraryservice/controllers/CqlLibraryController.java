@@ -8,6 +8,8 @@ import gov.cms.madie.cqllibraryservice.services.ActionLogService;
 import gov.cms.madie.cqllibraryservice.services.LibrarySetService;
 import gov.cms.madie.cqllibraryservice.utils.AuthUtils;
 import gov.cms.madie.cqllibraryservice.utils.LibraryUtils;
+import gov.cms.madie.models.access.AclOperation;
+import gov.cms.madie.models.access.AclSpecification;
 import gov.cms.madie.models.common.ActionType;
 import gov.cms.madie.models.dto.LibraryUsage;
 import gov.cms.madie.models.library.CqlLibrary;
@@ -218,27 +220,16 @@ public class CqlLibraryController {
     return response;
   }
 
-  @PutMapping(
-      value = "/{id}/grant",
-      produces = {MediaType.TEXT_PLAIN_VALUE})
+  @PutMapping("/{id}/acls")
   @PreAuthorize("#request.getHeader('api-key') == #apiKey")
-  public ResponseEntity<String> grantAccess(
+  public ResponseEntity<List<AclSpecification>> updateAccessControl(
       HttpServletRequest request,
-      @PathVariable("id") String id,
-      @RequestParam(required = true, name = "userid") String userid,
+      @PathVariable String id,
+      @RequestBody @Validated AclOperation aclOperation,
       @Value("${admin-api-key}") String apiKey) {
-    ResponseEntity<String> response =
-        ResponseEntity.badRequest().body("Cql Library does not exist.");
-
-    log.info("getLibraryId [{}] using apiKey ", id);
-
-    if (cqlLibraryService.grantAccess(id, userid)) {
-      response =
-          ResponseEntity.ok()
-              .body(String.format("%s granted access to Library successfully.", userid));
-      actionLogService.logAction(id, ActionType.UPDATED, "apiKey");
-    }
-    return response;
+    List<AclSpecification> aclSpecifications =
+        cqlLibraryService.updateAccessControlList(id, aclOperation);
+    return ResponseEntity.ok().body(aclSpecifications);
   }
 
   @GetMapping("/sharedWith")

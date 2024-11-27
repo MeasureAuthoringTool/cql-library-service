@@ -20,6 +20,7 @@ import gov.cms.madie.models.common.Version;
 import gov.cms.madie.cqllibraryservice.repositories.CqlLibraryRepository;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -92,7 +93,7 @@ class VersionServiceTest {
             .build();
     AclSpecification acl = new AclSpecification();
     acl.setUserId("testUser");
-    acl.setRoles(List.of(RoleEnum.SHARED_WITH));
+    acl.setRoles(Set.of(RoleEnum.SHARED_WITH));
 
     when(cqlLibraryService.findCqlLibraryById(anyString())).thenReturn(existingCqlLibrary);
     assertThrows(
@@ -155,7 +156,7 @@ class VersionServiceTest {
             .build();
     AclSpecification acl = new AclSpecification();
     acl.setUserId("testUser");
-    acl.setRoles(List.of(RoleEnum.SHARED_WITH));
+    acl.setRoles(Set.of(RoleEnum.SHARED_WITH));
     when(cqlLibraryService.findCqlLibraryById(anyString())).thenReturn(existingCqlLibrary);
 
     assertThrows(
@@ -183,7 +184,7 @@ class VersionServiceTest {
 
     AclSpecification acl = new AclSpecification();
     acl.setUserId("testUser");
-    acl.setRoles(List.of(RoleEnum.SHARED_WITH));
+    acl.setRoles(Set.of(RoleEnum.SHARED_WITH));
     when(cqlLibraryService.findCqlLibraryById(anyString())).thenReturn(existingCqlLibrary);
     when(cqlLibraryRepository.findMaxVersionByLibrarySetId(anyString()))
         .thenReturn(Optional.of(Version.parse("1.0.0")));
@@ -212,7 +213,7 @@ class VersionServiceTest {
             .build();
     AclSpecification acl = new AclSpecification();
     acl.setUserId("testUser");
-    acl.setRoles(List.of(RoleEnum.SHARED_WITH));
+    acl.setRoles(Set.of(RoleEnum.SHARED_WITH));
     when(cqlLibraryService.findCqlLibraryById(anyString())).thenReturn(existingCqlLibrary);
     when(cqlLibraryRepository.findMaxVersionByLibrarySetId(anyString()))
         .thenReturn(Optional.of(Version.parse("1.0.0")));
@@ -244,7 +245,7 @@ class VersionServiceTest {
     CqlLibrary updatedCqlLibrary = existingCqlLibrary.toBuilder().build();
     AclSpecification acl = new AclSpecification();
     acl.setUserId("testUser");
-    acl.setRoles(List.of(RoleEnum.SHARED_WITH));
+    acl.setRoles(Set.of(RoleEnum.SHARED_WITH));
     when(cqlLibraryService.findCqlLibraryById(anyString())).thenReturn(existingCqlLibrary);
     when(cqlLibraryRepository.findMaxVersionByLibrarySetId(anyString()))
         .thenReturn(Optional.of(Version.parse("1.0.0")));
@@ -287,7 +288,7 @@ class VersionServiceTest {
     CqlLibrary updatedCqlLibrary = existingCqlLibrary.toBuilder().build();
     AclSpecification acl = new AclSpecification();
     acl.setUserId("testUser");
-    acl.setRoles(List.of(RoleEnum.SHARED_WITH));
+    acl.setRoles(Set.of(RoleEnum.SHARED_WITH));
     when(cqlLibraryService.findCqlLibraryById(anyString())).thenReturn(existingCqlLibrary);
     when(cqlLibraryRepository.findMaxMinorVersionByLibrarySetIdAndVersionMajor(
             anyString(), anyInt()))
@@ -326,7 +327,7 @@ class VersionServiceTest {
   void testCreateDraftThrowsExceptionForAuthorization() {
     AclSpecification aclSpecification = new AclSpecification();
     aclSpecification.setUserId("sharedUser");
-    aclSpecification.setRoles(List.of(RoleEnum.SHARED_WITH));
+    aclSpecification.setRoles(Set.of(RoleEnum.SHARED_WITH));
 
     CqlLibrary existingCqlLibrary =
         CqlLibrary.builder()
@@ -356,7 +357,7 @@ class VersionServiceTest {
   void testCreateDraftSuccesfullyDraftsForSharedUser() {
     AclSpecification aclSpecification = new AclSpecification();
     aclSpecification.setUserId("sharedUser");
-    aclSpecification.setRoles(List.of(RoleEnum.SHARED_WITH));
+    aclSpecification.setRoles(Set.of(RoleEnum.SHARED_WITH));
 
     CqlLibrary existingCqlLibrary =
         CqlLibrary.builder()
@@ -434,7 +435,7 @@ class VersionServiceTest {
   void testCreateDraftThrowsExceptionWhenDraftAlreadyExists() {
     AclSpecification aclSpecification = new AclSpecification();
     aclSpecification.setUserId("sharedUser");
-    aclSpecification.setRoles(List.of(RoleEnum.SHARED_WITH));
+    aclSpecification.setRoles(Set.of(RoleEnum.SHARED_WITH));
 
     CqlLibrary existingCqlLibrary =
         CqlLibrary.builder()
