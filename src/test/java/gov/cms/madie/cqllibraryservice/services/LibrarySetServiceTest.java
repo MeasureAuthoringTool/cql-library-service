@@ -70,7 +70,8 @@ class LibrarySetServiceTest {
 
     Exception ex =
         assertThrows(
-            ResourceNotFoundException.class, () -> librarySetService.updateLibrarySetAcls(librarySetId, aclOperation));
+            ResourceNotFoundException.class,
+            () -> librarySetService.updateLibrarySetAcls(librarySetId, aclOperation));
     assertEquals(ex.getMessage(), "Could not find resource LibrarySet with id: " + librarySetId);
   }
 
@@ -94,10 +95,8 @@ class LibrarySetServiceTest {
 
   @Test
   public void testGrantOperationAsFirstNewAclWithNoAclsInLibrarySet() {
-    LibrarySet librarySetWithNoAcls = LibrarySet.builder()
-        .librarySetId("1")
-        .owner("user-1")
-        .build();
+    LibrarySet librarySetWithNoAcls =
+        LibrarySet.builder().librarySetId("1").owner("user-1").build();
     AclSpecification aclSpec = new AclSpecification();
     aclSpec.setUserId("john_1");
     aclSpec.setRoles(Set.of(RoleEnum.SHARED_WITH));
@@ -105,7 +104,8 @@ class LibrarySetServiceTest {
         AclOperation.builder().acls(List.of(aclSpec)).action(AclOperation.AclAction.GRANT).build();
     LibrarySet updatedLibrarySet =
         LibrarySet.builder().librarySetId("1").owner("john_1").acls(List.of(aclSpec)).build();
-    when(librarySetRepository.findByLibrarySetId(anyString())).thenReturn(Optional.of(librarySetWithNoAcls));
+    when(librarySetRepository.findByLibrarySetId(anyString()))
+        .thenReturn(Optional.of(librarySetWithNoAcls));
     when(librarySetRepository.save(any(LibrarySet.class))).thenReturn(updatedLibrarySet);
 
     LibrarySet librarySet = librarySetService.updateLibrarySetAcls("1", aclOperation);

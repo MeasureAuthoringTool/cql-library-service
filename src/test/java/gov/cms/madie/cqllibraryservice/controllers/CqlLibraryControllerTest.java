@@ -553,7 +553,8 @@ class CqlLibraryControllerTest {
     when(cqlLibraryService.updateAccessControlList(anyString(), any()))
         .thenReturn(aclSpecifications);
 
-    ResponseEntity<List<AclSpecification>> output = cqlLibraryController.updateAccessControl(request, "1", aclOperation, "key");
+    ResponseEntity<List<AclSpecification>> output =
+        cqlLibraryController.updateAccessControl(request, "1", aclOperation, "key");
 
     verify(cqlLibraryService, times(1)).updateAccessControlList(anyString(), any());
     assertThat(output.getBody(), equalTo(aclSpecifications));

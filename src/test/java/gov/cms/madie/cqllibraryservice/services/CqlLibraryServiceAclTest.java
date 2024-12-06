@@ -48,7 +48,8 @@ public class CqlLibraryServiceAclTest {
 
     Exception ex =
         assertThrows(
-            ResourceNotFoundException.class, () -> cqlLibraryService.updateAccessControlList(library.getId(), aclOperation));
+            ResourceNotFoundException.class,
+            () -> cqlLibraryService.updateAccessControlList(library.getId(), aclOperation));
     assertEquals(ex.getMessage(), "Library does not exist: " + library.getId());
   }
 
