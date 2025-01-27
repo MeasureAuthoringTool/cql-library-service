@@ -1132,7 +1132,7 @@ public class CqlLibraryControllerMvcTest {
     acl1.setRoles(Set.of(RoleEnum.SHARED_WITH));
 
     List<AclSpecification> acls = List.of(acl1);
-    LibrarySet librarySet = LibrarySet.builder().acls(acls).build();
+    LibrarySet librarySet = LibrarySet.builder().acls(acls).owner("owner1").build();
     lib1.setLibrarySet(librarySet);
     lib2.setLibrarySet(librarySet);
     when(cqlLibraryService.findCqlLibraryById(eq("12345"))).thenReturn(lib1);
@@ -1144,11 +1144,54 @@ public class CqlLibraryControllerMvcTest {
                 .with(csrf())
                 .with(user(TEST_USER_ID))
                 .header(TEST_API_KEY_HEADER, TEST_API_KEY_HEADER_VALUE)
-                .header("Authorization", "test-okta"))
+                .header("Authorization", "test-okta")
+                .header("harpId", "owner1"))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$[0].libraryId", equalTo("12345")))
         .andExpect(jsonPath("$[1].libraryId", equalTo("6789")))
         .andExpect(jsonPath("$[0].sharedWith.[0].userId", equalTo("raoulduke")));
+  }
+
+  @Test
+  public void testAdminMeasureGetSharedWithResourceNotFoundException() throws Exception {
+    when(cqlLibraryService.findCqlLibraryById(anyString())).thenReturn(null);
+
+    mockMvc
+        .perform(
+            MockMvcRequestBuilders.get("/cql-libraries/sharedWith?measureids=12345")
+                .with(csrf())
+                .with(user(TEST_USER_ID))
+                .header(TEST_API_KEY_HEADER, TEST_API_KEY_HEADER_VALUE)
+                .header("Authorization", "test-okta")
+                .header("harpId", "owner1"))
+        .andExpect(status().isNotFound());
+  }
+
+  @Test
+  public void testAdminMeasureGetSharedWithHarpIdMismatchException() throws Exception {
+    CqlLibrary testLibrary = CqlLibrary.builder().id("12345").build();
+    AclSpecification acl1 = new AclSpecification();
+    acl1.setUserId("raoulduke");
+    acl1.setRoles(Set.of(RoleEnum.SHARED_WITH));
+
+    List<AclSpecification> acls = List.of(acl1);
+    LibrarySet librarySet = LibrarySet.builder().acls(acls).owner("owner1").build();
+    testLibrary.setLibrarySet(librarySet);
+    when(cqlLibraryService.findCqlLibraryById(anyString())).thenReturn(testLibrary);
+
+    mockMvc
+        .perform(
+            MockMvcRequestBuilders.get("/cql-libraries/sharedWith?measureids=12345")
+                .with(csrf())
+                .with(user(TEST_USER_ID))
+                .header(TEST_API_KEY_HEADER, TEST_API_KEY_HEADER_VALUE)
+                .header("Authorization", "test-okta")
+                .header("harpId", "owner2"))
+        .andExpect(status().isConflict())
+        .andExpect(
+            jsonPath("$.message")
+                .value(
+                    "Response could not be completed because the HARP id of owner2 passed in does not match the owner of the library with the library id of 12345. The owner of the library is owner1"));
   }
 
   @Test
@@ -1159,7 +1202,7 @@ public class CqlLibraryControllerMvcTest {
     acl1.setRoles(Set.of(RoleEnum.SHARED_WITH));
 
     List<AclSpecification> acls = List.of(acl1);
-    LibrarySet librarySet = LibrarySet.builder().acls(acls).build();
+    LibrarySet librarySet = LibrarySet.builder().acls(acls).owner("owner1").build();
     testLibrary.setLibrarySet(librarySet);
     when(cqlLibraryService.findCqlLibraryById(anyString())).thenReturn(testLibrary);
 
@@ -1169,7 +1212,8 @@ public class CqlLibraryControllerMvcTest {
                 .with(csrf())
                 .with(user(TEST_USER_ID))
                 .header(TEST_API_KEY_HEADER, TEST_API_KEY_HEADER_VALUE)
-                .header("Authorization", "test-okta"))
+                .header("Authorization", "test-okta")
+                .header("harpId", "owner1"))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$[0].libraryId", equalTo("12345")))
         .andExpect(jsonPath("$[0].sharedWith.[0].userId", equalTo("raoulduke")));
@@ -1179,7 +1223,7 @@ public class CqlLibraryControllerMvcTest {
   public void testAdminMeasureGetSharedWithNoone() throws Exception {
     CqlLibrary testLibrary = CqlLibrary.builder().id("12345").build();
 
-    LibrarySet librarySet = LibrarySet.builder().acls(null).build();
+    LibrarySet librarySet = LibrarySet.builder().acls(null).owner("owner1").build();
     testLibrary.setLibrarySet(librarySet);
     when(cqlLibraryService.findCqlLibraryById(anyString())).thenReturn(testLibrary);
 
@@ -1189,7 +1233,8 @@ public class CqlLibraryControllerMvcTest {
                 .with(csrf())
                 .with(user(TEST_USER_ID))
                 .header(TEST_API_KEY_HEADER, TEST_API_KEY_HEADER_VALUE)
-                .header("Authorization", "test-okta"))
+                .header("Authorization", "test-okta")
+                .header("harpId", "owner1"))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$[0].libraryId", equalTo("12345")))
         .andExpect(jsonPath("$[0].sharedWith", equalTo(null)));
@@ -1570,7 +1615,7 @@ public class CqlLibraryControllerMvcTest {
 
   @Test
   void testDeleteLibraryAlongWithVersions() throws Exception {
-    doNothing().when(cqlLibraryService).deleteLibraryAlongWithVersions(anyString(), anyString());
+    doNothing().when(cqlLibraryService).deleteLibraryAlongWithVersions(anyString(), anyString(), anyString());
     MvcResult result =
         mockMvc
             .perform(
@@ -1578,7 +1623,8 @@ public class CqlLibraryControllerMvcTest {
                     .with(user(TEST_USER_ID))
                     .with(csrf())
                     .header("Authorization", "test-okta")
-                    .header("api-key", "0a51991c"))
+                    .header("api-key", "0a51991c")
+                    .header("harpId", "owner1"))
             .andReturn();
     assertEquals(result.getResponse().getStatus(), HttpStatus.OK.value());
     assertEquals(
@@ -1588,14 +1634,15 @@ public class CqlLibraryControllerMvcTest {
 
   @Test
   void testDeleteLibraryAlongWithVersionsMissingAdminKey() throws Exception {
-    doNothing().when(cqlLibraryService).deleteLibraryAlongWithVersions(anyString(), anyString());
+    doNothing().when(cqlLibraryService).deleteLibraryAlongWithVersions(anyString(), anyString(), anyString());
     MvcResult result =
         mockMvc
             .perform(
                 delete("/cql-libraries/Test/delete-all-versions")
                     .with(user(TEST_USER_ID))
                     .with(csrf())
-                    .header("Authorization", "test-okta"))
+                    .header("Authorization", "test-okta")
+                    .header("harpId", "owner1"))
             .andReturn();
     assertEquals(result.getResponse().getStatus(), HttpStatus.FORBIDDEN.value());
   }

@@ -2,6 +2,7 @@ package gov.cms.madie.cqllibraryservice.controllers;
 
 import gov.cms.madie.cqllibraryservice.dto.LibrarySetDTO;
 import gov.cms.madie.cqllibraryservice.dto.LibraryListDTO;
+import gov.cms.madie.cqllibraryservice.exceptions.HarpIdMismatchException;
 import gov.cms.madie.cqllibraryservice.exceptions.InvalidIdException;
 import gov.cms.madie.cqllibraryservice.exceptions.InvalidResourceStateException;
 import gov.cms.madie.cqllibraryservice.services.ActionLogService;
@@ -237,12 +238,17 @@ public class CqlLibraryController {
   public ResponseEntity<List<Map<String, Object>>> getMeasureSharedWith(
       HttpServletRequest request,
       @Value("${admin-api-key}") String apiKey,
+      @RequestHeader(name = "harpId") String harpId,
       @RequestParam(name = "measureids") String measureids) {
     List<Map<String, Object>> results = new ArrayList<>();
     String[] ids = StringUtils.split(measureids, ",");
     for (String id : ids) {
       CqlLibrary library = cqlLibraryService.findCqlLibraryById(id);
       if (library != null) {
+        if (!library.getLibrarySet().getOwner().equals(harpId)) {
+          throw new HarpIdMismatchException(
+              harpId, library.getLibrarySet().getOwner(), library.getId());
+        }
 
         Map<String, Object> result = new LinkedHashMap<>();
 
@@ -270,8 +276,9 @@ public class CqlLibraryController {
       HttpServletRequest request,
       @PathVariable String libraryName,
       @RequestHeader("Authorization") String accessToken,
+      @RequestHeader(name = "harpId") String harpId,
       @Value("${admin-api-key}") String apiKey) {
-    cqlLibraryService.deleteLibraryAlongWithVersions(libraryName, accessToken);
+    cqlLibraryService.deleteLibraryAlongWithVersions(libraryName, accessToken, harpId);
     return ResponseEntity.ok()
         .body("The library and all its associated versions have been removed successfully.");
   }

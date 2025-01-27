@@ -85,6 +85,7 @@ public class ErrorHandlingControllerAdvice {
   }
 
   @ExceptionHandler({
+    HarpIdMismatchException.class,
     GeneralConflictException.class,
     ResourceNotDraftableException.class,
     InvalidResourceStateException.class
