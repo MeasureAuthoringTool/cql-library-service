@@ -180,12 +180,21 @@ public class CqlLibraryService {
    * @param name - library name
    * @param accessToken - auth token
    */
-  public void deleteLibraryAlongWithVersions(String name, String accessToken) {
+  public void deleteLibraryAlongWithVersions(String name, String accessToken, String harpId) {
     if (isLibraryBeinUsed(name, accessToken)) {
       throw new GeneralConflictException(
           "Library is being used actively, hence can not be deleted.");
     }
     List<CqlLibrary> libraries = cqlLibraryRepository.findAllByCqlLibraryName(name);
+
+    for (CqlLibrary cqlLibrary: libraries) {
+      LibrarySet librarySet = librarySetService.findByLibrarySetId(cqlLibrary.getLibrarySetId());
+
+      if (!librarySet.getOwner().equals(harpId)) {
+        throw new HarpIdMismatchException(
+            harpId, librarySet.getOwner(), cqlLibrary.getId());
+      }
+    }
     cqlLibraryRepository.deleteAll(libraries);
   }
 
