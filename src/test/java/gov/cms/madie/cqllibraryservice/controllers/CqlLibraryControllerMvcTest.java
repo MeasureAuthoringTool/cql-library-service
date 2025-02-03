@@ -1156,15 +1156,18 @@ public class CqlLibraryControllerMvcTest {
   public void testAdminMeasureGetSharedWithResourceNotFoundException() throws Exception {
     when(cqlLibraryService.findCqlLibraryById(anyString())).thenReturn(null);
 
-    mockMvc
-        .perform(
-            MockMvcRequestBuilders.get("/cql-libraries/sharedWith?measureids=12345")
-                .with(csrf())
-                .with(user(TEST_USER_ID))
-                .header(TEST_API_KEY_HEADER, TEST_API_KEY_HEADER_VALUE)
-                .header("Authorization", "test-okta")
-                .header("harpId", "owner1"))
-        .andExpect(status().isNotFound());
+    MvcResult result =
+        mockMvc
+            .perform(
+                MockMvcRequestBuilders.get("/cql-libraries/sharedWith?measureids=12345")
+                    .with(csrf())
+                    .with(user(TEST_USER_ID))
+                    .header(TEST_API_KEY_HEADER, TEST_API_KEY_HEADER_VALUE)
+                    .header("Authorization", "test-okta")
+                    .header("harpId", "owner1"))
+            .andReturn();
+
+    assertEquals(HttpStatus.NOT_FOUND.value(), result.getResponse().getStatus());
   }
 
   @Test
@@ -1179,7 +1182,7 @@ public class CqlLibraryControllerMvcTest {
     testLibrary.setLibrarySet(librarySet);
     when(cqlLibraryService.findCqlLibraryById(anyString())).thenReturn(testLibrary);
 
-    mockMvc
+    MvcResult result = mockMvc
         .perform(
             MockMvcRequestBuilders.get("/cql-libraries/sharedWith?measureids=12345")
                 .with(csrf())
@@ -1187,11 +1190,12 @@ public class CqlLibraryControllerMvcTest {
                 .header(TEST_API_KEY_HEADER, TEST_API_KEY_HEADER_VALUE)
                 .header("Authorization", "test-okta")
                 .header("harpId", "owner2"))
-        .andExpect(status().isConflict())
         .andExpect(
             jsonPath("$.message")
-                .value(
-                    "Response could not be completed because the HARP id of owner2 passed in does not match the owner of the library with the library id of 12345. The owner of the library is owner1"));
+                .value("Response could not be completed because the HARP id of owner2 passed in does not match the owner of the library with the library id of 12345. The owner of the library is owner1"))
+        .andReturn();
+
+    assertEquals(HttpStatus.CONFLICT.value(), result.getResponse().getStatus());
   }
 
   @Test
