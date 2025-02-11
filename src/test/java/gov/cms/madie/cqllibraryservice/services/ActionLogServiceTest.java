@@ -1,6 +1,7 @@
 package gov.cms.madie.cqllibraryservice.services;
 
 import gov.cms.madie.cqllibraryservice.repositories.CqlLibraryActionLogRepository;
+import gov.cms.madie.models.common.AccessControlAction;
 import gov.cms.madie.models.common.Action;
 import gov.cms.madie.models.common.ActionType;
 import org.junit.jupiter.api.Test;
@@ -15,6 +16,7 @@ import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.notNullValue;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.instanceOf;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.times;
@@ -59,5 +61,37 @@ class ActionLogServiceTest {
     assertThat(value, is(notNullValue()));
     assertThat(value.getActionType(), is(equalTo(ActionType.VERSIONED_MAJOR)));
     assertThat(value.getPerformedBy(), is(equalTo("secondUser")));
+  }
+
+  @Test
+  void testLogAccessControlActionReturnsTrue() {
+    when(cqlLibraryHistoryRepository.pushEvent(anyString(), any(Action.class))).thenReturn(true);
+    boolean output = actionLogService.logAccessControlAction("TARGET_ID", ActionType.SHARED, "firstUser", "sharedWith");
+    assertThat(output, is(true));
+    verify(cqlLibraryHistoryRepository, times(1))
+        .pushEvent(stringArgumentCaptor.capture(), actionArgumentCaptor.capture());
+    assertThat(stringArgumentCaptor.getValue(), is(equalTo("TARGET_ID")));
+    assertThat(actionArgumentCaptor.getValue(), instanceOf(AccessControlAction.class));
+    AccessControlAction value = (AccessControlAction) actionArgumentCaptor.getValue();
+    assertThat(value, is(notNullValue()));
+    assertThat(value.getActionType(), is(equalTo(ActionType.SHARED)));
+    assertThat(value.getPerformedBy(), is(equalTo("firstUser")));
+    assertThat(value.getSharedWith(), is(equalTo("sharedWith")));
+  }
+
+  @Test
+  void testLogAccessControlActionReturnsFalse() {
+    when(cqlLibraryHistoryRepository.pushEvent(anyString(), any(Action.class))).thenReturn(false);
+    boolean output = actionLogService.logAccessControlAction("TARGET_ID", ActionType.SHARED, "secondUser", "sharedWith");
+    assertThat(output, is(false));
+    verify(cqlLibraryHistoryRepository, times(1))
+        .pushEvent(stringArgumentCaptor.capture(), actionArgumentCaptor.capture());
+    assertThat(stringArgumentCaptor.getValue(), is(equalTo("TARGET_ID")));
+    assertThat(actionArgumentCaptor.getValue(), instanceOf(AccessControlAction.class));
+    AccessControlAction value = (AccessControlAction) actionArgumentCaptor.getValue();
+    assertThat(value, is(notNullValue()));
+    assertThat(value.getActionType(), is(equalTo(ActionType.SHARED)));
+    assertThat(value.getPerformedBy(), is(equalTo("secondUser")));
+    assertThat(value.getSharedWith(), is(equalTo("sharedWith")));
   }
 }
