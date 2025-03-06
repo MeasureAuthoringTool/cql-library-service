@@ -19,7 +19,10 @@ public class ActionLogService {
   private final CqlLibraryActionLogRepository cqlLibraryHistoryRepository;
 
   public boolean logAction(
-      final String targetId, final ActionType actionType, final String userId, final String... additionalActionMessage) {
+      final String targetId,
+      final ActionType actionType,
+      final String userId,
+      final String... additionalActionMessage) {
     return cqlLibraryHistoryRepository.pushEvent(
         targetId,
         Action.builder()
@@ -31,7 +34,11 @@ public class ActionLogService {
   }
 
   public boolean logAccessControlAction(
-      final String targetId, final ActionType actionType, final String userId, final String sharedWith, final String... additionalActionMessage) {
+      final String targetId,
+      final ActionType actionType,
+      final String userId,
+      final String sharedWith,
+      final String... additionalActionMessage) {
     return cqlLibraryHistoryRepository.pushEvent(
         targetId,
         AccessControlAction.builder()

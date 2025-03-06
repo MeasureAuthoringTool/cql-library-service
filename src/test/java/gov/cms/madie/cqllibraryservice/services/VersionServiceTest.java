@@ -188,7 +188,7 @@ class VersionServiceTest {
     when(cqlLibraryService.findCqlLibraryById(anyString())).thenReturn(existingCqlLibrary);
     when(cqlLibraryRepository.findMaxVersionByLibrarySetId(anyString()))
         .thenReturn(Optional.of(Version.parse("1.0.0")));
-    when(elmTranslatorClient.getElmJson(anyString(), anyString(), anyString()))
+    when(elmTranslatorClient.getElmJson(anyString(), anyString(), anyString(), anyString()))
         .thenReturn(ElmJson.builder().json("{}").xml("<></>").build());
     when(elmTranslatorClient.hasErrors(any(ElmJson.class))).thenReturn(true);
     assertThrows(
@@ -217,7 +217,7 @@ class VersionServiceTest {
     when(cqlLibraryService.findCqlLibraryById(anyString())).thenReturn(existingCqlLibrary);
     when(cqlLibraryRepository.findMaxVersionByLibrarySetId(anyString()))
         .thenReturn(Optional.of(Version.parse("1.0.0")));
-    when(elmTranslatorClient.getElmJson(anyString(), anyString(), anyString()))
+    when(elmTranslatorClient.getElmJson(anyString(), anyString(), anyString(), anyString()))
         .thenReturn(ElmJson.builder().json("{}").xml("<></>").build());
     when(elmTranslatorClient.hasErrors(any(ElmJson.class)))
         .thenThrow(
@@ -250,7 +250,7 @@ class VersionServiceTest {
     when(cqlLibraryRepository.findMaxVersionByLibrarySetId(anyString()))
         .thenReturn(Optional.of(Version.parse("1.0.0")));
     when(cqlLibraryRepository.save(any(CqlLibrary.class))).thenReturn(updatedCqlLibrary);
-    when(elmTranslatorClient.getElmJson(anyString(), anyString(), anyString()))
+    when(elmTranslatorClient.getElmJson(anyString(), anyString(), anyString(), anyString()))
         .thenReturn(ElmJson.builder().json("{}").xml("<></>").build());
     when(elmTranslatorClient.hasErrors(any(ElmJson.class))).thenReturn(false);
     versionService.createVersion("testCqlLibraryId", true, "testUser", "accesstoken");
@@ -294,7 +294,7 @@ class VersionServiceTest {
             anyString(), anyInt()))
         .thenReturn(Optional.of(Version.parse("1.0.0")));
     when(cqlLibraryRepository.save(any(CqlLibrary.class))).thenReturn(updatedCqlLibrary);
-    when(elmTranslatorClient.getElmJson(anyString(), anyString(), anyString()))
+    when(elmTranslatorClient.getElmJson(anyString(), anyString(), anyString(), anyString()))
         .thenReturn(ElmJson.builder().json("{}").xml("<></>").build());
     when(elmTranslatorClient.hasErrors(any(ElmJson.class))).thenReturn(false);
     versionService.createVersion("testCqlLibraryId", false, "testUser", "accesstoken");

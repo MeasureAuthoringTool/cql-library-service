@@ -55,7 +55,7 @@ class ElmTranslatorClientTest {
         .thenThrow(new HttpClientErrorException(HttpStatus.FORBIDDEN));
     assertThrows(
         CqlElmTranslationServiceException.class,
-        () -> elmTranslatorClient.getElmJson("TEST_CQL", "QDM v5.6", "TEST_TOKEN"));
+        () -> elmTranslatorClient.getElmJson("TEST_CQL", "QDM v5.6", "TEST_TOKEN", "Error"));
   }
 
   @Test
@@ -65,7 +65,8 @@ class ElmTranslatorClientTest {
             any(URI.class), eq(HttpMethod.PUT), any(HttpEntity.class), any(Class.class)))
         .thenReturn(ResponseEntity.ok(elmJson));
     ElmJson output =
-        elmTranslatorClient.getElmJson("TEST_CQL", ModelType.QI_CORE.getValue(), "TEST_TOKEN");
+        elmTranslatorClient.getElmJson(
+            "TEST_CQL", ModelType.QI_CORE.getValue(), "TEST_TOKEN", "Error");
     assertThat(output, is(equalTo(elmJson)));
   }
 

@@ -16,6 +16,7 @@ import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.web.util.UriComponentsBuilder;
 
 @Slf4j
 @Service
@@ -25,15 +26,20 @@ public class ElmTranslatorClient {
   private EnvironmentConfig environmentConfig;
   private RestTemplate elmTranslatorRestTemplate;
 
-  public ElmJson getElmJson(final String cql, String libraryModel, String accessToken) {
+  public ElmJson getElmJson(
+      final String cql, String libraryModel, String accessToken, String errorSeverity) {
     try {
       URI uri = getCqlElmTranslationServiceUri(libraryModel);
       HttpHeaders headers = new HttpHeaders();
       headers.setContentType(MediaType.TEXT_PLAIN);
       headers.set(HttpHeaders.AUTHORIZATION, accessToken);
+
+      UriComponentsBuilder uriBuilder =
+          UriComponentsBuilder.fromUri(uri).queryParam("errorSeverity", errorSeverity);
+
       HttpEntity<String> cqlEntity = new HttpEntity<>(cql, headers);
       return elmTranslatorRestTemplate
-          .exchange(uri, HttpMethod.PUT, cqlEntity, ElmJson.class)
+          .exchange(uriBuilder.build().toUri(), HttpMethod.PUT, cqlEntity, ElmJson.class)
           .getBody();
     } catch (Exception ex) {
       log.error("An error occurred calling the CQL to ELM translation service", ex);
