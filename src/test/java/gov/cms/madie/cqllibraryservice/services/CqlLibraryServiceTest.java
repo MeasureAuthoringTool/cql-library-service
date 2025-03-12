@@ -319,14 +319,16 @@ class CqlLibraryServiceTest {
   void testDeleteLibraryAlongWithVersionsSuccess() {
     String libraryName = "test";
     String librarySetId = "LibSetID";
-    CqlLibrary cqlLibrary = CqlLibrary.builder().cqlLibraryName(libraryName).librarySetId(librarySetId).build();
+    CqlLibrary cqlLibrary =
+        CqlLibrary.builder().cqlLibraryName(libraryName).librarySetId(librarySetId).build();
     LibrarySet librarySet = LibrarySet.builder().librarySetId(librarySetId).owner("owner1").build();
 
     when(cqlLibraryRepository.existsByCqlLibraryName(anyString())).thenReturn(true);
     when(cqlLibraryRepository.findLibraryUsageByLibraryName(anyString())).thenReturn(List.of());
     when(measureServiceClient.getLibraryUsageInMeasures(anyString(), anyString()))
         .thenReturn(List.of());
-    when(cqlLibraryRepository.findAllByCqlLibraryName(cqlLibrary.getCqlLibraryName())).thenReturn(List.of(cqlLibrary));
+    when(cqlLibraryRepository.findAllByCqlLibraryName(cqlLibrary.getCqlLibraryName()))
+        .thenReturn(List.of(cqlLibrary));
     when(librarySetService.findByLibrarySetId(anyString())).thenReturn(librarySet);
 
     cqlLibraryService.deleteLibraryAlongWithVersions(libraryName, "token", "owner1");
@@ -344,7 +346,9 @@ class CqlLibraryServiceTest {
     Exception ex =
         assertThrows(
             GeneralConflictException.class,
-            () -> cqlLibraryService.deleteLibraryAlongWithVersions(libraryName, "token", anyString()));
+            () ->
+                cqlLibraryService.deleteLibraryAlongWithVersions(
+                    libraryName, "token", anyString()));
     assertThat(
         ex.getMessage(), is(equalTo("Library is being used actively, hence can not be deleted.")));
   }
@@ -361,7 +365,9 @@ class CqlLibraryServiceTest {
     Exception ex =
         assertThrows(
             GeneralConflictException.class,
-            () -> cqlLibraryService.deleteLibraryAlongWithVersions(libraryName, "token", anyString()));
+            () ->
+                cqlLibraryService.deleteLibraryAlongWithVersions(
+                    libraryName, "token", anyString()));
     assertThat(
         ex.getMessage(), is(equalTo("Library is being used actively, hence can not be deleted.")));
   }
@@ -373,7 +379,9 @@ class CqlLibraryServiceTest {
     Exception ex =
         assertThrows(
             ResourceNotFoundException.class,
-            () -> cqlLibraryService.deleteLibraryAlongWithVersions(libraryName, "token", anyString()));
+            () ->
+                cqlLibraryService.deleteLibraryAlongWithVersions(
+                    libraryName, "token", anyString()));
     assertThat(
         ex.getMessage(), is(equalTo("Could not find resource Library with name: " + libraryName)));
   }
@@ -382,21 +390,31 @@ class CqlLibraryServiceTest {
   void testDeleteLibraryAlongWithVersionsHarpIdMismatchException() {
     String libraryName = "test";
     String librarySetId = "librarySetId";
-    CqlLibrary cqlLibrary = CqlLibrary.builder().cqlLibraryName(libraryName).id("libraryId").librarySetId(librarySetId).build();
+    CqlLibrary cqlLibrary =
+        CqlLibrary.builder()
+            .cqlLibraryName(libraryName)
+            .id("libraryId")
+            .librarySetId(librarySetId)
+            .build();
     LibrarySet librarySet = LibrarySet.builder().librarySetId(librarySetId).owner("owner2").build();
 
     when(cqlLibraryRepository.existsByCqlLibraryName(anyString())).thenReturn(true);
     when(cqlLibraryRepository.findLibraryUsageByLibraryName(anyString())).thenReturn(List.of());
     when(measureServiceClient.getLibraryUsageInMeasures(anyString(), anyString()))
         .thenReturn(List.of());
-    when(cqlLibraryRepository.findAllByCqlLibraryName(cqlLibrary.getCqlLibraryName())).thenReturn(List.of(cqlLibrary));
+    when(cqlLibraryRepository.findAllByCqlLibraryName(cqlLibrary.getCqlLibraryName()))
+        .thenReturn(List.of(cqlLibrary));
     when(librarySetService.findByLibrarySetId(anyString())).thenReturn(librarySet);
 
     Exception ex =
         assertThrows(
             HarpIdMismatchException.class,
             () -> cqlLibraryService.deleteLibraryAlongWithVersions(libraryName, "token", "owner1"));
-    assertThat(ex.getMessage(), is(equalTo("Response could not be completed because the HARP id of owner1 passed in does not match the owner of the library with the library id of libraryId. The owner of the library is owner2")));
+    assertThat(
+        ex.getMessage(),
+        is(
+            equalTo(
+                "Response could not be completed because the HARP id of owner1 passed in does not match the owner of the library with the library id of libraryId. The owner of the library is owner2")));
 
     verify(cqlLibraryRepository, times(0)).deleteAll(List.of(cqlLibrary));
   }

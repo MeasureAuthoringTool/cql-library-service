@@ -66,7 +66,9 @@ class ActionLogServiceTest {
   @Test
   void testLogAccessControlActionReturnsTrue() {
     when(cqlLibraryHistoryRepository.pushEvent(anyString(), any(Action.class))).thenReturn(true);
-    boolean output = actionLogService.logAccessControlAction("TARGET_ID", ActionType.SHARED, "firstUser", "sharedWith");
+    boolean output =
+        actionLogService.logAccessControlAction(
+            "TARGET_ID", ActionType.SHARED, "firstUser", "sharedWith");
     assertThat(output, is(true));
     verify(cqlLibraryHistoryRepository, times(1))
         .pushEvent(stringArgumentCaptor.capture(), actionArgumentCaptor.capture());
@@ -82,7 +84,9 @@ class ActionLogServiceTest {
   @Test
   void testLogAccessControlActionReturnsFalse() {
     when(cqlLibraryHistoryRepository.pushEvent(anyString(), any(Action.class))).thenReturn(false);
-    boolean output = actionLogService.logAccessControlAction("TARGET_ID", ActionType.SHARED, "secondUser", "sharedWith");
+    boolean output =
+        actionLogService.logAccessControlAction(
+            "TARGET_ID", ActionType.SHARED, "secondUser", "sharedWith");
     assertThat(output, is(false));
     verify(cqlLibraryHistoryRepository, times(1))
         .pushEvent(stringArgumentCaptor.capture(), actionArgumentCaptor.capture());

@@ -187,12 +187,11 @@ public class CqlLibraryService {
     }
     List<CqlLibrary> libraries = cqlLibraryRepository.findAllByCqlLibraryName(name);
 
-    for (CqlLibrary cqlLibrary: libraries) {
+    for (CqlLibrary cqlLibrary : libraries) {
       LibrarySet librarySet = librarySetService.findByLibrarySetId(cqlLibrary.getLibrarySetId());
 
       if (!librarySet.getOwner().equals(harpId)) {
-        throw new HarpIdMismatchException(
-            harpId, librarySet.getOwner(), cqlLibrary.getId());
+        throw new HarpIdMismatchException(harpId, librarySet.getOwner(), cqlLibrary.getId());
       }
     }
     cqlLibraryRepository.deleteAll(libraries);

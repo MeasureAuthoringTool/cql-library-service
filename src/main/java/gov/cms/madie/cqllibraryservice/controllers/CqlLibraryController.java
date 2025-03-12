@@ -67,6 +67,15 @@ public class CqlLibraryController {
     return ResponseEntity.ok(cqlLibraries);
   }
 
+  // adding here
+  @GetMapping("/getOwners")
+  public ResponseEntity<List<String>> getDraftStatuses(
+      @RequestParam(name = "librarySetIds") List<String> librarySetIds) {
+    List<String> results = librarySetService.getAllOwners(librarySetIds);
+    log.info("results: {}", results);
+    return ResponseEntity.status(HttpStatus.CREATED).body(results);
+  }
+
   @GetMapping("/{id}")
   public ResponseEntity<CqlLibrary> getCqlLibrary(@PathVariable("id") String id) {
     return ResponseEntity.ok(cqlLibraryService.findCqlLibraryById(id));
