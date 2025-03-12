@@ -115,7 +115,7 @@ class CqlLibraryServiceTest {
     when(cqlLibraryRepository.findAllByCqlLibraryNameAndDraftAndVersionAndModel(
             any(), anyBoolean(), any(), anyString()))
         .thenReturn(cqlLibraries);
-    when(elmTranslatorClient.getElmJson(anyString(), anyString(), anyString()))
+    when(elmTranslatorClient.getElmJson(anyString(), anyString(), anyString(), anyString()))
         .thenReturn(ElmJson.builder().json("{\"library\": {}}").build());
     CqlLibrary versionedCqlLibrary =
         cqlLibraryService.getVersionedCqlLibrary(
@@ -140,7 +140,7 @@ class CqlLibraryServiceTest {
     cqlLibraries.add(cqlLibrary);
     when(cqlLibraryRepository.findAllByCqlLibraryNameAndDraftAndVersion(any(), anyBoolean(), any()))
         .thenReturn(cqlLibraries);
-    when(elmTranslatorClient.getElmJson(anyString(), anyString(), anyString()))
+    when(elmTranslatorClient.getElmJson(anyString(), anyString(), anyString(), anyString()))
         .thenReturn(ElmJson.builder().json("{\"library\": {}}").build());
     CqlLibrary versionedCqlLibrary =
         cqlLibraryService.getVersionedCqlLibrary(

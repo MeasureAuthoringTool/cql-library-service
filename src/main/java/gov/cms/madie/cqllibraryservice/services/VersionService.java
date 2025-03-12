@@ -43,7 +43,8 @@ public class VersionService {
 
     try {
       final ElmJson elmJson =
-          elmTranslatorClient.getElmJson(cqlLibrary.getCql(), cqlLibrary.getModel(), accessToken);
+          elmTranslatorClient.getElmJson(
+              cqlLibrary.getCql(), cqlLibrary.getModel(), accessToken, "Error");
       if (elmTranslatorClient.hasErrors(elmJson)) {
         throw new CqlElmTranslationErrorException(cqlLibrary.getCqlLibraryName());
       }
