@@ -86,9 +86,11 @@ public class CqlLibraryController {
       @RequestParam String version,
       @RequestParam Optional<String> model,
       @RequestParam(defaultValue = "true") boolean includeElm,
+      @RequestParam(defaultValue = "Info") String elmErrorSeverity,
       @RequestHeader("Authorization") String accessToken) {
     return ResponseEntity.ok(
-        cqlLibraryService.getVersionedCqlLibrary(name, version, model, includeElm, accessToken));
+        cqlLibraryService.getVersionedCqlLibrary(
+            name, version, model, includeElm, elmErrorSeverity, accessToken));
   }
 
   @GetMapping("/library-set/{setId}")
@@ -166,7 +168,9 @@ public class CqlLibraryController {
       @RequestParam String name,
       @RequestParam String version,
       @RequestParam Optional<String> model) {
-    return cqlLibraryService.getVersionedCqlLibrary(name, version, model, false, null).getCql();
+    return cqlLibraryService
+        .getVersionedCqlLibrary(name, version, model, false, "Info", null)
+        .getCql();
   }
 
   @PutMapping("/version/{id}")
