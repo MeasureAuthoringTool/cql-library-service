@@ -10,8 +10,13 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections4.CollectionUtils;
 import org.springframework.stereotype.Service;
+
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 
 @Slf4j
 @Service
@@ -95,6 +100,21 @@ public class LibrarySetService {
 
   public LibrarySet findByLibrarySetId(final String librarySetId) {
     return librarySetRepository.findByLibrarySetId(librarySetId).orElse(null);
+  }
+
+  public List<String> getAllOwners(final List<String> librarySetIds) {
+    Set<String> uniqueOwners = new HashSet<>();
+    for (String librarySetId : librarySetIds) {
+      Optional<LibrarySet> optionalLibrarySet =
+          librarySetRepository.findByLibrarySetId(librarySetId);
+      if (optionalLibrarySet.isPresent()) {
+        LibrarySet librarySet = optionalLibrarySet.get();
+        uniqueOwners.add(librarySet.getOwner());
+      } else {
+        log.warn("LibrarySet with id [{}] not found", librarySetId);
+      }
+    }
+    return new ArrayList<>(uniqueOwners);
   }
 
   private AclSpecification findAclSpecificationByUserId(LibrarySet librarySet, String userId) {

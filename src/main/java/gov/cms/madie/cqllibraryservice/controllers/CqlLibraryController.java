@@ -67,6 +67,14 @@ public class CqlLibraryController {
     return ResponseEntity.ok(cqlLibraries);
   }
 
+  @GetMapping("/getAllOwners")
+  public ResponseEntity<List<String>> getAllOwners(
+      @RequestParam(name = "librarySetIds") List<String> librarySetIds) {
+    List<String> results = librarySetService.getAllOwners(librarySetIds);
+    log.info("results: {}", results);
+    return ResponseEntity.status(HttpStatus.OK).body(results);
+  }
+
   @GetMapping("/{id}")
   public ResponseEntity<CqlLibrary> getCqlLibrary(@PathVariable("id") String id) {
     return ResponseEntity.ok(cqlLibraryService.findCqlLibraryById(id));
@@ -249,7 +257,6 @@ public class CqlLibraryController {
           throw new HarpIdMismatchException(
               harpId, library.getLibrarySet().getOwner(), library.getId());
         }
-
         Map<String, Object> result = new LinkedHashMap<>();
 
         result.put("libraryName", library.getCqlLibraryName());
