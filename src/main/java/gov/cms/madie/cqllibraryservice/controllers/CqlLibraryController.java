@@ -68,7 +68,7 @@ public class CqlLibraryController {
   }
 
   @GetMapping("/getAllOwners")
-  public ResponseEntity<List<String>> getDraftStatuses(
+  public ResponseEntity<List<String>> getAllOwners(
       @RequestParam(name = "librarySetIds") List<String> librarySetIds) {
     List<String> results = librarySetService.getAllOwners(librarySetIds);
     log.info("results: {}", results);
