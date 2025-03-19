@@ -119,7 +119,7 @@ class CqlLibraryServiceTest {
         .thenReturn(ElmJson.builder().json("{\"library\": {}}").build());
     CqlLibrary versionedCqlLibrary =
         cqlLibraryService.getVersionedCqlLibrary(
-            "TestFHIRHelpers", "1.0.000", Optional.of("QI-Core v4.1.1"), true, "test-okta");
+            "TestFHIRHelpers", "1.0.000", Optional.of("QI-Core v4.1.1"), true, "Info", "test-okta");
     assertNotNull(versionedCqlLibrary);
     assertEquals(cqlLibrary1.getCqlLibraryName(), versionedCqlLibrary.getCqlLibraryName());
     assertEquals(cqlLibrary1.getVersion(), versionedCqlLibrary.getVersion());
@@ -144,7 +144,7 @@ class CqlLibraryServiceTest {
         .thenReturn(ElmJson.builder().json("{\"library\": {}}").build());
     CqlLibrary versionedCqlLibrary =
         cqlLibraryService.getVersionedCqlLibrary(
-            "TestFHIRHelpers", "1.0.000", Optional.empty(), true, "test-okta");
+            "TestFHIRHelpers", "1.0.000", Optional.empty(), true, "Info", "test-okta");
     assertNotNull(versionedCqlLibrary);
     assertEquals(cqlLibrary.getCqlLibraryName(), versionedCqlLibrary.getCqlLibraryName());
     assertEquals(cqlLibrary.getVersion(), versionedCqlLibrary.getVersion());
@@ -160,7 +160,7 @@ class CqlLibraryServiceTest {
         ResourceNotFoundException.class,
         () ->
             cqlLibraryService.getVersionedCqlLibrary(
-                "TestFHIRHelpers", "1.0.000", Optional.empty(), true, "test-okta"));
+                "TestFHIRHelpers", "1.0.000", Optional.empty(), true, "Info", "test-okta"));
   }
 
   @Test
@@ -188,7 +188,7 @@ class CqlLibraryServiceTest {
         GeneralConflictException.class,
         () ->
             cqlLibraryService.getVersionedCqlLibrary(
-                "TestFHIRHelpers", "1.0.000", Optional.empty(), true, "test-okta"));
+                "TestFHIRHelpers", "1.0.000", Optional.empty(), true, "Info", "test-okta"));
   }
 
   @Test
