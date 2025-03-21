@@ -10,7 +10,10 @@ import org.springframework.data.mongodb.repository.ExistsQuery;
 import org.springframework.data.mongodb.repository.MongoRepository;
 
 public interface CqlLibraryRepository
-    extends MongoRepository<CqlLibrary, String>, CqlLibraryVersionRepository, LibraryAclRepository {
+    extends MongoRepository<CqlLibrary, String>,
+        CqlLibraryVersionRepository,
+        LibraryAclRepository,
+        CqlLibrarySearchService {
 
   @ExistsQuery("{cqlLibraryName: {$regex: '^?0$', $options: 'i'}}")
   boolean existsByCqlLibraryName(String cqlLibraryName);
