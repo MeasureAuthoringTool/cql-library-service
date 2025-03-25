@@ -5,6 +5,7 @@ import gov.cms.madie.cqllibraryservice.dto.LibraryListDTO;
 import gov.cms.madie.cqllibraryservice.exceptions.HarpIdMismatchException;
 import gov.cms.madie.cqllibraryservice.exceptions.InvalidIdException;
 import gov.cms.madie.cqllibraryservice.exceptions.InvalidResourceStateException;
+import gov.cms.madie.cqllibraryservice.repositories.LibrarySetRepository;
 import gov.cms.madie.cqllibraryservice.services.*;
 import gov.cms.madie.cqllibraryservice.utils.AuthUtils;
 import gov.cms.madie.cqllibraryservice.utils.LibraryUtils;
@@ -26,6 +27,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
+import gov.cms.madie.models.library.LibrarySet;
 import org.apache.commons.lang3.StringUtils;
 import jakarta.servlet.http.HttpServletRequest;
 
@@ -53,6 +55,7 @@ import gov.cms.madie.cqllibraryservice.exceptions.ResourceNotFoundException;
 public class CqlLibraryController {
 
   private final CqlLibraryRepository cqlLibraryRepository;
+  private final LibrarySetRepository librarySetRepository;
   private final ActionLogService actionLogService;
   private final VersionService versionService;
   private final CqlLibraryService cqlLibraryService;
@@ -64,7 +67,7 @@ public class CqlLibraryController {
       @RequestParam(required = false, defaultValue = "false", name = "currentUser")
           boolean filterByCurrentUser,
       @RequestParam(required = false, defaultValue = "", name = "searchCriteria")
-      String searchCriteria,
+          String searchCriteria,
       @RequestParam(required = false, defaultValue = "10", name = "limit") int limit,
       @RequestParam(required = false, defaultValue = "0", name = "page") int page) {
     final String username = principal.getName();
@@ -73,6 +76,14 @@ public class CqlLibraryController {
     cqlLibraries =
         cqlLibraryService.getLibrariesByCriteria(
             searchCriteria, filterByCurrentUser, pageReq, username);
+    cqlLibraries.map(
+        library -> {
+          LibrarySet librarySet =
+              librarySetRepository.findByLibrarySetId(library.getLibrarySetId()).orElse(null);
+          library.setLibrarySet(librarySet);
+          return library;
+        });
+
     return ResponseEntity.ok(cqlLibraries);
   }
 

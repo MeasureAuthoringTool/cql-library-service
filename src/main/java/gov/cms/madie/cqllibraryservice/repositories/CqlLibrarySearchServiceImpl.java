@@ -21,16 +21,19 @@ import static org.springframework.data.mongodb.core.aggregation.Aggregation.proj
 @Repository
 public class CqlLibrarySearchServiceImpl implements CqlLibrarySearchService {
   private final MongoTemplate mongoTemplate;
+
   private LookupOperation getLookupOperation() {
     return LookupOperation.newLookup()
-            .from("librarySet")
-            .localField("librarySetId")
-            .foreignField("librarySetId")
-            .as("librarySet");
+        .from("librarySet")
+        .localField("librarySetId")
+        .foreignField("librarySetId")
+        .as("librarySet");
   }
+
   public CqlLibrarySearchServiceImpl(MongoTemplate mongoTemplate) {
     this.mongoTemplate = mongoTemplate;
   }
+
   @Override
   public Page<LibraryListDTO> searchLibrariesByCriteria(
       String userId, Pageable pageable, String searchCriteria, boolean filterByCurrentUser) {
@@ -44,40 +47,35 @@ public class CqlLibrarySearchServiceImpl implements CqlLibrarySearchService {
     Criteria userCriteria = new Criteria();
     if (filterByCurrentUser && StringUtils.isNotBlank(userId)) {
       userCriteria =
-              new Criteria().orOperator(
-//                      Criteria.where("librarySet.owner").is(userId),
-                      Criteria.where("librarySet.owner").regex("^\\Q" + userId + "\\E$", "i"),
-                      Criteria.where("librarySet.acls.userId")
+          new Criteria()
+              .orOperator(
+                  Criteria.where("librarySet.owner").is(userId),
+                  Criteria.where("librarySet.acls.userId"),
+                  Criteria.where("librarySet.acls")
+                      .elemMatch(
+                          Criteria.where("userId")
                               .regex("^\\Q" + userId + "\\E$", "i")
-                              .and("librarySet.acls.roles")
-                              .in(RoleEnum.SHARED_WITH));
-//                      Criteria.where("librarySet.acls").elemMatch(
-//                              Criteria.where("userId").regex("^\\Q" + userId + "\\E$", "i")
-//                                      .and("roles").in(RoleEnum.SHARED_WITH)
-//                      )
-//      );
+                              .and("roles")
+                              .in(RoleEnum.SHARED_WITH)));
     }
     MatchOperation matchOperation =
-            match(new Criteria().andOperator(libraryNameCriteria, userCriteria));
-//    UnwindOperation unwindOperation = unwind("librarySet", true);
+        match(new Criteria().andOperator(libraryNameCriteria, userCriteria));
     FacetOperation facets =
-            facet(sortByCount("id"))
-                    .as("count")
-                    .and(
-                            sort(pageable.getSort()),
-                            skip(pageable.getOffset()),
-                            limit(pageable.getPageSize()),
-                            project(LibraryListDTO.class))
-                    .as("queryResults");
+        facet(sortByCount("id"))
+            .as("count")
+            .and(
+                sort(pageable.getSort()),
+                skip(pageable.getOffset()),
+                limit(pageable.getPageSize()),
+                project(LibraryListDTO.class))
+            .as("queryResults");
 
-//    Aggregation pipeline = newAggregation(lookupOperation, matchOperation, unwindOperation, facets);
     Aggregation pipeline = newAggregation(lookupOperation, matchOperation, facets);
 
     List<FacetDTO> results =
-            mongoTemplate.aggregate(pipeline, CqlLibrary.class, FacetDTO.class).getMappedResults();
+        mongoTemplate.aggregate(pipeline, CqlLibrary.class, FacetDTO.class).getMappedResults();
 
     return new PageImpl<>(
-            results.get(0).getQueryResults(), pageable, results.get(0).getCount().size());
-
+        results.get(0).getQueryResults(), pageable, results.get(0).getCount().size());
   }
 }

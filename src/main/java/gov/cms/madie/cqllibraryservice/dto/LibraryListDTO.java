@@ -38,8 +38,7 @@ public class LibraryListDTO {
   @JsonDeserialize(using = VersionJsonSerializer.VersionDeserializer.class)
   private Version version;
 
-  @DocumentReference
-  private LibrarySet librarySet;
+  @DocumentReference private LibrarySet librarySet;
 
   private boolean draft;
 }

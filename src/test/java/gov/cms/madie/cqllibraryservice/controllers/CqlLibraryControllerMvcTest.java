@@ -4,6 +4,7 @@ import gov.cms.madie.cqllibraryservice.config.security.SecurityConfig;
 import gov.cms.madie.cqllibraryservice.dto.LibrarySetDTO;
 import gov.cms.madie.cqllibraryservice.dto.LibraryListDTO;
 import gov.cms.madie.cqllibraryservice.exceptions.GeneralConflictException;
+import gov.cms.madie.cqllibraryservice.repositories.LibrarySetRepository;
 import gov.cms.madie.models.common.ModelType;
 
 import static org.hamcrest.CoreMatchers.containsString;
@@ -87,6 +88,7 @@ public class CqlLibraryControllerMvcTest {
   @MockBean private VersionService versionService;
   @MockBean private CqlLibraryService cqlLibraryService;
   @MockBean private LibrarySetService librarySetService;
+  @MockBean private LibrarySetRepository librarySetRepository;
 
   @MockBean ActionLogService actionLogService;
 

@@ -12,6 +12,6 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 public class FacetDTO {
-        List<Object> count;
-        List<LibraryListDTO> queryResults;
+  List<Object> count;
+  List<LibraryListDTO> queryResults;
 }
