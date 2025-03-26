@@ -8,7 +8,6 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 import gov.cms.madie.cqllibraryservice.dto.LibraryListDTO;
@@ -18,6 +17,7 @@ import gov.cms.madie.cqllibraryservice.exceptions.InvalidResourceStateException;
 import gov.cms.madie.cqllibraryservice.exceptions.PermissionDeniedException;
 import gov.cms.madie.cqllibraryservice.exceptions.ResourceNotDraftableException;
 import gov.cms.madie.cqllibraryservice.exceptions.ResourceNotFoundException;
+import gov.cms.madie.cqllibraryservice.repositories.LibrarySetRepository;
 import gov.cms.madie.cqllibraryservice.services.ActionLogService;
 import gov.cms.madie.cqllibraryservice.services.LibrarySetService;
 import gov.cms.madie.models.access.AclOperation;
@@ -48,6 +48,8 @@ import org.mockito.Captor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.mock.web.MockHttpServletRequest;
@@ -56,7 +58,7 @@ import org.springframework.mock.web.MockHttpServletRequest;
 class CqlLibraryControllerTest {
 
   @Mock CqlLibraryRepository cqlLibraryRepository;
-
+  @Mock private LibrarySetRepository librarySetRepository;
   @Mock VersionService versionService;
 
   @Mock CqlLibraryService cqlLibraryService;
@@ -98,32 +100,45 @@ class CqlLibraryControllerTest {
   @Test
   void getCqlLibrariesWithoutCurrentUserFilter() {
     List<LibraryListDTO> cqlLibraries = List.of(libraryList);
-    when(cqlLibraryRepository.findAllLibrariesByUser("")).thenReturn(cqlLibraries);
+    Page<LibraryListDTO> pageResult = new PageImpl<>(cqlLibraries);
+
+    when(cqlLibraryService.getLibrariesByCriteria(eq("test"), eq(false), any(), any()))
+        .thenReturn(pageResult);
+
     Principal principal = mock(Principal.class);
     when(principal.getName()).thenReturn("test.user");
-    ResponseEntity<List<LibraryListDTO>> response =
-        cqlLibraryController.getCqlLibraries(principal, false);
-    verify(cqlLibraryRepository, times(1)).findAllLibrariesByUser("");
-    verifyNoMoreInteractions(cqlLibraryRepository);
+
+    ResponseEntity<Page<LibraryListDTO>> response =
+        cqlLibraryController.getCqlLibraries(principal, false, "test", 10, 0);
+
+    verify(cqlLibraryService, times(1)).getLibrariesByCriteria(eq("test"), eq(false), any(), any());
+    verifyNoMoreInteractions(cqlLibraryService);
+
     assertNotNull(response.getBody());
-    assertNotNull(response.getBody().get(0));
-    assertEquals("testCqlLibraryId", response.getBody().get(0).getId());
+    assertFalse(response.getBody().isEmpty());
+    assertEquals("testCqlLibraryId", response.getBody().getContent().get(0).getId());
   }
 
   @Test
   void getCqlLibrariesWithCurrentUserFilter() {
     List<LibraryListDTO> cqlLibraries = List.of(libraryList);
-    when(cqlLibraryRepository.findAllLibrariesByUser(anyString())).thenReturn(cqlLibraries);
+    Page<LibraryListDTO> pageResult = new PageImpl<>(cqlLibraries);
+
+    when(cqlLibraryService.getLibrariesByCriteria(eq("test"), eq(true), any(), any()))
+        .thenReturn(pageResult);
+
     Principal principal = mock(Principal.class);
     when(principal.getName()).thenReturn("test.user");
 
-    ResponseEntity<List<LibraryListDTO>> response =
-        cqlLibraryController.getCqlLibraries(principal, true);
-    verify(cqlLibraryRepository, times(1)).findAllLibrariesByUser(eq("test.user"));
-    verifyNoMoreInteractions(cqlLibraryRepository);
+    ResponseEntity<Page<LibraryListDTO>> response =
+        cqlLibraryController.getCqlLibraries(principal, true, "test", 10, 0);
+
+    verify(cqlLibraryService, times(1)).getLibrariesByCriteria(eq("test"), eq(true), any(), any());
+    verifyNoMoreInteractions(cqlLibraryService);
+
     assertNotNull(response.getBody());
-    assertNotNull(response.getBody().get(0));
-    assertEquals("testCqlLibraryId", response.getBody().get(0).getId());
+    assertFalse(response.getBody().isEmpty());
+    assertEquals("testCqlLibraryId", response.getBody().getContent().get(0).getId());
   }
 
   @Test

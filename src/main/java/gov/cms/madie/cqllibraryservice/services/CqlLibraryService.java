@@ -20,6 +20,8 @@ import java.util.Optional;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.apache.commons.collections4.CollectionUtils;
 
@@ -34,6 +36,12 @@ public class CqlLibraryService {
   private final ActionLogService actionLogService;
   private LibrarySetService librarySetService;
   private MeasureServiceClient measureServiceClient;
+
+  public Page<LibraryListDTO> getLibrariesByCriteria(
+      String searchCriteria, boolean filterByCurrentUser, Pageable pageReq, String username) {
+    return cqlLibraryRepository.searchLibrariesByCriteria(
+        username, pageReq, searchCriteria, filterByCurrentUser);
+  }
 
   public void checkDuplicateCqlLibraryName(String cqlLibraryName) {
     if (StringUtils.isNotEmpty(cqlLibraryName)

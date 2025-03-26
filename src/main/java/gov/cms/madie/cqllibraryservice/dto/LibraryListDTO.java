@@ -13,6 +13,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder;
 import org.springframework.data.mongodb.core.mapping.Document;
+import org.springframework.data.mongodb.core.mapping.DocumentReference;
 
 import java.time.Instant;
 
@@ -37,7 +38,7 @@ public class LibraryListDTO {
   @JsonDeserialize(using = VersionJsonSerializer.VersionDeserializer.class)
   private Version version;
 
-  private LibrarySet librarySet;
+  @DocumentReference private LibrarySet librarySet;
 
   private boolean draft;
 }

@@ -5,8 +5,8 @@ import gov.cms.madie.cqllibraryservice.dto.LibraryListDTO;
 import gov.cms.madie.cqllibraryservice.exceptions.HarpIdMismatchException;
 import gov.cms.madie.cqllibraryservice.exceptions.InvalidIdException;
 import gov.cms.madie.cqllibraryservice.exceptions.InvalidResourceStateException;
-import gov.cms.madie.cqllibraryservice.services.ActionLogService;
-import gov.cms.madie.cqllibraryservice.services.LibrarySetService;
+import gov.cms.madie.cqllibraryservice.repositories.LibrarySetRepository;
+import gov.cms.madie.cqllibraryservice.services.*;
 import gov.cms.madie.cqllibraryservice.utils.AuthUtils;
 import gov.cms.madie.cqllibraryservice.utils.LibraryUtils;
 import gov.cms.madie.models.access.AclOperation;
@@ -17,8 +17,7 @@ import gov.cms.madie.models.library.CqlLibrary;
 import gov.cms.madie.models.library.CqlLibraryDraft;
 import gov.cms.madie.models.common.Version;
 import gov.cms.madie.cqllibraryservice.repositories.CqlLibraryRepository;
-import gov.cms.madie.cqllibraryservice.services.CqlLibraryService;
-import gov.cms.madie.cqllibraryservice.services.VersionService;
+
 import java.security.Principal;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -28,6 +27,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
+import gov.cms.madie.models.library.LibrarySet;
 import org.apache.commons.lang3.StringUtils;
 import jakarta.servlet.http.HttpServletRequest;
 
@@ -35,6 +35,10 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -51,19 +55,35 @@ import gov.cms.madie.cqllibraryservice.exceptions.ResourceNotFoundException;
 public class CqlLibraryController {
 
   private final CqlLibraryRepository cqlLibraryRepository;
+  private final LibrarySetRepository librarySetRepository;
   private final ActionLogService actionLogService;
   private final VersionService versionService;
   private final CqlLibraryService cqlLibraryService;
   private final LibrarySetService librarySetService;
 
   @GetMapping
-  public ResponseEntity<List<LibraryListDTO>> getCqlLibraries(
+  public ResponseEntity<Page<LibraryListDTO>> getCqlLibraries(
       Principal principal,
       @RequestParam(required = false, defaultValue = "false", name = "currentUser")
-          boolean filterByCurrentUser) {
+          boolean filterByCurrentUser,
+      @RequestParam(required = false, defaultValue = "", name = "searchCriteria")
+          String searchCriteria,
+      @RequestParam(required = false, defaultValue = "10", name = "limit") int limit,
+      @RequestParam(required = false, defaultValue = "0", name = "page") int page) {
     final String username = principal.getName();
-    List<LibraryListDTO> cqlLibraries =
-        cqlLibraryRepository.findAllLibrariesByUser(filterByCurrentUser ? username : "");
+    Page<LibraryListDTO> cqlLibraries;
+    final Pageable pageReq = PageRequest.of(page, limit, Sort.by("lastModifiedAt").descending());
+    cqlLibraries =
+        cqlLibraryService.getLibrariesByCriteria(
+            searchCriteria, filterByCurrentUser, pageReq, username);
+    cqlLibraries.map(
+        library -> {
+          LibrarySet librarySet =
+              librarySetRepository.findByLibrarySetId(library.getLibrarySetId()).orElse(null);
+          library.setLibrarySet(librarySet);
+          return library;
+        });
+
     return ResponseEntity.ok(cqlLibraries);
   }
 
