@@ -2,11 +2,15 @@ package gov.cms.madie.cqllibraryservice.services;
 
 import gov.cms.madie.cqllibraryservice.dto.LibrarySetDTO;
 import gov.cms.madie.cqllibraryservice.dto.LibraryListDTO;
+import gov.cms.madie.cqllibraryservice.dto.SharedUser;
 import gov.cms.madie.cqllibraryservice.exceptions.*;
 import gov.cms.madie.cqllibraryservice.repositories.LibrarySetRepository;
 import gov.cms.madie.models.access.AclOperation;
 import gov.cms.madie.models.access.AclSpecification;
+import gov.cms.madie.models.access.RoleEnum;
+import gov.cms.madie.models.common.AccessControlAction;
 import gov.cms.madie.models.common.ActionType;
+import gov.cms.madie.models.common.LibrarySetActionLog;
 import gov.cms.madie.models.common.Version;
 import gov.cms.madie.models.dto.LibraryUsage;
 import gov.cms.madie.models.library.CqlLibrary;
@@ -14,9 +18,7 @@ import gov.cms.madie.cqllibraryservice.repositories.CqlLibraryRepository;
 import gov.cms.madie.models.library.LibrarySet;
 import gov.cms.madie.models.measure.ElmJson;
 
-import java.util.List;
-import java.util.Objects;
-import java.util.Optional;
+import java.util.*;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
@@ -104,7 +106,7 @@ public class CqlLibraryService {
   }
 
   public List<AclSpecification> updateAccessControlList(
-      String cqlLibraryId, AclOperation aclOperation) {
+      String cqlLibraryId, AclOperation aclOperation, String userName) {
     Optional<CqlLibrary> persistedLibrary = cqlLibraryRepository.findById(cqlLibraryId);
     if (persistedLibrary.isEmpty()) {
       throw new ResourceNotFoundException("Library does not exist: " + cqlLibraryId);
@@ -113,7 +115,7 @@ public class CqlLibraryService {
     CqlLibrary library = persistedLibrary.get();
     LibrarySet librarySet =
         librarySetService.updateLibrarySetAcls(library.getLibrarySetId(), aclOperation);
-    actionLogService.logAction(cqlLibraryId, ActionType.UPDATED, "admin");
+    actionLogService.logAction(cqlLibraryId, ActionType.UPDATED, userName);
     return librarySet.getAcls();
   }
 
@@ -225,5 +227,137 @@ public class CqlLibraryService {
     }
     LibrarySet librarySet = librarySetRepository.findByLibrarySetId(librarySetId).orElse(null);
     return LibrarySetDTO.builder().libraries(libraries).librarySet(librarySet).build();
+  }
+
+  public Map<String, List<SharedUser>> getSharedLibraries(List<String> libraryIds) {
+    Map<String, List<SharedUser>> sharedLibraries = new HashMap<>();
+
+    for (String libraryId : libraryIds) {
+      CqlLibrary library = findCqlLibraryById(libraryId);
+
+      if (library == null) {
+        throw new ResourceNotFoundException("Library does not exist: " + libraryId);
+      }
+      if (library.getLibrarySet() == null) {
+        //          throw new InvalidLibraryStateException(
+        //                  "No library set exists for library with ID: " + library.getId());
+        throw new ResourceNotFoundException("Library does not exist: " + libraryId);
+      }
+      if (library.getLibrarySet().getAcls() == null) {
+        sharedLibraries.put(libraryId, Collections.emptyList());
+      } else {
+        List<String> userIds =
+            library.getLibrarySet().getAcls().stream()
+                .filter(
+                    aclSpecification -> aclSpecification.getRoles().contains(RoleEnum.SHARED_WITH))
+                .map(AclSpecification::getUserId)
+                .toList();
+        LibrarySetActionLog librarySetActionLog =
+            actionLogService.findLibrarySetActionLogByTargetId(library.getLibrarySetId());
+
+        if (librarySetActionLog != null) {
+          Collections.reverse(librarySetActionLog.getActions());
+          List<AccessControlAction> shareActions =
+              librarySetActionLog.getActions().stream()
+                  .filter(action -> action.getActionType().equals(ActionType.SHARED))
+                  .toList();
+          List<SharedUser> sharedUsers =
+              userIds.stream()
+                  .map(
+                      userId -> {
+                        SharedUser sharedUser = SharedUser.builder().userId(userId).build();
+                        Optional<AccessControlAction> latestShareActionByUserId =
+                            shareActions.stream()
+                                .filter(action -> action.getSharedWith().equals(userId))
+                                .findFirst();
+                        latestShareActionByUserId.ifPresent(
+                            action -> sharedUser.setPerformedAt(action.getPerformedAt()));
+
+                        return sharedUser;
+                      })
+                  .toList();
+          sharedLibraries.put(libraryId, sharedUsers);
+        } else {
+          sharedLibraries.put(
+              libraryId,
+              userIds.stream().map(userId -> SharedUser.builder().userId(userId).build()).toList());
+        }
+      }
+    }
+    return sharedLibraries;
+  }
+
+  public Map<String, List<AclSpecification>> shareLibraries(
+      Map<String, List<String>> libraryUserIdMap, String userName) {
+    Map<String, List<AclSpecification>> libraryIdToAclSpecification = new HashMap<>();
+
+    libraryUserIdMap
+        .keySet()
+        .forEach(
+            libraryId -> {
+              CqlLibrary library = findCqlLibraryById(libraryId);
+
+              if (library == null) {
+                throw new ResourceNotFoundException("Library does not exist: " + libraryId);
+              }
+              verifyAuthorization(userName, library, null);
+            });
+
+    libraryUserIdMap.forEach(
+        (LibraryId, userIds) -> {
+          AclOperation aclOperation = buildShareAclOperation(userIds);
+          libraryIdToAclSpecification.put(
+              LibraryId, updateAccessControlList(LibraryId, aclOperation, userName));
+        });
+
+    return libraryIdToAclSpecification;
+  }
+
+  private AclOperation buildShareAclOperation(List<String> userIds) {
+    return AclOperation.builder()
+        .acls(buildShareAclSpecifications(userIds))
+        .action(AclOperation.AclAction.GRANT)
+        .build();
+  }
+
+  private List<AclSpecification> buildShareAclSpecifications(List<String> userIds) {
+    return userIds.stream()
+        .map(
+            userId ->
+                AclSpecification.builder()
+                    .userId(userId)
+                    .roles(Set.of(RoleEnum.SHARED_WITH))
+                    .build())
+        .toList();
+  }
+
+  public void verifyAuthorization(String username, CqlLibrary library, List<RoleEnum> roles) {
+    LibrarySet librarySet =
+        library.getLibrarySetId() == null
+            ? librarySetService.findByLibrarySetId(library.getLibrarySetId())
+            : library.getLibrarySet();
+    if (librarySet == null) {
+      throw new ResourceNotFoundException(
+          "No library set exists for library with ID : " + library.getId());
+    }
+    verifyLibrarySetAuthorization(username, "CqlLibrary", library.getId(), roles, librarySet);
+  }
+
+  private void verifyLibrarySetAuthorization(
+      String username,
+      String target,
+      String targetId,
+      List<RoleEnum> roles,
+      LibrarySet librarySet) {
+    List<RoleEnum> allowedRoles = roles == null ? List.of() : roles;
+    if (!librarySet.getOwner().equalsIgnoreCase(username)
+            && (org.springframework.util.CollectionUtils.isEmpty(librarySet.getAcls())
+            || librarySet.getAcls().stream()
+            .noneMatch(
+                    acl ->
+                            acl.getUserId().equalsIgnoreCase(username)
+                                    && acl.getRoles().stream().anyMatch(allowedRoles::contains)))) {
+      throw new UnauthorizedException(target, targetId, username);
+    }
   }
 }
