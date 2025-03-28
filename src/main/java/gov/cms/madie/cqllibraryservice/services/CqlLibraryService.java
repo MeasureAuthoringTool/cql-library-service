@@ -22,6 +22,8 @@ import java.util.*;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.apache.commons.collections4.CollectionUtils;
 
@@ -36,6 +38,12 @@ public class CqlLibraryService {
   private final ActionLogService actionLogService;
   private LibrarySetService librarySetService;
   private MeasureServiceClient measureServiceClient;
+
+  public Page<LibraryListDTO> getLibrariesByCriteria(
+      String searchCriteria, boolean filterByCurrentUser, Pageable pageReq, String username) {
+    return cqlLibraryRepository.searchLibrariesByCriteria(
+        username, pageReq, searchCriteria, filterByCurrentUser);
+  }
 
   public void checkDuplicateCqlLibraryName(String cqlLibraryName) {
     if (StringUtils.isNotEmpty(cqlLibraryName)
@@ -351,12 +359,12 @@ public class CqlLibraryService {
       LibrarySet librarySet) {
     List<RoleEnum> allowedRoles = roles == null ? List.of() : roles;
     if (!librarySet.getOwner().equalsIgnoreCase(username)
-            && (org.springframework.util.CollectionUtils.isEmpty(librarySet.getAcls())
+        && (org.springframework.util.CollectionUtils.isEmpty(librarySet.getAcls())
             || librarySet.getAcls().stream()
-            .noneMatch(
+                .noneMatch(
                     acl ->
-                            acl.getUserId().equalsIgnoreCase(username)
-                                    && acl.getRoles().stream().anyMatch(allowedRoles::contains)))) {
+                        acl.getUserId().equalsIgnoreCase(username)
+                            && acl.getRoles().stream().anyMatch(allowedRoles::contains)))) {
       throw new UnauthorizedException(target, targetId, username);
     }
   }
