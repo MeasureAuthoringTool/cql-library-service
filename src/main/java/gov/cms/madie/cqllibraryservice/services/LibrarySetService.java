@@ -167,8 +167,6 @@ public class LibrarySetService {
   }
 
   public List<LibraryListDTO> getLibrariesByLibrarySetId(String librarySetId) {
-    // LookupOperation lookupOperation = getLookupOperation();
-
     Criteria libraryCriteria =
         Criteria.where("active").is(true).and("librarySetId").is(librarySetId);
 
