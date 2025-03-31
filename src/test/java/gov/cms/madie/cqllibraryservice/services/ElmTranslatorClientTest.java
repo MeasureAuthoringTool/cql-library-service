@@ -13,7 +13,9 @@ import gov.cms.madie.cqllibraryservice.config.EnvironmentConfig;
 import gov.cms.madie.cqllibraryservice.exceptions.CqlElmTranslationServiceException;
 import gov.cms.madie.models.common.ModelType;
 import gov.cms.madie.models.measure.ElmJson;
+
 import java.net.URI;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -103,6 +105,39 @@ class ElmTranslatorClientTest {
     ElmJson elmJson = ElmJson.builder().json(json).build();
     boolean output = elmTranslatorClient.hasErrors(elmJson);
     assertThat(output, is(true));
+  }
+
+  @Test
+  void testHasErrorsReturnsFalseForWarningAndInfo() {
+    final String json =
+        "{\n"
+            + "          \"errorExceptions\": [{\n"
+            + "                                  \"startLine\" : 3,\n"
+            + "                                  \"startChar\" : 1,\n"
+            + "                                  \"endLine\" : 3,\n"
+            + "                                  \"endChar\" : 6,\n"
+            + "                                  \"errorType\" : null,\n"
+            + "                                  \"errorSeverity\" : \"Info\",\n"
+            + "                                  \"targetIncludeLibraryId\" : \"TestLib\",\n"
+            + "                                  \"targetIncludeLibraryVersionId\" : \"2\",\n"
+            + "                                  \"type\" : null,\n"
+            + "                                  \"message\" : \"Some info message here.\"\n"
+            + "                                }, {\n"
+            + "                                  \"startLine\" : 2,\n"
+            + "                                  \"startChar\" : 1,\n"
+            + "                                  \"endLine\" : 2,\n"
+            + "                                  \"endChar\" : 6,\n"
+            + "                                  \"errorType\" : null,\n"
+            + "                                  \"errorSeverity\" : \"Warning\",\n"
+            + "                                  \"targetIncludeLibraryId\" : \"TestLib\",\n"
+            + "                                  \"targetIncludeLibraryVersionId\" : \"2\",\n"
+            + "                                  \"type\" : null,\n"
+            + "                                  \"message\" : \"Some warning message here.\"\n"
+            + "                                }]\n"
+            + "        }";
+    ElmJson elmJson = ElmJson.builder().json(json).build();
+    boolean output = elmTranslatorClient.hasErrors(elmJson);
+    assertThat(output, is(false));
   }
 
   @Test
