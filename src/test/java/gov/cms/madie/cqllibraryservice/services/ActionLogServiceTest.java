@@ -1,6 +1,7 @@
 package gov.cms.madie.cqllibraryservice.services;
 
 import gov.cms.madie.cqllibraryservice.repositories.CqlLibraryActionLogRepository;
+import gov.cms.madie.cqllibraryservice.repositories.LibrarySetActionLogRepository;
 import gov.cms.madie.models.common.AccessControlAction;
 import gov.cms.madie.models.common.Action;
 import gov.cms.madie.models.common.ActionType;
@@ -27,6 +28,8 @@ import static org.mockito.Mockito.when;
 class ActionLogServiceTest {
 
   @Mock CqlLibraryActionLogRepository cqlLibraryHistoryRepository;
+
+  @Mock LibrarySetActionLogRepository librarySetActionLogRepository;
 
   @InjectMocks ActionLogService actionLogService;
 
@@ -65,12 +68,12 @@ class ActionLogServiceTest {
 
   @Test
   void testLogAccessControlActionReturnsTrue() {
-    when(cqlLibraryHistoryRepository.pushEvent(anyString(), any(Action.class))).thenReturn(true);
+    when(librarySetActionLogRepository.pushEvent(anyString(), any(Action.class))).thenReturn(true);
     boolean output =
         actionLogService.logShareAccessControlAction(
             "TARGET_ID", ActionType.SHARED, "firstUser", "sharedWith");
     assertThat(output, is(true));
-    verify(cqlLibraryHistoryRepository, times(1))
+    verify(librarySetActionLogRepository, times(1))
         .pushEvent(stringArgumentCaptor.capture(), actionArgumentCaptor.capture());
     assertThat(stringArgumentCaptor.getValue(), is(equalTo("TARGET_ID")));
     assertThat(actionArgumentCaptor.getValue(), instanceOf(AccessControlAction.class));
@@ -83,12 +86,12 @@ class ActionLogServiceTest {
 
   @Test
   void testLogAccessControlActionReturnsFalse() {
-    when(cqlLibraryHistoryRepository.pushEvent(anyString(), any(Action.class))).thenReturn(false);
+    when(librarySetActionLogRepository.pushEvent(anyString(), any(Action.class))).thenReturn(false);
     boolean output =
         actionLogService.logShareAccessControlAction(
             "TARGET_ID", ActionType.SHARED, "secondUser", "sharedWith");
     assertThat(output, is(false));
-    verify(cqlLibraryHistoryRepository, times(1))
+    verify(librarySetActionLogRepository, times(1))
         .pushEvent(stringArgumentCaptor.capture(), actionArgumentCaptor.capture());
     assertThat(stringArgumentCaptor.getValue(), is(equalTo("TARGET_ID")));
     assertThat(actionArgumentCaptor.getValue(), instanceOf(AccessControlAction.class));
