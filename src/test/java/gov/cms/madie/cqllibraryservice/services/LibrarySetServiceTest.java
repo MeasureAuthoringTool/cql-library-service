@@ -71,7 +71,7 @@ class LibrarySetServiceTest {
     Exception ex =
         assertThrows(
             ResourceNotFoundException.class,
-            () -> librarySetService.updateLibrarySetAcls(librarySetId, aclOperation));
+            () -> librarySetService.updateLibrarySetAcls(librarySetId, aclOperation, "username"));
     assertEquals(ex.getMessage(), "Could not find resource LibrarySet with id: " + librarySetId);
   }
 
@@ -87,7 +87,7 @@ class LibrarySetServiceTest {
     when(librarySetRepository.findByLibrarySetId(anyString())).thenReturn(Optional.of(librarySet));
     when(librarySetRepository.save(any(LibrarySet.class))).thenReturn(updatedLibrarySet);
 
-    LibrarySet librarySet = librarySetService.updateLibrarySetAcls("1", aclOperation);
+    LibrarySet librarySet = librarySetService.updateLibrarySetAcls("1", aclOperation, "username");
     assertThat(librarySet.getId(), is(equalTo(updatedLibrarySet.getId())));
     assertThat(librarySet.getOwner(), is(equalTo(updatedLibrarySet.getOwner())));
     assertThat(librarySet.getAcls().size(), is(equalTo(1)));
@@ -108,7 +108,7 @@ class LibrarySetServiceTest {
         .thenReturn(Optional.of(librarySetWithNoAcls));
     when(librarySetRepository.save(any(LibrarySet.class))).thenReturn(updatedLibrarySet);
 
-    LibrarySet librarySet = librarySetService.updateLibrarySetAcls("1", aclOperation);
+    LibrarySet librarySet = librarySetService.updateLibrarySetAcls("1", aclOperation, "username");
     assertThat(librarySet.getId(), is(equalTo(updatedLibrarySet.getId())));
     assertThat(librarySet.getOwner(), is(equalTo(updatedLibrarySet.getOwner())));
     assertThat(librarySet.getAcls().size(), is(equalTo(1)));
@@ -133,7 +133,7 @@ class LibrarySetServiceTest {
     when(librarySetRepository.findByLibrarySetId(anyString())).thenReturn(Optional.of(librarySet));
     when(librarySetRepository.save(any(LibrarySet.class))).thenReturn(updatedLibrarySet);
 
-    LibrarySet librarySet = librarySetService.updateLibrarySetAcls("1", aclOperation);
+    LibrarySet librarySet = librarySetService.updateLibrarySetAcls("1", aclOperation, "username");
     assertThat(librarySet.getId(), is(equalTo(updatedLibrarySet.getId())));
     assertThat(librarySet.getOwner(), is(equalTo(updatedLibrarySet.getOwner())));
     assertThat(librarySet.getAcls().size(), is(equalTo(2)));
@@ -154,7 +154,7 @@ class LibrarySetServiceTest {
     when(librarySetRepository.findByLibrarySetId(anyString())).thenReturn(Optional.of(librarySet));
     when(librarySetRepository.save(any(LibrarySet.class))).thenReturn(updatedLibrarySet);
 
-    LibrarySet librarySet = librarySetService.updateLibrarySetAcls("1", aclOperation);
+    LibrarySet librarySet = librarySetService.updateLibrarySetAcls("1", aclOperation, "username");
     assertThat(librarySet.getId(), is(equalTo(updatedLibrarySet.getId())));
     assertThat(librarySet.getOwner(), is(equalTo(updatedLibrarySet.getOwner())));
     assertThat(librarySet.getAcls().size(), is(equalTo(1)));
@@ -171,7 +171,8 @@ class LibrarySetServiceTest {
     when(librarySetRepository.findByLibrarySetId(anyString())).thenReturn(Optional.of(librarySet));
     when(librarySetRepository.save(any(LibrarySet.class))).thenReturn(librarySet);
 
-    LibrarySet updatedLibrarySet = librarySetService.updateLibrarySetAcls("1", aclOperation);
+    LibrarySet updatedLibrarySet =
+        librarySetService.updateLibrarySetAcls("1", aclOperation, "username");
     assertThat(updatedLibrarySet.getId(), is(equalTo(librarySet.getId())));
     assertThat(updatedLibrarySet.getOwner(), is(equalTo(librarySet.getOwner())));
     assertThat(updatedLibrarySet.getAcls().size(), is(equalTo(0)));

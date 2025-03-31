@@ -29,7 +29,6 @@ import static org.mockito.Mockito.when;
 public class CqlLibraryServiceAclTest {
   @Mock private CqlLibraryRepository cqlLibraryRepository;
   @Mock private LibrarySetService librarySetService;
-  @Mock private ActionLogService actionLogService;
   @InjectMocks private CqlLibraryService cqlLibraryService;
 
   @Test
@@ -72,8 +71,7 @@ public class CqlLibraryServiceAclTest {
             .build();
     Optional<CqlLibrary> persistedLibrary = Optional.of(library);
     when(cqlLibraryRepository.findById(anyString())).thenReturn(persistedLibrary);
-    when(librarySetService.updateLibrarySetAcls(any(), any())).thenReturn(librarySet);
-    when(actionLogService.logAction(any(), any(), any())).thenReturn(true);
+    when(librarySetService.updateLibrarySetAcls(any(), any(), any())).thenReturn(librarySet);
 
     List<AclSpecification> aclSpecifications =
         cqlLibraryService.updateAccessControlList(library.getId(), aclOperation, "admin");

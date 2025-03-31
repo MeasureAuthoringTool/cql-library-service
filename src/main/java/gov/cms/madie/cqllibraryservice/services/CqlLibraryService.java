@@ -122,8 +122,7 @@ public class CqlLibraryService {
 
     CqlLibrary library = persistedLibrary.get();
     LibrarySet librarySet =
-        librarySetService.updateLibrarySetAcls(library.getLibrarySetId(), aclOperation);
-    actionLogService.logAction(cqlLibraryId, ActionType.UPDATED, userName);
+        librarySetService.updateLibrarySetAcls(library.getLibrarySetId(), aclOperation, userName);
     return librarySet.getAcls();
   }
 

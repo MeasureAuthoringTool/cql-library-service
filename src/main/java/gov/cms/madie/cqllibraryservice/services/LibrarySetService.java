@@ -47,10 +47,11 @@ public class LibrarySetService {
     }
   }
 
-  public LibrarySet updateLibrarySetAcls(String librarySetId, AclOperation aclOperation) {
+  public LibrarySet updateLibrarySetAcls(
+      String librarySetId, AclOperation aclOperation, String userName) {
     Optional<LibrarySet> optionalLibrarySet = librarySetRepository.findByLibrarySetId(librarySetId);
     if (optionalLibrarySet.isPresent()) {
-      // Map<String, ActionType> actionLogDetails = new HashMap<>();
+      Map<String, ActionType> actionLogDetails = new HashMap<>();
       LibrarySet librarySet = optionalLibrarySet.get();
       if (AclOperation.AclAction.GRANT == aclOperation.getAction()) {
         if (CollectionUtils.isEmpty(librarySet.getAcls())) {
@@ -95,11 +96,11 @@ public class LibrarySetService {
       LibrarySet updatedLibrarySet = librarySetRepository.save(librarySet);
       log.info("ACL updated for Library set [{}]", updatedLibrarySet.getId());
 
-      //      actionLogDetails.forEach(
-      //              (userId, actionType) -> {
-      //                actionLogService.logShareAccessControlAction(
-      //                        librarySetId, actionType, "userName", userId);
-      //              });
+      actionLogDetails.forEach(
+          (userId, actionType) -> {
+            actionLogService.logShareAccessControlAction(
+                librarySetId, actionType, userName, userId);
+          });
       return updatedLibrarySet;
     } else {
       String error =

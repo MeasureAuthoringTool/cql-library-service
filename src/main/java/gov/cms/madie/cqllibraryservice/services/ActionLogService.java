@@ -33,13 +33,13 @@ public class ActionLogService {
             .build());
   }
 
-  public boolean logAccessControlAction(
+  public boolean logShareAccessControlAction(
       final String targetId,
       final ActionType actionType,
       final String userId,
       final String sharedWith,
       final String... additionalActionMessage) {
-    return cqlLibraryHistoryRepository.pushEvent(
+    return librarySetActionLogRepository.pushEvent(
         targetId,
         AccessControlAction.builder()
             .actionType(actionType)
