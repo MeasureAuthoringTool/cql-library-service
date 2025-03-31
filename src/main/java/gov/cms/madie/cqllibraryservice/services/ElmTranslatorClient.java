@@ -10,6 +10,7 @@ import java.net.URI;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
+import org.cqframework.cql.cql2elm.CqlCompilerException;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
@@ -64,7 +65,18 @@ public class ElmTranslatorClient {
     try {
       ObjectMapper mapper = new ObjectMapper();
       JsonNode jsonNode = mapper.readTree(elmJson.getJson());
-      return jsonNode.has("errorExceptions") && jsonNode.get("errorExceptions").size() > 0;
+      boolean hasError = false;
+      if (jsonNode.has("errorExceptions") && jsonNode.get("errorExceptions").isArray()) {
+        JsonNode errorExceptions = jsonNode.get("errorExceptions");
+        for (JsonNode errorException : errorExceptions) {
+          if (CqlCompilerException.ErrorSeverity.Error.name()
+              .equals(errorException.path("errorSeverity").asText())) {
+            hasError = true;
+            break;
+          }
+        }
+      }
+      return hasError;
     } catch (Exception ex) {
       log.error("An error occurred parsing the response from the CQL-ELM translation service", ex);
       throw new CqlElmTranslationServiceException(
