@@ -718,94 +718,86 @@ class CqlLibraryServiceTest {
         () -> cqlLibraryService.shareLibraries(libraries, "userName"));
   }
 
-  //  @Test
-  //  public void testUpdateSharedMeasures() {
-  //    Map<String, List<String>> libraries = new HashMap<>();
-  //
-  //    AclSpecification aclSpec1 = new AclSpecification();
-  //    aclSpec1.setUserId("testUser");
-  //    aclSpec1.setRoles(
-  //            new HashSet<>() {
-  //              {
-  //                add(RoleEnum.SHARED_WITH);
-  //              }
-  //            });
-  //
-  //    AclSpecification aclSpec2 = new AclSpecification();
-  //    aclSpec2.setUserId("userId2");
-  //    aclSpec2.setRoles(
-  //            new HashSet<>() {
-  //              {
-  //                add(RoleEnum.SHARED_WITH);
-  //              }
-  //            });
-  //
-  //
-  //    LibrarySet librarySet1 =
-  //            LibrarySet.builder()
-  //                    .librarySetId("librarySetId1")
-  //                    .owner("testUser")
-  //                    .acls(List.of(aclSpec2, aclSpec1))
-  //                    .build();
-  //
-  //    LibrarySet librarySet2 =
-  //            LibrarySet.builder()
-  //                    .librarySetId("librarySetId1")
-  //                    .owner("testUser")
-  //                    .acls(List.of(aclSpec2, aclSpec1))
-  //                    .build();
-  //
-  //    String libraryId1 = "libraryId1";
-  //
-  //    CqlLibrary library1 =
-  //            CqlLibrary.builder()
-  //                    .id(libraryId1)
-  //                    .librarySetId(librarySet1.getLibrarySetId())
-  //                    .librarySet(librarySet1)
-  //                    .build();
-  //
-  //    String libraryId2 = "libraryId2";
-  //    CqlLibrary library2 =
-  //            CqlLibrary.builder()
-  //                    .id(libraryId1)
-  //                    .librarySetId(librarySet1.getLibrarySetId())
-  //                    .librarySet(librarySet2)
-  //                    .build();
-  //
-  //
-  //    libraries.put(libraryId1, List.of("testUser", "userId2"));
-  //    libraries.put(libraryId2, List.of("userId2"));
-  //
-  //    when(cqlLibraryRepository.findById("libraryId1")).thenReturn(Optional.ofNullable(library1));
-  //    when(librarySetService.findByLibrarySetId("librarySetId1")).thenReturn(librarySet1);
-  //    when(cqlLibraryRepository.findById("libraryId2")).thenReturn(Optional.ofNullable(library2));
-  //
-  //    //doNothing().when(cqlLibraryService).verifyAuthorization(anyString(), any(), any());
-  //
-  //    AclSpecification aclSpecification1 =
-  //
-  // AclSpecification.builder().userId("userId1").roles(Set.of(RoleEnum.SHARED_WITH)).build();
-  //    AclSpecification aclSpecification2 =
-  //
-  // AclSpecification.builder().userId("userId2").roles(Set.of(RoleEnum.SHARED_WITH)).build();
-  //
-  ////    doReturn(List.of(aclSpecification1, aclSpecification2))
-  ////            .when(cqlLibraryService)
-  ////            .updateAccessControlList(anyString(), any(AclOperation.class), anyString());
-  //
-  //    Map<String, List<AclSpecification>> updatedShareMeasures =
-  //            cqlLibraryService.shareLibraries(libraries, "testUser");
-  //    assertThat(updatedShareMeasures.size(), is(equalTo(2)));
-  //
-  ////    assertTrue(updatedShareMeasures.containsKey(measureId1));
-  ////    assertTrue(updatedShareMeasures.containsKey(measureId2));
-  ////
-  ////    assertThat(
-  ////            updatedShareMeasures.get(measureId1),
-  ////            is(equalTo(List.of(aclSpecification1, aclSpecification2))));
-  ////
-  ////    assertThat(
-  ////            updatedShareMeasures.get(measureId2),
-  ////            is(equalTo(List.of(aclSpecification1, aclSpecification2))));
-  //  }
+  @Test
+  public void testUpdateSharedMeasures() {
+    Map<String, List<String>> libraries = new HashMap<>();
+
+    AclSpecification aclSpec1 = new AclSpecification();
+    aclSpec1.setUserId("testUser");
+    aclSpec1.setRoles(
+        new HashSet<>() {
+          {
+            add(RoleEnum.SHARED_WITH);
+          }
+        });
+
+    AclSpecification aclSpec2 = new AclSpecification();
+    aclSpec2.setUserId("userId2");
+    aclSpec2.setRoles(
+        new HashSet<>() {
+          {
+            add(RoleEnum.SHARED_WITH);
+          }
+        });
+
+    LibrarySet librarySet1 =
+        LibrarySet.builder()
+            .librarySetId("librarySetId1")
+            .owner("testUser")
+            .acls(List.of(aclSpec2, aclSpec1))
+            .build();
+
+    LibrarySet librarySet2 =
+        LibrarySet.builder()
+            .librarySetId("librarySetId1")
+            .owner("testUser")
+            .acls(List.of(aclSpec2, aclSpec1))
+            .build();
+
+    String libraryId1 = "libraryId1";
+
+    CqlLibrary library1 =
+        CqlLibrary.builder()
+            .id(libraryId1)
+            .librarySetId(librarySet1.getLibrarySetId())
+            .librarySet(librarySet1)
+            .build();
+
+    String libraryId2 = "libraryId2";
+    CqlLibrary library2 =
+        CqlLibrary.builder()
+            .id(libraryId1)
+            .librarySetId(librarySet1.getLibrarySetId())
+            .librarySet(librarySet2)
+            .build();
+
+    libraries.put(libraryId1, List.of("testUser", "userId2"));
+    libraries.put(libraryId2, List.of("userId2"));
+
+    when(cqlLibraryRepository.findById("libraryId1")).thenReturn(Optional.ofNullable(library1));
+    when(librarySetService.findByLibrarySetId("librarySetId1")).thenReturn(librarySet1);
+    when(cqlLibraryRepository.findById("libraryId2")).thenReturn(Optional.ofNullable(library2));
+
+    when(librarySetService.updateLibrarySetAcls(any(), any(), any())).thenReturn(librarySet1);
+
+    AclSpecification aclSpecification1 =
+        AclSpecification.builder().userId("testUser").roles(Set.of(RoleEnum.SHARED_WITH)).build();
+    AclSpecification aclSpecification2 =
+        AclSpecification.builder().userId("userId2").roles(Set.of(RoleEnum.SHARED_WITH)).build();
+
+    Map<String, List<AclSpecification>> updatedShareMeasures =
+        cqlLibraryService.shareLibraries(libraries, "testUser");
+    assertThat(updatedShareMeasures.size(), is(equalTo(2)));
+
+    assertTrue(updatedShareMeasures.containsKey(libraryId1));
+    assertTrue(updatedShareMeasures.containsKey(libraryId2));
+
+    assertThat(
+        updatedShareMeasures.get(libraryId1),
+        is(equalTo(List.of(aclSpecification2, aclSpecification1))));
+
+    assertThat(
+        updatedShareMeasures.get(libraryId2),
+        is(equalTo(List.of(aclSpecification2, aclSpecification1))));
+  }
 }
