@@ -1,6 +1,7 @@
 package gov.cms.madie.cqllibraryservice.repositories;
 
 import com.mongodb.client.result.UpdateResult;
+import gov.cms.madie.models.common.AccessControlAction;
 import gov.cms.madie.models.common.Action;
 import gov.cms.madie.models.common.ActionLog;
 import lombok.extern.slf4j.Slf4j;
@@ -31,6 +32,20 @@ public class ActionLogRepositoryImpl implements ActionLogRepository {
             new Query(Criteria.where("targetId").is(targetId)),
             update.push("actions").value(action),
             ActionLog.class);
+    return upsert.getUpsertedId() != null || upsert.getModifiedCount() == 1;
+  }
+
+  @Override
+  public boolean pushEvent(String targetId, AccessControlAction accessControlAction) {
+    if (targetId == null || targetId.isEmpty() || accessControlAction == null) {
+      return false;
+    }
+    Update update = new Update();
+    UpdateResult upsert =
+        mongoTemplate.upsert(
+            new Query(Criteria.where("targetId").is(targetId)),
+            update.push("actions").value(accessControlAction),
+            LibrarySetActionLogRepository.class);
     return upsert.getUpsertedId() != null || upsert.getModifiedCount() == 1;
   }
 }

@@ -32,6 +32,7 @@ class LibrarySetServiceTest {
 
   @InjectMocks private LibrarySetService librarySetService;
   @Mock LibrarySetRepository librarySetRepository;
+  @Mock private ActionLogService actionLogService;
   LibrarySet librarySet;
 
   @BeforeEach
@@ -132,11 +133,14 @@ class LibrarySetServiceTest {
             .build();
     when(librarySetRepository.findByLibrarySetId(anyString())).thenReturn(Optional.of(librarySet));
     when(librarySetRepository.save(any(LibrarySet.class))).thenReturn(updatedLibrarySet);
+    when(actionLogService.logShareAccessControlAction(any(), any(), any(), any())).thenReturn(true);
 
     LibrarySet librarySet = librarySetService.updateLibrarySetAcls("1", aclOperation, "username");
     assertThat(librarySet.getId(), is(equalTo(updatedLibrarySet.getId())));
     assertThat(librarySet.getOwner(), is(equalTo(updatedLibrarySet.getOwner())));
     assertThat(librarySet.getAcls().size(), is(equalTo(2)));
+
+    verify(actionLogService, times(1)).logShareAccessControlAction(any(), any(), any(), any());
   }
 
   @Test

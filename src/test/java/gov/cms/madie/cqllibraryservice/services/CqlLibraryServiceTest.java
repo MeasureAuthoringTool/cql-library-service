@@ -32,9 +32,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 
 @ExtendWith(MockitoExtension.class)
 class CqlLibraryServiceTest {
@@ -518,4 +516,40 @@ class CqlLibraryServiceTest {
             BadRequestObjectException.class, () -> cqlLibraryService.getLibrarySetBySetId(null));
     assertThat(exception.getMessage(), equalTo("Please provide library set ID."));
   }
+
+  @Test
+  public void testGetSharedMeasuresWithNoMeasureFound() {
+    String libraryId1 = "libraryId1";
+    List<String> libraryIds = List.of(libraryId1);
+
+    when(cqlLibraryRepository.findById(libraryId1)).thenReturn(Optional.empty());
+
+    assertThrows(
+        ResourceNotFoundException.class, () -> cqlLibraryService.getSharedLibraries(libraryIds));
+  }
+
+  //  @Test
+  //  public void testGetSharedMeasuresWithNoMeasureSetFound() {
+  //    AclSpecification acl1 = new AclSpecification();
+  //    acl1.setUserId("userId2");
+  //    acl1.setRoles(Set.of(RoleEnum.SHARED_WITH));
+  //
+  //    LibrarySet librarySet1 =
+  // LibrarySet.builder().librarySetId("librarySetId1").owner("testUser").build();
+  //
+  //    CqlLibrary library1 =
+  //            CqlLibrary.builder()
+  //                    .id("libraryId1")
+  //                    .librarySetId(librarySet1.getLibrarySetId())
+  //                    .librarySet(librarySet1)
+  //                    .build();
+  //
+  //    CqlLibrary library2 = CqlLibrary.builder().id("libraryId2").build();
+  //
+  //    List<String> libraryIds = List.of("libraryId1", "libraryId2");
+  //
+  //    assertThrows(
+  //            ResourceNotFoundException.class, () ->
+  // cqlLibraryService.getSharedLibraries(libraryIds));
+  //  }
 }

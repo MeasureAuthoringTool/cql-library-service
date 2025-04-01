@@ -6,6 +6,7 @@ import gov.cms.madie.cqllibraryservice.repositories.CqlLibraryRepository;
 import gov.cms.madie.cqllibraryservice.repositories.LibrarySetRepository;
 import gov.cms.madie.models.access.AclOperation;
 import gov.cms.madie.models.access.AclSpecification;
+import gov.cms.madie.models.access.RoleEnum;
 import gov.cms.madie.models.common.ActionType;
 import gov.cms.madie.models.library.CqlLibrary;
 import gov.cms.madie.models.library.LibrarySet;
@@ -57,6 +58,22 @@ public class LibrarySetService {
         if (CollectionUtils.isEmpty(librarySet.getAcls())) {
           // if no acl present, add it
           librarySet.setAcls(aclOperation.getAcls());
+
+          aclOperation
+              .getAcls()
+              .forEach(
+                  aclSpecification -> {
+                    String userId = aclSpecification.getUserId();
+
+                    aclSpecification
+                        .getRoles()
+                        .forEach(
+                            roleEnum -> {
+                              if (roleEnum == RoleEnum.SHARED_WITH) {
+                                actionLogDetails.put(userId, ActionType.SHARED);
+                              }
+                            });
+                  });
         } else {
           // update acl
           aclOperation
@@ -69,8 +86,26 @@ public class LibrarySetService {
                     // if acl does not present, add it
                     if (aclSpecification == null) {
                       librarySet.getAcls().add(acl);
+
+                      acl.getRoles()
+                          .forEach(
+                              roleEnum -> {
+                                if (roleEnum == RoleEnum.SHARED_WITH) {
+                                  actionLogDetails.put(acl.getUserId(), ActionType.SHARED);
+                                }
+                              });
                     } else {
-                      aclSpecification.getRoles().addAll(acl.getRoles());
+                      acl.getRoles()
+                          .forEach(
+                              roleEnum -> {
+                                if (!aclSpecification.getRoles().contains(roleEnum)) {
+                                  aclSpecification.getRoles().add(roleEnum);
+
+                                  if (roleEnum == RoleEnum.SHARED_WITH) {
+                                    actionLogDetails.put(acl.getUserId(), ActionType.SHARED);
+                                  }
+                                }
+                              });
                     }
                   });
         }
