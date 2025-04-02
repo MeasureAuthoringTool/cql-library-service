@@ -3,6 +3,7 @@ package gov.cms.madie.cqllibraryservice.controllers;
 import gov.cms.madie.cqllibraryservice.config.security.SecurityConfig;
 import gov.cms.madie.cqllibraryservice.dto.LibrarySetDTO;
 import gov.cms.madie.cqllibraryservice.dto.LibraryListDTO;
+import gov.cms.madie.cqllibraryservice.dto.SharedUser;
 import gov.cms.madie.cqllibraryservice.exceptions.GeneralConflictException;
 import gov.cms.madie.cqllibraryservice.repositories.LibrarySetRepository;
 import gov.cms.madie.models.common.ModelType;
@@ -48,11 +49,12 @@ import gov.cms.madie.cqllibraryservice.repositories.CqlLibraryRepository;
 import gov.cms.madie.cqllibraryservice.services.CqlLibraryService;
 import gov.cms.madie.cqllibraryservice.services.LibrarySetService;
 import gov.cms.madie.cqllibraryservice.services.VersionService;
+
+import java.time.Clock;
 import java.time.Instant;
+import java.time.ZoneId;
 import java.time.temporal.ChronoUnit;
-import java.util.List;
-import java.util.Optional;
-import java.util.Set;
+import java.util.*;
 
 import gov.cms.madie.models.library.LibrarySet;
 
@@ -1736,5 +1738,106 @@ public class CqlLibraryControllerMvcTest {
     assertThat(
         result.getResponse().getContentAsString(),
         containsString(librarySetDTO.getLibraries().get(0).getCqlLibraryName()));
+  }
+
+  @Test
+  public void testGetSharedLibraries() throws Exception {
+    String libraryId1 = "libraryId1";
+    String libraryId2 = "libraryId2";
+
+    Instant fixedInstant = Instant.parse("2025-03-17T10:00:00Z");
+    ZoneId utc = ZoneId.of("UTC");
+    Clock fixedClock = Clock.fixed(fixedInstant, utc);
+
+    List<String> libraryIds = List.of(libraryId1, libraryId2);
+    SharedUser sharedUser1 =
+        SharedUser.builder().userId("userId1").performedAt(fixedClock.instant()).build();
+    SharedUser sharedUser2 =
+        SharedUser.builder().userId("userId2").performedAt(fixedClock.instant()).build();
+
+    Map<String, List<SharedUser>> sharedLibraries = new HashMap<>();
+    sharedLibraries.put(libraryId1, List.of(sharedUser1));
+    sharedLibraries.put(libraryId2, List.of(sharedUser1, sharedUser2));
+
+    doReturn(sharedLibraries).when(cqlLibraryService).getSharedLibraries(eq(libraryIds));
+
+    mockMvc
+        .perform(
+            get(String.format("/cql-libraries/shared?libraryIds=%s", String.join(",", libraryIds)))
+                .with(user(TEST_USER_ID))
+                .with(csrf())
+                .header("Authorization", "test-okta"))
+        .andExpect(status().isOk())
+        .andExpect(
+            content()
+                .string(
+                    "{\"libraryId1\":[{\"userId\":\"userId1\",\"performedAt\":\"2025-03-17T10:00:00Z\"}],\"libraryId2\":[{\"userId\":\"userId1\",\"performedAt\":\"2025-03-17T10:00:00Z\"},{\"userId\":\"userId2\",\"performedAt\":\"2025-03-17T10:00:00Z\"}]}"));
+
+    verify(cqlLibraryService, times(1)).getSharedLibraries(eq(libraryIds));
+  }
+
+  @Test
+  public void testUpdateSharedLibraries() throws Exception {
+    AclSpecification aclSpecification1 = new AclSpecification();
+    aclSpecification1.setUserId("userId1");
+    aclSpecification1.setRoles(Set.of(RoleEnum.SHARED_WITH));
+
+    AclSpecification aclSpecification2 = new AclSpecification();
+    aclSpecification2.setUserId("userId2");
+    aclSpecification2.setRoles(Set.of(RoleEnum.SHARED_WITH));
+
+    Map<String, List<AclSpecification>> updatedSharedLibraries = new HashMap<>();
+    updatedSharedLibraries.put("libraryId1", List.of(aclSpecification1));
+    updatedSharedLibraries.put("libraryId2", List.of(aclSpecification1, aclSpecification2));
+
+    doReturn(updatedSharedLibraries).when(cqlLibraryService).shareLibraries(any(), anyString());
+
+    MvcResult result =
+        mockMvc
+            .perform(
+                put("/cql-libraries/shared")
+                    .with(user(TEST_USER_ID))
+                    .with(csrf())
+                    .content("{\"libraryId1\": [\"userId1\"],\"libraryId2\": [\"userId1\"]}")
+                    .header(TEST_API_KEY_HEADER, TEST_API_KEY_HEADER_VALUE)
+                    .contentType(MediaType.APPLICATION_JSON_VALUE))
+            .andExpect(status().isOk())
+            .andReturn();
+    verify(cqlLibraryService, times(1)).shareLibraries(any(), anyString());
+    assertEquals(
+        result.getResponse().getContentAsString(),
+        "{\"libraryId1\":[{\"userId\":\"userId1\",\"roles\":[\"SHARED_WITH\"]}],\"libraryId2\":[{\"userId\":\"userId1\",\"roles\":[\"SHARED_WITH\"]},{\"userId\":\"userId2\",\"roles\":[\"SHARED_WITH\"]}]}");
+  }
+
+  @Test
+  public void testGetRecentLibrariesByLibrarySetId() throws Exception {
+    CqlLibrary library1 = new CqlLibrary();
+    library1.setId("L1");
+    library1.setCqlLibraryName("Library 1");
+
+    CqlLibrary library2 = new CqlLibrary();
+    library2.setId("L2");
+    library2.setCqlLibraryName("Library 2");
+
+    List<CqlLibrary> recentLibraries = List.of(library1, library2);
+
+    when(librarySetService.getRecentLibrariesByLibrarySetId(eq(List.of("set1", "set2"))))
+        .thenReturn(recentLibraries);
+
+    mockMvc
+        .perform(
+            get("/cql-libraries/recentsByLibrarySetId")
+                .with(user(TEST_USER_ID))
+                .queryParam("librarySetIds", "set1", "set2")
+                .accept(MediaType.APPLICATION_JSON))
+        .andExpect(status().isOk())
+        .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+        .andExpect(jsonPath("$[0].id").value("L1"))
+        .andExpect(jsonPath("$[0].cqlLibraryName").value("Library 1"))
+        .andExpect(jsonPath("$[1].id").value("L2"))
+        .andExpect(jsonPath("$[1].cqlLibraryName").value("Library 2"));
+
+    verify(librarySetService, times(1))
+        .getRecentLibrariesByLibrarySetId(eq(List.of("set1", "set2")));
   }
 }
