@@ -348,7 +348,7 @@ public class CqlLibraryService {
     verifyLibrarySetAuthorization(username, "CqlLibrary", library.getId(), roles, librarySet);
   }
 
-  private void verifyLibrarySetAuthorization(
+  public void verifyLibrarySetAuthorization(
       String username,
       String target,
       String targetId,

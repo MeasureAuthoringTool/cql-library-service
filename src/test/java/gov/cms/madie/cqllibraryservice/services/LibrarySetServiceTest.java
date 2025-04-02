@@ -1,5 +1,6 @@
 package gov.cms.madie.cqllibraryservice.services;
 
+import gov.cms.madie.cqllibraryservice.repositories.CqlLibraryRepository;
 import gov.cms.madie.cqllibraryservice.repositories.LibrarySetRepository;
 import gov.cms.madie.models.access.AclOperation;
 import gov.cms.madie.models.access.AclSpecification;
@@ -13,14 +14,14 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.mongodb.core.MongoTemplate;
 
 import java.util.*;
 
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.times;
@@ -31,8 +32,11 @@ import static org.mockito.Mockito.when;
 class LibrarySetServiceTest {
 
   @InjectMocks private LibrarySetService librarySetService;
+
+  @Mock CqlLibraryRepository cqlLibraryRepository;
   @Mock LibrarySetRepository librarySetRepository;
   @Mock private ActionLogService actionLogService;
+  @Mock MongoTemplate mongoTemplate;
   LibrarySet librarySet;
 
   @BeforeEach
@@ -213,5 +217,38 @@ class LibrarySetServiceTest {
             () -> librarySetService.updateOwnership("1", "testUser"));
     verify(librarySetRepository, times(1)).findByLibrarySetId(anyString());
     verify(librarySetRepository, times(0)).save(any(LibrarySet.class));
+  }
+
+  @Test
+  public void testGetAllOwners() {
+    when(librarySetRepository.findByLibrarySetId(anyString())).thenReturn(Optional.empty());
+    List<String> libraryIds = List.of("libraryId1", "libraryId2");
+
+    List<String> allOwners = librarySetService.getAllOwners(libraryIds);
+    assertThat(allOwners.size(), is(equalTo(0)));
+  }
+
+  @Test
+  public void testNotCreateLibrarySetWhenLibrarySetIdExists() {
+    LibrarySet librarySet =
+        LibrarySet.builder().librarySetId("librarySetId1").owner("user1").build();
+    when(librarySetRepository.existsByLibrarySetId("librarySetId1")).thenReturn(true);
+
+    librarySetService.createLibrarySet("userId1", "libraryId1", "librarySetId1");
+    verify(librarySetRepository, times(1)).existsByLibrarySetId("librarySetId1");
+    verify(librarySetRepository, times(0)).save(librarySet);
+  }
+
+  @Test
+  public void testCreateLibrarySet() {
+    LibrarySet librarySet =
+        LibrarySet.builder().librarySetId("librarySetId1").owner("user1").build();
+    when(librarySetRepository.existsByLibrarySetId("librarySetId1")).thenReturn(false);
+    when(librarySetRepository.save(any(LibrarySet.class))).thenReturn(librarySet);
+
+    librarySetService.createLibrarySet("userId1", "libraryId1", "librarySetId1");
+
+    verify(librarySetRepository, times(1)).existsByLibrarySetId("librarySetId1");
+    verify(librarySetRepository, times(1)).save(any(LibrarySet.class));
   }
 }

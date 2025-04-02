@@ -11,12 +11,7 @@ import static org.mockito.Mockito.*;
 import gov.cms.madie.cqllibraryservice.dto.LibrarySetDTO;
 import gov.cms.madie.cqllibraryservice.dto.LibraryListDTO;
 import gov.cms.madie.cqllibraryservice.dto.SharedUser;
-import gov.cms.madie.cqllibraryservice.exceptions.HarpIdMismatchException;
-import gov.cms.madie.cqllibraryservice.exceptions.BadRequestObjectException;
-import gov.cms.madie.cqllibraryservice.exceptions.DuplicateKeyException;
-import gov.cms.madie.cqllibraryservice.exceptions.GeneralConflictException;
-import gov.cms.madie.cqllibraryservice.exceptions.PermissionDeniedException;
-import gov.cms.madie.cqllibraryservice.exceptions.ResourceNotFoundException;
+import gov.cms.madie.cqllibraryservice.exceptions.*;
 import gov.cms.madie.cqllibraryservice.repositories.LibrarySetRepository;
 import gov.cms.madie.models.access.AclSpecification;
 import gov.cms.madie.models.access.RoleEnum;
@@ -799,5 +794,15 @@ class CqlLibraryServiceTest {
     assertThat(
         updatedShareMeasures.get(libraryId2),
         is(equalTo(List.of(aclSpecification2, aclSpecification1))));
+  }
+
+  @Test
+  public void testVerifyAutorization() {
+    LibrarySet librarySet1 = LibrarySet.builder().owner("test").build();
+    assertThrows(
+        UnauthorizedException.class,
+        () ->
+            cqlLibraryService.verifyLibrarySetAuthorization(
+                "testUser", "test", "targetId", null, librarySet1));
   }
 }
