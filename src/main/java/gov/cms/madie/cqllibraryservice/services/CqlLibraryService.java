@@ -338,7 +338,7 @@ public class CqlLibraryService {
 
   public void verifyAuthorization(String username, CqlLibrary library, List<RoleEnum> roles) {
     LibrarySet librarySet =
-        library.getLibrarySetId() == null
+        library.getLibrarySet() == null
             ? librarySetService.findByLibrarySetId(library.getLibrarySetId())
             : library.getLibrarySet();
     if (librarySet == null) {

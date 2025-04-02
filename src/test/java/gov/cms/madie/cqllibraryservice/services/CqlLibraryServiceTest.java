@@ -832,4 +832,14 @@ class CqlLibraryServiceTest {
             cqlLibraryService.verifyLibrarySetAuthorization(
                 "testUser2", "test", "targetId", null, librarySet1));
   }
+
+  @Test
+  public void testThrowReourceNotFoundWhenVerifyingAuthorization() {
+    when(librarySetService.findByLibrarySetId(anyString())).thenReturn(null);
+
+    CqlLibrary lib1 = CqlLibrary.builder().cqlLibraryName("Lib1").librarySetId("LibSetId1").build();
+    assertThrows(
+        ResourceNotFoundException.class,
+        () -> cqlLibraryService.verifyAuthorization("testUser", lib1, null));
+  }
 }
