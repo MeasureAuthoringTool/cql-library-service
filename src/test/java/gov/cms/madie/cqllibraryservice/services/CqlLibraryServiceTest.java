@@ -541,7 +541,7 @@ class CqlLibraryServiceTest {
   }
 
   @Test
-  public void testGetSharedMeasuresWithNoMeasureSetAclsFoundForOneMeasure() {
+  public void testGetSharedLibrariesWithNoLibrarySetAclsFoundForOneLibrary() {
     AclSpecification aclSpec = new AclSpecification();
     aclSpec.setUserId("john");
     aclSpec.setRoles(
@@ -584,22 +584,23 @@ class CqlLibraryServiceTest {
     when(librarySetService.findByLibrarySetId("librarySetId1")).thenReturn(librarySet1);
     when(cqlLibraryRepository.findById("libraryId2")).thenReturn(Optional.ofNullable(library2));
 
-    Map<String, List<SharedUser>> sharedMeasures = cqlLibraryService.getSharedLibraries(libraryIds);
+    Map<String, List<SharedUser>> sharedLibraries =
+        cqlLibraryService.getSharedLibraries(libraryIds);
 
-    assertThat(sharedMeasures.size(), is(equalTo(2)));
+    assertThat(sharedLibraries.size(), is(equalTo(2)));
 
-    assertTrue(sharedMeasures.containsKey(libraryId1));
-    assertThat(sharedMeasures.get(libraryId1).size(), is(equalTo(1)));
+    assertTrue(sharedLibraries.containsKey(libraryId1));
+    assertThat(sharedLibraries.get(libraryId1).size(), is(equalTo(1)));
     assertThat(
-        sharedMeasures.get(libraryId1).get(0).getUserId(),
+        sharedLibraries.get(libraryId1).get(0).getUserId(),
         is(equalTo(library1.getLibrarySet().getAcls().get(0).getUserId())));
 
-    assertTrue(sharedMeasures.containsKey(libraryId2));
-    assertThat(sharedMeasures.get(libraryId2).size(), is(equalTo(1)));
+    assertTrue(sharedLibraries.containsKey(libraryId2));
+    assertThat(sharedLibraries.get(libraryId2).size(), is(equalTo(1)));
   }
 
   @Test
-  public void testGetSharedMeasures() {
+  public void testGetSharedLibraries() {
     AclSpecification aclSpec1 = new AclSpecification();
     aclSpec1.setUserId("userId1");
     aclSpec1.setRoles(
@@ -677,27 +678,28 @@ class CqlLibraryServiceTest {
     when(actionLogService.findLibrarySetActionLogByTargetId(anyString()))
         .thenReturn(librarySetActionLog);
 
-    Map<String, List<SharedUser>> sharedMeasures = cqlLibraryService.getSharedLibraries(libraryIds);
+    Map<String, List<SharedUser>> sharedLibraries =
+        cqlLibraryService.getSharedLibraries(libraryIds);
 
-    assertThat(sharedMeasures.size(), is(equalTo(2)));
+    assertThat(sharedLibraries.size(), is(equalTo(2)));
 
-    assertTrue(sharedMeasures.containsKey(libraryId1));
-    assertThat(sharedMeasures.get(libraryId1).size(), is(equalTo(2)));
+    assertTrue(sharedLibraries.containsKey(libraryId1));
+    assertThat(sharedLibraries.get(libraryId1).size(), is(equalTo(2)));
     assertThat(
-        sharedMeasures.get(libraryId1).get(0).getUserId(),
+        sharedLibraries.get(libraryId1).get(0).getUserId(),
         is(equalTo(library1.getLibrarySet().getAcls().get(0).getUserId())));
-    assertThat(sharedMeasures.get(libraryId1).get(0).getPerformedAt(), is(equalTo(null)));
-    assertThat(sharedMeasures.get(libraryId1).get(1).getUserId(), is(equalTo("userId1")));
+    assertThat(sharedLibraries.get(libraryId1).get(0).getPerformedAt(), is(equalTo(null)));
+    assertThat(sharedLibraries.get(libraryId1).get(1).getUserId(), is(equalTo("userId1")));
 
-    assertTrue(sharedMeasures.containsKey(libraryId2));
-    assertThat(sharedMeasures.get(libraryId1).size(), is(equalTo(2)));
+    assertTrue(sharedLibraries.containsKey(libraryId2));
+    assertThat(sharedLibraries.get(libraryId1).size(), is(equalTo(2)));
     assertThat(
-        sharedMeasures.get(libraryId2).get(0).getUserId(),
+        sharedLibraries.get(libraryId2).get(0).getUserId(),
         is(equalTo(library2.getLibrarySet().getAcls().get(0).getUserId())));
   }
 
   @Test
-  public void testUpdateSharedMeasuresWithNoMeasureFound() {
+  public void testUpdateSharedLibrariesWithNoLibraryFound() {
     Map<String, List<String>> libraries = new HashMap<>();
 
     String libraryId1 = "libraryId1";
@@ -714,7 +716,7 @@ class CqlLibraryServiceTest {
   }
 
   @Test
-  public void testUpdateSharedMeasures() {
+  public void testUpdateSharedLibraries() {
     Map<String, List<String>> libraries = new HashMap<>();
 
     AclSpecification aclSpec1 = new AclSpecification();
@@ -780,19 +782,19 @@ class CqlLibraryServiceTest {
     AclSpecification aclSpecification2 =
         AclSpecification.builder().userId("userId2").roles(Set.of(RoleEnum.SHARED_WITH)).build();
 
-    Map<String, List<AclSpecification>> updatedShareMeasures =
+    Map<String, List<AclSpecification>> updatedSharedLibraries =
         cqlLibraryService.shareLibraries(libraries, "testUser");
-    assertThat(updatedShareMeasures.size(), is(equalTo(2)));
+    assertThat(updatedSharedLibraries.size(), is(equalTo(2)));
 
-    assertTrue(updatedShareMeasures.containsKey(libraryId1));
-    assertTrue(updatedShareMeasures.containsKey(libraryId2));
+    assertTrue(updatedSharedLibraries.containsKey(libraryId1));
+    assertTrue(updatedSharedLibraries.containsKey(libraryId2));
 
     assertThat(
-        updatedShareMeasures.get(libraryId1),
+        updatedSharedLibraries.get(libraryId1),
         is(equalTo(List.of(aclSpecification2, aclSpecification1))));
 
     assertThat(
-        updatedShareMeasures.get(libraryId2),
+        updatedSharedLibraries.get(libraryId2),
         is(equalTo(List.of(aclSpecification2, aclSpecification1))));
   }
 
