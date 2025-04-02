@@ -799,12 +799,37 @@ class CqlLibraryServiceTest {
   }
 
   @Test
-  public void testVerifyAutorization() {
+  public void testThrowingUnauthorizedErrorWhenLibrarySetHaveNoAcls() {
     LibrarySet librarySet1 = LibrarySet.builder().owner("test").build();
     assertThrows(
         UnauthorizedException.class,
         () ->
             cqlLibraryService.verifyLibrarySetAuthorization(
                 "testUser", "test", "targetId", null, librarySet1));
+  }
+
+  @Test
+  public void testThrowingUnauthorizedErrorWhenLibrarySetHaveAclsWIthNotCorrectOwner() {
+    AclSpecification aclSpec1 = new AclSpecification();
+    aclSpec1.setUserId("testUser1");
+    aclSpec1.setRoles(
+        new HashSet<>() {
+          {
+            add(RoleEnum.SHARED_WITH);
+          }
+        });
+
+    LibrarySet librarySet1 =
+        LibrarySet.builder()
+            .librarySetId("librarySetId1")
+            .owner("testUser")
+            .acls(List.of(aclSpec1))
+            .build();
+
+    assertThrows(
+        UnauthorizedException.class,
+        () ->
+            cqlLibraryService.verifyLibrarySetAuthorization(
+                "testUser2", "test", "targetId", null, librarySet1));
   }
 }
