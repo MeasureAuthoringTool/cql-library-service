@@ -1,6 +1,7 @@
 package gov.cms.madie.cqllibraryservice.repositories;
 
 import com.mongodb.client.result.UpdateResult;
+import gov.cms.madie.models.common.AccessControlAction;
 import gov.cms.madie.models.common.Action;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -54,6 +55,42 @@ class ActionLogRepositoryImplTest {
     when(mongoTemplate.upsert(any(Query.class), any(Update.class), any(Class.class)))
         .thenReturn(UpdateResult.acknowledged(1, 0L, null));
     boolean output = actionLogRepository.pushEvent("TARGET_ID", Action.builder().build());
+    assertThat(output, is(false));
+  }
+
+  @Test
+  void returnsFalseForNullTargetIdWhenPushingIntoLibrarySetActionLog() {
+    boolean output = actionLogRepository.pushEvent(null, AccessControlAction.builder().build());
+    assertThat(output, is(false));
+  }
+
+  @Test
+  void returnsFalseForEmptyTargetIdWhenPushingIntoLibrarySetActionLog() {
+    boolean output = actionLogRepository.pushEvent("", AccessControlAction.builder().build());
+    assertThat(output, is(false));
+  }
+
+  @Test
+  void returnsFalseForNullActionWhenPushingIntoLibrarySetActionLog() {
+    boolean output = actionLogRepository.pushEvent("TARGET_ID", null);
+    assertThat(output, is(false));
+  }
+
+  @Test
+  void returnsTrueForValidInputsWhenPushingIntoLibrarySetActionLog() {
+    when(mongoTemplate.upsert(any(Query.class), any(Update.class), any(Class.class)))
+        .thenReturn(UpdateResult.acknowledged(1, 1L, null));
+    boolean output =
+        actionLogRepository.pushEvent("TARGET_ID", AccessControlAction.builder().build());
+    assertThat(output, is(true));
+  }
+
+  @Test
+  void returnsFalseForValidInputsNoUpsertWhenPushingIntoLibrarySetActionLog() {
+    when(mongoTemplate.upsert(any(Query.class), any(Update.class), any(Class.class)))
+        .thenReturn(UpdateResult.acknowledged(1, 0L, null));
+    boolean output =
+        actionLogRepository.pushEvent("TARGET_ID", AccessControlAction.builder().build());
     assertThat(output, is(false));
   }
 }
