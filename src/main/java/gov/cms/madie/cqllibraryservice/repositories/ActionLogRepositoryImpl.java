@@ -4,6 +4,7 @@ import com.mongodb.client.result.UpdateResult;
 import gov.cms.madie.models.common.AccessControlAction;
 import gov.cms.madie.models.common.Action;
 import gov.cms.madie.models.common.ActionLog;
+import gov.cms.madie.models.common.LibrarySetActionLog;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.Criteria;
@@ -45,7 +46,7 @@ public class ActionLogRepositoryImpl implements ActionLogRepository {
         mongoTemplate.upsert(
             new Query(Criteria.where("targetId").is(targetId)),
             update.push("actions").value(accessControlAction),
-            LibrarySetActionLogRepository.class);
+            LibrarySetActionLog.class);
     return upsert.getUpsertedId() != null || upsert.getModifiedCount() == 1;
   }
 }
