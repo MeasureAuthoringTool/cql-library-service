@@ -229,6 +229,18 @@ class LibrarySetServiceTest {
   }
 
   @Test
+  public void testGettingAllOwnersOfGivenLibrarySetId() {
+    LibrarySet librarySet =
+        LibrarySet.builder().librarySetId("librarySetId1").owner("user1").build();
+    when(librarySetRepository.findByLibrarySetId(anyString()))
+        .thenReturn(Optional.ofNullable(librarySet));
+    List<String> libraryIds = List.of("libraryId1", "libraryId2");
+
+    List<String> allOwners = librarySetService.getAllOwners(libraryIds);
+    assertThat(allOwners.size(), is(equalTo(1)));
+  }
+
+  @Test
   public void testNotCreateLibrarySetWhenLibrarySetIdExists() {
     LibrarySet librarySet =
         LibrarySet.builder().librarySetId("librarySetId1").owner("user1").build();

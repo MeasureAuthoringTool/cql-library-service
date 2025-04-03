@@ -26,6 +26,9 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
 
 import java.time.Clock;
 import java.time.Instant;
@@ -43,6 +46,21 @@ class CqlLibraryServiceTest {
   @Mock private ElmTranslatorClient elmTranslatorClient;
 
   @Mock private ActionLogService actionLogService;
+
+  @Test
+  public void testGetLibrariesByCriteria() {
+    PageRequest initialPage = PageRequest.of(0, 10);
+    CqlLibrary lib1 = CqlLibrary.builder().build();
+
+    Page<CqlLibrary> activeLibraries = new PageImpl<>(List.of(lib1));
+    doReturn(activeLibraries)
+        .when(cqlLibraryRepository)
+        .searchLibrariesByCriteria(eq("test.user"), any(PageRequest.class), any(), eq(true));
+    Object libraries =
+        cqlLibraryService.getLibrariesByCriteria(
+            "measureSearchCriteria", true, initialPage, "test.user");
+    assertNotNull(libraries);
+  }
 
   @Test
   public void testCheckDuplicateCqlLibraryNameDoesNotThrowException() {
