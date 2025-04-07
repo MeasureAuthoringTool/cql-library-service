@@ -49,7 +49,7 @@ public class LibrarySetService {
   }
 
   public LibrarySet updateLibrarySetAcls(
-      String librarySetId, AclOperation aclOperation, String userName) {
+      String librarySetId, AclOperation aclOperation, String performedBy) {
     Optional<LibrarySet> optionalLibrarySet = librarySetRepository.findByLibrarySetId(librarySetId);
     if (optionalLibrarySet.isPresent()) {
       Map<String, ActionType> actionLogDetails = new HashMap<>();
@@ -134,7 +134,7 @@ public class LibrarySetService {
       actionLogDetails.forEach(
           (userId, actionType) -> {
             actionLogService.logShareAccessControlAction(
-                librarySetId, actionType, userName, userId);
+                librarySetId, actionType, performedBy, userId);
           });
       return updatedLibrarySet;
     } else {

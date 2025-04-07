@@ -317,7 +317,7 @@ public class CqlLibraryController {
 
   @GetMapping("/shared")
   public ResponseEntity<Map<String, List<SharedUser>>> getSharedLibraries(
-      HttpServletRequest request, @RequestParam(name = "libraryIds") List<String> libraryIds) {
+      @RequestParam(name = "libraryIds") List<String> libraryIds) {
     return ResponseEntity.ok().body(cqlLibraryService.getSharedLibraries(libraryIds));
   }
 
@@ -328,7 +328,7 @@ public class CqlLibraryController {
     return ResponseEntity.status(HttpStatus.OK).body(results);
   }
 
-  @PutMapping("/shared")
+  @PutMapping("/share")
   public ResponseEntity<Map<String, List<AclSpecification>>> shareLibraries(
       @RequestBody Map<String, List<String>> libraryUserIdMap, Principal principal) {
 

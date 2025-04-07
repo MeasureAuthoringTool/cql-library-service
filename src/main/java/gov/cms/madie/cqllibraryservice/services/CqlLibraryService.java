@@ -114,7 +114,7 @@ public class CqlLibraryService {
   }
 
   public List<AclSpecification> updateAccessControlList(
-      String cqlLibraryId, AclOperation aclOperation, String userName) {
+      String cqlLibraryId, AclOperation aclOperation, String performedBy) {
     Optional<CqlLibrary> persistedLibrary = cqlLibraryRepository.findById(cqlLibraryId);
     if (persistedLibrary.isEmpty()) {
       throw new ResourceNotFoundException("Library does not exist: " + cqlLibraryId);
@@ -122,7 +122,8 @@ public class CqlLibraryService {
 
     CqlLibrary library = persistedLibrary.get();
     LibrarySet librarySet =
-        librarySetService.updateLibrarySetAcls(library.getLibrarySetId(), aclOperation, userName);
+        librarySetService.updateLibrarySetAcls(
+            library.getLibrarySetId(), aclOperation, performedBy);
     return librarySet.getAcls();
   }
 
@@ -293,7 +294,7 @@ public class CqlLibraryService {
   }
 
   public Map<String, List<AclSpecification>> shareLibraries(
-      Map<String, List<String>> libraryUserIdMap, String userName) {
+      Map<String, List<String>> libraryUserIdMap, String performedBy) {
     Map<String, List<AclSpecification>> libraryIdToAclSpecification = new HashMap<>();
 
     libraryUserIdMap
@@ -305,14 +306,14 @@ public class CqlLibraryService {
               if (library == null) {
                 throw new ResourceNotFoundException("Library does not exist: " + libraryId);
               }
-              verifyAuthorization(userName, library, null);
+              verifyAuthorization(performedBy, library, null);
             });
 
     libraryUserIdMap.forEach(
         (LibraryId, userIds) -> {
           AclOperation aclOperation = buildShareAclOperation(userIds);
           libraryIdToAclSpecification.put(
-              LibraryId, updateAccessControlList(LibraryId, aclOperation, userName));
+              LibraryId, updateAccessControlList(LibraryId, aclOperation, performedBy));
         });
 
     return libraryIdToAclSpecification;

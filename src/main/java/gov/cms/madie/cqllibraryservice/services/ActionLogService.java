@@ -36,14 +36,14 @@ public class ActionLogService {
   public boolean logShareAccessControlAction(
       final String targetId,
       final ActionType actionType,
-      final String userId,
+      final String performedBy,
       final String sharedWith,
       final String... additionalActionMessage) {
     return librarySetActionLogRepository.pushEvent(
         targetId,
         AccessControlAction.builder()
             .actionType(actionType)
-            .performedBy(userId)
+            .performedBy(performedBy)
             .performedAt(Instant.now())
             .sharedWith(sharedWith)
             .additionalActionMessage(Arrays.toString(additionalActionMessage))

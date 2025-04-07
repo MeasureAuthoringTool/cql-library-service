@@ -1795,7 +1795,7 @@ public class CqlLibraryControllerMvcTest {
     MvcResult result =
         mockMvc
             .perform(
-                put("/cql-libraries/shared")
+                put("/cql-libraries/share")
                     .with(user(TEST_USER_ID))
                     .with(csrf())
                     .content("{\"libraryId1\": [\"userId1\"],\"libraryId2\": [\"userId1\"]}")
