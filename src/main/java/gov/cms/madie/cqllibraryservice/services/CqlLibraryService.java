@@ -247,7 +247,8 @@ public class CqlLibraryService {
         throw new ResourceNotFoundException("Library does not exist: " + libraryId);
       }
       if (library.getLibrarySet() == null) {
-        throw new ResourceNotFoundException("Library does not exist: " + libraryId);
+        throw new ResourceNotFoundException(
+            "Library set does not exist for library with ID : " + libraryId);
       }
       if (library.getLibrarySet().getAcls() == null) {
         sharedLibraries.put(libraryId, Collections.emptyList());
