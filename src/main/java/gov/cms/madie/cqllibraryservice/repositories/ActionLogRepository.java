@@ -1,5 +1,6 @@
 package gov.cms.madie.cqllibraryservice.repositories;
 
+import gov.cms.madie.models.common.AccessControlAction;
 import gov.cms.madie.models.common.Action;
 
 public interface ActionLogRepository {
@@ -15,4 +16,6 @@ public interface ActionLogRepository {
    * @return true if upsert is successful, false otherwise
    */
   boolean pushEvent(String targetId, Action action);
+
+  boolean pushEvent(String targetId, AccessControlAction action);
 }

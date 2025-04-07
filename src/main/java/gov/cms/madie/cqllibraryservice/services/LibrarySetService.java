@@ -1,29 +1,36 @@
 package gov.cms.madie.cqllibraryservice.services;
 
+import gov.cms.madie.cqllibraryservice.dto.LibraryListDTO;
 import gov.cms.madie.cqllibraryservice.exceptions.ResourceNotFoundException;
+import gov.cms.madie.cqllibraryservice.repositories.CqlLibraryRepository;
 import gov.cms.madie.cqllibraryservice.repositories.LibrarySetRepository;
 import gov.cms.madie.models.access.AclOperation;
 import gov.cms.madie.models.access.AclSpecification;
+import gov.cms.madie.models.access.RoleEnum;
 import gov.cms.madie.models.common.ActionType;
+import gov.cms.madie.models.library.CqlLibrary;
 import gov.cms.madie.models.library.LibrarySet;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections4.CollectionUtils;
+import org.springframework.data.mongodb.core.MongoTemplate;
+import org.springframework.data.mongodb.core.aggregation.*;
+import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.Set;
+import java.util.*;
+
+import static org.springframework.data.mongodb.core.aggregation.Aggregation.*;
+import static org.springframework.data.mongodb.core.aggregation.Aggregation.newAggregation;
 
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class LibrarySetService {
   private final LibrarySetRepository librarySetRepository;
+  private final CqlLibraryRepository cqlLibraryRepository;
   private final ActionLogService actionLogService;
+  private final MongoTemplate mongoTemplate;
 
   public void createLibrarySet(
       final String harpId, final String libraryId, final String savedLibrarySetId) {
@@ -41,14 +48,32 @@ public class LibrarySetService {
     }
   }
 
-  public LibrarySet updateLibrarySetAcls(String librarySetId, AclOperation aclOperation) {
+  public LibrarySet updateLibrarySetAcls(
+      String librarySetId, AclOperation aclOperation, String performedBy) {
     Optional<LibrarySet> optionalLibrarySet = librarySetRepository.findByLibrarySetId(librarySetId);
     if (optionalLibrarySet.isPresent()) {
+      Map<String, ActionType> actionLogDetails = new HashMap<>();
       LibrarySet librarySet = optionalLibrarySet.get();
       if (AclOperation.AclAction.GRANT == aclOperation.getAction()) {
         if (CollectionUtils.isEmpty(librarySet.getAcls())) {
           // if no acl present, add it
           librarySet.setAcls(aclOperation.getAcls());
+
+          aclOperation
+              .getAcls()
+              .forEach(
+                  aclSpecification -> {
+                    String userId = aclSpecification.getUserId();
+
+                    aclSpecification
+                        .getRoles()
+                        .forEach(
+                            roleEnum -> {
+                              if (roleEnum == RoleEnum.SHARED_WITH) {
+                                actionLogDetails.put(userId, ActionType.SHARED);
+                              }
+                            });
+                  });
         } else {
           // update acl
           aclOperation
@@ -61,8 +86,26 @@ public class LibrarySetService {
                     // if acl does not present, add it
                     if (aclSpecification == null) {
                       librarySet.getAcls().add(acl);
+
+                      acl.getRoles()
+                          .forEach(
+                              roleEnum -> {
+                                if (roleEnum == RoleEnum.SHARED_WITH) {
+                                  actionLogDetails.put(acl.getUserId(), ActionType.SHARED);
+                                }
+                              });
                     } else {
-                      aclSpecification.getRoles().addAll(acl.getRoles());
+                      acl.getRoles()
+                          .forEach(
+                              roleEnum -> {
+                                if (!aclSpecification.getRoles().contains(roleEnum)) {
+                                  aclSpecification.getRoles().add(roleEnum);
+
+                                  if (roleEnum == RoleEnum.SHARED_WITH) {
+                                    actionLogDetails.put(acl.getUserId(), ActionType.SHARED);
+                                  }
+                                }
+                              });
                     }
                   });
         }
@@ -87,6 +130,12 @@ public class LibrarySetService {
 
       LibrarySet updatedLibrarySet = librarySetRepository.save(librarySet);
       log.info("ACL updated for Library set [{}]", updatedLibrarySet.getId());
+
+      actionLogDetails.forEach(
+          (userId, actionType) -> {
+            actionLogService.logShareAccessControlAction(
+                librarySetId, actionType, performedBy, userId);
+          });
       return updatedLibrarySet;
     } else {
       String error =
@@ -143,5 +192,40 @@ public class LibrarySetService {
       log.error(error);
       throw new ResourceNotFoundException("LibrarySet", "id", librarySetId);
     }
+  }
+
+  private LookupOperation getLookupOperation() {
+    return LookupOperation.newLookup()
+        .from("librarySet")
+        .localField("librarySetId")
+        .foreignField("librarySetId")
+        .as("librarySet");
+  }
+
+  public List<LibraryListDTO> getLibrariesByLibrarySetId(String librarySetId) {
+    Criteria libraryCriteria =
+        Criteria.where("active").is(true).and("librarySetId").is(librarySetId);
+
+    MatchOperation matchOperation = match(libraryCriteria);
+    UnwindOperation unwindOperation = unwind("librarySet");
+    Aggregation libraryAggregation =
+        newAggregation(
+            getLookupOperation(), matchOperation, project(LibraryListDTO.class), unwindOperation);
+    return mongoTemplate
+        .aggregate(libraryAggregation, CqlLibrary.class, LibraryListDTO.class)
+        .getMappedResults();
+  }
+
+  public List<CqlLibrary> getRecentLibrariesByLibrarySetId(List<String> librarySetIds) {
+    List<CqlLibrary> mostRecentLibraries = new ArrayList<CqlLibrary>();
+    for (String librarySetId : librarySetIds) {
+      List<LibraryListDTO> libraries = getLibrariesByLibrarySetId(librarySetId);
+      if (libraries != null && !libraries.isEmpty()) {
+        LibraryListDTO library = libraries.get(libraries.size() - 1);
+        CqlLibrary recentLibrary = cqlLibraryRepository.findById(library.getId()).orElse(null);
+        mostRecentLibraries.add(recentLibrary);
+      }
+    }
+    return mostRecentLibraries;
   }
 }

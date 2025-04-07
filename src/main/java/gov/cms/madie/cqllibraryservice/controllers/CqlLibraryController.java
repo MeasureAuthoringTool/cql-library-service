@@ -2,6 +2,7 @@ package gov.cms.madie.cqllibraryservice.controllers;
 
 import gov.cms.madie.cqllibraryservice.dto.LibrarySetDTO;
 import gov.cms.madie.cqllibraryservice.dto.LibraryListDTO;
+import gov.cms.madie.cqllibraryservice.dto.SharedUser;
 import gov.cms.madie.cqllibraryservice.exceptions.HarpIdMismatchException;
 import gov.cms.madie.cqllibraryservice.exceptions.InvalidIdException;
 import gov.cms.madie.cqllibraryservice.exceptions.InvalidResourceStateException;
@@ -261,7 +262,7 @@ public class CqlLibraryController {
       @RequestBody @Validated AclOperation aclOperation,
       @Value("${admin-api-key}") String apiKey) {
     List<AclSpecification> aclSpecifications =
-        cqlLibraryService.updateAccessControlList(id, aclOperation);
+        cqlLibraryService.updateAccessControlList(id, aclOperation, "admin");
     return ResponseEntity.ok().body(aclSpecifications);
   }
 
@@ -312,5 +313,26 @@ public class CqlLibraryController {
     cqlLibraryService.deleteLibraryAlongWithVersions(libraryName, accessToken, harpId);
     return ResponseEntity.ok()
         .body("The library and all its associated versions have been removed successfully.");
+  }
+
+  @GetMapping("/shared")
+  public ResponseEntity<Map<String, List<SharedUser>>> getSharedLibraries(
+      @RequestParam(name = "libraryIds") List<String> libraryIds) {
+    return ResponseEntity.ok().body(cqlLibraryService.getSharedLibraries(libraryIds));
+  }
+
+  @GetMapping("/recentsByLibrarySetId")
+  public ResponseEntity<List<CqlLibrary>> getRecentLibrariesByLibrarySetId(
+      @RequestParam(name = "librarySetIds") List<String> librarySetIds) {
+    List<CqlLibrary> results = librarySetService.getRecentLibrariesByLibrarySetId(librarySetIds);
+    return ResponseEntity.status(HttpStatus.OK).body(results);
+  }
+
+  @PutMapping("/share")
+  public ResponseEntity<Map<String, List<AclSpecification>>> shareLibraries(
+      @RequestBody Map<String, List<String>> libraryUserIdMap, Principal principal) {
+
+    return ResponseEntity.ok(
+        cqlLibraryService.shareLibraries(libraryUserIdMap, principal.getName()));
   }
 }

@@ -570,13 +570,13 @@ class CqlLibraryControllerTest {
 
     List<AclSpecification> aclSpecifications = List.of(aclSpecification);
 
-    when(cqlLibraryService.updateAccessControlList(anyString(), any()))
+    when(cqlLibraryService.updateAccessControlList(anyString(), any(), anyString()))
         .thenReturn(aclSpecifications);
 
     ResponseEntity<List<AclSpecification>> output =
         cqlLibraryController.updateAccessControl(request, "1", aclOperation, "key");
 
-    verify(cqlLibraryService, times(1)).updateAccessControlList(anyString(), any());
+    verify(cqlLibraryService, times(1)).updateAccessControlList(anyString(), any(), anyString());
     assertThat(output.getBody(), equalTo(aclSpecifications));
   }
 }

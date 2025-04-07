@@ -6,21 +6,16 @@ import static org.hamcrest.CoreMatchers.notNullValue;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
-import static org.mockito.Mockito.doNothing;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
 import gov.cms.madie.cqllibraryservice.dto.LibrarySetDTO;
 import gov.cms.madie.cqllibraryservice.dto.LibraryListDTO;
-import gov.cms.madie.cqllibraryservice.exceptions.HarpIdMismatchException;
-import gov.cms.madie.cqllibraryservice.exceptions.BadRequestObjectException;
-import gov.cms.madie.cqllibraryservice.exceptions.DuplicateKeyException;
-import gov.cms.madie.cqllibraryservice.exceptions.GeneralConflictException;
-import gov.cms.madie.cqllibraryservice.exceptions.PermissionDeniedException;
-import gov.cms.madie.cqllibraryservice.exceptions.ResourceNotFoundException;
+import gov.cms.madie.cqllibraryservice.dto.SharedUser;
+import gov.cms.madie.cqllibraryservice.exceptions.*;
 import gov.cms.madie.cqllibraryservice.repositories.LibrarySetRepository;
-import gov.cms.madie.models.common.Version;
+import gov.cms.madie.models.access.AclSpecification;
+import gov.cms.madie.models.access.RoleEnum;
+import gov.cms.madie.models.common.*;
 import gov.cms.madie.models.dto.LibraryUsage;
 import gov.cms.madie.models.library.CqlLibrary;
 import gov.cms.madie.cqllibraryservice.repositories.CqlLibraryRepository;
@@ -31,10 +26,14 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
+import java.time.Clock;
+import java.time.Instant;
+import java.time.ZoneId;
+import java.util.*;
 
 @ExtendWith(MockitoExtension.class)
 class CqlLibraryServiceTest {
@@ -45,6 +44,23 @@ class CqlLibraryServiceTest {
   @Mock private MeasureServiceClient measureServiceClient;
   @Mock private LibrarySetRepository librarySetRepository;
   @Mock private ElmTranslatorClient elmTranslatorClient;
+
+  @Mock private ActionLogService actionLogService;
+
+  @Test
+  public void testGetLibrariesByCriteria() {
+    PageRequest initialPage = PageRequest.of(0, 10);
+    CqlLibrary lib1 = CqlLibrary.builder().build();
+
+    Page<CqlLibrary> activeLibraries = new PageImpl<>(List.of(lib1));
+    doReturn(activeLibraries)
+        .when(cqlLibraryRepository)
+        .searchLibrariesByCriteria(eq("test.user"), any(PageRequest.class), any(), eq(true));
+    Object libraries =
+        cqlLibraryService.getLibrariesByCriteria(
+            "measureSearchCriteria", true, initialPage, "test.user");
+    assertNotNull(libraries);
+  }
 
   @Test
   public void testCheckDuplicateCqlLibraryNameDoesNotThrowException() {
@@ -517,5 +533,331 @@ class CqlLibraryServiceTest {
         assertThrows(
             BadRequestObjectException.class, () -> cqlLibraryService.getLibrarySetBySetId(null));
     assertThat(exception.getMessage(), equalTo("Please provide library set ID."));
+  }
+
+  @Test
+  public void testGetSharedLibrariesWithNoLibraryFound() {
+    String libraryId1 = "libraryId1";
+    List<String> libraryIds = List.of(libraryId1);
+
+    when(cqlLibraryRepository.findById(libraryId1)).thenReturn(Optional.empty());
+
+    assertThrows(
+        ResourceNotFoundException.class, () -> cqlLibraryService.getSharedLibraries(libraryIds));
+  }
+
+  @Test
+  public void testGetSharedLibrariesWithNoLibrarySetFound() {
+    CqlLibrary library1 =
+        CqlLibrary.builder().id("libraryId1").librarySetId("librarySetId1").build();
+
+    when(cqlLibraryRepository.findById("libraryId1")).thenReturn(Optional.ofNullable(library1));
+
+    assertThrows(
+        ResourceNotFoundException.class,
+        () -> cqlLibraryService.getSharedLibraries(List.of("libraryId1")));
+  }
+
+  @Test
+  public void testGetSharedLibrariesWithNoLibrarySetAclsFoundForOneLibrary() {
+    AclSpecification aclSpec = new AclSpecification();
+    aclSpec.setUserId("john");
+    aclSpec.setRoles(
+        new HashSet<>() {
+          {
+            add(RoleEnum.SHARED_WITH);
+          }
+        });
+
+    LibrarySet librarySet1 =
+        LibrarySet.builder()
+            .librarySetId("librarySetId1")
+            .owner("testUser")
+            .acls(
+                new ArrayList<>() {
+                  {
+                    add(aclSpec);
+                  }
+                })
+            .build();
+
+    String libraryId1 = "libraryId1";
+    CqlLibrary library1 =
+        CqlLibrary.builder().id("libraryId1").librarySetId("librarySetId1").build();
+
+    LibrarySet librarySet2 =
+        LibrarySet.builder().librarySetId("librarySetId1").owner("testUser").build();
+
+    String libraryId2 = "libraryId2";
+    CqlLibrary library2 =
+        CqlLibrary.builder()
+            .id(libraryId1)
+            .librarySetId(librarySet1.getLibrarySetId())
+            .librarySet(librarySet2)
+            .build();
+
+    List<String> libraryIds = List.of(libraryId1, libraryId2);
+
+    when(cqlLibraryRepository.findById("libraryId1")).thenReturn(Optional.ofNullable(library1));
+    when(librarySetService.findByLibrarySetId("librarySetId1")).thenReturn(librarySet1);
+    when(cqlLibraryRepository.findById("libraryId2")).thenReturn(Optional.ofNullable(library2));
+
+    Map<String, List<SharedUser>> sharedLibraries =
+        cqlLibraryService.getSharedLibraries(libraryIds);
+
+    assertThat(sharedLibraries.size(), is(equalTo(2)));
+
+    assertTrue(sharedLibraries.containsKey(libraryId1));
+    assertThat(sharedLibraries.get(libraryId1).size(), is(equalTo(1)));
+    assertThat(
+        sharedLibraries.get(libraryId1).get(0).getUserId(),
+        is(equalTo(library1.getLibrarySet().getAcls().get(0).getUserId())));
+
+    assertTrue(sharedLibraries.containsKey(libraryId2));
+    assertThat(sharedLibraries.get(libraryId2).size(), is(equalTo(1)));
+  }
+
+  @Test
+  public void testGetSharedLibraries() {
+    AclSpecification aclSpec1 = new AclSpecification();
+    aclSpec1.setUserId("userId1");
+    aclSpec1.setRoles(
+        new HashSet<>() {
+          {
+            add(RoleEnum.SHARED_WITH);
+          }
+        });
+
+    AclSpecification aclSpec2 = new AclSpecification();
+    aclSpec2.setUserId("userId2");
+    aclSpec2.setRoles(
+        new HashSet<>() {
+          {
+            add(RoleEnum.SHARED_WITH);
+          }
+        });
+
+    LibrarySet librarySet2 =
+        LibrarySet.builder()
+            .librarySetId("librarySetId1")
+            .owner("testUser")
+            .acls(
+                new ArrayList<>() {
+                  {
+                    add(aclSpec1);
+                  }
+                })
+            .build();
+
+    LibrarySet librarySet1 =
+        LibrarySet.builder()
+            .librarySetId("librarySetId1")
+            .owner("testUser")
+            .acls(List.of(aclSpec2, aclSpec1))
+            .build();
+
+    String libraryId1 = "libraryId1";
+    CqlLibrary library1 =
+        CqlLibrary.builder()
+            .id(libraryId1)
+            .librarySetId(librarySet1.getLibrarySetId())
+            .librarySet(librarySet1)
+            .build();
+
+    String libraryId2 = "libraryId2";
+    CqlLibrary library2 =
+        CqlLibrary.builder()
+            .id(libraryId1)
+            .librarySetId(librarySet1.getLibrarySetId())
+            .librarySet(librarySet2)
+            .build();
+
+    Instant fixedInstant = Instant.parse("2025-03-17T10:00:00Z");
+    ZoneId utc = ZoneId.of("UTC");
+    Clock fixedClock = Clock.fixed(fixedInstant, utc);
+
+    LibrarySetActionLog librarySetActionLog =
+        LibrarySetActionLog.builder()
+            .actions(
+                List.of(
+                    AccessControlAction.builder()
+                        .sharedWith(aclSpec1.getUserId())
+                        .actionType(ActionType.SHARED)
+                        .performedAt(fixedClock.instant())
+                        .performedBy("performedByUserId")
+                        .build()))
+            .build();
+
+    List<String> libraryIds = List.of(libraryId1, libraryId2);
+
+    when(cqlLibraryRepository.findById("libraryId1")).thenReturn(Optional.ofNullable(library1));
+    when(librarySetService.findByLibrarySetId("librarySetId1")).thenReturn(librarySet1);
+    when(cqlLibraryRepository.findById("libraryId2")).thenReturn(Optional.ofNullable(library2));
+    when(actionLogService.findLibrarySetActionLogByTargetId(anyString()))
+        .thenReturn(librarySetActionLog);
+
+    Map<String, List<SharedUser>> sharedLibraries =
+        cqlLibraryService.getSharedLibraries(libraryIds);
+
+    assertThat(sharedLibraries.size(), is(equalTo(2)));
+
+    assertTrue(sharedLibraries.containsKey(libraryId1));
+    assertThat(sharedLibraries.get(libraryId1).size(), is(equalTo(2)));
+    assertThat(
+        sharedLibraries.get(libraryId1).get(0).getUserId(),
+        is(equalTo(library1.getLibrarySet().getAcls().get(0).getUserId())));
+    assertThat(sharedLibraries.get(libraryId1).get(0).getPerformedAt(), is(equalTo(null)));
+    assertThat(sharedLibraries.get(libraryId1).get(1).getUserId(), is(equalTo("userId1")));
+
+    assertTrue(sharedLibraries.containsKey(libraryId2));
+    assertThat(sharedLibraries.get(libraryId1).size(), is(equalTo(2)));
+    assertThat(
+        sharedLibraries.get(libraryId2).get(0).getUserId(),
+        is(equalTo(library2.getLibrarySet().getAcls().get(0).getUserId())));
+  }
+
+  @Test
+  public void testUpdateSharedLibrariesWithNoLibraryFound() {
+    Map<String, List<String>> libraries = new HashMap<>();
+
+    String libraryId1 = "libraryId1";
+    String libraryId2 = "libraryId2";
+
+    libraries.put(libraryId1, List.of("userId1", "userId2"));
+    libraries.put(libraryId2, List.of("userId2"));
+
+    when(cqlLibraryRepository.findById(eq(libraryId1))).thenReturn(Optional.empty());
+
+    assertThrows(
+        ResourceNotFoundException.class,
+        () -> cqlLibraryService.shareLibraries(libraries, "userName"));
+  }
+
+  @Test
+  public void testUpdateSharedLibraries() {
+    Map<String, List<String>> libraries = new HashMap<>();
+
+    AclSpecification aclSpec1 = new AclSpecification();
+    aclSpec1.setUserId("testUser");
+    aclSpec1.setRoles(
+        new HashSet<>() {
+          {
+            add(RoleEnum.SHARED_WITH);
+          }
+        });
+
+    AclSpecification aclSpec2 = new AclSpecification();
+    aclSpec2.setUserId("userId2");
+    aclSpec2.setRoles(
+        new HashSet<>() {
+          {
+            add(RoleEnum.SHARED_WITH);
+          }
+        });
+
+    LibrarySet librarySet1 =
+        LibrarySet.builder()
+            .librarySetId("librarySetId1")
+            .owner("testUser")
+            .acls(List.of(aclSpec2, aclSpec1))
+            .build();
+
+    LibrarySet librarySet2 =
+        LibrarySet.builder()
+            .librarySetId("librarySetId1")
+            .owner("testUser")
+            .acls(List.of(aclSpec2, aclSpec1))
+            .build();
+
+    String libraryId1 = "libraryId1";
+
+    CqlLibrary library1 =
+        CqlLibrary.builder()
+            .id(libraryId1)
+            .librarySetId(librarySet1.getLibrarySetId())
+            .librarySet(librarySet1)
+            .build();
+
+    String libraryId2 = "libraryId2";
+    CqlLibrary library2 =
+        CqlLibrary.builder()
+            .id(libraryId1)
+            .librarySetId(librarySet1.getLibrarySetId())
+            .librarySet(librarySet2)
+            .build();
+
+    libraries.put(libraryId1, List.of("testUser", "userId2"));
+    libraries.put(libraryId2, List.of("userId2"));
+
+    when(cqlLibraryRepository.findById("libraryId1")).thenReturn(Optional.ofNullable(library1));
+    when(librarySetService.findByLibrarySetId("librarySetId1")).thenReturn(librarySet1);
+    when(cqlLibraryRepository.findById("libraryId2")).thenReturn(Optional.ofNullable(library2));
+
+    when(librarySetService.updateLibrarySetAcls(any(), any(), any())).thenReturn(librarySet1);
+
+    AclSpecification aclSpecification1 =
+        AclSpecification.builder().userId("testUser").roles(Set.of(RoleEnum.SHARED_WITH)).build();
+    AclSpecification aclSpecification2 =
+        AclSpecification.builder().userId("userId2").roles(Set.of(RoleEnum.SHARED_WITH)).build();
+
+    Map<String, List<AclSpecification>> updatedSharedLibraries =
+        cqlLibraryService.shareLibraries(libraries, "testUser");
+    assertThat(updatedSharedLibraries.size(), is(equalTo(2)));
+
+    assertTrue(updatedSharedLibraries.containsKey(libraryId1));
+    assertTrue(updatedSharedLibraries.containsKey(libraryId2));
+
+    assertThat(
+        updatedSharedLibraries.get(libraryId1),
+        is(equalTo(List.of(aclSpecification2, aclSpecification1))));
+
+    assertThat(
+        updatedSharedLibraries.get(libraryId2),
+        is(equalTo(List.of(aclSpecification2, aclSpecification1))));
+  }
+
+  @Test
+  public void testThrowingUnauthorizedErrorWhenLibrarySetHaveNoAcls() {
+    LibrarySet librarySet1 = LibrarySet.builder().owner("test").build();
+    assertThrows(
+        UnauthorizedException.class,
+        () ->
+            cqlLibraryService.verifyLibrarySetAuthorization(
+                "testUser", "test", "targetId", null, librarySet1));
+  }
+
+  @Test
+  public void testThrowingUnauthorizedErrorWhenLibrarySetHaveAclsWIthNotCorrectOwner() {
+    AclSpecification aclSpec1 = new AclSpecification();
+    aclSpec1.setUserId("testUser1");
+    aclSpec1.setRoles(
+        new HashSet<>() {
+          {
+            add(RoleEnum.SHARED_WITH);
+          }
+        });
+
+    LibrarySet librarySet1 =
+        LibrarySet.builder()
+            .librarySetId("librarySetId1")
+            .owner("testUser")
+            .acls(List.of(aclSpec1))
+            .build();
+
+    assertThrows(
+        UnauthorizedException.class,
+        () ->
+            cqlLibraryService.verifyLibrarySetAuthorization(
+                "testUser2", "test", "targetId", null, librarySet1));
+  }
+
+  @Test
+  public void testThrowReourceNotFoundWhenVerifyingAuthorization() {
+    when(librarySetService.findByLibrarySetId(anyString())).thenReturn(null);
+
+    CqlLibrary lib1 = CqlLibrary.builder().cqlLibraryName("Lib1").librarySetId("LibSetId1").build();
+    assertThrows(
+        ResourceNotFoundException.class,
+        () -> cqlLibraryService.verifyAuthorization("testUser", lib1, null));
   }
 }

@@ -1,9 +1,8 @@
 package gov.cms.madie.cqllibraryservice.services;
 
 import gov.cms.madie.cqllibraryservice.repositories.CqlLibraryActionLogRepository;
-import gov.cms.madie.models.common.AccessControlAction;
-import gov.cms.madie.models.common.Action;
-import gov.cms.madie.models.common.ActionType;
+import gov.cms.madie.cqllibraryservice.repositories.LibrarySetActionLogRepository;
+import gov.cms.madie.models.common.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -17,6 +16,7 @@ import java.util.Arrays;
 public class ActionLogService {
 
   private final CqlLibraryActionLogRepository cqlLibraryHistoryRepository;
+  private final LibrarySetActionLogRepository librarySetActionLogRepository;
 
   public boolean logAction(
       final String targetId,
@@ -33,20 +33,24 @@ public class ActionLogService {
             .build());
   }
 
-  public boolean logAccessControlAction(
+  public boolean logShareAccessControlAction(
       final String targetId,
       final ActionType actionType,
-      final String userId,
+      final String performedBy,
       final String sharedWith,
       final String... additionalActionMessage) {
-    return cqlLibraryHistoryRepository.pushEvent(
+    return librarySetActionLogRepository.pushEvent(
         targetId,
         AccessControlAction.builder()
             .actionType(actionType)
-            .performedBy(userId)
+            .performedBy(performedBy)
             .performedAt(Instant.now())
             .sharedWith(sharedWith)
             .additionalActionMessage(Arrays.toString(additionalActionMessage))
             .build());
+  }
+
+  public LibrarySetActionLog findLibrarySetActionLogByTargetId(final String targetId) {
+    return librarySetActionLogRepository.findByTargetId(targetId).orElse(null);
   }
 }
