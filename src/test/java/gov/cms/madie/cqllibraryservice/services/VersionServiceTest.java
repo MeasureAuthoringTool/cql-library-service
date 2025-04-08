@@ -265,7 +265,10 @@ class VersionServiceTest {
 
     verify(actionLogService, times(1))
         .logAction(
-            targetIdArgumentCaptor.capture(), actionTypeArgumentCaptor.capture(), anyString());
+            targetIdArgumentCaptor.capture(),
+            actionTypeArgumentCaptor.capture(),
+            anyString(),
+            anyString());
     assertThat(targetIdArgumentCaptor.getValue(), is(equalTo("testLibrarySetId")));
     assertThat(actionTypeArgumentCaptor.getValue(), is(equalTo(ActionType.VERSIONED_MAJOR)));
   }
@@ -306,7 +309,10 @@ class VersionServiceTest {
 
     verify(actionLogService, times(1))
         .logAction(
-            targetIdArgumentCaptor.capture(), actionTypeArgumentCaptor.capture(), anyString());
+            targetIdArgumentCaptor.capture(),
+            actionTypeArgumentCaptor.capture(),
+            anyString(),
+            anyString());
     assertThat(targetIdArgumentCaptor.getValue(), is(equalTo("testLibrarySetId")));
     assertThat(actionTypeArgumentCaptor.getValue(), is(equalTo(ActionType.VERSIONED_MINOR)));
   }

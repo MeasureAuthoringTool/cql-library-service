@@ -40,11 +40,13 @@ class ActionLogServiceTest {
 
   @Test
   void testLogActionReturnsTrue() {
-    when(cqlLibraryHistoryRepository.pushEvent(anyString(), any(Action.class))).thenReturn(true);
-    boolean output = actionLogService.logAction("TARGET_ID", ActionType.CREATED, "firstUser");
+    when(cqlLibraryHistoryRepository.pushEvent(anyString(), any(Action.class), anyString()))
+        .thenReturn(true);
+    boolean output =
+        actionLogService.logAction("TARGET_ID", ActionType.CREATED, "firstUser", "actionLog");
     assertThat(output, is(true));
     verify(cqlLibraryHistoryRepository, times(1))
-        .pushEvent(stringArgumentCaptor.capture(), actionArgumentCaptor.capture());
+        .pushEvent(stringArgumentCaptor.capture(), actionArgumentCaptor.capture(), anyString());
     assertThat(stringArgumentCaptor.getValue(), is(equalTo("TARGET_ID")));
     Action value = actionArgumentCaptor.getValue();
     assertThat(value, is(notNullValue()));
@@ -54,12 +56,14 @@ class ActionLogServiceTest {
 
   @Test
   void testLogActionReturnsFalse() {
-    when(cqlLibraryHistoryRepository.pushEvent(anyString(), any(Action.class))).thenReturn(false);
+    when(cqlLibraryHistoryRepository.pushEvent(anyString(), any(Action.class), anyString()))
+        .thenReturn(false);
     boolean output =
-        actionLogService.logAction("TARGET_ID", ActionType.VERSIONED_MAJOR, "secondUser");
+        actionLogService.logAction(
+            "TARGET_ID", ActionType.VERSIONED_MAJOR, "secondUser", "actionLog");
     assertThat(output, is(false));
     verify(cqlLibraryHistoryRepository, times(1))
-        .pushEvent(stringArgumentCaptor.capture(), actionArgumentCaptor.capture());
+        .pushEvent(stringArgumentCaptor.capture(), actionArgumentCaptor.capture(), anyString());
     assertThat(stringArgumentCaptor.getValue(), is(equalTo("TARGET_ID")));
     Action value = actionArgumentCaptor.getValue();
     assertThat(value, is(notNullValue()));

@@ -143,7 +143,8 @@ public class CqlLibraryController {
         "User [{}] successfully created new cql library with ID [{}]",
         username,
         cqlLibrary.getId());
-    actionLogService.logAction(cqlLibrary.getLibrarySetId(), ActionType.CREATED, username);
+    actionLogService.logAction(
+        cqlLibrary.getLibrarySetId(), ActionType.CREATED, username, "actionLog");
 
     librarySetService.createLibrarySet(
         username, savedCqlLibrary.getId(), savedCqlLibrary.getLibrarySetId());
@@ -248,7 +249,7 @@ public class CqlLibraryController {
           ResponseEntity.ok()
               .contentType(MediaType.TEXT_PLAIN)
               .body(String.format("%s granted ownership to Library successfully.", userid));
-      actionLogService.logAction(id, ActionType.UPDATED, "apiKey");
+      actionLogService.logAction(id, ActionType.UPDATED, "apiKey", "librarySetActionLog");
     }
 
     return response;

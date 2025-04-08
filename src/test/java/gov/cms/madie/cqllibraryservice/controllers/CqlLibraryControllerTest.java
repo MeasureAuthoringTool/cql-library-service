@@ -165,7 +165,10 @@ class CqlLibraryControllerTest {
 
     verify(actionLogService, times(1))
         .logAction(
-            targetIdArgumentCaptor.capture(), actionTypeArgumentCaptor.capture(), anyString());
+            targetIdArgumentCaptor.capture(),
+            actionTypeArgumentCaptor.capture(),
+            anyString(),
+            anyString());
     assertThat(targetIdArgumentCaptor.getValue(), is(notNullValue()));
     assertThat(actionTypeArgumentCaptor.getValue(), is(equalTo(ActionType.CREATED)));
   }

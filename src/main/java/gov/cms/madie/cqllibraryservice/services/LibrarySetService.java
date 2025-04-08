@@ -44,7 +44,8 @@ public class LibrarySetService {
           "Library set [{}] is successfully created for the library [{}]",
           savedLibrarySet.getId(),
           libraryId);
-      actionLogService.logAction(savedLibrarySet.getId(), ActionType.CREATED, harpId);
+      actionLogService.logAction(
+          savedLibrarySet.getLibrarySetId(), ActionType.CREATED, harpId, "librarySetActionLog");
     }
   }
 

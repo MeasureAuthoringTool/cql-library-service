@@ -22,6 +22,7 @@ public class ActionLogService {
       final String targetId,
       final ActionType actionType,
       final String userId,
+      final String collection,
       final String... additionalActionMessage) {
     return cqlLibraryHistoryRepository.pushEvent(
         targetId,
@@ -30,7 +31,8 @@ public class ActionLogService {
             .performedBy(userId)
             .performedAt(Instant.now())
             .additionalActionMessage(Arrays.toString(additionalActionMessage))
-            .build());
+            .build(),
+        collection);
   }
 
   public boolean logShareAccessControlAction(
