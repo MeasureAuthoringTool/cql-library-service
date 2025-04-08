@@ -1527,28 +1527,6 @@ public class CqlLibraryControllerMvcTest {
             "test-okta");
   }
 
-  //  @Test
-  //  public void testChangeOwnership() throws Exception {
-  //    String libraryId = "f225481c-921e-4015-9e14-e5046bfac9ff";
-  //
-  //    doReturn(true).when(cqlLibraryService).changeOwnership(eq(libraryId), eq("testUser"));
-  //
-  //    mockMvc
-  //        .perform(
-  //            put("/cql-libraries/" + libraryId + "/ownership?userid=testUser")
-  //                .header(TEST_API_KEY_HEADER, TEST_API_KEY_HEADER_VALUE))
-  //        .andExpect(status().isOk())
-  //        .andExpect(content().string("testUser granted ownership to Library successfully."));
-  //
-  //    verify(cqlLibraryService, times(1)).changeOwnership(eq(libraryId), eq("testUser"));
-  //
-  //    verify(actionLogService, times(1))
-  //        .logAction(
-  //            targetIdArgumentCaptor.capture(), actionTypeArgumentCaptor.capture(), anyString());
-  //    assertNotNull(targetIdArgumentCaptor.getValue());
-  //    assertThat(actionTypeArgumentCaptor.getValue(), is(equalTo(ActionType.UPDATED)));
-  //  }
-
   @Test
   public void testHardDeleteDraftLibraryForNonOwnerReturnsForbidden() throws Exception {
     String libraryId = "f225481c-921e-4015-9e14-e5046bfac9ff";
