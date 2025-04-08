@@ -438,6 +438,41 @@ class VersionServiceTest {
   }
 
   @Test
+  void testCreateDraftSuccessWhenModelIsDifferent() {
+    CqlLibrary existingCqlLibrary =
+        CqlLibrary.builder()
+            .id("testCqlLibraryId")
+            .cqlLibraryName("testCqlLibraryName")
+            .model(ModelType.QI_CORE.getValue())
+            .createdBy("testUser")
+            .cql("library testCql version '1.0.000'")
+            .draft(false)
+            .librarySetId("testLibrarySetId")
+            .version(Version.parse("1.0.000"))
+            .librarySet(
+                LibrarySet.builder().librarySetId("testLibrarySetId").owner("testUser").build())
+            .build();
+
+    CqlLibrary clonedCqlLibrary = existingCqlLibrary.toBuilder().build();
+    when(cqlLibraryService.findCqlLibraryById(anyString())).thenReturn(existingCqlLibrary);
+    when(cqlLibraryRepository.save(any(CqlLibrary.class))).thenReturn(clonedCqlLibrary);
+    doNothing().when(cqlLibraryService).checkDuplicateCqlLibraryName(anyString());
+    when(cqlLibraryRepository.existsByLibrarySetIdAndDraft(anyString(), anyBoolean()))
+        .thenReturn(false);
+
+    versionService.createDraft(
+        "testCqlLibraryId", "testNewCqlLibraryName", ModelType.QDM_5_6.getValue(), "testUser");
+    verify(cqlLibraryRepository, times(1)).save(cqlLibraryArgumentCaptor.capture());
+    CqlLibrary savedValue = cqlLibraryArgumentCaptor.getValue();
+
+    assertThat(savedValue.getCqlLibraryName(), is(equalTo("testNewCqlLibraryName")));
+    assertTrue(savedValue.isDraft());
+    // version and groupId should not change
+    assertThat(savedValue.getVersion(), is(equalTo(existingCqlLibrary.getVersion())));
+    assertThat(savedValue.getLibrarySetId(), is(equalTo(existingCqlLibrary.getLibrarySetId())));
+  }
+
+  @Test
   void testCreateDraftThrowsExceptionWhenDraftAlreadyExists() {
     AclSpecification aclSpecification = new AclSpecification();
     aclSpecification.setUserId("sharedUser");

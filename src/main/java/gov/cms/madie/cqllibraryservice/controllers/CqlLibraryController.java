@@ -249,7 +249,6 @@ public class CqlLibraryController {
           ResponseEntity.ok()
               .contentType(MediaType.TEXT_PLAIN)
               .body(String.format("%s granted ownership to Library successfully.", userid));
-      actionLogService.logAction(id, ActionType.UPDATED, "apiKey", "librarySetActionLog");
     }
 
     return response;
