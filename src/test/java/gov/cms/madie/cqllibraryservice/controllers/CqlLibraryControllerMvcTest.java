@@ -1528,6 +1528,22 @@ public class CqlLibraryControllerMvcTest {
   }
 
   @Test
+  public void testChangeOwnership() throws Exception {
+    String libraryId = "f225481c-921e-4015-9e14-e5046bfac9ff";
+
+    doReturn(true).when(cqlLibraryService).changeOwnership(eq(libraryId), eq("testUser"));
+
+    mockMvc
+        .perform(
+            put("/cql-libraries/" + libraryId + "/ownership?userid=testUser")
+                .header(TEST_API_KEY_HEADER, TEST_API_KEY_HEADER_VALUE))
+        .andExpect(status().isOk())
+        .andExpect(content().string("testUser granted ownership to Library successfully."));
+
+    verify(cqlLibraryService, times(1)).changeOwnership(eq(libraryId), eq("testUser"));
+  }
+
+  @Test
   public void testHardDeleteDraftLibraryForNonOwnerReturnsForbidden() throws Exception {
     String libraryId = "f225481c-921e-4015-9e14-e5046bfac9ff";
 
