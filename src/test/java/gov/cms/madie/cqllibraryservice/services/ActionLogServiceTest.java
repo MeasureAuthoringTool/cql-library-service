@@ -1,6 +1,7 @@
 package gov.cms.madie.cqllibraryservice.services;
 
 import gov.cms.madie.cqllibraryservice.repositories.CqlLibraryActionLogRepository;
+import gov.cms.madie.cqllibraryservice.repositories.LibrarySetActionLogRepository;
 import gov.cms.madie.models.common.AccessControlAction;
 import gov.cms.madie.models.common.Action;
 import gov.cms.madie.models.common.ActionType;
@@ -28,9 +29,12 @@ class ActionLogServiceTest {
 
   @Mock CqlLibraryActionLogRepository cqlLibraryHistoryRepository;
 
+  @Mock LibrarySetActionLogRepository librarySetActionLogRepository;
+
   @InjectMocks ActionLogService actionLogService;
 
   @Captor private ArgumentCaptor<Action> actionArgumentCaptor;
+  @Captor private ArgumentCaptor<AccessControlAction> accessControlActionArgumentCaptor;
 
   @Captor private ArgumentCaptor<String> stringArgumentCaptor;
 
@@ -65,16 +69,17 @@ class ActionLogServiceTest {
 
   @Test
   void testLogAccessControlActionReturnsTrue() {
-    when(cqlLibraryHistoryRepository.pushEvent(anyString(), any(Action.class))).thenReturn(true);
+    when(librarySetActionLogRepository.pushEvent(anyString(), any(AccessControlAction.class)))
+        .thenReturn(true);
     boolean output =
-        actionLogService.logAccessControlAction(
+        actionLogService.logShareAccessControlAction(
             "TARGET_ID", ActionType.SHARED, "firstUser", "sharedWith");
     assertThat(output, is(true));
-    verify(cqlLibraryHistoryRepository, times(1))
-        .pushEvent(stringArgumentCaptor.capture(), actionArgumentCaptor.capture());
+    verify(librarySetActionLogRepository, times(1))
+        .pushEvent(stringArgumentCaptor.capture(), accessControlActionArgumentCaptor.capture());
     assertThat(stringArgumentCaptor.getValue(), is(equalTo("TARGET_ID")));
-    assertThat(actionArgumentCaptor.getValue(), instanceOf(AccessControlAction.class));
-    AccessControlAction value = (AccessControlAction) actionArgumentCaptor.getValue();
+    assertThat(accessControlActionArgumentCaptor.getValue(), instanceOf(AccessControlAction.class));
+    AccessControlAction value = (AccessControlAction) accessControlActionArgumentCaptor.getValue();
     assertThat(value, is(notNullValue()));
     assertThat(value.getActionType(), is(equalTo(ActionType.SHARED)));
     assertThat(value.getPerformedBy(), is(equalTo("firstUser")));
@@ -83,16 +88,17 @@ class ActionLogServiceTest {
 
   @Test
   void testLogAccessControlActionReturnsFalse() {
-    when(cqlLibraryHistoryRepository.pushEvent(anyString(), any(Action.class))).thenReturn(false);
+    when(librarySetActionLogRepository.pushEvent(anyString(), any(AccessControlAction.class)))
+        .thenReturn(false);
     boolean output =
-        actionLogService.logAccessControlAction(
+        actionLogService.logShareAccessControlAction(
             "TARGET_ID", ActionType.SHARED, "secondUser", "sharedWith");
     assertThat(output, is(false));
-    verify(cqlLibraryHistoryRepository, times(1))
-        .pushEvent(stringArgumentCaptor.capture(), actionArgumentCaptor.capture());
+    verify(librarySetActionLogRepository, times(1))
+        .pushEvent(stringArgumentCaptor.capture(), accessControlActionArgumentCaptor.capture());
     assertThat(stringArgumentCaptor.getValue(), is(equalTo("TARGET_ID")));
-    assertThat(actionArgumentCaptor.getValue(), instanceOf(AccessControlAction.class));
-    AccessControlAction value = (AccessControlAction) actionArgumentCaptor.getValue();
+    assertThat(accessControlActionArgumentCaptor.getValue(), instanceOf(AccessControlAction.class));
+    AccessControlAction value = (AccessControlAction) accessControlActionArgumentCaptor.getValue();
     assertThat(value, is(notNullValue()));
     assertThat(value.getActionType(), is(equalTo(ActionType.SHARED)));
     assertThat(value.getPerformedBy(), is(equalTo("secondUser")));

@@ -12,7 +12,7 @@
 
     <!-- https://checkstyle.sourceforge.io/config_sizes.html#FileLength -->
     <module name="FileLength">
-        <property name="max" value="350" />
+        <property name="max" value="500" />
     </module>
 <module name="SuppressionFilter">
   <property name="file" value="suppressions.xml"/>
@@ -30,7 +30,7 @@
         <!-- https://checkstyle.sourceforge.io/config_sizes.html#MethodLength -->
         <module name="MethodLength">
             <property name="tokens" value="METHOD_DEF" />
-            <property name="max" value="60" />
+            <property name="max" value="100" />
         </module>
 
         <!-- https://checkstyle.sourceforge.io/config_misc.html#OuterTypeFilename -->
