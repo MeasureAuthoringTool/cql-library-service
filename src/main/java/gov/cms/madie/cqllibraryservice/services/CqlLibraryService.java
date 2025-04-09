@@ -234,4 +234,19 @@ public class CqlLibraryService {
     LibrarySet librarySet = librarySetRepository.findByLibrarySetId(librarySetId).orElse(null);
     return LibrarySetDTO.builder().libraries(libraries).librarySet(librarySet).build();
   }
+
+  public List<LibraryListDTO> getLibrariesByLibrarySetId(
+      String librarySetId, boolean sortByLatestVersion) {
+    if (StringUtils.isBlank(librarySetId)) {
+      throw new BadRequestObjectException("Please provide library set ID.");
+    }
+    return cqlLibraryRepository.findLibrariesByLibrarySetIdAndActiveIsTrueOrderByVersionDesc(
+        librarySetId, sortByLatestVersion);
+  }
+
+  public boolean hasAssociatedLibraries(LibraryListDTO library) {
+    return cqlLibraryRepository.countAllByLibrarySetIdAndActiveAndIdIsNot(
+            library.getLibrarySetId(), true, library.getId())
+        > 1;
+  }
 }

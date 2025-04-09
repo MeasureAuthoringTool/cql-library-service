@@ -1,5 +1,6 @@
 package gov.cms.madie.cqllibraryservice.repositories;
 
+import gov.cms.madie.cqllibraryservice.dto.LibraryListDTO;
 import gov.cms.madie.models.common.Version;
 import gov.cms.madie.models.library.CqlLibrary;
 
@@ -39,4 +40,9 @@ public interface CqlLibraryRepository
 
   List<CqlLibrary> findByLibrarySetIdAndDraftAndActive(
       String librarySetId, boolean draft, boolean active);
+
+  List<LibraryListDTO> findLibrariesByLibrarySetIdAndActiveIsTrueOrderByVersionDesc(
+      String librarySetId, boolean sortByLatestVersion);
+
+  int countAllByLibrarySetIdAndActiveAndIdIsNot(String librarySetId, boolean active, String id);
 }
