@@ -335,4 +335,11 @@ public class CqlLibraryController {
     return ResponseEntity.ok(
         cqlLibraryService.shareLibraries(libraryUserIdMap, principal.getName()));
   }
+
+  @PutMapping("/unshare")
+  public ResponseEntity<Map<String, List<AclSpecification>>> unshareLibraries(
+      @RequestBody Map<String, List<String>> libraryUserIdMap, Principal principal) {
+    return ResponseEntity.ok(
+        cqlLibraryService.unshareLibraries(libraryUserIdMap, principal.getName()));
+  }
 }

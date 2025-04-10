@@ -860,4 +860,52 @@ class CqlLibraryServiceTest {
         ResourceNotFoundException.class,
         () -> cqlLibraryService.verifyAuthorization("testUser", lib1, null));
   }
+
+  @Test
+  public void testUnshareLibraries() {
+    Map<String, List<String>> libraries = new HashMap<>();
+
+    AclSpecification aclSpec1 = new AclSpecification();
+    aclSpec1.setUserId("testUser");
+    aclSpec1.setRoles(
+        new HashSet<>() {
+          {
+            add(RoleEnum.SHARED_WITH);
+          }
+        });
+
+    LibrarySet librarySet1 =
+        LibrarySet.builder()
+            .librarySetId("librarySetId1")
+            .owner("testUser")
+            .acls(List.of(aclSpec1))
+            .build();
+
+    String libraryId1 = "libraryId1";
+
+    CqlLibrary library1 =
+        CqlLibrary.builder()
+            .id(libraryId1)
+            .librarySetId(librarySet1.getLibrarySetId())
+            .librarySet(librarySet1)
+            .build();
+
+    libraries.put(libraryId1, List.of("testUser", "userId2"));
+
+    when(cqlLibraryRepository.findById("libraryId1")).thenReturn(Optional.ofNullable(library1));
+    when(librarySetService.findByLibrarySetId("librarySetId1")).thenReturn(librarySet1);
+
+    when(librarySetService.updateLibrarySetAcls(any(), any(), any())).thenReturn(librarySet1);
+
+    AclSpecification aclSpecification1 =
+        AclSpecification.builder().userId("testUser").roles(Set.of(RoleEnum.SHARED_WITH)).build();
+
+    Map<String, List<AclSpecification>> updatedSharedLibraries =
+        cqlLibraryService.unshareLibraries(libraries, "testUser");
+    assertThat(updatedSharedLibraries.size(), is(equalTo(1)));
+
+    assertTrue(updatedSharedLibraries.containsKey(libraryId1));
+
+    assertThat(updatedSharedLibraries.get(libraryId1), is(equalTo(List.of(aclSpecification1))));
+  }
 }

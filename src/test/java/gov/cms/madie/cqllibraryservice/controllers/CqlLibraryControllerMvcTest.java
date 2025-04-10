@@ -1839,4 +1839,34 @@ public class CqlLibraryControllerMvcTest {
     verify(librarySetService, times(1))
         .getRecentLibrariesByLibrarySetId(eq(List.of("set1", "set2")));
   }
+
+  @Test
+  public void testUnshareLibraries() throws Exception {
+    AclSpecification aclSpecification2 = new AclSpecification();
+    aclSpecification2.setUserId("userId2");
+    aclSpecification2.setRoles(Set.of(RoleEnum.SHARED_WITH));
+
+    Map<String, List<AclSpecification>> libraryIdToAclSpecification = new HashMap<>();
+    libraryIdToAclSpecification.put("libraryId2", List.of(aclSpecification2));
+
+    doReturn(libraryIdToAclSpecification)
+        .when(cqlLibraryService)
+        .unshareLibraries(any(), anyString());
+
+    MvcResult result =
+        mockMvc
+            .perform(
+                put("/cql-libraries/unshare")
+                    .with(user(TEST_USER_ID))
+                    .with(csrf())
+                    .content("{\"libraryId1\": [\"userId1\"],\"libraryId2\": [\"userId1\"]}")
+                    .header(TEST_API_KEY_HEADER, TEST_API_KEY_HEADER_VALUE)
+                    .contentType(MediaType.APPLICATION_JSON_VALUE))
+            .andExpect(status().isOk())
+            .andReturn();
+    verify(cqlLibraryService, times(1)).unshareLibraries(any(), anyString());
+    assertEquals(
+        result.getResponse().getContentAsString(),
+        "{\"libraryId2\":[{\"userId\":\"userId2\",\"roles\":[\"SHARED_WITH\"]}]}");
+  }
 }
