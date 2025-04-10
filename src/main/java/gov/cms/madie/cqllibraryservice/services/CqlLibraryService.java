@@ -392,7 +392,7 @@ public class CqlLibraryService {
 
   private AclOperation buildAclOperation(List<String> userIds, String operation) {
     AclOperation.AclAction aclOperationAction =
-        operation == "Grant" ? AclOperation.AclAction.GRANT : AclOperation.AclAction.REVOKE;
+        operation.equals("Grant") ? AclOperation.AclAction.GRANT : AclOperation.AclAction.REVOKE;
     return AclOperation.builder()
         .acls(buildShareAclSpecifications(userIds))
         .action(aclOperationAction)
