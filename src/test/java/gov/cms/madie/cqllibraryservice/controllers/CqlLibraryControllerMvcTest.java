@@ -1757,7 +1757,7 @@ public class CqlLibraryControllerMvcTest {
     when(cqlLibraryService.getLibrariesByLibrarySetId(anyString(), anyBoolean()))
         .thenReturn(List.of(listDTO));
     when(librarySetRepository.findByLibrarySetId(anyString()))
-            .thenReturn(Optional.ofNullable(librarySet));
+        .thenReturn(Optional.ofNullable(librarySet));
     MvcResult result =
         mockMvc
             .perform(

@@ -6,6 +6,7 @@ import gov.cms.madie.models.library.CqlLibrary;
 
 import java.util.List;
 
+import org.springframework.data.domain.Sort;
 import org.springframework.data.mongodb.repository.Aggregation;
 import org.springframework.data.mongodb.repository.ExistsQuery;
 import org.springframework.data.mongodb.repository.MongoRepository;
@@ -41,8 +42,8 @@ public interface CqlLibraryRepository
   List<CqlLibrary> findByLibrarySetIdAndDraftAndActive(
       String librarySetId, boolean draft, boolean active);
 
-  List<LibraryListDTO> findLibrariesByLibrarySetIdAndActiveIsTrueOrderByVersionDesc(
-      String librarySetId, boolean sortByLatestVersion);
+  List<LibraryListDTO> findLibrariesByLibrarySetIdAndActive(
+      String librarySetId, boolean active, Sort sort);
 
   int countAllByLibrarySetIdAndActiveAndIdIsNot(String librarySetId, boolean active, String id);
 }

@@ -539,8 +539,8 @@ class CqlLibraryServiceTest {
   void testGetLibrariesByLibrarySetId() {
     String librarySetId = "testSetId";
     LibraryListDTO l1 = LibraryListDTO.builder().id("L1").librarySetId(librarySetId).build();
-    when(cqlLibraryRepository.findLibrariesByLibrarySetIdAndActiveIsTrueOrderByVersionDesc(
-            eq(librarySetId), anyBoolean()))
+    when(cqlLibraryRepository.findLibrariesByLibrarySetIdAndActive(
+            eq(librarySetId), anyBoolean(), any()))
         .thenReturn(List.of(l1));
     List<LibraryListDTO> results = cqlLibraryService.getLibrariesByLibrarySetId(librarySetId, true);
     assertEquals(1, results.size());

@@ -122,7 +122,8 @@ public class CqlLibraryController {
 
   @GetMapping("/byLibrarySetId")
   public ResponseEntity<List<LibraryListDTO>> getLibrariesByLibrarySetId(
-      @RequestParam(name = "librarySetId") String librarySetId, boolean sortByLatestVersion) {
+      @RequestParam(name = "librarySetId") String librarySetId,
+      @RequestParam(defaultValue = "true") boolean sortByLatestVersion) {
     List<LibraryListDTO> cqlLibraries =
         cqlLibraryService.getLibrariesByLibrarySetId(librarySetId, sortByLatestVersion);
     cqlLibraries.forEach(
