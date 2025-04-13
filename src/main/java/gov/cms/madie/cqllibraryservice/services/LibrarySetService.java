@@ -45,7 +45,7 @@ public class LibrarySetService {
           savedLibrarySet.getId(),
           libraryId);
       actionLogService.logAction(
-          savedLibrarySet.getLibrarySetId(), ActionType.CREATED, harpId, "librarySetActionLog");
+          savedLibrarySet.getId(), ActionType.CREATED, harpId, "librarySetActionLog");
     }
   }
 
@@ -138,7 +138,7 @@ public class LibrarySetService {
       actionLogDetails.forEach(
           (userId, actionType) -> {
             actionLogService.logShareAccessControlAction(
-                librarySetId, actionType, performedBy, userId);
+                librarySet.getId(), actionType, performedBy, userId);
           });
       return updatedLibrarySet;
     } else {
@@ -187,6 +187,8 @@ public class LibrarySetService {
       librarySet.setOwner(userId);
       LibrarySet updatedLibrarySet = librarySetRepository.save(librarySet);
       log.info("Owner changed in Library set [{}]", updatedLibrarySet.getId());
+      actionLogService.logAction(
+          updatedLibrarySet.getId(), ActionType.UPDATED, "apiKey", "librarySetActionLog");
       return updatedLibrarySet;
     } else {
       String error =

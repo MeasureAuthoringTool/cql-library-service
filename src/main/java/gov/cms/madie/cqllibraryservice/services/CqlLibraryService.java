@@ -135,13 +135,6 @@ public class CqlLibraryService {
       librarySetService.updateOwnership(cqlLibrary.getLibrarySetId(), userid);
       result = true;
     }
-    if (result) {
-      actionLogService.logAction(
-          persistedCqlLibrary.get().getLibrarySetId(),
-          ActionType.UPDATED,
-          "apiKey",
-          "librarySetActionLog");
-    }
     return result;
   }
 
