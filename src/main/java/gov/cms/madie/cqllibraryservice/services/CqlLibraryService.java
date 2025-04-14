@@ -24,6 +24,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.apache.commons.collections4.CollectionUtils;
 
@@ -235,6 +236,27 @@ public class CqlLibraryService {
     }
     LibrarySet librarySet = librarySetRepository.findByLibrarySetId(librarySetId).orElse(null);
     return LibrarySetDTO.builder().libraries(libraries).librarySet(librarySet).build();
+  }
+
+  public List<LibraryListDTO> getLibrariesByLibrarySetId(
+      String librarySetId, boolean sortByLatestVersion) {
+    if (StringUtils.isBlank(librarySetId)) {
+      throw new BadRequestObjectException("Please provide library set ID.");
+    }
+
+    Sort sort;
+    if (sortByLatestVersion) {
+      sort = Sort.by(Sort.Direction.DESC, "version");
+    } else {
+      sort = Sort.by(Sort.Direction.ASC, "version");
+    }
+    return cqlLibraryRepository.findLibrariesByLibrarySetIdAndActive(librarySetId, true, sort);
+  }
+
+  public boolean hasAssociatedLibraries(LibraryListDTO library) {
+    return cqlLibraryRepository.countAllByLibrarySetIdAndActiveAndIdIsNot(
+            library.getLibrarySetId(), true, library.getId())
+        > 1;
   }
 
   public Map<String, List<SharedUser>> getSharedLibraries(List<String> libraryIds) {

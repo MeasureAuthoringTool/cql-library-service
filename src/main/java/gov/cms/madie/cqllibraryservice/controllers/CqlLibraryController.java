@@ -82,6 +82,7 @@ public class CqlLibraryController {
           LibrarySet librarySet =
               librarySetRepository.findByLibrarySetId(library.getLibrarySetId()).orElse(null);
           library.setLibrarySet(librarySet);
+          library.setHasAssociatedLibraries(cqlLibraryService.hasAssociatedLibraries(library));
           return library;
         });
 
@@ -117,6 +118,22 @@ public class CqlLibraryController {
   @GetMapping("/library-set/{setId}")
   public ResponseEntity<LibrarySetDTO> getLibrarySetBySetId(@PathVariable String setId) {
     return ResponseEntity.ok(cqlLibraryService.getLibrarySetBySetId(setId));
+  }
+
+  @GetMapping("/byLibrarySetId")
+  public ResponseEntity<List<LibraryListDTO>> getLibrariesByLibrarySetId(
+      @RequestParam(name = "librarySetId") String librarySetId,
+      @RequestParam(defaultValue = "true") boolean sortByLatestVersion) {
+    List<LibraryListDTO> cqlLibraries =
+        cqlLibraryService.getLibrariesByLibrarySetId(librarySetId, sortByLatestVersion);
+    cqlLibraries.forEach(
+        library -> {
+          LibrarySet librarySet =
+              librarySetRepository.findByLibrarySetId(library.getLibrarySetId()).orElse(null);
+          library.setLibrarySet(librarySet);
+        });
+
+    return ResponseEntity.ok(cqlLibraries);
   }
 
   @PostMapping
