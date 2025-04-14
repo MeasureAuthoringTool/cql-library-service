@@ -1741,6 +1741,44 @@ public class CqlLibraryControllerMvcTest {
   }
 
   @Test
+  void testGetLibrariesByLibrarySetId() throws Exception {
+    String librarySetId = "1-1-1-1";
+    String owner = "John";
+    LibrarySet librarySet = LibrarySet.builder().librarySetId(librarySetId).owner(owner).build();
+    LibraryListDTO listDTO =
+        LibraryListDTO.builder()
+            .cqlLibraryName("Test")
+            .version(Version.parse("0.1.000"))
+            .model(MODEL)
+            .librarySetId(librarySetId)
+            .librarySet(librarySet)
+            .build();
+
+    when(cqlLibraryService.getLibrariesByLibrarySetId(anyString(), anyBoolean()))
+        .thenReturn(List.of(listDTO));
+    when(librarySetRepository.findByLibrarySetId(anyString()))
+        .thenReturn(Optional.ofNullable(librarySet));
+    MvcResult result =
+        mockMvc
+            .perform(
+                get("/cql-libraries/byLibrarySetId?librarySetId=" + librarySetId)
+                    .with(user(TEST_USER_ID))
+                    .with(csrf()))
+            .andReturn();
+    assertThat(
+        result.getResponse().getContentAsString(),
+        containsString(listDTO.getLibrarySet().getLibrarySetId()));
+    assertThat(
+        result.getResponse().getContentAsString(),
+        containsString(listDTO.getLibrarySet().getOwner()));
+    assertThat(
+        result.getResponse().getContentAsString(), containsString(listDTO.getCqlLibraryName()));
+    assertThat(
+        result.getResponse().getContentAsString(), containsString(listDTO.getVersion().toString()));
+    assertThat(result.getResponse().getContentAsString(), containsString(listDTO.getModel()));
+  }
+
+  @Test
   public void testGetSharedLibraries() throws Exception {
     String libraryId1 = "libraryId1";
     String libraryId2 = "libraryId2";

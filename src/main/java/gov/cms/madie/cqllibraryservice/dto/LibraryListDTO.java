@@ -41,4 +41,5 @@ public class LibraryListDTO {
   @DocumentReference private LibrarySet librarySet;
 
   private boolean draft;
+  private boolean hasAssociatedLibraries;
 }

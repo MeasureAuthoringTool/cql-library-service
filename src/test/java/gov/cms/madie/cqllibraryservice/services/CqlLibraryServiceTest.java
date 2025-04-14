@@ -536,6 +536,46 @@ class CqlLibraryServiceTest {
   }
 
   @Test
+  void testGetLibrariesByLibrarySetId() {
+    String librarySetId = "testSetId";
+    LibraryListDTO l1 = LibraryListDTO.builder().id("L1").librarySetId(librarySetId).build();
+    when(cqlLibraryRepository.findLibrariesByLibrarySetIdAndActive(
+            eq(librarySetId), anyBoolean(), any()))
+        .thenReturn(List.of(l1));
+    List<LibraryListDTO> results = cqlLibraryService.getLibrariesByLibrarySetId(librarySetId, true);
+    assertEquals(1, results.size());
+    assertThat(results.get(0).getId(), equalTo("L1"));
+    assertThat(results.get(0).getLibrarySetId(), equalTo(librarySetId));
+  }
+
+  @Test
+  void testGetLibrariesByLibrarySetIdThrowsBadRequestObjectException() {
+    Exception exception =
+        assertThrows(
+            BadRequestObjectException.class,
+            () -> cqlLibraryService.getLibrariesByLibrarySetId("", true));
+    assertThat(exception.getMessage(), equalTo("Please provide library set ID."));
+  }
+
+  @Test
+  void testHasAssociatedLibrariesTrue() {
+    LibraryListDTO l1 = LibraryListDTO.builder().id("L1").librarySetId("setId").build();
+    when(cqlLibraryRepository.countAllByLibrarySetIdAndActiveAndIdIsNot(
+            eq("setId"), anyBoolean(), eq("L1")))
+        .thenReturn(2);
+    assertTrue(cqlLibraryService.hasAssociatedLibraries(l1));
+  }
+
+  @Test
+  void testHasAssociatedLibrariesFalse() {
+    LibraryListDTO l1 = LibraryListDTO.builder().id("L1").librarySetId("setId").build();
+    when(cqlLibraryRepository.countAllByLibrarySetIdAndActiveAndIdIsNot(
+            eq("setId"), anyBoolean(), eq("L1")))
+        .thenReturn(1);
+    assertFalse(cqlLibraryService.hasAssociatedLibraries(l1));
+  }
+
+  @Test
   public void testGetSharedLibrariesWithNoLibraryFound() {
     String libraryId1 = "libraryId1";
     List<String> libraryIds = List.of(libraryId1);
