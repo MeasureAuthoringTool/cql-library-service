@@ -65,9 +65,10 @@ public class VersionService {
     var savedCqlLibrary = cqlLibraryRepository.save(cqlLibrary);
 
     actionLogService.logAction(
-        cqlLibrary.getLibrarySetId(),
+        cqlLibrary.getId(),
         isMajor ? ActionType.VERSIONED_MAJOR : ActionType.VERSIONED_MINOR,
-        username);
+        username,
+        "actionLog");
 
     log.info(
         "User [{}] successfully versioned cql library with ID [{}]",

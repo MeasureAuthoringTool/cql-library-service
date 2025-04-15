@@ -149,7 +149,7 @@ class CqlLibraryControllerTest {
     doReturn(cqlLibrary).when(cqlLibraryRepository).save(any());
     doNothing().when(librarySetService).createLibrarySet(anyString(), anyString(), anyString());
 
-    CqlLibrary cqlLibrary = new CqlLibrary();
+    CqlLibrary cqlLibrary = CqlLibrary.builder().id("1").build();
     Principal principal = mock(Principal.class);
     when(principal.getName()).thenReturn("test.user");
 
@@ -167,7 +167,10 @@ class CqlLibraryControllerTest {
 
     verify(actionLogService, times(1))
         .logAction(
-            targetIdArgumentCaptor.capture(), actionTypeArgumentCaptor.capture(), anyString());
+            targetIdArgumentCaptor.capture(),
+            actionTypeArgumentCaptor.capture(),
+            anyString(),
+            anyString());
     assertThat(targetIdArgumentCaptor.getValue(), is(notNullValue()));
     assertThat(actionTypeArgumentCaptor.getValue(), is(equalTo(ActionType.CREATED)));
   }
