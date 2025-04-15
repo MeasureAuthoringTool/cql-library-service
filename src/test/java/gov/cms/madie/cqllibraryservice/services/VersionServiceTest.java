@@ -269,7 +269,7 @@ class VersionServiceTest {
             actionTypeArgumentCaptor.capture(),
             anyString(),
             anyString());
-    assertThat(targetIdArgumentCaptor.getValue(), is(equalTo("testLibrarySetId")));
+    assertThat(targetIdArgumentCaptor.getValue(), is(equalTo("testCqlLibraryId")));
     assertThat(actionTypeArgumentCaptor.getValue(), is(equalTo(ActionType.VERSIONED_MAJOR)));
   }
 
@@ -313,7 +313,7 @@ class VersionServiceTest {
             actionTypeArgumentCaptor.capture(),
             anyString(),
             anyString());
-    assertThat(targetIdArgumentCaptor.getValue(), is(equalTo("testLibrarySetId")));
+    assertThat(targetIdArgumentCaptor.getValue(), is(equalTo("testCqlLibraryId")));
     assertThat(actionTypeArgumentCaptor.getValue(), is(equalTo(ActionType.VERSIONED_MINOR)));
   }
 

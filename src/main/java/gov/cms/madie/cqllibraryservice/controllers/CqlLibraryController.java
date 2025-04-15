@@ -160,8 +160,7 @@ public class CqlLibraryController {
         "User [{}] successfully created new cql library with ID [{}]",
         username,
         cqlLibrary.getId());
-    actionLogService.logAction(
-        cqlLibrary.getLibrarySetId(), ActionType.CREATED, username, "actionLog");
+    actionLogService.logAction(savedCqlLibrary.getId(), ActionType.CREATED, username, "actionLog");
 
     librarySetService.createLibrarySet(
         username, savedCqlLibrary.getId(), savedCqlLibrary.getLibrarySetId());

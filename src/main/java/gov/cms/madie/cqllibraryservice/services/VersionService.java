@@ -65,7 +65,7 @@ public class VersionService {
     var savedCqlLibrary = cqlLibraryRepository.save(cqlLibrary);
 
     actionLogService.logAction(
-        cqlLibrary.getLibrarySetId(),
+        cqlLibrary.getId(),
         isMajor ? ActionType.VERSIONED_MAJOR : ActionType.VERSIONED_MINOR,
         username,
         "actionLog");
