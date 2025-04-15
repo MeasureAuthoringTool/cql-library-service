@@ -35,6 +35,7 @@ public class ActionLogService {
         collection);
   }
 
+  // logs only: share and unshare of the library
   public boolean logShareAccessControlAction(
       final String targetId,
       final ActionType actionType,
