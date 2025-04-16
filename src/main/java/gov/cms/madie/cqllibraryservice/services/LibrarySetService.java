@@ -44,7 +44,8 @@ public class LibrarySetService {
           "Library set [{}] is successfully created for the library [{}]",
           savedLibrarySet.getId(),
           libraryId);
-      actionLogService.logAction(savedLibrarySet.getId(), ActionType.CREATED, harpId);
+      actionLogService.logAction(
+          savedLibrarySet.getLibrarySetId(), ActionType.CREATED, harpId, "librarySetActionLog");
     }
   }
 
@@ -58,13 +59,11 @@ public class LibrarySetService {
         if (CollectionUtils.isEmpty(librarySet.getAcls())) {
           // if no acl present, add it
           librarySet.setAcls(aclOperation.getAcls());
-
           aclOperation
               .getAcls()
               .forEach(
                   aclSpecification -> {
                     String userId = aclSpecification.getUserId();
-
                     aclSpecification
                         .getRoles()
                         .forEach(
@@ -86,7 +85,6 @@ public class LibrarySetService {
                     // if acl does not present, add it
                     if (aclSpecification == null) {
                       librarySet.getAcls().add(acl);
-
                       acl.getRoles()
                           .forEach(
                               roleEnum -> {
@@ -100,7 +98,6 @@ public class LibrarySetService {
                               roleEnum -> {
                                 if (!aclSpecification.getRoles().contains(roleEnum)) {
                                   aclSpecification.getRoles().add(roleEnum);
-
                                   if (roleEnum == RoleEnum.SHARED_WITH) {
                                     actionLogDetails.put(acl.getUserId(), ActionType.SHARED);
                                   }
@@ -119,7 +116,16 @@ public class LibrarySetService {
                       findAclSpecificationByUserId(librarySet, acl.getUserId());
                   if (aclSpecification != null) {
                     // remove roles from ACL
-                    aclSpecification.getRoles().removeAll(acl.getRoles());
+                    acl.getRoles()
+                        .forEach(
+                            roleEnum -> {
+                              if (aclSpecification.getRoles().contains(roleEnum)) {
+                                aclSpecification.getRoles().remove(roleEnum);
+                                if (roleEnum == RoleEnum.SHARED_WITH) {
+                                  actionLogDetails.put(acl.getUserId(), ActionType.UNSHARED);
+                                }
+                              }
+                            });
                     // after removing the roles if there is no role left, remove acl
                     if (aclSpecification.getRoles().isEmpty()) {
                       librarySet.getAcls().remove(aclSpecification);
@@ -127,14 +133,12 @@ public class LibrarySetService {
                   }
                 });
       }
-
       LibrarySet updatedLibrarySet = librarySetRepository.save(librarySet);
       log.info("ACL updated for Library set [{}]", updatedLibrarySet.getId());
-
       actionLogDetails.forEach(
           (userId, actionType) -> {
             actionLogService.logShareAccessControlAction(
-                librarySetId, actionType, performedBy, userId);
+                librarySet.getLibrarySetId(), actionType, performedBy, userId);
           });
       return updatedLibrarySet;
     } else {
@@ -183,6 +187,8 @@ public class LibrarySetService {
       librarySet.setOwner(userId);
       LibrarySet updatedLibrarySet = librarySetRepository.save(librarySet);
       log.info("Owner changed in Library set [{}]", updatedLibrarySet.getId());
+      actionLogService.logAction(
+          updatedLibrarySet.getLibrarySetId(), ActionType.UPDATED, "apiKey", "librarySetActionLog");
       return updatedLibrarySet;
     } else {
       String error =

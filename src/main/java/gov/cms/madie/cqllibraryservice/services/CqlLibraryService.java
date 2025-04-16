@@ -256,7 +256,7 @@ public class CqlLibraryService {
   public boolean hasAssociatedLibraries(LibraryListDTO library) {
     return cqlLibraryRepository.countAllByLibrarySetIdAndActiveAndIdIsNot(
             library.getLibrarySetId(), true, library.getId())
-        > 1;
+        > 0;
   }
 
   public Map<String, List<SharedUser>> getSharedLibraries(List<String> libraryIds) {
@@ -320,6 +320,66 @@ public class CqlLibraryService {
       Map<String, List<String>> libraryUserIdMap, String performedBy) {
     Map<String, List<AclSpecification>> libraryIdToAclSpecification = new HashMap<>();
 
+    log.info(
+        "User [{}] has called shareLibraries with libraryUserIdMap [{}]",
+        performedBy,
+        libraryUserIdMap);
+
+    verifyShareAuthorization(libraryUserIdMap, performedBy);
+
+    libraryUserIdMap.forEach(
+        (LibraryId, userIds) -> {
+          AclOperation aclOperation = buildAclOperation(userIds, "Grant");
+          libraryIdToAclSpecification.put(
+              LibraryId, updateAccessControlList(LibraryId, aclOperation, performedBy));
+        });
+
+    log.info(
+        "User [{}] successfully called shared library(s) with libraryUserIdMap [{}]. The "
+            + "AclSpecification is now [{}]",
+        performedBy,
+        libraryUserIdMap,
+        libraryIdToAclSpecification);
+
+    return libraryIdToAclSpecification;
+  }
+
+  public Map<String, List<AclSpecification>> unshareLibraries(
+      Map<String, List<String>> libraryUserIdMap, String username) {
+    log.info(
+        "User [{}] has called unshareLibraries with libraryUserIdMap [{}]",
+        username,
+        libraryUserIdMap);
+
+    Map<String, List<AclSpecification>> libraryIdToAclSpecification = new HashMap<>();
+
+    verifyShareAuthorization(libraryUserIdMap, username);
+
+    libraryUserIdMap.forEach(
+        (libraryId, userIds) -> {
+          AclOperation aclOperation = buildAclOperation(userIds, "Revoke");
+          libraryIdToAclSpecification.put(
+              libraryId, updateAccessControlList(libraryId, aclOperation, username));
+        });
+
+    log.info(
+        "User [{}] successfully called unshareLibraries with libraryUserIdMap [{}]. The "
+            + "AclSpecification is now [{}]",
+        username,
+        libraryUserIdMap,
+        libraryIdToAclSpecification);
+
+    return libraryIdToAclSpecification;
+  }
+
+  private void verifyShareAuthorization(
+      Map<String, List<String>> libraryUserIdMap, String username) {
+    log.info(
+        "User [{}] has called verifyShareAuthorization to determine whether operation with [{}]"
+            + " is allowed to be performed",
+        username,
+        libraryUserIdMap);
+
     libraryUserIdMap
         .keySet()
         .forEach(
@@ -327,25 +387,30 @@ public class CqlLibraryService {
               CqlLibrary library = findCqlLibraryById(libraryId);
 
               if (library == null) {
+                log.error(
+                    "User [{}] called verifyShareAuthorization with libraryUserIdMap [{}] but "
+                        + "failed because the library with library ID [{}] does not exist.",
+                    username,
+                    libraryUserIdMap,
+                    libraryId);
                 throw new ResourceNotFoundException("Library does not exist: " + libraryId);
               }
-              verifyAuthorization(performedBy, library, null);
+              verifyAuthorization(username, library, null);
             });
 
-    libraryUserIdMap.forEach(
-        (LibraryId, userIds) -> {
-          AclOperation aclOperation = buildShareAclOperation(userIds);
-          libraryIdToAclSpecification.put(
-              LibraryId, updateAccessControlList(LibraryId, aclOperation, performedBy));
-        });
-
-    return libraryIdToAclSpecification;
+    log.info(
+        "User [{}] successfully called verifyShareAuthorization and determined that operation "
+            + "with [{}] is allowed to be performed",
+        username,
+        libraryUserIdMap);
   }
 
-  private AclOperation buildShareAclOperation(List<String> userIds) {
+  private AclOperation buildAclOperation(List<String> userIds, String operation) {
+    AclOperation.AclAction aclOperationAction =
+        operation.equals("Grant") ? AclOperation.AclAction.GRANT : AclOperation.AclAction.REVOKE;
     return AclOperation.builder()
         .acls(buildShareAclSpecifications(userIds))
-        .action(AclOperation.AclAction.GRANT)
+        .action(aclOperationAction)
         .build();
   }
 

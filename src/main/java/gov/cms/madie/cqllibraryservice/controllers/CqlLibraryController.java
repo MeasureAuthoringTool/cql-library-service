@@ -160,7 +160,7 @@ public class CqlLibraryController {
         "User [{}] successfully created new cql library with ID [{}]",
         username,
         cqlLibrary.getId());
-    actionLogService.logAction(cqlLibrary.getLibrarySetId(), ActionType.CREATED, username);
+    actionLogService.logAction(savedCqlLibrary.getId(), ActionType.CREATED, username, "actionLog");
 
     librarySetService.createLibrarySet(
         username, savedCqlLibrary.getId(), savedCqlLibrary.getLibrarySetId());
@@ -265,7 +265,6 @@ public class CqlLibraryController {
           ResponseEntity.ok()
               .contentType(MediaType.TEXT_PLAIN)
               .body(String.format("%s granted ownership to Library successfully.", userid));
-      actionLogService.logAction(id, ActionType.UPDATED, "apiKey");
     }
 
     return response;
@@ -351,5 +350,12 @@ public class CqlLibraryController {
 
     return ResponseEntity.ok(
         cqlLibraryService.shareLibraries(libraryUserIdMap, principal.getName()));
+  }
+
+  @PutMapping("/unshare")
+  public ResponseEntity<Map<String, List<AclSpecification>>> unshareLibraries(
+      @RequestBody Map<String, List<String>> libraryUserIdMap, Principal principal) {
+    return ResponseEntity.ok(
+        cqlLibraryService.unshareLibraries(libraryUserIdMap, principal.getName()));
   }
 }
