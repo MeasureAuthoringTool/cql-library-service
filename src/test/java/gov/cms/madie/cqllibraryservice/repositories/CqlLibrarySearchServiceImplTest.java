@@ -127,4 +127,33 @@ public class CqlLibrarySearchServiceImplTest {
     assertEquals(page1Libraries.get(0).getCqlLibraryName(), library1.getCqlLibraryName());
     assertEquals(page1Libraries.get(1).getCqlLibraryName(), library2.getCqlLibraryName());
   }
+
+  @Test
+  public void testFindLibrariesInSets() {
+    when(appConfigService.isFlagEnabled(MadieFeatureFlag.LIBRARY_SEARCH)).thenReturn(true);
+    // page size 3 from 0-2
+    PageRequest pageRequest = PageRequest.of(0, 3);
+    List<LibraryListDTO> allLibraries = List.of(library1, library2, library3, library4, library5);
+
+    FacetDTO facetDTO =
+            FacetDTO.builder()
+                    .queryResults(List.of(library1, library2, library3))
+                    .count(Arrays.asList(allLibraries.toArray()))
+                    .build();
+
+    AggregationResults pagedResults = new AggregationResults<>(List.of(facetDTO), new Document());
+
+    when(mongoTemplate.aggregate(any(Aggregation.class), (Class<?>) any(), any()))
+            .thenReturn(pagedResults);
+
+    Page<LibraryListDTO> page =
+            libraryAclRepository.searchLibrariesByCriteria("john", pageRequest, null, true);
+    assertEquals(page.getTotalElements(), 3);
+    assertEquals(page.getTotalPages(), 1);
+    assertEquals(page.getContent().size(), 3);
+    List<LibraryListDTO> page1Libraries = page.getContent();
+    assertEquals(page1Libraries.get(0).getId(), library1.getId());
+    assertEquals(page1Libraries.get(1).getId(), library2.getId());
+    assertEquals(page1Libraries.get(2).getId(), library3.getId());
+  }
 }
