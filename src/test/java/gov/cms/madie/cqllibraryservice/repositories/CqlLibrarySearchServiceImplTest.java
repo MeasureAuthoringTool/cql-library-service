@@ -2,6 +2,8 @@ package gov.cms.madie.cqllibraryservice.repositories;
 
 import gov.cms.madie.cqllibraryservice.dto.FacetDTO;
 import gov.cms.madie.cqllibraryservice.dto.LibraryListDTO;
+import gov.cms.madie.cqllibraryservice.dto.MadieFeatureFlag;
+import gov.cms.madie.cqllibraryservice.services.AppConfigService;
 import org.bson.Document;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -30,6 +32,7 @@ import static org.mockito.Mockito.when;
 public class CqlLibrarySearchServiceImplTest {
 
   @Mock MongoTemplate mongoTemplate;
+  @Mock AppConfigService appConfigService;
   @InjectMocks CqlLibrarySearchServiceImpl libraryAclRepository;
 
   private LibraryListDTO library1;
@@ -74,6 +77,7 @@ public class CqlLibrarySearchServiceImplTest {
 
   @Test
   public void testFindLibraries() {
+    when(appConfigService.isFlagEnabled(MadieFeatureFlag.LIBRARY_SEARCH)).thenReturn(false);
     // page size 3 from 0-2
     PageRequest pageRequest = PageRequest.of(0, 3);
     List<LibraryListDTO> allLibraries = List.of(library1, library2, library3, library4, library5);
@@ -102,6 +106,7 @@ public class CqlLibrarySearchServiceImplTest {
 
   @Test
   public void testFindMyActiveLibrariesWithSearchTerm() {
+    when(appConfigService.isFlagEnabled(MadieFeatureFlag.LIBRARY_SEARCH)).thenReturn(false);
     PageRequest pageRequest = PageRequest.of(0, 3);
 
     FacetDTO facetDTO =

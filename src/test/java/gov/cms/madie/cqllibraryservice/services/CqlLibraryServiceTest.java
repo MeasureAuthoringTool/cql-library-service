@@ -571,7 +571,7 @@ class CqlLibraryServiceTest {
     LibraryListDTO l1 = LibraryListDTO.builder().id("L1").librarySetId("setId").build();
     when(cqlLibraryRepository.countAllByLibrarySetIdAndActiveAndIdIsNot(
             eq("setId"), anyBoolean(), eq("L1")))
-        .thenReturn(1);
+        .thenReturn(0);
     assertFalse(cqlLibraryService.hasAssociatedLibraries(l1));
   }
 
