@@ -256,7 +256,7 @@ public class CqlLibraryService {
   public boolean hasAssociatedLibraries(LibraryListDTO library) {
     return cqlLibraryRepository.countAllByLibrarySetIdAndActiveAndIdIsNot(
             library.getLibrarySetId(), true, library.getId())
-        > 0;
+        > 1;
   }
 
   public Map<String, List<SharedUser>> getSharedLibraries(List<String> libraryIds) {

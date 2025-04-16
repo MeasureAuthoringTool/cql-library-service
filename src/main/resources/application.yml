@@ -18,9 +18,6 @@ madie:
       qdm-base-url: ${QDM_ELM_TRANSLATOR_SERVICE_URL:http://localhost:8084/api/qdm}
       fhir-base-url: ${FHIR_ELM_TRANSLATOR_SERVICE_URL:http://localhost:8083/api/fhir}
       elm-json-uri: /cql/translator/cql
-  service-config:
-    json-url: ${SERVICE_CONFIG_JSON_URL:http://localhost:9000/env-config/serviceConfig.json}
-
 management:
   endpoints:
     enabled-by-default: false
