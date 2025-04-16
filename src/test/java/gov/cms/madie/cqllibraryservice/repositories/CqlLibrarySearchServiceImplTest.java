@@ -136,18 +136,18 @@ public class CqlLibrarySearchServiceImplTest {
     List<LibraryListDTO> allLibraries = List.of(library1, library2, library3, library4, library5);
 
     FacetDTO facetDTO =
-            FacetDTO.builder()
-                    .queryResults(List.of(library1, library2, library3))
-                    .count(Arrays.asList(allLibraries.toArray()))
-                    .build();
+        FacetDTO.builder()
+            .queryResults(List.of(library1, library2, library3))
+            .count(Arrays.asList(allLibraries.toArray()))
+            .build();
 
     AggregationResults pagedResults = new AggregationResults<>(List.of(facetDTO), new Document());
 
     when(mongoTemplate.aggregate(any(Aggregation.class), (Class<?>) any(), any()))
-            .thenReturn(pagedResults);
+        .thenReturn(pagedResults);
 
     Page<LibraryListDTO> page =
-            libraryAclRepository.searchLibrariesByCriteria("john", pageRequest, null, true);
+        libraryAclRepository.searchLibrariesByCriteria("john", pageRequest, null, true);
     assertEquals(page.getTotalElements(), 3);
     assertEquals(page.getTotalPages(), 1);
     assertEquals(page.getContent().size(), 3);

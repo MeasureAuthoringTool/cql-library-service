@@ -130,9 +130,7 @@ public class CqlLibrarySearchServiceImpl implements CqlLibrarySearchService {
           Object totalCount = countList.get(0);
           if (totalCount instanceof Map<?, ?>) {
             Object count = ((Map<?, ?>) totalCount).get("count");
-            if (count instanceof Number) {
-              totalSize = ((Number) count).longValue();
-            }
+            totalSize = ((Number) count).longValue();
           }
         }
       }
