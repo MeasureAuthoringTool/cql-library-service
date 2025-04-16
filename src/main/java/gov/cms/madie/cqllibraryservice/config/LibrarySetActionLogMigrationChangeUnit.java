@@ -22,78 +22,78 @@ import java.util.stream.Collectors;
 @Slf4j
 @ChangeUnit(id = "data_migration_libraryset_action_log", order = "1", author = "madie_dev")
 public class LibrarySetActionLogMigrationChangeUnit {
-    List<ActionLog> actionLogsToBeMigrated = new ArrayList<>();
-    List<String> librarySetActionLogIds = new ArrayList<>();
+  List<ActionLog> actionLogsToBeMigrated = new ArrayList<>();
+  List<String> librarySetActionLogIds = new ArrayList<>();
 
-    @Execution
-    public void migrateLibrarySetActionLog(
-            LibrarySetRepository librarySetRepository,
-            CqlLibraryActionLogRepository cqlLibraryHistoryRepository,
-            LibrarySetActionLogRepository librarySetActionLogRepository) {
+  @Execution
+  public void migrateLibrarySetActionLog(
+      LibrarySetRepository librarySetRepository,
+      CqlLibraryActionLogRepository cqlLibraryHistoryRepository,
+      LibrarySetActionLogRepository librarySetActionLogRepository) {
 
-        List<ActionLog> actionsLogs = cqlLibraryHistoryRepository.findAll();
-        List<String> actionLogIdsToBeMigrated = new ArrayList<>();
-        List<LibrarySetActionLog> librarySetActionLogs = new ArrayList<>();
+    List<ActionLog> actionsLogs = cqlLibraryHistoryRepository.findAll();
+    List<String> actionLogIdsToBeMigrated = new ArrayList<>();
+    List<LibrarySetActionLog> librarySetActionLogs = new ArrayList<>();
 
-        if (CollectionUtils.isNotEmpty(actionsLogs)) {
-            actionsLogs.stream()
-                    .forEach(
-                            actionLog -> {
-                                String targetId = actionLog.getTargetId();
-                                Optional<LibrarySet> librarySetOpt = librarySetRepository.findById(targetId);
-                                if (librarySetOpt.isPresent()) {
-                                    actionLogsToBeMigrated.add(actionLog);
-                                    actionLogIdsToBeMigrated.add(actionLog.getId());
+    if (CollectionUtils.isNotEmpty(actionsLogs)) {
+      actionsLogs.stream()
+          .forEach(
+              actionLog -> {
+                String targetId = actionLog.getTargetId();
+                Optional<LibrarySet> librarySetOpt = librarySetRepository.findById(targetId);
+                if (librarySetOpt.isPresent()) {
+                  actionLogsToBeMigrated.add(actionLog);
+                  actionLogIdsToBeMigrated.add(actionLog.getId());
 
-                                    // get the LibrarySetActionLog data ready:
-                                    List<AccessControlAction> accessControlActions =
-                                            actionLog.getActions().stream()
-                                                    .map(
-                                                            action -> {
-                                                                return AccessControlAction.builder()
-                                                                        .actionType(action.getActionType())
-                                                                        .additionalActionMessage(action.getAdditionalActionMessage())
-                                                                        .performedAt(action.getPerformedAt())
-                                                                        .performedBy(action.getPerformedBy())
-                                                                        .build();
-                                                            })
-                                                    .collect(Collectors.toList());
+                  // get the LibrarySetActionLog data ready:
+                  List<AccessControlAction> accessControlActions =
+                      actionLog.getActions().stream()
+                          .map(
+                              action -> {
+                                return AccessControlAction.builder()
+                                    .actionType(action.getActionType())
+                                    .additionalActionMessage(action.getAdditionalActionMessage())
+                                    .performedAt(action.getPerformedAt())
+                                    .performedBy(action.getPerformedBy())
+                                    .build();
+                              })
+                          .collect(Collectors.toList());
 
-                                    LibrarySetActionLog librarySetActionLog =
-                                            LibrarySetActionLog.builder()
-                                                    .id(actionLog.getId())
-                                                    .targetId(librarySetOpt.get().getLibrarySetId())
-                                                    .actions(accessControlActions)
-                                                    .build();
+                  LibrarySetActionLog librarySetActionLog =
+                      LibrarySetActionLog.builder()
+                          .id(actionLog.getId())
+                          .targetId(librarySetOpt.get().getLibrarySetId())
+                          .actions(accessControlActions)
+                          .build();
 
-                                    librarySetActionLogs.add(librarySetActionLog);
-                                    librarySetActionLogIds.add(actionLog.getId());
-                                }
-                            });
-        }
-
-        // add LibrarySetActionLog first
-        if (CollectionUtils.isNotEmpty(librarySetActionLogs)) {
-            librarySetActionLogRepository.saveAll(librarySetActionLogs);
-        }
-        // delete from LibraryActionLog
-        if (CollectionUtils.isNotEmpty(actionLogIdsToBeMigrated)) {
-            cqlLibraryHistoryRepository.deleteAllById(actionLogIdsToBeMigrated);
-        }
+                  librarySetActionLogs.add(librarySetActionLog);
+                  librarySetActionLogIds.add(actionLog.getId());
+                }
+              });
     }
 
-    @RollbackExecution
-    public void rollbackExecution(
-            CqlLibraryActionLogRepository cqlLibraryHistoryRepository,
-            LibrarySetActionLogRepository librarySetActionLogRepository) {
-        log.debug("Entering rollbackExecution()");
-
-        if (CollectionUtils.isNotEmpty(actionLogsToBeMigrated)) {
-            cqlLibraryHistoryRepository.saveAll(actionLogsToBeMigrated);
-        }
-
-        if (CollectionUtils.isNotEmpty(librarySetActionLogIds)) {
-            librarySetActionLogRepository.deleteAllById(librarySetActionLogIds);
-        }
+    // add LibrarySetActionLog first
+    if (CollectionUtils.isNotEmpty(librarySetActionLogs)) {
+      librarySetActionLogRepository.saveAll(librarySetActionLogs);
     }
+    // delete from LibraryActionLog
+    if (CollectionUtils.isNotEmpty(actionLogIdsToBeMigrated)) {
+      cqlLibraryHistoryRepository.deleteAllById(actionLogIdsToBeMigrated);
+    }
+  }
+
+  @RollbackExecution
+  public void rollbackExecution(
+      CqlLibraryActionLogRepository cqlLibraryHistoryRepository,
+      LibrarySetActionLogRepository librarySetActionLogRepository) {
+    log.debug("Entering rollbackExecution()");
+
+    if (CollectionUtils.isNotEmpty(actionLogsToBeMigrated)) {
+      cqlLibraryHistoryRepository.saveAll(actionLogsToBeMigrated);
+    }
+
+    if (CollectionUtils.isNotEmpty(librarySetActionLogIds)) {
+      librarySetActionLogRepository.deleteAllById(librarySetActionLogIds);
+    }
+  }
 }

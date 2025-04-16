@@ -27,113 +27,113 @@ import java.util.stream.Collectors;
 
 @ExtendWith(MockitoExtension.class)
 public class LibrarySetActionLogMigrationChangeUnitTest {
-    @Mock private LibrarySetRepository librarySetRepository;
-    @Mock CqlLibraryActionLogRepository libraryActionLogRepository;
-    @Mock LibrarySetActionLogRepository librarySetActionLogRepository;
-    @InjectMocks private LibrarySetActionLogMigrationChangeUnit changeUnit;
+  @Mock private LibrarySetRepository librarySetRepository;
+  @Mock CqlLibraryActionLogRepository libraryActionLogRepository;
+  @Mock LibrarySetActionLogRepository librarySetActionLogRepository;
+  @InjectMocks private LibrarySetActionLogMigrationChangeUnit changeUnit;
 
-    private ActionLog actionLog;
-    Instant instant = Instant.parse("2025-04-06T21:06:00Z");
-    private LibrarySet librarySet;
-    LibrarySetActionLog librarySetActionLog = null;
+  private ActionLog actionLog;
+  Instant instant = Instant.parse("2025-04-06T21:06:00Z");
+  private LibrarySet librarySet;
+  LibrarySetActionLog librarySetActionLog = null;
 
-    @BeforeEach
-    void setUp() {
-        actionLog = new ActionLog();
-        actionLog.setId("action1");
-        actionLog.setTargetId("librarySetId");
-        Action action1 =
-                Action.builder()
-                        .actionType(ActionType.CREATED)
-                        .additionalActionMessage("message1")
-                        .performedAt(instant)
-                        .performedBy("user1")
-                        .build();
+  @BeforeEach
+  void setUp() {
+    actionLog = new ActionLog();
+    actionLog.setId("action1");
+    actionLog.setTargetId("librarySetId");
+    Action action1 =
+        Action.builder()
+            .actionType(ActionType.CREATED)
+            .additionalActionMessage("message1")
+            .performedAt(instant)
+            .performedBy("user1")
+            .build();
 
-        actionLog.setActions(List.of(action1));
+    actionLog.setActions(List.of(action1));
 
-        librarySet = LibrarySet.builder().id("librarySetId").librarySetId("librarySet1").build();
+    librarySet = LibrarySet.builder().id("librarySetId").librarySetId("librarySet1").build();
 
-        List<AccessControlAction> accessControlActions =
-                actionLog.getActions().stream()
-                        .map(
-                                action -> {
-                                    return AccessControlAction.builder()
-                                            .actionType(action.getActionType())
-                                            .additionalActionMessage(action.getAdditionalActionMessage())
-                                            .performedAt(action.getPerformedAt())
-                                            .performedBy(action.getPerformedBy())
-                                            .build();
-                                })
-                        .collect(Collectors.toList());
-        librarySetActionLog =
-                LibrarySetActionLog.builder()
-                        .id(actionLog.getId())
-                        .targetId("librarySet1")
-                        .actions(accessControlActions)
-                        .build();
-    }
+    List<AccessControlAction> accessControlActions =
+        actionLog.getActions().stream()
+            .map(
+                action -> {
+                  return AccessControlAction.builder()
+                      .actionType(action.getActionType())
+                      .additionalActionMessage(action.getAdditionalActionMessage())
+                      .performedAt(action.getPerformedAt())
+                      .performedBy(action.getPerformedBy())
+                      .build();
+                })
+            .collect(Collectors.toList());
+    librarySetActionLog =
+        LibrarySetActionLog.builder()
+            .id(actionLog.getId())
+            .targetId("librarySet1")
+            .actions(accessControlActions)
+            .build();
+  }
 
-    @Test
-    void testMigrateLibrarySetActionLogEmptyLibraryActionLog() {
-        when(libraryActionLogRepository.findAll()).thenReturn(List.of());
+  @Test
+  void testMigrateLibrarySetActionLogEmptyLibraryActionLog() {
+    when(libraryActionLogRepository.findAll()).thenReturn(List.of());
 
-        changeUnit.migrateLibrarySetActionLog(
-                librarySetRepository, libraryActionLogRepository, librarySetActionLogRepository);
+    changeUnit.migrateLibrarySetActionLog(
+        librarySetRepository, libraryActionLogRepository, librarySetActionLogRepository);
 
-        verify(libraryActionLogRepository, new Times(1)).findAll();
-        verifyNoInteractions(librarySetRepository);
-        verifyNoInteractions(librarySetActionLogRepository);
-    }
+    verify(libraryActionLogRepository, new Times(1)).findAll();
+    verifyNoInteractions(librarySetRepository);
+    verifyNoInteractions(librarySetActionLogRepository);
+  }
 
-    @Test
-    void testMigrateLibrarySetActionLogNotInLibrarySet() {
-        when(libraryActionLogRepository.findAll()).thenReturn(List.of(actionLog));
-        when(librarySetRepository.findById(anyString())).thenReturn(Optional.empty());
+  @Test
+  void testMigrateLibrarySetActionLogNotInLibrarySet() {
+    when(libraryActionLogRepository.findAll()).thenReturn(List.of(actionLog));
+    when(librarySetRepository.findById(anyString())).thenReturn(Optional.empty());
 
-        changeUnit.migrateLibrarySetActionLog(
-                librarySetRepository, libraryActionLogRepository, librarySetActionLogRepository);
+    changeUnit.migrateLibrarySetActionLog(
+        librarySetRepository, libraryActionLogRepository, librarySetActionLogRepository);
 
-        verify(libraryActionLogRepository, new Times(1)).findAll();
-        verify(librarySetRepository, new Times(1)).findById("librarySetId");
-        verifyNoInteractions(librarySetActionLogRepository);
-    }
+    verify(libraryActionLogRepository, new Times(1)).findAll();
+    verify(librarySetRepository, new Times(1)).findById("librarySetId");
+    verifyNoInteractions(librarySetActionLogRepository);
+  }
 
-    @Test
-    void testMigrateLibrarySetActionLog() {
-        when(libraryActionLogRepository.findAll()).thenReturn(List.of(actionLog));
-        when(librarySetRepository.findById(anyString())).thenReturn(Optional.of(librarySet));
+  @Test
+  void testMigrateLibrarySetActionLog() {
+    when(libraryActionLogRepository.findAll()).thenReturn(List.of(actionLog));
+    when(librarySetRepository.findById(anyString())).thenReturn(Optional.of(librarySet));
 
-        changeUnit.migrateLibrarySetActionLog(
-                librarySetRepository, libraryActionLogRepository, librarySetActionLogRepository);
+    changeUnit.migrateLibrarySetActionLog(
+        librarySetRepository, libraryActionLogRepository, librarySetActionLogRepository);
 
-        verify(libraryActionLogRepository, new Times(1)).findAll();
-        verify(librarySetRepository, new Times(1)).findById("librarySetId");
-        verify(librarySetActionLogRepository, new Times(1)).saveAll(List.of(librarySetActionLog));
-        verify(libraryActionLogRepository, new Times(1)).deleteAllById(List.of("action1"));
-    }
+    verify(libraryActionLogRepository, new Times(1)).findAll();
+    verify(librarySetRepository, new Times(1)).findById("librarySetId");
+    verify(librarySetActionLogRepository, new Times(1)).saveAll(List.of(librarySetActionLog));
+    verify(libraryActionLogRepository, new Times(1)).deleteAllById(List.of("action1"));
+  }
 
-    @Test
-    public void testRollbackExecution() {
+  @Test
+  public void testRollbackExecution() {
 
-        ReflectionTestUtils.setField(changeUnit, "actionLogsToBeMigrated", List.of(actionLog));
-        ReflectionTestUtils.setField(changeUnit, "librarySetActionLogIds", List.of("action1"));
+    ReflectionTestUtils.setField(changeUnit, "actionLogsToBeMigrated", List.of(actionLog));
+    ReflectionTestUtils.setField(changeUnit, "librarySetActionLogIds", List.of("action1"));
 
-        changeUnit.rollbackExecution(libraryActionLogRepository, librarySetActionLogRepository);
+    changeUnit.rollbackExecution(libraryActionLogRepository, librarySetActionLogRepository);
 
-        verify(libraryActionLogRepository, new Times(1)).saveAll(List.of(actionLog));
-        verify(librarySetActionLogRepository, new Times(1)).deleteAllById(List.of("action1"));
-    }
+    verify(libraryActionLogRepository, new Times(1)).saveAll(List.of(actionLog));
+    verify(librarySetActionLogRepository, new Times(1)).deleteAllById(List.of("action1"));
+  }
 
-    @Test
-    public void testRollbackExecutionNoActionLogs() {
+  @Test
+  public void testRollbackExecutionNoActionLogs() {
 
-        ReflectionTestUtils.setField(changeUnit, "actionLogsToBeMigrated", Collections.emptyList());
-        ReflectionTestUtils.setField(changeUnit, "librarySetActionLogIds", Collections.emptyList());
+    ReflectionTestUtils.setField(changeUnit, "actionLogsToBeMigrated", Collections.emptyList());
+    ReflectionTestUtils.setField(changeUnit, "librarySetActionLogIds", Collections.emptyList());
 
-        changeUnit.rollbackExecution(libraryActionLogRepository, librarySetActionLogRepository);
+    changeUnit.rollbackExecution(libraryActionLogRepository, librarySetActionLogRepository);
 
-        verifyNoInteractions(libraryActionLogRepository);
-        verifyNoInteractions(librarySetActionLogRepository);
-    }
+    verifyNoInteractions(libraryActionLogRepository);
+    verifyNoInteractions(librarySetActionLogRepository);
+  }
 }
