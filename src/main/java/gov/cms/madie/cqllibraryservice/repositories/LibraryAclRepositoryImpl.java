@@ -102,7 +102,9 @@ public class LibraryAclRepositoryImpl implements LibraryAclRepository {
                     Criteria.where("model").is(model)));
 
     ProjectionOperation projectionOperation =
-        project("cqlLibraryName", "version", "librarySet", "librarySetId", "createdBy");
+        project("cqlLibraryName", "version", "librarySet", "librarySetId")
+            .and("librarySet.owner")
+            .as("owner");
 
     UnwindOperation unwindOperation = unwind("librarySet");
 
