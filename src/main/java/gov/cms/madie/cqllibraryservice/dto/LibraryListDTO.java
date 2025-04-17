@@ -26,6 +26,7 @@ public class LibraryListDTO {
   private String librarySetId;
   private String cqlLibraryName;
   private Instant createdAt;
+  private String owner;
 
   @NotBlank(message = "Model is required")
   @EnumValidator(

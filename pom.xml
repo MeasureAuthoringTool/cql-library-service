@@ -98,10 +98,10 @@
       <version>3.0.7</version>
       <exclusions>
         <exclusion>
-          <groupId>org.springframework.security</groupId>
           <artifactId>spring-security-web</artifactId>
+          <groupId>org.springframework.security</groupId>
         </exclusion>
-      </exclusions>      
+      </exclusions>
     </dependency>
     <dependency>
       <groupId>org.projectlombok</groupId>
@@ -111,7 +111,7 @@
     <dependency>
       <groupId>gov.cms.madie</groupId>
       <artifactId>madie-java-models</artifactId>
-      <version>0.6.90-SNAPSHOT</version>
+      <version>0.6.91-SNAPSHOT</version>
     </dependency>
     <dependency>
       <groupId>gov.cms.madie</groupId>
