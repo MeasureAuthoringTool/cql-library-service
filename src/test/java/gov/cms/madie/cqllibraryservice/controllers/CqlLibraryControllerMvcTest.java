@@ -14,7 +14,6 @@ import static org.hamcrest.CoreMatchers.notNullValue;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
@@ -398,7 +397,10 @@ public class CqlLibraryControllerMvcTest {
 
     verify(actionLogService, times(1))
         .logAction(
-            targetIdArgumentCaptor.capture(), actionTypeArgumentCaptor.capture(), anyString());
+            targetIdArgumentCaptor.capture(),
+            actionTypeArgumentCaptor.capture(),
+            anyString(),
+            anyString());
     assertThat(targetIdArgumentCaptor.getValue(), is(notNullValue()));
     assertThat(actionTypeArgumentCaptor.getValue(), is(equalTo(ActionType.CREATED)));
   }
@@ -457,7 +459,10 @@ public class CqlLibraryControllerMvcTest {
 
     verify(actionLogService, times(1))
         .logAction(
-            targetIdArgumentCaptor.capture(), actionTypeArgumentCaptor.capture(), anyString());
+            targetIdArgumentCaptor.capture(),
+            actionTypeArgumentCaptor.capture(),
+            anyString(),
+            anyString());
     assertThat(targetIdArgumentCaptor.getValue(), is(notNullValue()));
     assertThat(actionTypeArgumentCaptor.getValue(), is(equalTo(ActionType.CREATED)));
   }
@@ -1536,12 +1541,6 @@ public class CqlLibraryControllerMvcTest {
         .andExpect(content().string("testUser granted ownership to Library successfully."));
 
     verify(cqlLibraryService, times(1)).changeOwnership(eq(libraryId), eq("testUser"));
-
-    verify(actionLogService, times(1))
-        .logAction(
-            targetIdArgumentCaptor.capture(), actionTypeArgumentCaptor.capture(), anyString());
-    assertNotNull(targetIdArgumentCaptor.getValue());
-    assertThat(actionTypeArgumentCaptor.getValue(), is(equalTo(ActionType.UPDATED)));
   }
 
   @Test
@@ -1741,6 +1740,44 @@ public class CqlLibraryControllerMvcTest {
   }
 
   @Test
+  void testGetLibrariesByLibrarySetId() throws Exception {
+    String librarySetId = "1-1-1-1";
+    String owner = "John";
+    LibrarySet librarySet = LibrarySet.builder().librarySetId(librarySetId).owner(owner).build();
+    LibraryListDTO listDTO =
+        LibraryListDTO.builder()
+            .cqlLibraryName("Test")
+            .version(Version.parse("0.1.000"))
+            .model(MODEL)
+            .librarySetId(librarySetId)
+            .librarySet(librarySet)
+            .build();
+
+    when(cqlLibraryService.getLibrariesByLibrarySetId(anyString(), anyBoolean()))
+        .thenReturn(List.of(listDTO));
+    when(librarySetRepository.findByLibrarySetId(anyString()))
+        .thenReturn(Optional.ofNullable(librarySet));
+    MvcResult result =
+        mockMvc
+            .perform(
+                get("/cql-libraries/byLibrarySetId?librarySetId=" + librarySetId)
+                    .with(user(TEST_USER_ID))
+                    .with(csrf()))
+            .andReturn();
+    assertThat(
+        result.getResponse().getContentAsString(),
+        containsString(listDTO.getLibrarySet().getLibrarySetId()));
+    assertThat(
+        result.getResponse().getContentAsString(),
+        containsString(listDTO.getLibrarySet().getOwner()));
+    assertThat(
+        result.getResponse().getContentAsString(), containsString(listDTO.getCqlLibraryName()));
+    assertThat(
+        result.getResponse().getContentAsString(), containsString(listDTO.getVersion().toString()));
+    assertThat(result.getResponse().getContentAsString(), containsString(listDTO.getModel()));
+  }
+
+  @Test
   public void testGetSharedLibraries() throws Exception {
     String libraryId1 = "libraryId1";
     String libraryId2 = "libraryId2";
@@ -1839,5 +1876,35 @@ public class CqlLibraryControllerMvcTest {
 
     verify(librarySetService, times(1))
         .getRecentLibrariesByLibrarySetId(eq(List.of("set1", "set2")));
+  }
+
+  @Test
+  public void testUnshareLibraries() throws Exception {
+    AclSpecification aclSpecification2 = new AclSpecification();
+    aclSpecification2.setUserId("userId2");
+    aclSpecification2.setRoles(Set.of(RoleEnum.SHARED_WITH));
+
+    Map<String, List<AclSpecification>> libraryIdToAclSpecification = new HashMap<>();
+    libraryIdToAclSpecification.put("libraryId2", List.of(aclSpecification2));
+
+    doReturn(libraryIdToAclSpecification)
+        .when(cqlLibraryService)
+        .unshareLibraries(any(), anyString());
+
+    MvcResult result =
+        mockMvc
+            .perform(
+                put("/cql-libraries/unshare")
+                    .with(user(TEST_USER_ID))
+                    .with(csrf())
+                    .content("{\"libraryId1\": [\"userId1\"],\"libraryId2\": [\"userId1\"]}")
+                    .header(TEST_API_KEY_HEADER, TEST_API_KEY_HEADER_VALUE)
+                    .contentType(MediaType.APPLICATION_JSON_VALUE))
+            .andExpect(status().isOk())
+            .andReturn();
+    verify(cqlLibraryService, times(1)).unshareLibraries(any(), anyString());
+    assertEquals(
+        result.getResponse().getContentAsString(),
+        "{\"libraryId2\":[{\"userId\":\"userId2\",\"roles\":[\"SHARED_WITH\"]}]}");
   }
 }

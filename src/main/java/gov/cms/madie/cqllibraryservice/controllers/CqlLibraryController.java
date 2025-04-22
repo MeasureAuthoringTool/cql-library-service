@@ -82,6 +82,7 @@ public class CqlLibraryController {
           LibrarySet librarySet =
               librarySetRepository.findByLibrarySetId(library.getLibrarySetId()).orElse(null);
           library.setLibrarySet(librarySet);
+          library.setHasAssociatedLibraries(cqlLibraryService.hasAssociatedLibraries(library));
           return library;
         });
 
@@ -119,6 +120,22 @@ public class CqlLibraryController {
     return ResponseEntity.ok(cqlLibraryService.getLibrarySetBySetId(setId));
   }
 
+  @GetMapping("/byLibrarySetId")
+  public ResponseEntity<List<LibraryListDTO>> getLibrariesByLibrarySetId(
+      @RequestParam(name = "librarySetId") String librarySetId,
+      @RequestParam(defaultValue = "true") boolean sortByLatestVersion) {
+    List<LibraryListDTO> cqlLibraries =
+        cqlLibraryService.getLibrariesByLibrarySetId(librarySetId, sortByLatestVersion);
+    cqlLibraries.forEach(
+        library -> {
+          LibrarySet librarySet =
+              librarySetRepository.findByLibrarySetId(library.getLibrarySetId()).orElse(null);
+          library.setLibrarySet(librarySet);
+        });
+
+    return ResponseEntity.ok(cqlLibraries);
+  }
+
   @PostMapping
   public ResponseEntity<CqlLibrary> createCqlLibrary(
       @Validated(CqlLibrary.ValidationSequence.class) @RequestBody CqlLibrary cqlLibrary,
@@ -143,7 +160,7 @@ public class CqlLibraryController {
         "User [{}] successfully created new cql library with ID [{}]",
         username,
         cqlLibrary.getId());
-    actionLogService.logAction(cqlLibrary.getLibrarySetId(), ActionType.CREATED, username);
+    actionLogService.logAction(savedCqlLibrary.getId(), ActionType.CREATED, username, "actionLog");
 
     librarySetService.createLibrarySet(
         username, savedCqlLibrary.getId(), savedCqlLibrary.getLibrarySetId());
@@ -248,7 +265,6 @@ public class CqlLibraryController {
           ResponseEntity.ok()
               .contentType(MediaType.TEXT_PLAIN)
               .body(String.format("%s granted ownership to Library successfully.", userid));
-      actionLogService.logAction(id, ActionType.UPDATED, "apiKey");
     }
 
     return response;
@@ -334,5 +350,12 @@ public class CqlLibraryController {
 
     return ResponseEntity.ok(
         cqlLibraryService.shareLibraries(libraryUserIdMap, principal.getName()));
+  }
+
+  @PutMapping("/unshare")
+  public ResponseEntity<Map<String, List<AclSpecification>>> unshareLibraries(
+      @RequestBody Map<String, List<String>> libraryUserIdMap, Principal principal) {
+    return ResponseEntity.ok(
+        cqlLibraryService.unshareLibraries(libraryUserIdMap, principal.getName()));
   }
 }

@@ -15,7 +15,7 @@ public interface ActionLogRepository {
    * @param action action to push into the list of actions for the given targetId
    * @return true if upsert is successful, false otherwise
    */
-  boolean pushEvent(String targetId, Action action);
+  boolean pushEvent(String targetId, Action action, String collection);
 
   boolean pushEvent(String targetId, AccessControlAction action);
 }

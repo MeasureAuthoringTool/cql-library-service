@@ -15,6 +15,7 @@ import org.springframework.data.mongodb.core.query.Update;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -26,13 +27,13 @@ class ActionLogRepositoryImplTest {
 
   @Test
   void returnsFalseForNullTargetId() {
-    boolean output = actionLogRepository.pushEvent(null, Action.builder().build());
+    boolean output = actionLogRepository.pushEvent(null, Action.builder().build(), "actionLog");
     assertThat(output, is(false));
   }
 
   @Test
   void returnsFalseForEmptyTargetId() {
-    boolean output = actionLogRepository.pushEvent("", Action.builder().build());
+    boolean output = actionLogRepository.pushEvent("", Action.builder().build(), "actionLog");
     assertThat(output, is(false));
   }
 
@@ -44,17 +45,19 @@ class ActionLogRepositoryImplTest {
 
   @Test
   void returnsTrueForValidInputs() {
-    when(mongoTemplate.upsert(any(Query.class), any(Update.class), any(Class.class)))
+    when(mongoTemplate.upsert(any(Query.class), any(Update.class), anyString()))
         .thenReturn(UpdateResult.acknowledged(1, 1L, null));
-    boolean output = actionLogRepository.pushEvent("TARGET_ID", Action.builder().build());
+    boolean output =
+        actionLogRepository.pushEvent("TARGET_ID", Action.builder().build(), "librarySetActionLog");
     assertThat(output, is(true));
   }
 
   @Test
   void returnsFalseForValidInputsNoUpsert() {
-    when(mongoTemplate.upsert(any(Query.class), any(Update.class), any(Class.class)))
+    when(mongoTemplate.upsert(any(Query.class), any(Update.class), anyString()))
         .thenReturn(UpdateResult.acknowledged(1, 0L, null));
-    boolean output = actionLogRepository.pushEvent("TARGET_ID", Action.builder().build());
+    boolean output =
+        actionLogRepository.pushEvent("TARGET_ID", Action.builder().build(), "librarySetActionLog");
     assertThat(output, is(false));
   }
 
