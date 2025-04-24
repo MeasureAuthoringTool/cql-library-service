@@ -40,6 +40,10 @@ public class AppConfigService {
   }
 
   public boolean isFlagEnabled(MadieFeatureFlag flag) {
+    if (featureFlags == null) {
+      log.warn("Feature flags are not initialized. Returning false for flag: {}", flag);
+      return false;
+    }
     return featureFlags.getOrDefault(flag.toString(), false);
   }
 }

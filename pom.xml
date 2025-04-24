@@ -22,9 +22,9 @@
     <mvn.checkstyle.version>3.1.2</mvn.checkstyle.version>
     <mvnreports.version>3.2.2</mvnreports.version>
     <mvnsite.version>3.9.1</mvnsite.version>
+    <org.fhir.ucum.version>1.0.9</org.fhir.ucum.version>
     <springboot.version>2.5.7</springboot.version>
     <springfox.version>3.0.0</springfox.version>
-    <org.fhir.ucum.version>1.0.9</org.fhir.ucum.version>
   </properties>
 
   <dependencyManagement>
@@ -46,6 +46,11 @@
         <artifactId>junit-jupiter-engine</artifactId>
         <version>${junit-jupiter.version}</version>
       </dependency>
+      <dependency>
+        <groupId>org.fhir</groupId>
+        <artifactId>ucum</artifactId>
+        <version>${org.fhir.ucum.version}</version>
+      </dependency>
       <!-- END: needed to fix mismatched versions coming from above
             mongock -->
       <dependency>
@@ -54,11 +59,6 @@
         <version>5.1.7</version>
         <type>pom</type>
         <scope>import</scope>
-      </dependency>
-      <dependency>
-        <groupId>org.fhir</groupId>
-        <artifactId>ucum</artifactId>
-        <version>${org.fhir.ucum.version}</version>
       </dependency>
     </dependencies>
   </dependencyManagement>
