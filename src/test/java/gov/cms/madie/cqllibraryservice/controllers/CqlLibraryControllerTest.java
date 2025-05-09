@@ -112,7 +112,6 @@ class CqlLibraryControllerTest {
         cqlLibraryController.getCqlLibraries(principal, false, "test", 10, 0);
 
     verify(cqlLibraryService, times(1)).getLibrariesByCriteria(eq("test"), eq(false), any(), any());
-    verify(cqlLibraryService, times(1)).hasAssociatedLibraries(any());
     verifyNoMoreInteractions(cqlLibraryService);
 
     assertNotNull(response.getBody());
@@ -135,7 +134,6 @@ class CqlLibraryControllerTest {
         cqlLibraryController.getCqlLibraries(principal, true, "test", 10, 0);
 
     verify(cqlLibraryService, times(1)).getLibrariesByCriteria(eq("test"), eq(true), any(), any());
-    verify(cqlLibraryService, times(1)).hasAssociatedLibraries(any());
     verifyNoMoreInteractions(cqlLibraryService);
 
     assertNotNull(response.getBody());
@@ -597,8 +595,6 @@ class CqlLibraryControllerTest {
 
     verify(cqlLibraryService, times(1)).getLibrariesByLibrarySetId(eq("test"), eq(true));
     verifyNoMoreInteractions(cqlLibraryService);
-
-    verify(librarySetRepository, times(1)).findByLibrarySetId(eq("testCqlLibrarySetId"));
 
     assertNotNull(response.getBody());
     assertEquals("testCqlLibraryId", response.getBody().get(0).getId());
