@@ -24,7 +24,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.apache.commons.collections4.CollectionUtils;
 
@@ -243,14 +242,7 @@ public class CqlLibraryService {
     if (StringUtils.isBlank(librarySetId)) {
       throw new BadRequestObjectException("Please provide library set ID.");
     }
-
-    Sort sort;
-    if (sortByLatestVersion) {
-      sort = Sort.by(Sort.Direction.DESC, "version");
-    } else {
-      sort = Sort.by(Sort.Direction.ASC, "version");
-    }
-    return cqlLibraryRepository.findLibrariesByLibrarySetIdAndActive(librarySetId, true, sort);
+    return cqlLibraryRepository.findLibrariesByLibrarySetId(librarySetId, sortByLatestVersion);
   }
 
   public boolean hasAssociatedLibraries(LibraryListDTO library) {

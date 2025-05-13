@@ -28,7 +28,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
-import gov.cms.madie.models.library.LibrarySet;
 import org.apache.commons.lang3.StringUtils;
 import jakarta.servlet.http.HttpServletRequest;
 
@@ -77,15 +76,6 @@ public class CqlLibraryController {
     cqlLibraries =
         cqlLibraryService.getLibrariesByCriteria(
             searchCriteria, filterByCurrentUser, pageReq, username);
-    cqlLibraries.map(
-        library -> {
-          LibrarySet librarySet =
-              librarySetRepository.findByLibrarySetId(library.getLibrarySetId()).orElse(null);
-          library.setLibrarySet(librarySet);
-          library.setHasAssociatedLibraries(cqlLibraryService.hasAssociatedLibraries(library));
-          return library;
-        });
-
     return ResponseEntity.ok(cqlLibraries);
   }
 
@@ -126,13 +116,6 @@ public class CqlLibraryController {
       @RequestParam(defaultValue = "true") boolean sortByLatestVersion) {
     List<LibraryListDTO> cqlLibraries =
         cqlLibraryService.getLibrariesByLibrarySetId(librarySetId, sortByLatestVersion);
-    cqlLibraries.forEach(
-        library -> {
-          LibrarySet librarySet =
-              librarySetRepository.findByLibrarySetId(library.getLibrarySetId()).orElse(null);
-          library.setLibrarySet(librarySet);
-        });
-
     return ResponseEntity.ok(cqlLibraries);
   }
 
