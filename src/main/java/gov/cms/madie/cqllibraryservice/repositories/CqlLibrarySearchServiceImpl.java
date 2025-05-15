@@ -21,6 +21,7 @@ import java.util.Map;
 
 import static org.springframework.data.mongodb.core.aggregation.Aggregation.*;
 import static org.springframework.data.mongodb.core.aggregation.Aggregation.project;
+import static org.springframework.data.mongodb.core.aggregation.ConditionalOperators.Cond.when;
 
 @Repository
 public class CqlLibrarySearchServiceImpl implements CqlLibrarySearchService {
@@ -46,6 +47,8 @@ public class CqlLibrarySearchServiceImpl implements CqlLibrarySearchService {
   public Page<LibraryListDTO> searchLibrariesByCriteria(
       String userId, Pageable pageable, String searchCriteria, boolean filterByCurrentUser) {
     LookupOperation lookupOperation = getLookupOperation();
+    UnwindOperation unwindOperation = unwind("librarySet");
+
     Criteria libraryNameCriteria = new Criteria();
     if (StringUtils.isNotBlank(searchCriteria)) {
       libraryNameCriteria.and("cqlLibraryName").regex(searchCriteria, "i");
@@ -77,47 +80,35 @@ public class CqlLibrarySearchServiceImpl implements CqlLibrarySearchService {
             .as("queryResults");
     Aggregation pipeline = null;
     if (appConfigService.isFlagEnabled(MadieFeatureFlag.LIBRARY_SEARCH)) {
-      SortOperation sortOperation =
-          sort(
-              Sort.by(
-                  Sort.Direction.DESC, "version.major", "version.minor", "version.revisionNumber"));
-      GroupOperation groupOperation = group("librarySetId").push("$$ROOT").as("docs");
-      ProjectionOperation projectionOperation =
-          project()
-              .and(
-                  ConditionalOperators.when(
-                          ComparisonOperators.Gt.valueOf(
-                                  ArrayOperators.Size.lengthOfArray(
-                                      ArrayOperators.Filter.filter("docs")
-                                          .as("item")
-                                          .by(
-                                              ComparisonOperators.Eq.valueOf("item.draft")
-                                                  .equalToValue(true))))
-                              .greaterThanValue(0))
-                      .thenValueOf(
-                          ArrayOperators.ArrayElemAt.arrayOf(
-                                  ArrayOperators.Filter.filter("docs")
-                                      .as("item")
-                                      .by(
-                                          ComparisonOperators.Eq.valueOf("item.draft")
-                                              .equalToValue(true)))
-                              .elementAt(0))
-                      .otherwiseValueOf(ArrayOperators.ArrayElemAt.arrayOf("docs").elementAt(0)))
-              .as("selectedDoc");
+      SortOperation sortOperation = sort(Sort.by(Sort.Direction.DESC, "draft", "version"));
+      GroupOperation groupOperation =
+          group("librarySetId").count().as("count").first("$$ROOT").as("selectedDoc");
+
+      AddFieldsOperation addFieldsOperation =
+          addFields()
+              .addField("selectedDoc.hasAssociatedLibraries")
+              .withValueOf(
+                  when(ComparisonOperators.Gt.valueOf("count").greaterThanValue(1))
+                      .then(true)
+                      .otherwise(false))
+              .build();
 
       ReplaceRootOperation replaceRootOperation = replaceRoot("selectedDoc");
 
       pipeline =
           newAggregation(
               lookupOperation,
+              unwindOperation,
               matchOperation,
               sortOperation,
+              project(LibraryListDTO.class),
               groupOperation,
-              projectionOperation,
+              addFieldsOperation,
               replaceRootOperation,
+              sort(Sort.by(Sort.Direction.DESC, "lastModifiedAt")),
               facets);
     } else {
-      pipeline = newAggregation(lookupOperation, matchOperation, facets);
+      pipeline = newAggregation(lookupOperation, unwindOperation, matchOperation, facets);
     }
 
     List<FacetDTO> results =
@@ -139,5 +130,26 @@ public class CqlLibrarySearchServiceImpl implements CqlLibrarySearchService {
 
     return new PageImpl<>(
         results.get(0).getQueryResults(), pageable, results.get(0).getCount().size());
+  }
+
+  public List<LibraryListDTO> findLibrariesByLibrarySetId(
+      String librarySetId, boolean sortByLatestVersion) {
+    LookupOperation lookupOperation = getLookupOperation();
+    UnwindOperation unwindOperation = unwind("librarySet");
+
+    Criteria measureCriteria =
+        Criteria.where("active").is(true).and("librarySetId").is(librarySetId);
+
+    MatchOperation matchOperation = match(measureCriteria);
+    Aggregation aggregation;
+    if (sortByLatestVersion) {
+      SortOperation sortOperation = sort(Sort.by(Sort.Direction.DESC, "version"));
+      aggregation = newAggregation(lookupOperation, unwindOperation, matchOperation, sortOperation);
+    } else {
+      aggregation = newAggregation(lookupOperation, unwindOperation, matchOperation);
+    }
+    return mongoTemplate
+        .aggregate(aggregation, CqlLibrary.class, LibraryListDTO.class)
+        .getMappedResults();
   }
 }
