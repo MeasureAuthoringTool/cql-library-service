@@ -1,14 +1,18 @@
 package gov.cms.madie.cqllibraryservice.services;
 
+import gov.cms.madie.cqllibraryservice.dto.LibraryListDTO;
 import gov.cms.madie.cqllibraryservice.exceptions.*;
 import gov.cms.madie.cqllibraryservice.utils.AuthUtils;
 import gov.cms.madie.models.common.ActionType;
+import gov.cms.madie.models.common.ModelType;
 import gov.cms.madie.models.library.CqlLibrary;
 import gov.cms.madie.models.measure.ElmJson;
 import gov.cms.madie.models.common.Version;
 import gov.cms.madie.cqllibraryservice.repositories.CqlLibraryRepository;
 import java.time.Instant;
+import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -130,6 +134,9 @@ public class VersionService {
     if (!isDraftable(cqlLibrary)) {
       throw new ResourceNotDraftableException("CQL Library");
     }
+    if (isQiCore411AndHasQiCore600Library(cqlLibrary)) {
+      throw new QiCore411DraftOffQiCore600Exception();
+    }
 
     CqlLibrary clonedCqlLibrary = cqlLibrary.toBuilder().build(); // creates a shallow copy
     // Clear ID so that the unique GUID from MongoDB will be applied
@@ -198,6 +205,24 @@ public class VersionService {
       return true;
     }
     return !cqlLibraryRepository.existsByLibrarySetIdAndDraft(cqlLibrary.getLibrarySetId(), true);
+  }
+
+  boolean isQiCore411AndHasQiCore600Library(CqlLibrary cqlLibrary) {
+    boolean isQiCore411AndHasQiCore600Library = false;
+    if (ModelType.QI_CORE.getValue().equalsIgnoreCase(cqlLibrary.getModel())) {
+
+      List<LibraryListDTO> cqlLibraries =
+          cqlLibraryService.getLibrariesByLibrarySetId(cqlLibrary.getLibrarySetId(), true);
+      Optional<LibraryListDTO> libsWithSameSet =
+          cqlLibraries.stream()
+              .filter(
+                  (library) ->
+                      !library.getId().equals(cqlLibrary.getId())
+                          && library.getModel().equals(ModelType.QI_CORE_6_0_0.getValue()))
+              .findFirst();
+      isQiCore411AndHasQiCore600Library = libsWithSameSet.isPresent() ? true : false;
+    }
+    return isQiCore411AndHasQiCore600Library;
   }
 
   private String updateUsingStatement(String model, final String cql) {
