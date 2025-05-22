@@ -969,7 +969,7 @@ public class CqlLibraryControllerMvcTest {
                 .with(csrf())
                 .content(json)
                 .contentType(MediaType.APPLICATION_JSON_VALUE))
-        .andExpect(status().isConflict())
+        .andExpect(status().isBadRequest())
         .andExpect(content().contentType(MediaType.APPLICATION_JSON_VALUE));
     verify(versionService, times(1))
         .createDraft(
