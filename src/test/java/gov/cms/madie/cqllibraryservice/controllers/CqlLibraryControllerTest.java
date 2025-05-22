@@ -453,7 +453,9 @@ class CqlLibraryControllerTest {
   @Test
   public void testCreateDraftReturnsException() {
     when(versionService.createDraft(anyString(), anyString(), anyString(), anyString()))
-        .thenThrow(new ResourceNotDraftableException("CqlLibrary"));
+        .thenThrow(
+            new ResourceNotDraftableException(
+                "CqlLibrary", "A draft already exists for the CQL Library Group."));
     when(principal.getName()).thenReturn("test.user");
     assertThrows(
         ResourceNotDraftableException.class,

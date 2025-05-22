@@ -959,7 +959,9 @@ public class CqlLibraryControllerMvcTest {
                 .build());
 
     when(versionService.createDraft(anyString(), anyString(), anyString(), anyString()))
-        .thenThrow(new ResourceNotDraftableException("CQL Library"));
+        .thenThrow(
+            new ResourceNotDraftableException(
+                "CQL Library", "A draft already exists for the CQL Library Group."));
     mockMvc
         .perform(
             post("/cql-libraries/draft/Library1_ID")

@@ -131,11 +131,21 @@ public class VersionService {
 
     AuthUtils.checkAccessPermissions(cqlLibrary, username);
 
+    if (cqlLibrary.isDraft()) {
+      throw new ResourceNotDraftableException(
+          "CQL Library", "Only versioned library can be drafted.");
+    }
     if (!isDraftable(cqlLibrary)) {
-      throw new ResourceNotDraftableException("CQL Library");
+      throw new ResourceNotDraftableException(
+          "CQL Library", "A draft already exists for the CQL Library Group.");
     }
     if (isQiCore411AndHasQiCore600Library(cqlLibrary)) {
-      throw new QiCore411DraftOffQiCore600Exception();
+      throw new ResourceNotDraftableException(
+          "CQL Library", "You cannot draft a 4.1.1 library when a 6.0.0 version is available.");
+    }
+    if (!isValidQiCore600(cqlLibrary, model)) {
+      throw new ResourceNotDraftableException(
+          "CQL Library", "You cannot draft a 6.0.0 library to a 4.1.1 library.");
     }
 
     CqlLibrary clonedCqlLibrary = cqlLibrary.toBuilder().build(); // creates a shallow copy
@@ -223,6 +233,15 @@ public class VersionService {
       isQiCore411AndHasQiCore600Library = libsWithSameSet.isPresent() ? true : false;
     }
     return isQiCore411AndHasQiCore600Library;
+  }
+
+  /** Returns false if a QI-Core 6.0.0 versioned library is drafted with model version to 4.1.1 */
+  boolean isValidQiCore600(CqlLibrary cqlLibrary, String model) {
+    if (ModelType.QI_CORE_6_0_0.getValue().equals(cqlLibrary.getModel())
+        && ModelType.QI_CORE.getValue().equals(model)) {
+      return false;
+    }
+    return true;
   }
 
   private String updateUsingStatement(String model, final String cql) {

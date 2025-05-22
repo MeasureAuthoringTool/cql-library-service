@@ -88,8 +88,7 @@ public class ErrorHandlingControllerAdvice {
     HarpIdMismatchException.class,
     GeneralConflictException.class,
     ResourceNotDraftableException.class,
-    InvalidResourceStateException.class,
-    QiCore411DraftOffQiCore600Exception.class
+    InvalidResourceStateException.class
   })
   @ResponseStatus(HttpStatus.CONFLICT)
   @ResponseBody
