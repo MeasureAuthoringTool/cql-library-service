@@ -139,11 +139,11 @@ public class VersionService {
       throw new ResourceNotDraftableException(
           "CQL Library", "A draft already exists for the CQL Library Group.");
     }
-    if (isQiCore411AndHasQiCore600Library(cqlLibrary)) {
+    if (isQiCore411AndHasOtherQiCoreLibrary(cqlLibrary)) {
       throw new ResourceNotDraftableException(
           "CQL Library", "You cannot draft a 4.1.1 library when a 6.0.0 version is available.");
     }
-    if (!isValidQiCore600(cqlLibrary, model)) {
+    if (!isValidDraftableVersion(cqlLibrary, model)) {
       throw new ResourceNotDraftableException(
           "CQL Library", "You cannot draft a 6.0.0 library to a 4.1.1 library.");
     }
@@ -217,8 +217,8 @@ public class VersionService {
     return !cqlLibraryRepository.existsByLibrarySetIdAndDraft(cqlLibrary.getLibrarySetId(), true);
   }
 
-  boolean isQiCore411AndHasQiCore600Library(CqlLibrary cqlLibrary) {
-    boolean isQiCore411AndHasQiCore600Library = false;
+  boolean isQiCore411AndHasOtherQiCoreLibrary(CqlLibrary cqlLibrary) {
+    boolean isQiCore411AndHasOtherQiCoreLibrary = false;
     if (ModelType.QI_CORE.getValue().equalsIgnoreCase(cqlLibrary.getModel())) {
 
       List<LibraryListDTO> cqlLibraries =
@@ -230,13 +230,13 @@ public class VersionService {
                       !library.getId().equals(cqlLibrary.getId())
                           && library.getModel().equals(ModelType.QI_CORE_6_0_0.getValue()))
               .findFirst();
-      isQiCore411AndHasQiCore600Library = libsWithSameSet.isPresent() ? true : false;
+      isQiCore411AndHasOtherQiCoreLibrary = libsWithSameSet.isPresent() ? true : false;
     }
-    return isQiCore411AndHasQiCore600Library;
+    return isQiCore411AndHasOtherQiCoreLibrary;
   }
 
   /** Returns false if a QI-Core 6.0.0 versioned library is drafted with model version to 4.1.1 */
-  boolean isValidQiCore600(CqlLibrary cqlLibrary, String model) {
+  boolean isValidDraftableVersion(CqlLibrary cqlLibrary, String model) {
     boolean valid = true;
     if (ModelType.QI_CORE_6_0_0.getValue().equals(cqlLibrary.getModel())
         && ModelType.QI_CORE.getValue().equals(model)) {

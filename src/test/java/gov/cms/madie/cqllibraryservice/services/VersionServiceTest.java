@@ -610,15 +610,15 @@ class VersionServiceTest {
   }
 
   @Test
-  void testIsQiCore411AndHasQiCore600LibraryReturnsFalse() {
+  void testIsQiCore411AndHasOtherQiCoreLibraryReturnsFalse() {
     CqlLibrary existingCqlLibrary =
         CqlLibrary.builder().model(ModelType.QI_CORE_6_0_0.getValue()).build();
-    boolean result = versionService.isQiCore411AndHasQiCore600Library(existingCqlLibrary);
+    boolean result = versionService.isQiCore411AndHasOtherQiCoreLibrary(existingCqlLibrary);
     assertFalse(result);
   }
 
   @Test
-  void testIsQiCore411AndHasQiCore600LibraryReturnsFalseNoQiCore600() {
+  void testIsQiCore411AndHasOtherQiCoreLibraryReturnsFalseNoOtherQiCore() {
     CqlLibrary existingCqlLibrary =
         CqlLibrary.builder()
             .id("testCqlLibraryId")
@@ -629,12 +629,12 @@ class VersionServiceTest {
         LibraryListDTO.builder().id("testCqlLibraryId").model(ModelType.QI_CORE.getValue()).build();
     when(cqlLibraryService.getLibrariesByLibrarySetId(anyString(), anyBoolean()))
         .thenReturn((List.of(libraryDto)));
-    boolean result = versionService.isQiCore411AndHasQiCore600Library(existingCqlLibrary);
+    boolean result = versionService.isQiCore411AndHasOtherQiCoreLibrary(existingCqlLibrary);
     assertFalse(result);
   }
 
   @Test
-  void testIsQiCore411AndHasQiCore600LibraryReturnsFalseQdm() {
+  void testIsQiCore411AndHasOtherQiCoreLibraryReturnsFalseQdm() {
     CqlLibrary existingCqlLibrary =
         CqlLibrary.builder()
             .id("testCqlLibraryId")
@@ -648,12 +648,12 @@ class VersionServiceTest {
             .build();
     when(cqlLibraryService.getLibrariesByLibrarySetId(anyString(), anyBoolean()))
         .thenReturn((List.of(libraryDto)));
-    boolean result = versionService.isQiCore411AndHasQiCore600Library(existingCqlLibrary);
+    boolean result = versionService.isQiCore411AndHasOtherQiCoreLibrary(existingCqlLibrary);
     assertFalse(result);
   }
 
   @Test
-  void testIsQiCore411AndHasQiCore600LibraryReturnsTrue() {
+  void testIsQiCore411AndHasOtherQiCoreLibraryReturnsTrue() {
     CqlLibrary existingCqlLibrary =
         CqlLibrary.builder()
             .id("testCqlLibraryId")
@@ -667,7 +667,7 @@ class VersionServiceTest {
             .build();
     when(cqlLibraryService.getLibrariesByLibrarySetId(anyString(), anyBoolean()))
         .thenReturn((List.of(libraryDto)));
-    boolean result = versionService.isQiCore411AndHasQiCore600Library(existingCqlLibrary);
+    boolean result = versionService.isQiCore411AndHasOtherQiCoreLibrary(existingCqlLibrary);
     assertTrue(result);
   }
 
