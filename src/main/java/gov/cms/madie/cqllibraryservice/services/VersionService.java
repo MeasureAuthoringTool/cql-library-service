@@ -237,11 +237,12 @@ public class VersionService {
 
   /** Returns false if a QI-Core 6.0.0 versioned library is drafted with model version to 4.1.1 */
   boolean isValidQiCore600(CqlLibrary cqlLibrary, String model) {
+    boolean valid = true;
     if (ModelType.QI_CORE_6_0_0.getValue().equals(cqlLibrary.getModel())
         && ModelType.QI_CORE.getValue().equals(model)) {
-      return false;
+      valid = false;
     }
-    return true;
+    return valid;
   }
 
   private String updateUsingStatement(String model, final String cql) {
