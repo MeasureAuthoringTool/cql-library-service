@@ -959,7 +959,9 @@ public class CqlLibraryControllerMvcTest {
                 .build());
 
     when(versionService.createDraft(anyString(), anyString(), anyString(), anyString()))
-        .thenThrow(new ResourceNotDraftableException("CQL Library"));
+        .thenThrow(
+            new ResourceNotDraftableException(
+                "CQL Library", "A draft already exists for the CQL Library Group."));
     mockMvc
         .perform(
             post("/cql-libraries/draft/Library1_ID")
@@ -967,7 +969,7 @@ public class CqlLibraryControllerMvcTest {
                 .with(csrf())
                 .content(json)
                 .contentType(MediaType.APPLICATION_JSON_VALUE))
-        .andExpect(status().isConflict())
+        .andExpect(status().isBadRequest())
         .andExpect(content().contentType(MediaType.APPLICATION_JSON_VALUE));
     verify(versionService, times(1))
         .createDraft(
