@@ -109,7 +109,7 @@ class CqlLibraryControllerTest {
     when(principal.getName()).thenReturn("test.user");
 
     ResponseEntity<Page<LibraryListDTO>> response =
-        cqlLibraryController.getCqlLibraries(principal, false, "test", 10, 0);
+        cqlLibraryController.getCqlLibraries(principal, false, "test", "10", 0);
 
     verify(cqlLibraryService, times(1)).getLibrariesByCriteria(eq("test"), eq(false), any(), any());
     verifyNoMoreInteractions(cqlLibraryService);
@@ -131,7 +131,7 @@ class CqlLibraryControllerTest {
     when(principal.getName()).thenReturn("test.user");
 
     ResponseEntity<Page<LibraryListDTO>> response =
-        cqlLibraryController.getCqlLibraries(principal, true, "test", 10, 0);
+        cqlLibraryController.getCqlLibraries(principal, true, "test", "10", 0);
 
     verify(cqlLibraryService, times(1)).getLibrariesByCriteria(eq("test"), eq(true), any(), any());
     verifyNoMoreInteractions(cqlLibraryService);

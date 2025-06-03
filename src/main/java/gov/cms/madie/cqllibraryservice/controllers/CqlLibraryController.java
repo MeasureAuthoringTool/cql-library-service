@@ -68,11 +68,17 @@ public class CqlLibraryController {
           boolean filterByCurrentUser,
       @RequestParam(required = false, defaultValue = "", name = "searchCriteria")
           String searchCriteria,
-      @RequestParam(required = false, defaultValue = "10", name = "limit") int limit,
+      @RequestParam(required = false, defaultValue = "10", name = "limit") String limit,
       @RequestParam(required = false, defaultValue = "0", name = "page") int page) {
     final String username = principal.getName();
     Page<LibraryListDTO> cqlLibraries;
-    final Pageable pageReq = PageRequest.of(page, limit, Sort.by("lastModifiedAt").descending());
+    final Pageable pageReq;
+    if ("All".equalsIgnoreCase(limit)) {
+      pageReq = Pageable.unpaged();
+    } else {
+      pageReq =
+          PageRequest.of(page, Integer.parseInt(limit), Sort.by("lastModifiedAt").descending());
+    }
     cqlLibraries =
         cqlLibraryService.getLibrariesByCriteria(
             searchCriteria, filterByCurrentUser, pageReq, username);
