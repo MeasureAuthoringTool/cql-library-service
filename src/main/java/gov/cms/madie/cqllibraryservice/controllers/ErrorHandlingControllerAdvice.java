@@ -87,14 +87,19 @@ public class ErrorHandlingControllerAdvice {
   @ExceptionHandler({
     HarpIdMismatchException.class,
     GeneralConflictException.class,
-    ResourceNotDraftableException.class,
-    InvalidResourceStateException.class,
-    QiCore411DraftOffQiCore600Exception.class
+    InvalidResourceStateException.class
   })
   @ResponseStatus(HttpStatus.CONFLICT)
   @ResponseBody
-  Map<String, Object> onResourceNotDraftableException(WebRequest request) {
+  Map<String, Object> onGeneralConflictException(WebRequest request) {
     return getErrorAttributes(request, HttpStatus.CONFLICT);
+  }
+
+  @ExceptionHandler(ResourceNotDraftableException.class)
+  @ResponseStatus(HttpStatus.BAD_REQUEST)
+  @ResponseBody
+  Map<String, Object> onResourceNotDraftableException(WebRequest request) {
+    return getErrorAttributes(request, HttpStatus.BAD_REQUEST);
   }
 
   @ExceptionHandler(InvalidIdException.class)

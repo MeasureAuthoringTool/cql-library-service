@@ -109,7 +109,96 @@ class CqlLibraryControllerTest {
     when(principal.getName()).thenReturn("test.user");
 
     ResponseEntity<Page<LibraryListDTO>> response =
-        cqlLibraryController.getCqlLibraries(principal, false, "test", "10", 0);
+        cqlLibraryController.getCqlLibraries(principal, false, "test", 10, 0, "");
+
+    verify(cqlLibraryService, times(1)).getLibrariesByCriteria(eq("test"), eq(false), any(), any());
+    verifyNoMoreInteractions(cqlLibraryService);
+
+    assertNotNull(response.getBody());
+    assertFalse(response.getBody().isEmpty());
+    assertEquals("testCqlLibraryId", response.getBody().getContent().get(0).getId());
+  }
+
+  @Test
+  void getCqlLibrariesWithBadSortInfo() {
+    List<LibraryListDTO> cqlLibraries = List.of(libraryList);
+    Page<LibraryListDTO> pageResult = new PageImpl<>(cqlLibraries);
+
+    when(cqlLibraryService.getLibrariesByCriteria(eq("test"), eq(false), any(), any()))
+        .thenReturn(pageResult);
+
+    Principal principal = mock(Principal.class);
+    when(principal.getName()).thenReturn("test.user");
+
+    ResponseEntity<Page<LibraryListDTO>> response =
+        cqlLibraryController.getCqlLibraries(
+            principal, false, "test", 10, 0, "badsortinfo,worsesortinfo,asdf");
+
+    verify(cqlLibraryService, times(1)).getLibrariesByCriteria(eq("test"), eq(false), any(), any());
+    verifyNoMoreInteractions(cqlLibraryService);
+
+    assertNotNull(response.getBody());
+    assertFalse(response.getBody().isEmpty());
+    assertEquals("testCqlLibraryId", response.getBody().getContent().get(0).getId());
+  }
+
+  @Test
+  void getCqlLibrariesWithGoodAscendingSortInfo() {
+    List<LibraryListDTO> cqlLibraries = List.of(libraryList);
+    Page<LibraryListDTO> pageResult = new PageImpl<>(cqlLibraries);
+
+    when(cqlLibraryService.getLibrariesByCriteria(eq("test"), eq(false), any(), any()))
+        .thenReturn(pageResult);
+
+    Principal principal = mock(Principal.class);
+    when(principal.getName()).thenReturn("test.user");
+
+    ResponseEntity<Page<LibraryListDTO>> response =
+        cqlLibraryController.getCqlLibraries(principal, false, "test", 10, 0, "draft,false");
+
+    verify(cqlLibraryService, times(1)).getLibrariesByCriteria(eq("test"), eq(false), any(), any());
+    verifyNoMoreInteractions(cqlLibraryService);
+
+    assertNotNull(response.getBody());
+    assertFalse(response.getBody().isEmpty());
+    assertEquals("testCqlLibraryId", response.getBody().getContent().get(0).getId());
+  }
+
+  @Test
+  void getCqlLibrariesWithGoodDescendingSortInfo() {
+    List<LibraryListDTO> cqlLibraries = List.of(libraryList);
+    Page<LibraryListDTO> pageResult = new PageImpl<>(cqlLibraries);
+
+    when(cqlLibraryService.getLibrariesByCriteria(eq("test"), eq(false), any(), any()))
+        .thenReturn(pageResult);
+
+    Principal principal = mock(Principal.class);
+    when(principal.getName()).thenReturn("test.user");
+
+    ResponseEntity<Page<LibraryListDTO>> response =
+        cqlLibraryController.getCqlLibraries(principal, false, "test", 10, 0, "draft,true");
+
+    verify(cqlLibraryService, times(1)).getLibrariesByCriteria(eq("test"), eq(false), any(), any());
+    verifyNoMoreInteractions(cqlLibraryService);
+
+    assertNotNull(response.getBody());
+    assertFalse(response.getBody().isEmpty());
+    assertEquals("testCqlLibraryId", response.getBody().getContent().get(0).getId());
+  }
+
+  @Test
+  void getCqlLibrariesWithNullSortInfo() {
+    List<LibraryListDTO> cqlLibraries = List.of(libraryList);
+    Page<LibraryListDTO> pageResult = new PageImpl<>(cqlLibraries);
+
+    when(cqlLibraryService.getLibrariesByCriteria(eq("test"), eq(false), any(), any()))
+        .thenReturn(pageResult);
+
+    Principal principal = mock(Principal.class);
+    when(principal.getName()).thenReturn("test.user");
+
+    ResponseEntity<Page<LibraryListDTO>> response =
+        cqlLibraryController.getCqlLibraries(principal, false, "test", 10, 0, null);
 
     verify(cqlLibraryService, times(1)).getLibrariesByCriteria(eq("test"), eq(false), any(), any());
     verifyNoMoreInteractions(cqlLibraryService);
@@ -131,7 +220,7 @@ class CqlLibraryControllerTest {
     when(principal.getName()).thenReturn("test.user");
 
     ResponseEntity<Page<LibraryListDTO>> response =
-        cqlLibraryController.getCqlLibraries(principal, true, "test", "10", 0);
+        cqlLibraryController.getCqlLibraries(principal, true, "test", 10, 0, "");
 
     verify(cqlLibraryService, times(1)).getLibrariesByCriteria(eq("test"), eq(true), any(), any());
     verifyNoMoreInteractions(cqlLibraryService);
@@ -453,7 +542,9 @@ class CqlLibraryControllerTest {
   @Test
   public void testCreateDraftReturnsException() {
     when(versionService.createDraft(anyString(), anyString(), anyString(), anyString()))
-        .thenThrow(new ResourceNotDraftableException("CqlLibrary"));
+        .thenThrow(
+            new ResourceNotDraftableException(
+                "CqlLibrary", "A draft already exists for the CQL Library Group."));
     when(principal.getName()).thenReturn("test.user");
     assertThrows(
         ResourceNotDraftableException.class,
