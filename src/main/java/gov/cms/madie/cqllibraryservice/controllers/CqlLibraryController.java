@@ -68,12 +68,13 @@ public class CqlLibraryController {
           boolean filterByCurrentUser,
       @RequestParam(required = false, defaultValue = "", name = "searchCriteria")
           String searchCriteria,
-      @RequestParam(required = false, defaultValue = "10", name = "limit") int limit,
+      @RequestParam(required = false, defaultValue = "10", name = "limit") String limit,
       @RequestParam(required = false, defaultValue = "0", name = "page") int page,
       @RequestParam(required = false, name = "sortInfo") String sortInfo) {
     final String username = principal.getName();
     Pageable pageReq;
     // if sortInfo provided
+    int pageSize = limit.equals("All") ? Integer.MAX_VALUE : Integer.parseInt(limit);
     if (sortInfo != null && !sortInfo.trim().isEmpty()) {
       String[] sortParts = sortInfo.split(",");
       // sort parts correct length
@@ -82,15 +83,15 @@ public class CqlLibraryController {
         boolean desc = Boolean.parseBoolean(sortParts[1]);
         pageReq =
             PageRequest.of(
-                page, limit, Sort.by(desc ? Sort.Order.desc(sortBy) : Sort.Order.asc(sortBy)));
+                page, pageSize, Sort.by(desc ? Sort.Order.desc(sortBy) : Sort.Order.asc(sortBy)));
       } else {
         // sortParts wrong length
         // in case we provide bad info we just do last modified
-        pageReq = PageRequest.of(page, limit, Sort.by(Sort.Order.desc("lastModifiedAt")));
+        pageReq = PageRequest.of(page, pageSize, Sort.by(Sort.Order.desc("lastModifiedAt")));
       }
       // default behavior no sort.
     } else {
-      pageReq = PageRequest.of(page, limit, Sort.by(Sort.Order.desc("lastModifiedAt")));
+      pageReq = PageRequest.of(page, pageSize, Sort.by(Sort.Order.desc("lastModifiedAt")));
     }
     Page<LibraryListDTO> cqlLibraries =
         cqlLibraryService.getLibrariesByCriteria(
