@@ -69,19 +69,13 @@ public class CqlLibrarySearchServiceImpl implements CqlLibrarySearchService {
     }
     MatchOperation matchOperation =
         match(new Criteria().andOperator(libraryNameCriteria, userCriteria));
-    // Handle unpaged case
-    Pageable pageableToUse = pageable.isPaged() ? pageable : Pageable.ofSize(Integer.MAX_VALUE);
-    Sort sortToUse =
-        pageableToUse.getSort().isSorted()
-            ? pageableToUse.getSort()
-            : Sort.by(Sort.Direction.DESC, "defaultField");
     FacetOperation facets =
         facet(sortByCount("id"))
             .as("count")
             .and(
-                sort(sortToUse),
-                skip(pageableToUse.getOffset()),
-                limit(pageableToUse.getPageSize()),
+                sort(pageable.getSort()),
+                skip(pageable.getOffset()),
+                limit(pageable.getPageSize()),
                 project(LibraryListDTO.class))
             .as("queryResults");
     Aggregation pipeline = null;
@@ -131,11 +125,11 @@ public class CqlLibrarySearchServiceImpl implements CqlLibrarySearchService {
           }
         }
       }
-      return new PageImpl<>(results.get(0).getQueryResults(), pageableToUse, totalSize);
+      return new PageImpl<>(results.get(0).getQueryResults(), pageable, totalSize);
     }
 
     return new PageImpl<>(
-        results.get(0).getQueryResults(), pageableToUse, results.get(0).getCount().size());
+        results.get(0).getQueryResults(), pageable, results.get(0).getCount().size());
   }
 
   public List<LibraryListDTO> findLibrariesByLibrarySetId(
