@@ -166,10 +166,9 @@ public class VersionService {
                   ".*?[\n\r]",
                   "library " + cqlLibraryName + " version '" + cqlLibrary.getVersion() + "'\n"));
     }
-    if (!model.equals(cqlLibrary.getModel())) {
-      clonedCqlLibrary.setModel(model);
-      clonedCqlLibrary.setCql(updateUsingStatement(model, cqlLibrary.getCql()));
-    }
+
+    clonedCqlLibrary.setModel(model);
+    clonedCqlLibrary.setCql(updateUsingStatement(model, cqlLibrary.getCql()));
 
     var savedCqlLibrary = cqlLibraryRepository.save(clonedCqlLibrary);
 

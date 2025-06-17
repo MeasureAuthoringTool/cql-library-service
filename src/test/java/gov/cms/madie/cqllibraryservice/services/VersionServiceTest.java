@@ -373,7 +373,8 @@ class VersionServiceTest {
             .model(ModelType.QI_CORE.getValue())
             .createdBy("testUser")
             .draft(false)
-            .cql("library testCql version '1.0.000'")
+            .cql(
+                "library testCql version '1.0.000'\nusing QICore version '4.1.1'\nusing FHIR version '4.0.1'")
             .librarySetId("testLibrarySetId")
             .version(Version.parse("1.0.000"))
             .librarySet(
@@ -406,6 +407,7 @@ class VersionServiceTest {
     // version and groupId should not change
     assertThat(savedValue.getVersion(), is(equalTo(existingCqlLibrary.getVersion())));
     assertThat(savedValue.getLibrarySetId(), is(equalTo(existingCqlLibrary.getLibrarySetId())));
+    assertTrue(savedValue.getCql().contains("using FHIR version '4.0.1'"));
   }
 
   @Test
@@ -742,7 +744,7 @@ class VersionServiceTest {
   }
 
   @Test
-  void testCreateDraftrQiCore600Successfully() {
+  void testCreateDraftQiCore600Successfully() {
     CqlLibrary existingCqlLibrary =
         CqlLibrary.builder()
             .id("testCqlLibraryId")
