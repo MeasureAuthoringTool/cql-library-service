@@ -373,7 +373,8 @@ class VersionServiceTest {
             .model(ModelType.QI_CORE.getValue())
             .createdBy("testUser")
             .draft(false)
-            .cql("library testCql version '1.0.000'")
+            .cql(
+                "library testCql version '1.0.000'\nusing QICore version '4.1.1'\nusing FHIR version '4.0.1'")
             .librarySetId("testLibrarySetId")
             .version(Version.parse("1.0.000"))
             .librarySet(
@@ -406,6 +407,7 @@ class VersionServiceTest {
     // version and groupId should not change
     assertThat(savedValue.getVersion(), is(equalTo(existingCqlLibrary.getVersion())));
     assertThat(savedValue.getLibrarySetId(), is(equalTo(existingCqlLibrary.getLibrarySetId())));
+    assertTrue(savedValue.getCql().contains("using FHIR version '4.0.1'"));
   }
 
   @Test
@@ -672,6 +674,52 @@ class VersionServiceTest {
   }
 
   @Test
+  void testIsQiCore411AndHasOtherQiCoreLibraryReturnsTrueForQiCore7() {
+    CqlLibrary existingCqlLibrary =
+        CqlLibrary.builder()
+            .id("testCqlLibraryId")
+            .model(ModelType.QI_CORE.getValue())
+            .librarySetId("testLibrarySetId")
+            .build();
+    LibraryListDTO libraryDto =
+        LibraryListDTO.builder()
+            .id("testCqlLibraryId2")
+            .model(ModelType.QI_CORE_7_0_0.getValue())
+            .build();
+    when(cqlLibraryService.getLibrariesByLibrarySetId(anyString(), anyBoolean()))
+        .thenReturn((List.of(libraryDto)));
+    boolean result = versionService.isQiCore411AndHasOtherQiCoreLibrary(existingCqlLibrary);
+    assertTrue(result);
+  }
+
+  @Test
+  void testIsValidDraftableVersionReturnsFalseWhenDraftedToQiCore6() {
+    CqlLibrary existingCqlLibrary =
+        CqlLibrary.builder()
+            .id("testCqlLibraryId")
+            .model(ModelType.QI_CORE_7_0_0.getValue())
+            .librarySetId("testLibrarySetId")
+            .build();
+    boolean result =
+        versionService.isValidDraftableVersion(
+            existingCqlLibrary, ModelType.QI_CORE_6_0_0.getValue());
+    assertFalse(result);
+  }
+
+  @Test
+  void testIsValidDraftableVersionReturnsFalseWhenDraftedToQiCore411() {
+    CqlLibrary existingCqlLibrary =
+        CqlLibrary.builder()
+            .id("testCqlLibraryId")
+            .model(ModelType.QI_CORE_7_0_0.getValue())
+            .librarySetId("testLibrarySetId")
+            .build();
+    boolean result =
+        versionService.isValidDraftableVersion(existingCqlLibrary, ModelType.QI_CORE.getValue());
+    assertFalse(result);
+  }
+
+  @Test
   void testCreateDraftThrowsExceptionForQiCore411DraftOffQiCore600() {
     CqlLibrary existingCqlLibrary =
         CqlLibrary.builder()
@@ -742,7 +790,7 @@ class VersionServiceTest {
   }
 
   @Test
-  void testCreateDraftrQiCore600Successfully() {
+  void testCreateDraftQiCore600Successfully() {
     CqlLibrary existingCqlLibrary =
         CqlLibrary.builder()
             .id("testCqlLibraryId")
