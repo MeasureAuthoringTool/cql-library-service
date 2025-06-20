@@ -674,6 +674,52 @@ class VersionServiceTest {
   }
 
   @Test
+  void testIsQiCore411AndHasOtherQiCoreLibraryReturnsTrueForQiCore7() {
+    CqlLibrary existingCqlLibrary =
+        CqlLibrary.builder()
+            .id("testCqlLibraryId")
+            .model(ModelType.QI_CORE.getValue())
+            .librarySetId("testLibrarySetId")
+            .build();
+    LibraryListDTO libraryDto =
+        LibraryListDTO.builder()
+            .id("testCqlLibraryId2")
+            .model(ModelType.QI_CORE_7_0_0.getValue())
+            .build();
+    when(cqlLibraryService.getLibrariesByLibrarySetId(anyString(), anyBoolean()))
+        .thenReturn((List.of(libraryDto)));
+    boolean result = versionService.isQiCore411AndHasOtherQiCoreLibrary(existingCqlLibrary);
+    assertTrue(result);
+  }
+
+  @Test
+  void testIsValidDraftableVersionReturnsFalseWhenDraftedToQiCore6() {
+    CqlLibrary existingCqlLibrary =
+        CqlLibrary.builder()
+            .id("testCqlLibraryId")
+            .model(ModelType.QI_CORE_7_0_0.getValue())
+            .librarySetId("testLibrarySetId")
+            .build();
+    boolean result =
+        versionService.isValidDraftableVersion(
+            existingCqlLibrary, ModelType.QI_CORE_6_0_0.getValue());
+    assertFalse(result);
+  }
+
+  @Test
+  void testIsValidDraftableVersionReturnsFalseWhenDraftedToQiCore411() {
+    CqlLibrary existingCqlLibrary =
+        CqlLibrary.builder()
+            .id("testCqlLibraryId")
+            .model(ModelType.QI_CORE_7_0_0.getValue())
+            .librarySetId("testLibrarySetId")
+            .build();
+    boolean result =
+        versionService.isValidDraftableVersion(existingCqlLibrary, ModelType.QI_CORE.getValue());
+    assertFalse(result);
+  }
+
+  @Test
   void testCreateDraftThrowsExceptionForQiCore411DraftOffQiCore600() {
     CqlLibrary existingCqlLibrary =
         CqlLibrary.builder()

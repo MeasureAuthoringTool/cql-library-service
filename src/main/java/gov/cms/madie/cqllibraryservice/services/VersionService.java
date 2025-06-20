@@ -141,11 +141,11 @@ public class VersionService {
     }
     if (isQiCore411AndHasOtherQiCoreLibrary(cqlLibrary)) {
       throw new ResourceNotDraftableException(
-          "CQL Library", "You cannot draft a 4.1.1 library when a 6.0.0 version is available.");
+          "CQL Library", "You cannot draft a 4.1.1 library when a newer version is available.");
     }
     if (!isValidDraftableVersion(cqlLibrary, model)) {
       throw new ResourceNotDraftableException(
-          "CQL Library", "You cannot draft a 6.0.0 library to a 4.1.1 library.");
+          "CQL Library", "You cannot draft a 6.0.0 or 7.0.0 library to an older version library.");
     }
 
     CqlLibrary clonedCqlLibrary = cqlLibrary.toBuilder().build(); // creates a shallow copy
@@ -227,18 +227,26 @@ public class VersionService {
               .filter(
                   (library) ->
                       !library.getId().equals(cqlLibrary.getId())
-                          && library.getModel().equals(ModelType.QI_CORE_6_0_0.getValue()))
+                          && (library.getModel().equals(ModelType.QI_CORE_6_0_0.getValue())
+                              || library.getModel().equals(ModelType.QI_CORE_7_0_0.getValue())))
               .findFirst();
       isQiCore411AndHasOtherQiCoreLibrary = libsWithSameSet.isPresent() ? true : false;
     }
     return isQiCore411AndHasOtherQiCoreLibrary;
   }
 
-  /** Returns false if a QI-Core 6.0.0 versioned library is drafted with model version to 4.1.1 */
+  /**
+   * Returns false if a QI-Core 6.0.0 or QI-Core 7.0.0 versioned library is drafted with an older
+   * model version
+   */
   boolean isValidDraftableVersion(CqlLibrary cqlLibrary, String model) {
     boolean valid = true;
     if (ModelType.QI_CORE_6_0_0.getValue().equals(cqlLibrary.getModel())
         && ModelType.QI_CORE.getValue().equals(model)) {
+      valid = false;
+    } else if (ModelType.QI_CORE_7_0_0.getValue().equals(cqlLibrary.getModel())
+        && (ModelType.QI_CORE_6_0_0.getValue().equals(model)
+            || ModelType.QI_CORE.getValue().equals(model))) {
       valid = false;
     }
     return valid;
