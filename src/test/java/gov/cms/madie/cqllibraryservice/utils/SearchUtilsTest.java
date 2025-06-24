@@ -10,7 +10,7 @@ import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 
 class SearchUtilsTest {
     @Test
-    void testAppendVersionSearchCriteria_ThreePartVersion() {
+    void testAppendVersionSearchCriteriaThreePartVersion() {
         Criteria base = new Criteria();
         LibrarySearchCriteria input = new LibrarySearchCriteria("1.2.3", List.of("version"));
 
@@ -21,7 +21,7 @@ class SearchUtilsTest {
     }
 
     @Test
-    void testAppendVersionSearchCriteria_TwoPartVersion() {
+    void testAppendVersionSearchCriteriaTwoPartVersion() {
         Criteria base = new Criteria();
         LibrarySearchCriteria input = new LibrarySearchCriteria("2.5", List.of("version"));
 
@@ -36,7 +36,7 @@ class SearchUtilsTest {
     }
 
     @Test
-    void testAppendVersionSearchCriteria_SingleNumber() {
+    void testAppendVersionSearchCriteriaSingleNumber() {
         Criteria base = new Criteria();
         LibrarySearchCriteria input = new LibrarySearchCriteria("4", List.of("version"));
 
