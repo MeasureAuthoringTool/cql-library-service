@@ -9,78 +9,78 @@ import java.util.List;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 
 class SearchUtilsTest {
-    @Test
-    void testAppendVersionSearchCriteriaThreePartVersion() {
-        Criteria base = new Criteria();
-        LibrarySearchCriteria input = new LibrarySearchCriteria("1.2.3", List.of("version"));
+  @Test
+  void testAppendVersionSearchCriteriaThreePartVersion() {
+    Criteria base = new Criteria();
+    LibrarySearchCriteria input = new LibrarySearchCriteria("1.2.3", List.of("version"));
 
-        SearchUtils.appendAdditionalSearchCriteria(base, input);
+    SearchUtils.appendAdditionalSearchCriteria(base, input);
 
-        String json = base.getCriteriaObject().toString();
-        assertThat(json).contains("version=1.2.003");
-    }
+    String json = base.getCriteriaObject().toString();
+    assertThat(json).contains("version=1.2.003");
+  }
 
-    @Test
-    void testAppendVersionSearchCriteriaTwoPartVersion() {
-        Criteria base = new Criteria();
-        LibrarySearchCriteria input = new LibrarySearchCriteria("2.5", List.of("version"));
+  @Test
+  void testAppendVersionSearchCriteriaTwoPartVersion() {
+    Criteria base = new Criteria();
+    LibrarySearchCriteria input = new LibrarySearchCriteria("2.5", List.of("version"));
 
-        SearchUtils.appendAdditionalSearchCriteria(base, input);
+    SearchUtils.appendAdditionalSearchCriteria(base, input);
 
-        String json = base.getCriteriaObject().toJson();
-        assertThat(json).contains("version.major");
-        assertThat(json).contains("version.minor");
-        assertThat(json).contains("version.revisionNumber");
-        assertThat(json).contains("2");
-        assertThat(json).contains("5");
-    }
+    String json = base.getCriteriaObject().toJson();
+    assertThat(json).contains("version.major");
+    assertThat(json).contains("version.minor");
+    assertThat(json).contains("version.revisionNumber");
+    assertThat(json).contains("2");
+    assertThat(json).contains("5");
+  }
 
-    @Test
-    void testAppendVersionSearchCriteriaSingleNumber() {
-        Criteria base = new Criteria();
-        LibrarySearchCriteria input = new LibrarySearchCriteria("4", List.of("version"));
+  @Test
+  void testAppendVersionSearchCriteriaSingleNumber() {
+    Criteria base = new Criteria();
+    LibrarySearchCriteria input = new LibrarySearchCriteria("4", List.of("version"));
 
-        SearchUtils.appendAdditionalSearchCriteria(base, input);
+    SearchUtils.appendAdditionalSearchCriteria(base, input);
 
-        String json = base.getCriteriaObject().toJson();
-        assertThat(json).contains("version.major");
-        assertThat(json).contains("version.minor");
-        assertThat(json).contains("version.revisionNumber");
-    }
+    String json = base.getCriteriaObject().toJson();
+    assertThat(json).contains("version.major");
+    assertThat(json).contains("version.minor");
+    assertThat(json).contains("version.revisionNumber");
+  }
 
-    @Test
-    void testAppendLibrarySearchCriteria() {
-        Criteria base = new Criteria();
-        LibrarySearchCriteria input = new LibrarySearchCriteria("TestLib", List.of("library"));
+  @Test
+  void testAppendLibrarySearchCriteria() {
+    Criteria base = new Criteria();
+    LibrarySearchCriteria input = new LibrarySearchCriteria("TestLib", List.of("library"));
 
-        SearchUtils.appendAdditionalSearchCriteria(base, input);
+    SearchUtils.appendAdditionalSearchCriteria(base, input);
 
-        String json = base.getCriteriaObject().toJson();
-        assertThat(json).contains("cqlLibraryName");
-        assertThat(json).contains("TestLib");
-    }
+    String json = base.getCriteriaObject().toJson();
+    assertThat(json).contains("cqlLibraryName");
+    assertThat(json).contains("TestLib");
+  }
 
-    @Test
-    void testAppendModelSearchCriteria() {
-        Criteria base = new Criteria();
-        LibrarySearchCriteria input = new LibrarySearchCriteria("FHIR", List.of("model"));
+  @Test
+  void testAppendModelSearchCriteria() {
+    Criteria base = new Criteria();
+    LibrarySearchCriteria input = new LibrarySearchCriteria("FHIR", List.of("model"));
 
-        SearchUtils.appendAdditionalSearchCriteria(base, input);
+    SearchUtils.appendAdditionalSearchCriteria(base, input);
 
-        String json = base.getCriteriaObject().toJson();
-        assertThat(json).contains("model");
-        assertThat(json).contains("FHIR");
-    }
+    String json = base.getCriteriaObject().toJson();
+    assertThat(json).contains("model");
+    assertThat(json).contains("FHIR");
+  }
 
-    @Test
-    void testAppendUnknownFieldCriteria() {
-        Criteria base = new Criteria();
-        LibrarySearchCriteria input = new LibrarySearchCriteria("someText", List.of("customField"));
+  @Test
+  void testAppendUnknownFieldCriteria() {
+    Criteria base = new Criteria();
+    LibrarySearchCriteria input = new LibrarySearchCriteria("someText", List.of("customField"));
 
-        SearchUtils.appendAdditionalSearchCriteria(base, input);
+    SearchUtils.appendAdditionalSearchCriteria(base, input);
 
-        String json = base.getCriteriaObject().toJson();
-        assertThat(json).contains("customField");
-        assertThat(json).contains("someText");
-    }
+    String json = base.getCriteriaObject().toJson();
+    assertThat(json).contains("customField");
+    assertThat(json).contains("someText");
+  }
 }

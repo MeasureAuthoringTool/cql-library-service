@@ -208,7 +208,7 @@ public class LibrarySetService {
         .as("librarySet");
   }
 
-  public List<LibraryListDTO> getLibrariesByLibrarySetId(String librarySetId) {
+  private List<LibraryListDTO> getLibrariesByLibrarySetId(String librarySetId) {
     Criteria libraryCriteria =
         Criteria.where("active").is(true).and("librarySetId").is(librarySetId);
 
@@ -223,7 +223,7 @@ public class LibrarySetService {
   }
 
   public List<CqlLibrary> getRecentLibrariesByLibrarySetId(List<String> librarySetIds) {
-    List<CqlLibrary> mostRecentLibraries = new ArrayList<CqlLibrary>();
+    List<CqlLibrary> mostRecentLibraries = new ArrayList<>();
     for (String librarySetId : librarySetIds) {
       List<LibraryListDTO> libraries = getLibrariesByLibrarySetId(librarySetId);
       if (libraries != null && !libraries.isEmpty()) {

@@ -283,6 +283,15 @@ class CqlLibraryControllerTest {
   }
 
   @Test
+  public void testGetAllOwners() {
+    List<String> mockedResponse = List.of("owner1", "owner2");
+    when(librarySetService.getAllOwners(any())).thenReturn(mockedResponse);
+
+    var result = cqlLibraryController.getAllOwners(List.of("set1", "set2"));
+    assertEquals(mockedResponse, result.getBody());
+  }
+
+  @Test
   public void testGetCqlLibraryThrowsExceptionForNotFound() {
     doThrow(new ResourceNotFoundException("CQL Library", "Library1"))
         .when(cqlLibraryService)
@@ -507,7 +516,8 @@ class CqlLibraryControllerTest {
 
     when(cqlLibraryService.findCqlLibraryById(anyString())).thenReturn(existingLibrary);
     when(cqlLibraryService.isCqlLibraryNameChanged(any(CqlLibrary.class), any(CqlLibrary.class)))
-        .thenReturn(false);
+        .thenReturn(true);
+    doNothing().when(cqlLibraryService).checkDuplicateCqlLibraryName(anyString());
     when(principal.getName()).thenReturn("User2");
 
     when(cqlLibraryRepository.save(any(CqlLibrary.class))).thenReturn(updatingLibrary);
