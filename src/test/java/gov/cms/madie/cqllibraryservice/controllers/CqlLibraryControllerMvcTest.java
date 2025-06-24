@@ -5,7 +5,6 @@ import gov.cms.madie.cqllibraryservice.dto.LibrarySetDTO;
 import gov.cms.madie.cqllibraryservice.dto.LibraryListDTO;
 import gov.cms.madie.cqllibraryservice.dto.SharedUser;
 import gov.cms.madie.cqllibraryservice.exceptions.GeneralConflictException;
-import gov.cms.madie.cqllibraryservice.repositories.LibrarySetRepository;
 import gov.cms.madie.models.common.ModelType;
 
 import static org.hamcrest.CoreMatchers.containsString;
@@ -64,11 +63,11 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 import org.springframework.test.web.servlet.MvcResult;
@@ -85,13 +84,12 @@ public class CqlLibraryControllerMvcTest {
   private static final String MODEL = ModelType.QI_CORE.toString();
   public static final String ELM_SEVERITY = "Info";
 
-  @MockBean private CqlLibraryRepository repository;
-  @MockBean private VersionService versionService;
-  @MockBean private CqlLibraryService cqlLibraryService;
-  @MockBean private LibrarySetService librarySetService;
-  @MockBean private LibrarySetRepository librarySetRepository;
+  @MockitoBean CqlLibraryRepository cqlLibraryRepository;
+  @MockitoBean VersionService versionService;
+  @MockitoBean CqlLibraryService cqlLibraryService;
+  @MockitoBean LibrarySetService librarySetService;
 
-  @MockBean ActionLogService actionLogService;
+  @MockitoBean ActionLogService actionLogService;
 
   @Captor private ArgumentCaptor<CqlLibrary> cqlLibraryArgumentCaptor;
 
@@ -111,7 +109,7 @@ public class CqlLibraryControllerMvcTest {
   @Test
   public void testCreateCqlLibraryReturnsValidationErrorForNullCqlLibraryName() throws Exception {
     String json = toJsonString(CqlLibrary.builder().cqlLibraryName(null).model(MODEL).build());
-    when(repository.existsByCqlLibraryName(anyString())).thenReturn(false);
+    when(cqlLibraryRepository.existsByCqlLibraryName(anyString())).thenReturn(false);
     mockMvc
         .perform(
             post("/cql-libraries")
@@ -122,13 +120,13 @@ public class CqlLibraryControllerMvcTest {
         .andExpect(status().isBadRequest())
         .andExpect(
             jsonPath("$.validationErrors.cqlLibraryName").value("Library name is required."));
-    verifyNoInteractions(repository);
+    verifyNoInteractions(cqlLibraryRepository);
   }
 
   @Test
   public void testCreateCqlLibraryReturnsValidationErrorForEmptyCqlLibraryName() throws Exception {
     String json = toJsonString(CqlLibrary.builder().cqlLibraryName("").model(MODEL).build());
-    when(repository.existsByCqlLibraryName(anyString())).thenReturn(false);
+    when(cqlLibraryRepository.existsByCqlLibraryName(anyString())).thenReturn(false);
     mockMvc
         .perform(
             post("/cql-libraries")
@@ -139,7 +137,7 @@ public class CqlLibraryControllerMvcTest {
         .andExpect(status().isBadRequest())
         .andExpect(
             jsonPath("$.validationErrors.cqlLibraryName").value("Library name is required."));
-    verifyNoInteractions(repository);
+    verifyNoInteractions(cqlLibraryRepository);
   }
 
   @Test
@@ -152,7 +150,7 @@ public class CqlLibraryControllerMvcTest {
                 .model(MODEL)
                 .librarySetId(TEST_LIBRARYSET_ID)
                 .build());
-    when(repository.existsByCqlLibraryName(anyString())).thenReturn(false);
+    when(cqlLibraryRepository.existsByCqlLibraryName(anyString())).thenReturn(false);
     mockMvc
         .perform(
             post("/cql-libraries")
@@ -167,7 +165,7 @@ public class CqlLibraryControllerMvcTest {
                     "Library name must start with an upper case letter, "
                         + "followed by alpha-numeric character(s) and must not contain "
                         + "spaces or other special characters except of underscore for QDM."));
-    verifyNoInteractions(repository);
+    verifyNoInteractions(cqlLibraryRepository);
   }
 
   @Test
@@ -179,7 +177,7 @@ public class CqlLibraryControllerMvcTest {
                 .model(MODEL)
                 .librarySetId(TEST_LIBRARYSET_ID)
                 .build());
-    when(repository.existsByCqlLibraryName(anyString())).thenReturn(false);
+    when(cqlLibraryRepository.existsByCqlLibraryName(anyString())).thenReturn(false);
     mockMvc
         .perform(
             post("/cql-libraries")
@@ -194,7 +192,7 @@ public class CqlLibraryControllerMvcTest {
                     "Library name must start with an upper case letter, "
                         + "followed by alpha-numeric character(s) and must not contain "
                         + "spaces or other special characters except of underscore for QDM."));
-    verifyNoInteractions(repository);
+    verifyNoInteractions(cqlLibraryRepository);
   }
 
   @Test
@@ -206,7 +204,7 @@ public class CqlLibraryControllerMvcTest {
                 .model(MODEL)
                 .librarySetId(TEST_LIBRARYSET_ID)
                 .build());
-    when(repository.existsByCqlLibraryName(anyString())).thenReturn(false);
+    when(cqlLibraryRepository.existsByCqlLibraryName(anyString())).thenReturn(false);
     mockMvc
         .perform(
             post("/cql-libraries")
@@ -221,7 +219,7 @@ public class CqlLibraryControllerMvcTest {
                     "Library name must start with an upper case letter, "
                         + "followed by alpha-numeric character(s) and must not contain "
                         + "spaces or other special characters except of underscore for QDM."));
-    verifyNoInteractions(repository);
+    verifyNoInteractions(cqlLibraryRepository);
   }
 
   @Test
@@ -234,7 +232,7 @@ public class CqlLibraryControllerMvcTest {
                 .model(MODEL)
                 .librarySetId(TEST_LIBRARYSET_ID)
                 .build());
-    when(repository.existsByCqlLibraryName(anyString())).thenReturn(false);
+    when(cqlLibraryRepository.existsByCqlLibraryName(anyString())).thenReturn(false);
     mockMvc
         .perform(
             post("/cql-libraries")
@@ -249,7 +247,7 @@ public class CqlLibraryControllerMvcTest {
                     "Library name must start with an upper case letter, "
                         + "followed by alpha-numeric character(s) and must not contain "
                         + "spaces or other special characters except of underscore for QDM."));
-    verifyNoInteractions(repository);
+    verifyNoInteractions(cqlLibraryRepository);
   }
 
   @Test
@@ -263,7 +261,7 @@ public class CqlLibraryControllerMvcTest {
                 .model(MODEL)
                 .librarySetId(TEST_LIBRARYSET_ID)
                 .build());
-    when(repository.existsByCqlLibraryName(anyString())).thenReturn(false);
+    when(cqlLibraryRepository.existsByCqlLibraryName(anyString())).thenReturn(false);
     mockMvc
         .perform(
             post("/cql-libraries")
@@ -275,7 +273,7 @@ public class CqlLibraryControllerMvcTest {
         .andExpect(
             jsonPath("$.validationErrors.cqlLibraryName")
                 .value("Library name cannot be more than 64 characters."));
-    verifyNoInteractions(repository);
+    verifyNoInteractions(cqlLibraryRepository);
   }
 
   @Test
@@ -302,7 +300,7 @@ public class CqlLibraryControllerMvcTest {
         .andExpect(
             jsonPath("$.validationErrors.cqlLibraryName").value("Library name must be unique."));
     verify(cqlLibraryService, times(1)).checkDuplicateCqlLibraryName(anyString());
-    verifyNoMoreInteractions(repository);
+    verifyNoMoreInteractions(cqlLibraryRepository);
   }
 
   @Test
@@ -326,7 +324,7 @@ public class CqlLibraryControllerMvcTest {
         .andExpect(
             jsonPath("$.validationErrors.model")
                 .value("Model must be one of the supported types in MADiE."));
-    verifyNoInteractions(repository);
+    verifyNoInteractions(cqlLibraryRepository);
   }
 
   @Test
@@ -341,7 +339,7 @@ public class CqlLibraryControllerMvcTest {
                 .contentType(MediaType.APPLICATION_JSON_VALUE))
         .andExpect(status().isBadRequest())
         .andExpect(jsonPath("$.validationErrors.model").value("Model is required."));
-    verifyNoInteractions(repository);
+    verifyNoInteractions(cqlLibraryRepository);
   }
 
   @Test
@@ -359,7 +357,7 @@ public class CqlLibraryControllerMvcTest {
     doNothing().when(cqlLibraryService).checkDuplicateCqlLibraryName(anyString());
     doNothing().when(librarySetService).createLibrarySet(anyString(), anyString(), anyString());
     String objectId = ObjectId.get().toHexString();
-    when(repository.save(any(CqlLibrary.class)))
+    when(cqlLibraryRepository.save(any(CqlLibrary.class)))
         .then(
             (args) -> {
               CqlLibrary lib = args.getArgument(0);
@@ -393,7 +391,7 @@ public class CqlLibraryControllerMvcTest {
         .andExpect(jsonPath("$.createdAt").value(fiveMinMatcher))
         .andExpect(jsonPath("$.lastModifiedAt").value(fiveMinMatcher));
     verify(cqlLibraryService, times(1)).checkDuplicateCqlLibraryName(anyString());
-    verify(repository, times(1)).save(any(CqlLibrary.class));
+    verify(cqlLibraryRepository, times(1)).save(any(CqlLibrary.class));
 
     verify(actionLogService, times(1))
         .logAction(
@@ -420,7 +418,7 @@ public class CqlLibraryControllerMvcTest {
     doNothing().when(cqlLibraryService).checkDuplicateCqlLibraryName(anyString());
     doNothing().when(librarySetService).createLibrarySet(anyString(), anyString(), anyString());
     String objectId = ObjectId.get().toHexString();
-    when(repository.save(any(CqlLibrary.class)))
+    when(cqlLibraryRepository.save(any(CqlLibrary.class)))
         .then(
             (args) -> {
               CqlLibrary lib = args.getArgument(0);
@@ -455,7 +453,7 @@ public class CqlLibraryControllerMvcTest {
         .andExpect(jsonPath("$.createdAt").value(fiveMinMatcher))
         .andExpect(jsonPath("$.lastModifiedAt").value(fiveMinMatcher));
     verify(cqlLibraryService, times(1)).checkDuplicateCqlLibraryName(anyString());
-    verify(repository, times(1)).save(any(CqlLibrary.class));
+    verify(cqlLibraryRepository, times(1)).save(any(CqlLibrary.class));
 
     verify(actionLogService, times(1))
         .logAction(
@@ -526,7 +524,7 @@ public class CqlLibraryControllerMvcTest {
             jsonPath("$.message")
                 .value(
                     "CQL Library ID is required for Update (PUT) operation on a CQL Library. (PUT [base]/[resource]/[id])"));
-    verifyNoInteractions(repository);
+    verifyNoInteractions(cqlLibraryRepository);
   }
 
   @Test
@@ -551,7 +549,7 @@ public class CqlLibraryControllerMvcTest {
             jsonPath("$.message")
                 .value(
                     "CQL Library ID is required for Update (PUT) operation on a CQL Library. (PUT [base]/[resource]/[id])"));
-    verifyNoInteractions(repository);
+    verifyNoInteractions(cqlLibraryRepository);
   }
 
   @Test
@@ -576,7 +574,7 @@ public class CqlLibraryControllerMvcTest {
             jsonPath("$.message")
                 .value(
                     "CQL Library ID is required for Update (PUT) operation on a CQL Library. (PUT [base]/[resource]/[id])"));
-    verifyNoInteractions(repository);
+    verifyNoInteractions(cqlLibraryRepository);
   }
 
   @Test
@@ -594,7 +592,7 @@ public class CqlLibraryControllerMvcTest {
         .andExpect(status().isBadRequest())
         .andExpect(
             jsonPath("$.validationErrors.cqlLibraryName").value("Library name is required."));
-    verifyNoInteractions(repository);
+    verifyNoInteractions(cqlLibraryRepository);
   }
 
   @Test
@@ -612,7 +610,7 @@ public class CqlLibraryControllerMvcTest {
         .andExpect(status().isBadRequest())
         .andExpect(
             jsonPath("$.validationErrors.cqlLibraryName").value("Library name is required."));
-    verifyNoInteractions(repository);
+    verifyNoInteractions(cqlLibraryRepository);
   }
 
   @Test
@@ -629,7 +627,7 @@ public class CqlLibraryControllerMvcTest {
                 .contentType(MediaType.APPLICATION_JSON_VALUE))
         .andExpect(status().isBadRequest())
         .andExpect(jsonPath("$.validationErrors.model").value("Model is required."));
-    verifyNoInteractions(repository);
+    verifyNoInteractions(cqlLibraryRepository);
   }
 
   @Test
@@ -653,7 +651,7 @@ public class CqlLibraryControllerMvcTest {
         .andExpect(
             jsonPath("$.validationErrors.model")
                 .value("Model must be one of the supported types in MADiE."));
-    verifyNoInteractions(repository);
+    verifyNoInteractions(cqlLibraryRepository);
   }
 
   @Test
@@ -677,7 +675,7 @@ public class CqlLibraryControllerMvcTest {
         .andExpect(
             jsonPath("$.validationErrors.model")
                 .value("Model must be one of the supported types in MADiE."));
-    verifyNoInteractions(repository);
+    verifyNoInteractions(cqlLibraryRepository);
   }
 
   @Test
@@ -847,7 +845,7 @@ public class CqlLibraryControllerMvcTest {
     when(cqlLibraryService.findCqlLibraryById(anyString())).thenReturn(existingLibrary);
     when(cqlLibraryService.isCqlLibraryNameChanged(any(CqlLibrary.class), any(CqlLibrary.class)))
         .thenReturn(false);
-    when(repository.save(any(CqlLibrary.class))).thenReturn(updatingLibrary);
+    when(cqlLibraryRepository.save(any(CqlLibrary.class))).thenReturn(updatingLibrary);
     mockMvc
         .perform(
             put("/cql-libraries/Library1_ID")
@@ -859,7 +857,7 @@ public class CqlLibraryControllerMvcTest {
         .andExpect(content().contentType(MediaType.APPLICATION_JSON_VALUE))
         .andExpect(content().json(toJsonString(updatingLibrary)));
     verify(cqlLibraryService, times(1)).findCqlLibraryById(anyString());
-    verify(repository, times(1)).save(cqlLibraryArgumentCaptor.capture());
+    verify(cqlLibraryRepository, times(1)).save(cqlLibraryArgumentCaptor.capture());
     CqlLibrary savedValue = cqlLibraryArgumentCaptor.getValue();
     assertThat(savedValue, is(notNullValue()));
     assertThat(savedValue.getId(), is(equalTo("Library1_ID")));
@@ -890,7 +888,7 @@ public class CqlLibraryControllerMvcTest {
                     "Library name must start with an upper case letter, "
                         + "followed by alpha-numeric character(s) and must not contain "
                         + "spaces or other special characters."));
-    verifyNoInteractions(repository);
+    verifyNoInteractions(cqlLibraryRepository);
   }
 
   @Test
@@ -912,7 +910,7 @@ public class CqlLibraryControllerMvcTest {
                     "Library name must start with an upper case letter, "
                         + "followed by alpha-numeric character(s) and must not contain "
                         + "spaces or other special characters."));
-    verifyNoInteractions(repository);
+    verifyNoInteractions(cqlLibraryRepository);
   }
 
   @Test
@@ -932,7 +930,7 @@ public class CqlLibraryControllerMvcTest {
         .andExpect(
             jsonPath("$.validationErrors.cqlLibraryName")
                 .value("Library name cannot be more than 64 characters."));
-    verifyNoInteractions(repository);
+    verifyNoInteractions(cqlLibraryRepository);
   }
 
   @Test
@@ -1757,8 +1755,6 @@ public class CqlLibraryControllerMvcTest {
 
     when(cqlLibraryService.getLibrariesByLibrarySetId(anyString(), anyBoolean()))
         .thenReturn(List.of(listDTO));
-    when(librarySetRepository.findByLibrarySetId(anyString()))
-        .thenReturn(Optional.ofNullable(librarySet));
     MvcResult result =
         mockMvc
             .perform(

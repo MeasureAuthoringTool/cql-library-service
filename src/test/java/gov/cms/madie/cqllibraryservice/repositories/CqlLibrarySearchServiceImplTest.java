@@ -1,8 +1,6 @@
 package gov.cms.madie.cqllibraryservice.repositories;
 
-import gov.cms.madie.cqllibraryservice.dto.FacetDTO;
-import gov.cms.madie.cqllibraryservice.dto.LibraryListDTO;
-import gov.cms.madie.cqllibraryservice.dto.MadieFeatureFlag;
+import gov.cms.madie.cqllibraryservice.dto.*;
 import gov.cms.madie.cqllibraryservice.services.AppConfigService;
 import org.bson.Document;
 
@@ -33,7 +31,7 @@ public class CqlLibrarySearchServiceImplTest {
 
   @Mock MongoTemplate mongoTemplate;
   @Mock AppConfigService appConfigService;
-  @InjectMocks CqlLibrarySearchServiceImpl libraryAclRepository;
+  @InjectMocks CqlLibrarySearchServiceImpl cqlLibrarySearchServiceImpl;
 
   private LibraryListDTO library1;
   private LibraryListDTO library2;
@@ -94,7 +92,7 @@ public class CqlLibrarySearchServiceImplTest {
         .thenReturn(pagedResults);
 
     Page<LibraryListDTO> page =
-        libraryAclRepository.searchLibrariesByCriteria("john", pageRequest, null, true);
+        cqlLibrarySearchServiceImpl.searchLibrariesByCriteria("john", pageRequest, null, true);
     assertEquals(page.getTotalElements(), 5);
     assertEquals(page.getTotalPages(), 2);
     assertEquals(page.getContent().size(), 3);
@@ -116,9 +114,9 @@ public class CqlLibrarySearchServiceImplTest {
     when(mongoTemplate.aggregate(any(Aggregation.class), (Class<?>) any(), any()))
         .thenReturn(pagedResults);
 
-    String librarySearchCriteria = "test";
+    var librarySearchCriteria = LibrarySearchCriteria.builder().searchField("test").build();
     Page<LibraryListDTO> page =
-        libraryAclRepository.searchLibrariesByCriteria(
+        cqlLibrarySearchServiceImpl.searchLibrariesByCriteria(
             "john", pageRequest, librarySearchCriteria, true);
     assertEquals(page.getTotalElements(), 2);
     assertEquals(page.getTotalPages(), 1);
@@ -133,21 +131,32 @@ public class CqlLibrarySearchServiceImplTest {
     when(appConfigService.isFlagEnabled(MadieFeatureFlag.LIBRARY_SEARCH)).thenReturn(true);
     // page size 3 from 0-2
     PageRequest pageRequest = PageRequest.of(0, 3);
-    List<LibraryListDTO> allLibraries = List.of(library1, library2, library3, library4, library5);
 
+    LibrarySetIdDTO librarySetIdDTO1 = LibrarySetIdDTO.builder().id("setIdi").build();
+    LibrarySetIdDTO librarySetIdDTO2 = LibrarySetIdDTO.builder().id("setId2").build();
+
+    List<LibraryListDTO> allLibraries = List.of(library1, library2, library3, library4, library5);
     FacetDTO facetDTO =
         FacetDTO.builder()
             .queryResults(List.of(library1, library2, library3))
             .count(Arrays.asList(allLibraries.toArray()))
             .build();
 
-    AggregationResults pagedResults = new AggregationResults<>(List.of(facetDTO), new Document());
-
     when(mongoTemplate.aggregate(any(Aggregation.class), (Class<?>) any(), any()))
-        .thenReturn(pagedResults);
+        .thenAnswer(
+            invocation -> {
+              Class<?> outputClass = invocation.getArgument(2);
+              if (outputClass.equals(FacetDTO.class)) {
+                return new AggregationResults<>(List.of(facetDTO), new Document());
+              } else if (outputClass.equals(LibrarySetIdDTO.class)) {
+                return new AggregationResults<>(
+                    List.of(librarySetIdDTO1, librarySetIdDTO2), new Document());
+              }
+              return null;
+            });
 
     Page<LibraryListDTO> page =
-        libraryAclRepository.searchLibrariesByCriteria("john", pageRequest, null, true);
+        cqlLibrarySearchServiceImpl.searchLibrariesByCriteria("john", pageRequest, null, true);
     assertEquals(page.getTotalElements(), 3);
     assertEquals(page.getTotalPages(), 1);
     assertEquals(page.getContent().size(), 3);
