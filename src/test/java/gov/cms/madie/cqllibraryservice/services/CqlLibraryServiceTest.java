@@ -8,6 +8,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
+import gov.cms.madie.cqllibraryservice.dto.LibrarySearchCriteria;
 import gov.cms.madie.cqllibraryservice.dto.LibrarySetDTO;
 import gov.cms.madie.cqllibraryservice.dto.LibraryListDTO;
 import gov.cms.madie.cqllibraryservice.dto.SharedUser;
@@ -49,6 +50,8 @@ class CqlLibraryServiceTest {
 
   @Test
   public void testGetLibrariesByCriteria() {
+    var librarySearchCriteria =
+        LibrarySearchCriteria.builder().searchField("measureSearchCriteria").build();
     PageRequest initialPage = PageRequest.of(0, 10);
     CqlLibrary lib1 = CqlLibrary.builder().build();
 
@@ -58,7 +61,7 @@ class CqlLibraryServiceTest {
         .searchLibrariesByCriteria(eq("test.user"), any(PageRequest.class), any(), eq(true));
     Object libraries =
         cqlLibraryService.getLibrariesByCriteria(
-            "measureSearchCriteria", true, initialPage, "test.user");
+            librarySearchCriteria, true, initialPage, "test.user");
     assertNotNull(libraries);
   }
 

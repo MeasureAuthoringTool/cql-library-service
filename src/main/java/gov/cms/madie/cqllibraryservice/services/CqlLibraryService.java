@@ -1,5 +1,6 @@
 package gov.cms.madie.cqllibraryservice.services;
 
+import gov.cms.madie.cqllibraryservice.dto.LibrarySearchCriteria;
 import gov.cms.madie.cqllibraryservice.dto.LibrarySetDTO;
 import gov.cms.madie.cqllibraryservice.dto.LibraryListDTO;
 import gov.cms.madie.cqllibraryservice.dto.SharedUser;
@@ -40,9 +41,12 @@ public class CqlLibraryService {
   private MeasureServiceClient measureServiceClient;
 
   public Page<LibraryListDTO> getLibrariesByCriteria(
-      String searchCriteria, boolean filterByCurrentUser, Pageable pageReq, String username) {
+      LibrarySearchCriteria librarySearchCriteria,
+      boolean filterByCurrentUser,
+      Pageable pageReq,
+      String username) {
     return cqlLibraryRepository.searchLibrariesByCriteria(
-        username, pageReq, searchCriteria, filterByCurrentUser);
+        username, pageReq, librarySearchCriteria, filterByCurrentUser);
   }
 
   public void checkDuplicateCqlLibraryName(String cqlLibraryName) {
@@ -170,7 +174,7 @@ public class CqlLibraryService {
    * Library is being used if any of its version is either included in other library or measure
    *
    * @param name - library name
-   * @param accessToken
+   * @param accessToken accessToken
    * @return true/false
    */
   public boolean isLibraryBeinUsed(String name, String accessToken) {

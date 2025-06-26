@@ -1,11 +1,14 @@
 package gov.cms.madie.cqllibraryservice.services;
 
+import gov.cms.madie.cqllibraryservice.dto.LibraryListDTO;
 import gov.cms.madie.cqllibraryservice.repositories.CqlLibraryRepository;
 import gov.cms.madie.cqllibraryservice.repositories.LibrarySetRepository;
 import gov.cms.madie.models.access.AclOperation;
 import gov.cms.madie.models.access.AclSpecification;
 import gov.cms.madie.models.access.RoleEnum;
+import gov.cms.madie.models.library.CqlLibrary;
 import gov.cms.madie.models.library.LibrarySet;
+import org.bson.Document;
 import org.junit.jupiter.api.Assertions;
 import gov.cms.madie.cqllibraryservice.exceptions.ResourceNotFoundException;
 import org.junit.jupiter.api.BeforeEach;
@@ -15,6 +18,8 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.mongodb.core.MongoTemplate;
+import org.springframework.data.mongodb.core.aggregation.Aggregation;
+import org.springframework.data.mongodb.core.aggregation.AggregationResults;
 
 import java.util.*;
 
@@ -262,5 +267,55 @@ class LibrarySetServiceTest {
 
     verify(librarySetRepository, times(1)).existsByLibrarySetId("librarySetId1");
     verify(librarySetRepository, times(1)).save(any(LibrarySet.class));
+  }
+
+  @Test
+  void testGetRecentLibrariesByLibrarySetIdSuccess() {
+    String librarySetId = "lib-set-1";
+    String libraryId = "lib-123";
+
+    LibraryListDTO dto = new LibraryListDTO();
+    dto.setId(libraryId);
+
+    CqlLibrary cqlLibrary = new CqlLibrary();
+    cqlLibrary.setId(libraryId);
+    cqlLibrary.setCqlLibraryName("TestLib");
+
+    AggregationResults mockAggregationResults =
+        new AggregationResults<>(List.of(dto), new Document());
+
+    when(mongoTemplate.aggregate(any(Aggregation.class), (Class<?>) any(), any()))
+        .thenReturn(mockAggregationResults);
+
+    when(cqlLibraryRepository.findById(libraryId)).thenReturn(Optional.of(cqlLibrary));
+
+    List<CqlLibrary> result =
+        librarySetService.getRecentLibrariesByLibrarySetId(List.of(librarySetId));
+
+    assertEquals(1, result.size());
+    assertEquals("TestLib", result.get(0).getCqlLibraryName());
+  }
+
+  @Test
+  void testGetRecentLibrariesByLibrarySetIdRepoReturnsEmpty() {
+    String librarySetId = "lib-set-1";
+    String libraryId = "lib-123";
+
+    LibraryListDTO dto = new LibraryListDTO();
+    dto.setId(libraryId);
+
+    AggregationResults mockAggregationResults =
+        new AggregationResults<>(List.of(dto), new Document());
+
+    when(mongoTemplate.aggregate(any(Aggregation.class), (Class<?>) any(), any()))
+        .thenReturn(mockAggregationResults);
+
+    when(cqlLibraryRepository.findById(libraryId)).thenReturn(Optional.empty());
+
+    List<CqlLibrary> result =
+        librarySetService.getRecentLibrariesByLibrarySetId(List.of(librarySetId));
+
+    assertEquals(1, result.size());
+    assertNull(result.get(0));
   }
 }

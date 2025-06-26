@@ -1,12 +1,12 @@
 package gov.cms.madie.cqllibraryservice.controllers;
 
+import gov.cms.madie.cqllibraryservice.dto.LibrarySearchCriteria;
 import gov.cms.madie.cqllibraryservice.dto.LibrarySetDTO;
 import gov.cms.madie.cqllibraryservice.dto.LibraryListDTO;
 import gov.cms.madie.cqllibraryservice.dto.SharedUser;
 import gov.cms.madie.cqllibraryservice.exceptions.HarpIdMismatchException;
 import gov.cms.madie.cqllibraryservice.exceptions.InvalidIdException;
 import gov.cms.madie.cqllibraryservice.exceptions.InvalidResourceStateException;
-import gov.cms.madie.cqllibraryservice.repositories.LibrarySetRepository;
 import gov.cms.madie.cqllibraryservice.services.*;
 import gov.cms.madie.cqllibraryservice.utils.AuthUtils;
 import gov.cms.madie.cqllibraryservice.utils.LibraryUtils;
@@ -55,19 +55,17 @@ import gov.cms.madie.cqllibraryservice.exceptions.ResourceNotFoundException;
 public class CqlLibraryController {
 
   private final CqlLibraryRepository cqlLibraryRepository;
-  private final LibrarySetRepository librarySetRepository;
   private final ActionLogService actionLogService;
   private final VersionService versionService;
   private final CqlLibraryService cqlLibraryService;
   private final LibrarySetService librarySetService;
 
-  @GetMapping
-  public ResponseEntity<Page<LibraryListDTO>> getCqlLibraries(
+  @PutMapping("/searches")
+  public ResponseEntity<Page<LibraryListDTO>> fetchLibrariesByCriteria(
       Principal principal,
       @RequestParam(required = false, defaultValue = "false", name = "currentUser")
           boolean filterByCurrentUser,
-      @RequestParam(required = false, defaultValue = "", name = "searchCriteria")
-          String searchCriteria,
+      @RequestBody(required = false) LibrarySearchCriteria librarySearchCriteria,
       @RequestParam(required = false, defaultValue = "10", name = "limit") int limit,
       @RequestParam(required = false, defaultValue = "0", name = "page") int page,
       @RequestParam(required = false, name = "sortInfo") String sortInfo) {
@@ -94,7 +92,7 @@ public class CqlLibraryController {
     }
     Page<LibraryListDTO> cqlLibraries =
         cqlLibraryService.getLibrariesByCriteria(
-            searchCriteria, filterByCurrentUser, pageReq, username);
+            librarySearchCriteria, filterByCurrentUser, pageReq, username);
     return ResponseEntity.ok(cqlLibraries);
   }
 
