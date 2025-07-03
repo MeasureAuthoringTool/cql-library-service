@@ -4,7 +4,6 @@ import gov.cms.madie.cqllibraryservice.dto.*;
 import gov.cms.madie.cqllibraryservice.services.AppConfigService;
 import gov.cms.madie.models.access.RoleEnum;
 import gov.cms.madie.models.library.CqlLibrary;
-import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
@@ -54,14 +53,9 @@ public class CqlLibrarySearchServiceImpl implements CqlLibrarySearchService {
 
     Criteria criteria = Criteria.where("active").is(true);
 
-    if (librarySearchCriteria != null) {
-      if (CollectionUtils.isEmpty(librarySearchCriteria.getOptionalSearchProperties())
-          && StringUtils.isNotBlank(librarySearchCriteria.getSearchField())) {
-        criteria.and("cqlLibraryName").regex(librarySearchCriteria.getSearchField(), "i");
-      } else if (CollectionUtils.isNotEmpty(librarySearchCriteria.getOptionalSearchProperties())
-          && StringUtils.isNotBlank(librarySearchCriteria.getSearchField())) {
-        appendAdditionalSearchCriteria(criteria, librarySearchCriteria);
-      }
+    if (librarySearchCriteria != null
+        && StringUtils.isNotBlank(librarySearchCriteria.getSearchField())) {
+      appendAdditionalSearchCriteria(criteria, librarySearchCriteria);
     }
     Criteria librarySetCriteria = new Criteria();
     if (filterByCurrentUser && StringUtils.isNotBlank(userId)) {

@@ -73,14 +73,29 @@ class SearchUtilsTest {
   }
 
   @Test
-  void testAppendUnknownFieldCriteria() {
+  void testAppendDefaultSearchCriteriaWhenNoOptionalPropertiesProvided() {
     Criteria base = new Criteria();
-    LibrarySearchCriteria input = new LibrarySearchCriteria("someText", List.of("customField"));
+    LibrarySearchCriteria input = new LibrarySearchCriteria("TestLib", null);
 
     SearchUtils.appendAdditionalSearchCriteria(base, input);
 
     String json = base.getCriteriaObject().toJson();
-    assertThat(json).contains("customField");
-    assertThat(json).contains("someText");
+
+    assertThat(json).contains("cqlLibraryName");
+    assertThat(json).contains("model");
+    assertThat(json).contains("TestLib");
+  }
+
+  @Test
+  void testAppendDefaultSearchCriteriaWhenNoOptionalPropertiesProvidedIfTypeVersion() {
+    Criteria base = new Criteria();
+    LibrarySearchCriteria input = new LibrarySearchCriteria("5.2.000", null);
+
+    SearchUtils.appendAdditionalSearchCriteria(base, input);
+    String json = base.getCriteriaObject().toString();
+    assertThat(json).contains("version=5.2.000");
+    assertThat(json).contains("cqlLibraryName");
+    assertThat(json).contains("model");
+    assertThat(json).contains("5.2.000");
   }
 }
