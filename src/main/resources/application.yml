@@ -2,7 +2,7 @@ spring:
   data:
     mongodb:
       database: ${MONGO_DATABASE:madiecqllibrary}
-      uri: ${MONGO_URI:mongodb://${DBUSER}:${DBPASS}@localhost:27017/madiecqllibrary}?authSource=admin&maxPoolSize=50&connectTimeoutMS=2000&serverSelectionTimeoutMS=2000
+      uri: ${MONGO_URI:mongodb://localhost:27017/madiecqllibrary}?authSource=admin&maxPoolSize=50&connectTimeoutMS=2000&serverSelectionTimeoutMS=2000
 
 server:
   port: 8082
@@ -30,7 +30,7 @@ management:
 
 okta:
   oauth2:
-    issuer: ${OKTA_ISSUER:https://dev-18092578.okta.com/oauth2/default}
+    issuer: ${OKTA_ISSUER:https://integrator-3514157.okta.com/oauth2/default}
     audience: ${OKTA_AUDIENCE:api://default}
 
 admin-api-key: ${ADMIN_API_KEY:0a51991c}
