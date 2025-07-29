@@ -13,6 +13,7 @@ import gov.cms.madie.models.common.AccessControlAction;
 import gov.cms.madie.models.common.ActionType;
 import gov.cms.madie.models.common.LibrarySetActionLog;
 import gov.cms.madie.models.common.Version;
+import gov.cms.madie.models.common.ViewScope;
 import gov.cms.madie.models.dto.LibraryUsage;
 import gov.cms.madie.models.library.CqlLibrary;
 import gov.cms.madie.cqllibraryservice.repositories.CqlLibraryRepository;
@@ -42,11 +43,11 @@ public class CqlLibraryService {
 
   public Page<LibraryListDTO> getLibrariesByCriteria(
       LibrarySearchCriteria librarySearchCriteria,
-      boolean filterByCurrentUser,
+      ViewScope viewScope,
       Pageable pageReq,
       String username) {
     return cqlLibraryRepository.searchLibrariesByCriteria(
-        username, pageReq, librarySearchCriteria, filterByCurrentUser);
+        username, pageReq, librarySearchCriteria, viewScope);
   }
 
   public void checkDuplicateCqlLibraryName(String cqlLibraryName) {
