@@ -3,7 +3,7 @@ package gov.cms.madie.cqllibraryservice.repositories;
 import gov.cms.madie.cqllibraryservice.dto.*;
 import gov.cms.madie.cqllibraryservice.services.AppConfigService;
 import gov.cms.madie.models.access.RoleEnum;
-import gov.cms.madie.models.common.ViewScope;
+import gov.cms.madie.models.common.OwnershipType;
 import gov.cms.madie.models.library.CqlLibrary;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.data.domain.Page;
@@ -48,7 +48,7 @@ public class CqlLibrarySearchServiceImpl implements CqlLibrarySearchService {
       String userId,
       Pageable pageable,
       LibrarySearchCriteria librarySearchCriteria,
-      ViewScope viewScope) {
+      OwnershipType ownershipType) {
     LookupOperation lookupOperation = getLookupOperation();
     UnwindOperation unwindOperation = unwind("librarySet");
 
@@ -62,9 +62,9 @@ public class CqlLibrarySearchServiceImpl implements CqlLibrarySearchService {
     Criteria librarySetCriteria = new Criteria();
 
     if (StringUtils.isNotBlank(userId)) {
-      if (viewScope == ViewScope.OWNED) {
+      if (ownershipType == OwnershipType.OWNED) {
         librarySetCriteria = Criteria.where("librarySet.owner").is(userId);
-      } else if (viewScope == ViewScope.SHARED) {
+      } else if (ownershipType == OwnershipType.SHARED) {
         librarySetCriteria =
             Criteria.where("librarySet.acls")
                 .elemMatch(

@@ -2,7 +2,7 @@ package gov.cms.madie.cqllibraryservice.repositories;
 
 import gov.cms.madie.cqllibraryservice.dto.*;
 import gov.cms.madie.cqllibraryservice.services.AppConfigService;
-import gov.cms.madie.models.common.ViewScope;
+import gov.cms.madie.models.common.OwnershipType;
 import org.bson.Document;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -94,7 +94,7 @@ public class CqlLibrarySearchServiceImplTest {
 
     Page<LibraryListDTO> page =
         cqlLibrarySearchServiceImpl.searchLibrariesByCriteria(
-            "john", pageRequest, null, ViewScope.OWNED);
+            "john", pageRequest, null, OwnershipType.OWNED);
     assertEquals(page.getTotalElements(), 5);
     assertEquals(page.getTotalPages(), 2);
     assertEquals(page.getContent().size(), 3);
@@ -124,7 +124,7 @@ public class CqlLibrarySearchServiceImplTest {
 
     Page<LibraryListDTO> page =
         cqlLibrarySearchServiceImpl.searchLibrariesByCriteria(
-            "john", pageRequest, null, ViewScope.SHARED);
+            "john", pageRequest, null, OwnershipType.SHARED);
     assertEquals(page.getTotalElements(), 3);
     assertEquals(page.getTotalPages(), 1);
     assertEquals(page.getContent().size(), 3);
@@ -149,7 +149,7 @@ public class CqlLibrarySearchServiceImplTest {
     var librarySearchCriteria = LibrarySearchCriteria.builder().searchField("test").build();
     Page<LibraryListDTO> page =
         cqlLibrarySearchServiceImpl.searchLibrariesByCriteria(
-            "john", pageRequest, librarySearchCriteria, ViewScope.OWNED);
+            "john", pageRequest, librarySearchCriteria, OwnershipType.OWNED);
     assertEquals(page.getTotalElements(), 2);
     assertEquals(page.getTotalPages(), 1);
     assertEquals(page.getContent().size(), 2);
@@ -189,7 +189,7 @@ public class CqlLibrarySearchServiceImplTest {
 
     Page<LibraryListDTO> page =
         cqlLibrarySearchServiceImpl.searchLibrariesByCriteria(
-            "john", pageRequest, null, ViewScope.OWNED);
+            "john", pageRequest, null, OwnershipType.OWNED);
     assertEquals(page.getTotalElements(), 3);
     assertEquals(page.getTotalPages(), 1);
     assertEquals(page.getContent().size(), 3);

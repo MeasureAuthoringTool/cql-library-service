@@ -2,7 +2,7 @@ package gov.cms.madie.cqllibraryservice.repositories;
 
 import gov.cms.madie.cqllibraryservice.dto.LibraryListDTO;
 import gov.cms.madie.cqllibraryservice.dto.LibrarySearchCriteria;
-import gov.cms.madie.models.common.ViewScope;
+import gov.cms.madie.models.common.OwnershipType;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
@@ -14,7 +14,7 @@ public interface CqlLibrarySearchService {
       String userId,
       Pageable pageable,
       LibrarySearchCriteria librarySearchCriteria,
-      ViewScope viewScope);
+      OwnershipType ownershipType);
 
   List<LibraryListDTO> findLibrariesByLibrarySetId(
       String librarySetId, boolean sortByLatestVersion);

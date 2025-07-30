@@ -59,10 +59,10 @@ class CqlLibraryServiceTest {
     doReturn(activeLibraries)
         .when(cqlLibraryRepository)
         .searchLibrariesByCriteria(
-            eq("test.user"), any(PageRequest.class), any(), eq(ViewScope.OWNED));
+            eq("test.user"), any(PageRequest.class), any(), eq(OwnershipType.OWNED));
     Object libraries =
         cqlLibraryService.getLibrariesByCriteria(
-            librarySearchCriteria, ViewScope.OWNED, initialPage, "test.user");
+            librarySearchCriteria, OwnershipType.OWNED, initialPage, "test.user");
     assertNotNull(libraries);
   }
 
