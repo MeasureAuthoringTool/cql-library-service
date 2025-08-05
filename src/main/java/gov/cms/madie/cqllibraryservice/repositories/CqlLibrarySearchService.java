@@ -17,4 +17,8 @@ public interface CqlLibrarySearchService {
 
   List<LibraryListDTO> findLibrariesByLibrarySetId(
       String librarySetId, boolean sortByLatestVersion);
+
+  List<LibraryListDTO> findLibrariesByLibrarySetIdAndCriteria(
+          String librarySetId,
+          LibrarySearchCriteria searchCriteria);
 }

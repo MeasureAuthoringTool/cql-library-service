@@ -51,19 +51,16 @@ public class SearchUtils {
                 Criteria.where("version.minor").is(major).and("version.revisionNumber").is(minor);
             orConditions.add(otherCriteria);
             orConditions.add(additionalCriteria);
-          } else if (versionParts.length == 1) {
-            if (isNumeric(versionParts[0])) {
-              int anyMatch = Integer.parseInt(versionParts[0]);
-              Criteria majorMatch = Criteria.where("version.major").is(anyMatch);
-              Criteria minorMatch = Criteria.where("version.minor").is(anyMatch);
-              Criteria patchMatch = Criteria.where("version.revisionNumber").is(anyMatch);
-              orConditions.add(majorMatch);
-              orConditions.add(minorMatch);
-              orConditions.add(patchMatch);
-            } else if (effectiveProperties.size() == 1) {
-              Criteria noVersionMatch = Criteria.where("version.major").is(versionParts[0]);
-              orConditions.add(noVersionMatch);
-            }
+          } else if (versionParts.length == 1 && isNumeric(versionParts[0])) {
+            int anyMatch = Integer.parseInt(versionParts[0]);
+            Criteria majorMatch = Criteria.where("version.major").is(anyMatch);
+            Criteria minorMatch = Criteria.where("version.minor").is(anyMatch);
+            Criteria patchMatch = Criteria.where("version.revisionNumber").is(anyMatch);
+            orConditions.add(majorMatch);
+            orConditions.add(minorMatch);
+            orConditions.add(patchMatch);
+          } else {
+            orConditions.add(Criteria.where("version.major").is("__NO_MATCH__"));
           }
           break;
         case "library":

@@ -13,8 +13,12 @@ import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.aggregation.*;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.stereotype.Repository;
+
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import static gov.cms.madie.cqllibraryservice.utils.SearchUtils.appendAdditionalSearchCriteria;
@@ -83,20 +87,32 @@ public class CqlLibrarySearchServiceImpl implements CqlLibrarySearchService {
                 project(LibraryListDTO.class))
             .as("queryResults");
 
-    Aggregation pipeline;
     if (appConfigService.isFlagEnabled(MadieFeatureFlag.LIBRARY_SEARCH)) {
       // Find all the libraries that matches the given Criteria and fetch unique librarySetIds
-      List<String> matchedLibrarySetIds =
-          mongoTemplate
-              .aggregate(
-                  newAggregation(
-                      lookupOperation, unwindOperation, matchOperation, group("librarySetId")),
-                  CqlLibrary.class,
-                  LibrarySetIdDTO.class)
-              .getMappedResults()
-              .stream()
-              .map(LibrarySetIdDTO::getId)
-              .collect(Collectors.toList());
+      List<LibrarySetMatchCountDTO> matchedLibrarySetCounts =
+              mongoTemplate.aggregate(
+                      newAggregation(
+                              lookupOperation,
+                              unwindOperation,
+                              matchOperation,
+                              group("librarySetId")
+                                      .count().as("matchCount")
+                                      .first("_id").as("matchedLibraryId")),
+                      CqlLibrary.class,
+                      LibrarySetMatchCountDTO.class
+              ).getMappedResults();
+
+      Map<String, LibrarySetMatchCountDTO> matchInfoMap = matchedLibrarySetCounts.stream()
+              .collect(Collectors.toMap(
+                      LibrarySetMatchCountDTO::getLibrarySetId,
+                      Function.identity()
+              ));
+
+      List<String> matchedLibrarySetIds = new ArrayList<>(matchInfoMap.keySet());
+
+      if (matchedLibrarySetIds.isEmpty()) {
+        return new PageImpl<>(Collections.emptyList(), pageable, 0);
+      }
 
       // Fetch all libraries associated to each LibrarySetId
       MatchOperation matchLibrarySetIds =
@@ -104,58 +120,54 @@ public class CqlLibrarySearchServiceImpl implements CqlLibrarySearchService {
 
       // Sort those libraries based on version and draft status
       SortOperation sortByVersionAndDraft = sort(Sort.by(Sort.Direction.DESC, "draft", "version"));
+      GroupOperation groupByLibrarySet = group("librarySetId")
+              .first("$$ROOT").as("selectedDoc");
 
-      // Group all libraries that has same librarySetId and get the count and also first document
-      // which will be the latest library in the LibrarySet
-      GroupOperation groupByLibrarySet =
-          group("librarySetId").count().as("count").first("$$ROOT").as("selectedDoc");
+      ReplaceRootOperation replaceRoot = replaceRoot("selectedDoc");
 
-      AddFieldsOperation addFieldsOperation =
-          addFields()
-              .addField("selectedDoc.hasAssociatedLibraries")
-              .withValueOf(
-                  when(ComparisonOperators.Gt.valueOf("count").greaterThanValue(1))
-                      .then(true)
-                      .otherwise(false))
-              .build();
-
-      ReplaceRootOperation replaceRootOperation = replaceRoot("selectedDoc");
-
-      pipeline =
+      Aggregation pipeline =
           newAggregation(
               lookupOperation,
               unwindOperation,
               matchLibrarySetIds,
               sortByVersionAndDraft,
               groupByLibrarySet,
-              addFieldsOperation,
-              replaceRootOperation,
+                  replaceRoot,
               sort(Sort.by(Sort.Direction.DESC, "lastModifiedAt")),
               skip(pageable.getOffset()),
-              facets);
-    } else {
-      pipeline = newAggregation(lookupOperation, unwindOperation, matchOperation, facets);
-    }
+                  limit(pageable.getPageSize()));
+      List<LibraryListDTO> libraries =
+              mongoTemplate.aggregate(pipeline, CqlLibrary.class, LibraryListDTO.class).getMappedResults();
+      for (LibraryListDTO dto : libraries) {
+        LibrarySetMatchCountDTO matchInfo = matchInfoMap.get(dto.getLibrarySetId());
 
-    List<FacetDTO> results =
-        mongoTemplate.aggregate(pipeline, CqlLibrary.class, FacetDTO.class).getMappedResults();
-    if (appConfigService.isFlagEnabled(MadieFeatureFlag.LIBRARY_SEARCH)) {
-      long totalSize = 0;
-      if (results != null && !results.isEmpty()) {
-        List<?> countList = results.get(0).getCount();
-        if (countList != null && !countList.isEmpty()) {
-          Object totalCount = countList.get(0);
-          if (totalCount instanceof Map<?, ?>) {
-            Object count = ((Map<?, ?>) totalCount).get("count");
-            totalSize = ((Number) count).longValue();
+        if (matchInfo != null) {
+          boolean hasAssociated;
+          if (matchInfo.getMatchCount() > 1) {
+            hasAssociated = true;
+          } else {
+            // matchCount == 1 → compare selected (latest) library ID with matched one
+            String selectedId = dto.getId();
+            String matchedId = matchInfo.getMatchedLibraryId();
+            hasAssociated = matchedId != null && !matchedId.equals(selectedId);
           }
+          dto.setHasAssociatedLibraries(hasAssociated);
+        } else {
+          dto.setHasAssociatedLibraries(false); // Default/fallback
         }
       }
-      return new PageImpl<>(results.get(0).getQueryResults(), pageable, totalSize);
-    }
+      long totalSize = matchInfoMap.size();
+      return new PageImpl<>(libraries, pageable, totalSize);
 
-    return new PageImpl<>(
-        results.get(0).getQueryResults(), pageable, results.get(0).getCount().size());
+    } else {
+      Aggregation pipeline = newAggregation(lookupOperation, unwindOperation, matchOperation, facets);
+
+      List<FacetDTO> results =
+              mongoTemplate.aggregate(pipeline, CqlLibrary.class, FacetDTO.class).getMappedResults();
+
+      return new PageImpl<>(
+              results.get(0).getQueryResults(), pageable, results.get(0).getCount().size());
+    }
   }
 
   public List<LibraryListDTO> findLibrariesByLibrarySetId(
@@ -178,4 +190,24 @@ public class CqlLibrarySearchServiceImpl implements CqlLibrarySearchService {
         .aggregate(aggregation, CqlLibrary.class, LibraryListDTO.class)
         .getMappedResults();
   }
+
+  @Override
+  public List<LibraryListDTO> findLibrariesByLibrarySetIdAndCriteria(
+          String librarySetId,
+          LibrarySearchCriteria searchCriteria) {
+    Criteria criteria = Criteria.where("active").is(true).and("librarySetId").is(librarySetId);
+
+    if (searchCriteria != null && StringUtils.isNotBlank(searchCriteria.getSearchField())) {
+      appendAdditionalSearchCriteria(criteria, searchCriteria);
+    }
+    MatchOperation matchOperation = match(criteria);
+
+    SortOperation sortOperation = sort(Sort.by(Sort.Direction.DESC, "version"));
+    Aggregation aggregation = newAggregation(matchOperation, sortOperation);
+
+    return mongoTemplate
+            .aggregate(aggregation, CqlLibrary.class, LibraryListDTO.class)
+            .getMappedResults();
+  }
+
 }

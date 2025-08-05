@@ -249,6 +249,15 @@ public class CqlLibraryService {
     return cqlLibraryRepository.findLibrariesByLibrarySetId(librarySetId, sortByLatestVersion);
   }
 
+  public List<LibraryListDTO> fetchLibrariesByLibrarySetIdAndCriteria(
+          String librarySetId,
+          LibrarySearchCriteria searchCriteria) {
+    if (StringUtils.isBlank(librarySetId)) {
+      throw new BadRequestObjectException("Please provide library set ID.");
+    }
+    return cqlLibraryRepository.findLibrariesByLibrarySetIdAndCriteria(librarySetId, searchCriteria);
+  }
+
   public boolean hasAssociatedLibraries(LibraryListDTO library) {
     return cqlLibraryRepository.countAllByLibrarySetIdAndActiveAndIdIsNot(
             library.getLibrarySetId(), true, library.getId())
