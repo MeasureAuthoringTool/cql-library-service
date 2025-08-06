@@ -8,6 +8,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 
+import gov.cms.madie.cqllibraryservice.dto.LibraryListDTO;
 import gov.cms.madie.cqllibraryservice.exceptions.*;
 import gov.cms.madie.models.access.AclSpecification;
 import gov.cms.madie.models.access.RoleEnum;
@@ -359,140 +360,135 @@ class VersionServiceTest {
                 "testCqlLibraryId", "Library1", ModelType.QI_CORE.getValue(), "randomUser"));
   }
 
-  //  @Test
-  //  void testCreateDraftSuccesfullyDraftsForSharedUser() {
-  //    AclSpecification aclSpecification = new AclSpecification();
-  //    aclSpecification.setUserId("sharedUser");
-  //    aclSpecification.setRoles(Set.of(RoleEnum.SHARED_WITH));
-  //
-  //    CqlLibrary existingCqlLibrary =
-  //        CqlLibrary.builder()
-  //            .id("testCqlLibraryId")
-  //            .cqlLibraryName("testCqlLibraryName")
-  //            .model(ModelType.QI_CORE.getValue())
-  //            .createdBy("testUser")
-  //            .draft(false)
-  //            .cql(
-  //                "library testCql version '1.0.000'\nusing QICore version '4.1.1'\nusing FHIR
-  // version '4.0.1'")
-  //            .librarySetId("testLibrarySetId")
-  //            .version(Version.parse("1.0.000"))
-  //            .librarySet(
-  //                LibrarySet.builder()
-  //                    .librarySetId("testLibrarySetId")
-  //                    .owner("testUser")
-  //                    .acls(List.of(aclSpecification))
-  //                    .build())
-  //            .build();
-  //
-  //    CqlLibrary clonedCqlLibrary = existingCqlLibrary.toBuilder().build();
-  //    when(cqlLibraryService.findCqlLibraryById(anyString())).thenReturn(existingCqlLibrary);
-  //    when(cqlLibraryRepository.save(any(CqlLibrary.class))).thenReturn(clonedCqlLibrary);
-  //    doNothing().when(cqlLibraryService).checkDuplicateCqlLibraryName(anyString());
-  //    when(cqlLibraryRepository.existsByLibrarySetIdAndDraft(anyString(), anyBoolean()))
-  //        .thenReturn(false);
-  //
-  //    LibraryListDTO libraryDto =
-  //
-  // LibraryListDTO.builder().id("testCqlLibraryId").model(ModelType.QI_CORE.getValue()).build();
-  //    when(cqlLibraryService.getLibrariesByLibrarySetId(anyString(), anyBoolean()))
-  //        .thenReturn((List.of(libraryDto)));
-  //
-  //    versionService.createDraft(
-  //        "testCqlLibraryId", "testNewCqlLibraryName", ModelType.QI_CORE.getValue(),
-  // "sharedUser");
-  //    verify(cqlLibraryRepository, times(1)).save(cqlLibraryArgumentCaptor.capture());
-  //    CqlLibrary savedValue = cqlLibraryArgumentCaptor.getValue();
-  //
-  //    assertThat(savedValue.getCqlLibraryName(), is(equalTo("testNewCqlLibraryName")));
-  //    assertTrue(savedValue.isDraft());
-  //    // version and groupId should not change
-  //    assertThat(savedValue.getVersion(), is(equalTo(existingCqlLibrary.getVersion())));
-  //    assertThat(savedValue.getLibrarySetId(), is(equalTo(existingCqlLibrary.getLibrarySetId())));
-  //    assertTrue(savedValue.getCql().contains("using FHIR version '4.0.1'"));
-  //  }
-  //
-  //  @Test
-  //  void testCreateDraftSuccess() {
-  //    CqlLibrary existingCqlLibrary =
-  //        CqlLibrary.builder()
-  //            .id("testCqlLibraryId")
-  //            .cqlLibraryName("testCqlLibraryName")
-  //            .model(ModelType.QI_CORE.getValue())
-  //            .createdBy("testUser")
-  //            .cql("library testCql version '1.0.000'")
-  //            .draft(false)
-  //            .librarySetId("testLibrarySetId")
-  //            .version(Version.parse("1.0.000"))
-  //            .librarySet(
-  //                LibrarySet.builder().librarySetId("testLibrarySetId").owner("testUser").build())
-  //            .build();
-  //
-  //    CqlLibrary clonedCqlLibrary = existingCqlLibrary.toBuilder().build();
-  //    when(cqlLibraryService.findCqlLibraryById(anyString())).thenReturn(existingCqlLibrary);
-  //    when(cqlLibraryRepository.save(any(CqlLibrary.class))).thenReturn(clonedCqlLibrary);
-  //    doNothing().when(cqlLibraryService).checkDuplicateCqlLibraryName(anyString());
-  //    when(cqlLibraryRepository.existsByLibrarySetIdAndDraft(anyString(), anyBoolean()))
-  //        .thenReturn(false);
-  //
-  //    LibraryListDTO libraryDto =
-  //
-  // LibraryListDTO.builder().id("testCqlLibraryId").model(ModelType.QI_CORE.getValue()).build();
-  //    when(cqlLibraryService.getLibrariesByLibrarySetId(anyString(), anyBoolean()))
-  //        .thenReturn((List.of(libraryDto)));
-  //
-  //    versionService.createDraft(
-  //        "testCqlLibraryId", "testNewCqlLibraryName", ModelType.QI_CORE.getValue(), "testUser");
-  //    verify(cqlLibraryRepository, times(1)).save(cqlLibraryArgumentCaptor.capture());
-  //    CqlLibrary savedValue = cqlLibraryArgumentCaptor.getValue();
-  //
-  //    assertThat(savedValue.getCqlLibraryName(), is(equalTo("testNewCqlLibraryName")));
-  //    assertTrue(savedValue.isDraft());
-  //    // version and groupId should not change
-  //    assertThat(savedValue.getVersion(), is(equalTo(existingCqlLibrary.getVersion())));
-  //    assertThat(savedValue.getLibrarySetId(), is(equalTo(existingCqlLibrary.getLibrarySetId())));
-  //  }
-  //
-  //  @Test
-  //  void testCreateDraftSuccessWhenModelIsDifferent() {
-  //    CqlLibrary existingCqlLibrary =
-  //        CqlLibrary.builder()
-  //            .id("testCqlLibraryId")
-  //            .cqlLibraryName("testCqlLibraryName")
-  //            .model(ModelType.QI_CORE.getValue())
-  //            .createdBy("testUser")
-  //            .cql("library testCql version '1.0.000'")
-  //            .draft(false)
-  //            .librarySetId("testLibrarySetId")
-  //            .version(Version.parse("1.0.000"))
-  //            .librarySet(
-  //                LibrarySet.builder().librarySetId("testLibrarySetId").owner("testUser").build())
-  //            .build();
-  //
-  //    CqlLibrary clonedCqlLibrary = existingCqlLibrary.toBuilder().build();
-  //    when(cqlLibraryService.findCqlLibraryById(anyString())).thenReturn(existingCqlLibrary);
-  //    when(cqlLibraryRepository.save(any(CqlLibrary.class))).thenReturn(clonedCqlLibrary);
-  //    doNothing().when(cqlLibraryService).checkDuplicateCqlLibraryName(anyString());
-  //    when(cqlLibraryRepository.existsByLibrarySetIdAndDraft(anyString(), anyBoolean()))
-  //        .thenReturn(false);
-  //
-  //    LibraryListDTO libraryDto =
-  //
-  // LibraryListDTO.builder().id("testCqlLibraryId").model(ModelType.QI_CORE.getValue()).build();
-  //    when(cqlLibraryService.getLibrariesByLibrarySetId(anyString(), anyBoolean()))
-  //        .thenReturn((List.of(libraryDto)));
-  //
-  //    versionService.createDraft(
-  //        "testCqlLibraryId", "testNewCqlLibraryName", ModelType.QDM_5_6.getValue(), "testUser");
-  //    verify(cqlLibraryRepository, times(1)).save(cqlLibraryArgumentCaptor.capture());
-  //    CqlLibrary savedValue = cqlLibraryArgumentCaptor.getValue();
-  //
-  //    assertThat(savedValue.getCqlLibraryName(), is(equalTo("testNewCqlLibraryName")));
-  //    assertTrue(savedValue.isDraft());
-  //    // version and groupId should not change
-  //    assertThat(savedValue.getVersion(), is(equalTo(existingCqlLibrary.getVersion())));
-  //    assertThat(savedValue.getLibrarySetId(), is(equalTo(existingCqlLibrary.getLibrarySetId())));
-  //  }
+  @Test
+  void testCreateDraftSuccesfullyDraftsForSharedUser() {
+    AclSpecification aclSpecification = new AclSpecification();
+    aclSpecification.setUserId("sharedUser");
+    aclSpecification.setRoles(Set.of(RoleEnum.SHARED_WITH));
+
+    CqlLibrary existingCqlLibrary =
+        CqlLibrary.builder()
+            .id("testCqlLibraryId")
+            .cqlLibraryName("testCqlLibraryName")
+            .model(ModelType.QI_CORE.getValue())
+            .createdBy("testUser")
+            .draft(false)
+            .cql(
+                "library testCql version '1.0.000'\nusing QICore version '4.1.1'\nusing FHIR version '4.0.1'")
+            .librarySetId("testLibrarySetId")
+            .version(Version.parse("1.0.000"))
+            .librarySet(
+                LibrarySet.builder()
+                    .librarySetId("testLibrarySetId")
+                    .owner("testUser")
+                    .acls(List.of(aclSpecification))
+                    .build())
+            .build();
+
+    CqlLibrary clonedCqlLibrary = existingCqlLibrary.toBuilder().build();
+    when(cqlLibraryService.findCqlLibraryById(anyString())).thenReturn(existingCqlLibrary);
+    when(cqlLibraryRepository.save(any(CqlLibrary.class))).thenReturn(clonedCqlLibrary);
+    doNothing().when(cqlLibraryService).checkDuplicateCqlLibraryName(anyString());
+    when(cqlLibraryRepository.existsByLibrarySetIdAndDraft(anyString(), anyBoolean()))
+        .thenReturn(false);
+
+    LibraryListDTO libraryDto =
+        LibraryListDTO.builder().id("testCqlLibraryId").model(ModelType.QI_CORE.getValue()).build();
+    when(cqlLibraryService.getLibrariesByLibrarySetId(anyString(), anyBoolean(), any()))
+        .thenReturn((List.of(libraryDto)));
+
+    versionService.createDraft(
+        "testCqlLibraryId", "testNewCqlLibraryName", ModelType.QI_CORE.getValue(), "sharedUser");
+    verify(cqlLibraryRepository, times(1)).save(cqlLibraryArgumentCaptor.capture());
+    CqlLibrary savedValue = cqlLibraryArgumentCaptor.getValue();
+
+    assertThat(savedValue.getCqlLibraryName(), is(equalTo("testNewCqlLibraryName")));
+    assertTrue(savedValue.isDraft());
+    // version and groupId should not change
+    assertThat(savedValue.getVersion(), is(equalTo(existingCqlLibrary.getVersion())));
+    assertThat(savedValue.getLibrarySetId(), is(equalTo(existingCqlLibrary.getLibrarySetId())));
+    assertTrue(savedValue.getCql().contains("using FHIR version '4.0.1'"));
+  }
+
+  @Test
+  void testCreateDraftSuccess() {
+    CqlLibrary existingCqlLibrary =
+        CqlLibrary.builder()
+            .id("testCqlLibraryId")
+            .cqlLibraryName("testCqlLibraryName")
+            .model(ModelType.QI_CORE.getValue())
+            .createdBy("testUser")
+            .cql("library testCql version '1.0.000'")
+            .draft(false)
+            .librarySetId("testLibrarySetId")
+            .version(Version.parse("1.0.000"))
+            .librarySet(
+                LibrarySet.builder().librarySetId("testLibrarySetId").owner("testUser").build())
+            .build();
+
+    CqlLibrary clonedCqlLibrary = existingCqlLibrary.toBuilder().build();
+    when(cqlLibraryService.findCqlLibraryById(anyString())).thenReturn(existingCqlLibrary);
+    when(cqlLibraryRepository.save(any(CqlLibrary.class))).thenReturn(clonedCqlLibrary);
+    doNothing().when(cqlLibraryService).checkDuplicateCqlLibraryName(anyString());
+    when(cqlLibraryRepository.existsByLibrarySetIdAndDraft(anyString(), anyBoolean()))
+        .thenReturn(false);
+
+    LibraryListDTO libraryDto =
+        LibraryListDTO.builder().id("testCqlLibraryId").model(ModelType.QI_CORE.getValue()).build();
+    when(cqlLibraryService.getLibrariesByLibrarySetId(anyString(), anyBoolean(), any()))
+        .thenReturn((List.of(libraryDto)));
+
+    versionService.createDraft(
+        "testCqlLibraryId", "testNewCqlLibraryName", ModelType.QI_CORE.getValue(), "testUser");
+    verify(cqlLibraryRepository, times(1)).save(cqlLibraryArgumentCaptor.capture());
+    CqlLibrary savedValue = cqlLibraryArgumentCaptor.getValue();
+
+    assertThat(savedValue.getCqlLibraryName(), is(equalTo("testNewCqlLibraryName")));
+    assertTrue(savedValue.isDraft());
+    // version and groupId should not change
+    assertThat(savedValue.getVersion(), is(equalTo(existingCqlLibrary.getVersion())));
+    assertThat(savedValue.getLibrarySetId(), is(equalTo(existingCqlLibrary.getLibrarySetId())));
+  }
+
+  @Test
+  void testCreateDraftSuccessWhenModelIsDifferent() {
+    CqlLibrary existingCqlLibrary =
+        CqlLibrary.builder()
+            .id("testCqlLibraryId")
+            .cqlLibraryName("testCqlLibraryName")
+            .model(ModelType.QI_CORE.getValue())
+            .createdBy("testUser")
+            .cql("library testCql version '1.0.000'")
+            .draft(false)
+            .librarySetId("testLibrarySetId")
+            .version(Version.parse("1.0.000"))
+            .librarySet(
+                LibrarySet.builder().librarySetId("testLibrarySetId").owner("testUser").build())
+            .build();
+
+    CqlLibrary clonedCqlLibrary = existingCqlLibrary.toBuilder().build();
+    when(cqlLibraryService.findCqlLibraryById(anyString())).thenReturn(existingCqlLibrary);
+    when(cqlLibraryRepository.save(any(CqlLibrary.class))).thenReturn(clonedCqlLibrary);
+    doNothing().when(cqlLibraryService).checkDuplicateCqlLibraryName(anyString());
+    when(cqlLibraryRepository.existsByLibrarySetIdAndDraft(anyString(), anyBoolean()))
+        .thenReturn(false);
+
+    LibraryListDTO libraryDto =
+        LibraryListDTO.builder().id("testCqlLibraryId").model(ModelType.QI_CORE.getValue()).build();
+    when(cqlLibraryService.getLibrariesByLibrarySetId(anyString(), anyBoolean(), any()))
+        .thenReturn((List.of(libraryDto)));
+
+    versionService.createDraft(
+        "testCqlLibraryId", "testNewCqlLibraryName", ModelType.QDM_5_6.getValue(), "testUser");
+    verify(cqlLibraryRepository, times(1)).save(cqlLibraryArgumentCaptor.capture());
+    CqlLibrary savedValue = cqlLibraryArgumentCaptor.getValue();
+
+    assertThat(savedValue.getCqlLibraryName(), is(equalTo("testNewCqlLibraryName")));
+    assertTrue(savedValue.isDraft());
+    // version and groupId should not change
+    assertThat(savedValue.getVersion(), is(equalTo(existingCqlLibrary.getVersion())));
+    assertThat(savedValue.getLibrarySetId(), is(equalTo(existingCqlLibrary.getLibrarySetId())));
+  }
 
   @Test
   void testCreateDraftThrowsExceptionWhenDraftAlreadyExists() {
@@ -623,79 +619,78 @@ class VersionServiceTest {
     assertFalse(result);
   }
 
-  //  @Test
-  //  void testIsQiCore411AndHasOtherQiCoreLibraryReturnsFalseNoOtherQiCore() {
-  //    CqlLibrary existingCqlLibrary =
-  //        CqlLibrary.builder()
-  //            .id("testCqlLibraryId")
-  //            .model(ModelType.QI_CORE.getValue())
-  //            .librarySetId("testLibrarySetId")
-  //            .build();
-  //    LibraryListDTO libraryDto =
-  //
-  // LibraryListDTO.builder().id("testCqlLibraryId").model(ModelType.QI_CORE.getValue()).build();
-  //    when(cqlLibraryService.getLibrariesByLibrarySetId(anyString(), anyBoolean()))
-  //        .thenReturn((List.of(libraryDto)));
-  //    boolean result = versionService.isQiCore411AndHasOtherQiCoreLibrary(existingCqlLibrary);
-  //    assertFalse(result);
-  //  }
-  //
-  //  @Test
-  //  void testIsQiCore411AndHasOtherQiCoreLibraryReturnsFalseQdm() {
-  //    CqlLibrary existingCqlLibrary =
-  //        CqlLibrary.builder()
-  //            .id("testCqlLibraryId")
-  //            .model(ModelType.QI_CORE.getValue())
-  //            .librarySetId("testLibrarySetId")
-  //            .build();
-  //    LibraryListDTO libraryDto =
-  //        LibraryListDTO.builder()
-  //            .id("testCqlLibraryId2")
-  //            .model(ModelType.QDM_5_6.getValue())
-  //            .build();
-  //    when(cqlLibraryService.getLibrariesByLibrarySetId(anyString(), anyBoolean()))
-  //        .thenReturn((List.of(libraryDto)));
-  //    boolean result = versionService.isQiCore411AndHasOtherQiCoreLibrary(existingCqlLibrary);
-  //    assertFalse(result);
-  //  }
-  //
-  //  @Test
-  //  void testIsQiCore411AndHasOtherQiCoreLibraryReturnsTrue() {
-  //    CqlLibrary existingCqlLibrary =
-  //        CqlLibrary.builder()
-  //            .id("testCqlLibraryId")
-  //            .model(ModelType.QI_CORE.getValue())
-  //            .librarySetId("testLibrarySetId")
-  //            .build();
-  //    LibraryListDTO libraryDto =
-  //        LibraryListDTO.builder()
-  //            .id("testCqlLibraryId2")
-  //            .model(ModelType.QI_CORE_6_0_0.getValue())
-  //            .build();
-  //    when(cqlLibraryService.getLibrariesByLibrarySetId(anyString(), anyBoolean()))
-  //        .thenReturn((List.of(libraryDto)));
-  //    boolean result = versionService.isQiCore411AndHasOtherQiCoreLibrary(existingCqlLibrary);
-  //    assertTrue(result);
-  //  }
-  //
-  //  @Test
-  //  void testIsQiCore411AndHasOtherQiCoreLibraryReturnsTrueForQiCore7() {
-  //    CqlLibrary existingCqlLibrary =
-  //        CqlLibrary.builder()
-  //            .id("testCqlLibraryId")
-  //            .model(ModelType.QI_CORE.getValue())
-  //            .librarySetId("testLibrarySetId")
-  //            .build();
-  //    LibraryListDTO libraryDto =
-  //        LibraryListDTO.builder()
-  //            .id("testCqlLibraryId2")
-  //            .model(ModelType.QI_CORE_7_0_0.getValue())
-  //            .build();
-  //    when(cqlLibraryService.getLibrariesByLibrarySetId(anyString(), anyBoolean()))
-  //        .thenReturn((List.of(libraryDto)));
-  //    boolean result = versionService.isQiCore411AndHasOtherQiCoreLibrary(existingCqlLibrary);
-  //    assertTrue(result);
-  //  }
+  @Test
+  void testIsQiCore411AndHasOtherQiCoreLibraryReturnsFalseNoOtherQiCore() {
+    CqlLibrary existingCqlLibrary =
+        CqlLibrary.builder()
+            .id("testCqlLibraryId")
+            .model(ModelType.QI_CORE.getValue())
+            .librarySetId("testLibrarySetId")
+            .build();
+    LibraryListDTO libraryDto =
+        LibraryListDTO.builder().id("testCqlLibraryId").model(ModelType.QI_CORE.getValue()).build();
+    when(cqlLibraryService.getLibrariesByLibrarySetId(anyString(), anyBoolean(), any()))
+        .thenReturn((List.of(libraryDto)));
+    boolean result = versionService.isQiCore411AndHasOtherQiCoreLibrary(existingCqlLibrary);
+    assertFalse(result);
+  }
+
+  @Test
+  void testIsQiCore411AndHasOtherQiCoreLibraryReturnsFalseQdm() {
+    CqlLibrary existingCqlLibrary =
+        CqlLibrary.builder()
+            .id("testCqlLibraryId")
+            .model(ModelType.QI_CORE.getValue())
+            .librarySetId("testLibrarySetId")
+            .build();
+    LibraryListDTO libraryDto =
+        LibraryListDTO.builder()
+            .id("testCqlLibraryId2")
+            .model(ModelType.QDM_5_6.getValue())
+            .build();
+    when(cqlLibraryService.getLibrariesByLibrarySetId(anyString(), anyBoolean(), any()))
+        .thenReturn((List.of(libraryDto)));
+    boolean result = versionService.isQiCore411AndHasOtherQiCoreLibrary(existingCqlLibrary);
+    assertFalse(result);
+  }
+
+  @Test
+  void testIsQiCore411AndHasOtherQiCoreLibraryReturnsTrue() {
+    CqlLibrary existingCqlLibrary =
+        CqlLibrary.builder()
+            .id("testCqlLibraryId")
+            .model(ModelType.QI_CORE.getValue())
+            .librarySetId("testLibrarySetId")
+            .build();
+    LibraryListDTO libraryDto =
+        LibraryListDTO.builder()
+            .id("testCqlLibraryId2")
+            .model(ModelType.QI_CORE_6_0_0.getValue())
+            .build();
+    when(cqlLibraryService.getLibrariesByLibrarySetId(anyString(), anyBoolean(), any()))
+        .thenReturn((List.of(libraryDto)));
+    boolean result = versionService.isQiCore411AndHasOtherQiCoreLibrary(existingCqlLibrary);
+    assertTrue(result);
+  }
+
+  @Test
+  void testIsQiCore411AndHasOtherQiCoreLibraryReturnsTrueForQiCore7() {
+    CqlLibrary existingCqlLibrary =
+        CqlLibrary.builder()
+            .id("testCqlLibraryId")
+            .model(ModelType.QI_CORE.getValue())
+            .librarySetId("testLibrarySetId")
+            .build();
+    LibraryListDTO libraryDto =
+        LibraryListDTO.builder()
+            .id("testCqlLibraryId2")
+            .model(ModelType.QI_CORE_7_0_0.getValue())
+            .build();
+    when(cqlLibraryService.getLibrariesByLibrarySetId(anyString(), anyBoolean(), any()))
+        .thenReturn((List.of(libraryDto)));
+    boolean result = versionService.isQiCore411AndHasOtherQiCoreLibrary(existingCqlLibrary);
+    assertTrue(result);
+  }
 
   @Test
   void testIsValidDraftableVersionReturnsFalseWhenDraftedToQiCore6() {
@@ -724,44 +719,44 @@ class VersionServiceTest {
     assertFalse(result);
   }
 
-  //  @Test
-  //  void testCreateDraftThrowsExceptionForQiCore411DraftOffQiCore600() {
-  //    CqlLibrary existingCqlLibrary =
-  //        CqlLibrary.builder()
-  //            .id("testCqlLibraryId")
-  //            .cqlLibraryName("testCqlLibraryName")
-  //            .model(ModelType.QI_CORE.getValue())
-  //            .createdBy("testUser")
-  //            .cql("library testCql version '1.0.000'")
-  //            .draft(false)
-  //            .librarySetId("testLibrarySetId")
-  //            .version(Version.parse("1.0.000"))
-  //            .librarySet(
-  //                LibrarySet.builder().librarySetId("testLibrarySetId").owner("testUser").build())
-  //            .build();
-  //
-  //    when(cqlLibraryService.findCqlLibraryById(anyString())).thenReturn(existingCqlLibrary);
-  //    doNothing().when(cqlLibraryService).checkDuplicateCqlLibraryName(anyString());
-  //    when(cqlLibraryRepository.existsByLibrarySetIdAndDraft(anyString(), anyBoolean()))
-  //        .thenReturn(false);
-  //
-  //    LibraryListDTO libraryDto =
-  //        LibraryListDTO.builder()
-  //            .id("testCqlLibraryId2")
-  //            .model(ModelType.QI_CORE_6_0_0.getValue())
-  //            .build();
-  //    when(cqlLibraryService.getLibrariesByLibrarySetId(anyString(), anyBoolean()))
-  //        .thenReturn((List.of(libraryDto)));
-  //
-  //    assertThrows(
-  //        ResourceNotDraftableException.class,
-  //        () ->
-  //            versionService.createDraft(
-  //                "testCqlLibraryId",
-  //                "testNewCqlLibraryName",
-  //                ModelType.QI_CORE.getValue(),
-  //                "testUser"));
-  //  }
+  @Test
+  void testCreateDraftThrowsExceptionForQiCore411DraftOffQiCore600() {
+    CqlLibrary existingCqlLibrary =
+        CqlLibrary.builder()
+            .id("testCqlLibraryId")
+            .cqlLibraryName("testCqlLibraryName")
+            .model(ModelType.QI_CORE.getValue())
+            .createdBy("testUser")
+            .cql("library testCql version '1.0.000'")
+            .draft(false)
+            .librarySetId("testLibrarySetId")
+            .version(Version.parse("1.0.000"))
+            .librarySet(
+                LibrarySet.builder().librarySetId("testLibrarySetId").owner("testUser").build())
+            .build();
+
+    when(cqlLibraryService.findCqlLibraryById(anyString())).thenReturn(existingCqlLibrary);
+    doNothing().when(cqlLibraryService).checkDuplicateCqlLibraryName(anyString());
+    when(cqlLibraryRepository.existsByLibrarySetIdAndDraft(anyString(), anyBoolean()))
+        .thenReturn(false);
+
+    LibraryListDTO libraryDto =
+        LibraryListDTO.builder()
+            .id("testCqlLibraryId2")
+            .model(ModelType.QI_CORE_6_0_0.getValue())
+            .build();
+    when(cqlLibraryService.getLibrariesByLibrarySetId(anyString(), anyBoolean(), any()))
+        .thenReturn((List.of(libraryDto)));
+
+    assertThrows(
+        ResourceNotDraftableException.class,
+        () ->
+            versionService.createDraft(
+                "testCqlLibraryId",
+                "testNewCqlLibraryName",
+                ModelType.QI_CORE.getValue(),
+                "testUser"));
+  }
 
   @Test
   void testCreateDraftThrowsExceptionForQiCore600WithQiCore411Model() {
