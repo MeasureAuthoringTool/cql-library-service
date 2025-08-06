@@ -242,20 +242,14 @@ public class CqlLibraryService {
   }
 
   public List<LibraryListDTO> getLibrariesByLibrarySetId(
-      String librarySetId, boolean sortByLatestVersion) {
+      String librarySetId,
+      boolean sortByLatestVersion,
+      LibrarySearchCriteria librarySearchCriteria) {
     if (StringUtils.isBlank(librarySetId)) {
       throw new BadRequestObjectException("Please provide library set ID.");
     }
-    return cqlLibraryRepository.findLibrariesByLibrarySetId(librarySetId, sortByLatestVersion);
-  }
-
-  public List<LibraryListDTO> fetchLibrariesByLibrarySetIdAndCriteria(
-          String librarySetId,
-          LibrarySearchCriteria searchCriteria) {
-    if (StringUtils.isBlank(librarySetId)) {
-      throw new BadRequestObjectException("Please provide library set ID.");
-    }
-    return cqlLibraryRepository.findLibrariesByLibrarySetIdAndCriteria(librarySetId, searchCriteria);
+    return cqlLibraryRepository.findLibrariesByLibrarySetId(
+        librarySetId, sortByLatestVersion, librarySearchCriteria);
   }
 
   public boolean hasAssociatedLibraries(LibraryListDTO library) {

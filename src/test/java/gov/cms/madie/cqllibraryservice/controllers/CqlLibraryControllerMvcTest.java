@@ -1,6 +1,7 @@
 package gov.cms.madie.cqllibraryservice.controllers;
 
 import gov.cms.madie.cqllibraryservice.config.security.SecurityConfig;
+import gov.cms.madie.cqllibraryservice.dto.LibrarySearchCriteria;
 import gov.cms.madie.cqllibraryservice.dto.LibrarySetDTO;
 import gov.cms.madie.cqllibraryservice.dto.LibraryListDTO;
 import gov.cms.madie.cqllibraryservice.dto.SharedUser;
@@ -1753,14 +1754,21 @@ public class CqlLibraryControllerMvcTest {
             .librarySet(librarySet)
             .build();
 
-    when(cqlLibraryService.getLibrariesByLibrarySetId(anyString(), anyBoolean()))
+    LibrarySearchCriteria librarySearchCriteria = LibrarySearchCriteria.builder().build();
+    ObjectMapper objectMapper = new ObjectMapper(); // Jackson mapper
+    String jsonBody = objectMapper.writeValueAsString(librarySearchCriteria);
+
+    when(cqlLibraryService.getLibrariesByLibrarySetId(
+            anyString(), anyBoolean(), eq(librarySearchCriteria)))
         .thenReturn(List.of(listDTO));
     MvcResult result =
         mockMvc
             .perform(
-                get("/cql-libraries/byLibrarySetId?librarySetId=" + librarySetId)
+                put("/cql-libraries/byLibrarySetId?librarySetId=" + librarySetId)
                     .with(user(TEST_USER_ID))
-                    .with(csrf()))
+                    .with(csrf())
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(jsonBody))
             .andReturn();
     assertThat(
         result.getResponse().getContentAsString(),

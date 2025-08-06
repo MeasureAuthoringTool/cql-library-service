@@ -16,9 +16,7 @@ public interface CqlLibrarySearchService {
       boolean filterByCurrentUser);
 
   List<LibraryListDTO> findLibrariesByLibrarySetId(
-      String librarySetId, boolean sortByLatestVersion);
-
-  List<LibraryListDTO> findLibrariesByLibrarySetIdAndCriteria(
-          String librarySetId,
-          LibrarySearchCriteria searchCriteria);
+      String librarySetId,
+      boolean sortByLatestVersion,
+      LibrarySearchCriteria librarySearchCriteria);
 }

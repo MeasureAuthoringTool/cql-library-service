@@ -542,9 +542,12 @@ class CqlLibraryServiceTest {
   void testGetLibrariesByLibrarySetId() {
     String librarySetId = "testSetId";
     LibraryListDTO l1 = LibraryListDTO.builder().id("L1").librarySetId(librarySetId).build();
-    when(cqlLibraryRepository.findLibrariesByLibrarySetId(eq(librarySetId), anyBoolean()))
+    when(cqlLibraryRepository.findLibrariesByLibrarySetId(
+            eq(librarySetId), anyBoolean(), any(LibrarySearchCriteria.class)))
         .thenReturn(List.of(l1));
-    List<LibraryListDTO> results = cqlLibraryService.getLibrariesByLibrarySetId(librarySetId, true);
+    List<LibraryListDTO> results =
+        cqlLibraryService.getLibrariesByLibrarySetId(
+            librarySetId, true, LibrarySearchCriteria.builder().build());
     assertEquals(1, results.size());
     assertThat(results.get(0).getId(), equalTo("L1"));
     assertThat(results.get(0).getLibrarySetId(), equalTo(librarySetId));
@@ -555,7 +558,7 @@ class CqlLibraryServiceTest {
     Exception exception =
         assertThrows(
             BadRequestObjectException.class,
-            () -> cqlLibraryService.getLibrariesByLibrarySetId("", true));
+            () -> cqlLibraryService.getLibrariesByLibrarySetId("", true, null));
     assertThat(exception.getMessage(), equalTo("Please provide library set ID."));
   }
 

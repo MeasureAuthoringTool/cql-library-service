@@ -127,24 +127,16 @@ public class CqlLibraryController {
     return ResponseEntity.ok(cqlLibraryService.getLibrarySetBySetId(setId));
   }
 
-  @GetMapping("/byLibrarySetId")
+  @PutMapping("/byLibrarySetId")
   public ResponseEntity<List<LibraryListDTO>> getLibrariesByLibrarySetId(
       @RequestParam(name = "librarySetId") String librarySetId,
-      @RequestParam(defaultValue = "true") boolean sortByLatestVersion) {
+      @RequestParam(defaultValue = "true") boolean sortByLatestVersion,
+      @RequestBody(required = false) LibrarySearchCriteria librarySearchCriteria) {
     List<LibraryListDTO> cqlLibraries =
-        cqlLibraryService.getLibrariesByLibrarySetId(librarySetId, sortByLatestVersion);
+        cqlLibraryService.getLibrariesByLibrarySetId(
+            librarySetId, sortByLatestVersion, librarySearchCriteria);
     return ResponseEntity.ok(cqlLibraries);
   }
-
-  @PutMapping("/byLibrarySetId")
-  public ResponseEntity<List<LibraryListDTO>> fetchLibrariesByLibrarySetIdAndCriteria(
-          @RequestParam(name = "librarySetId") String librarySetId,
-          @RequestBody(required = false) LibrarySearchCriteria librarySearchCriteria) {
-    List<LibraryListDTO> cqlLibraries =
-            cqlLibraryService.fetchLibrariesByLibrarySetIdAndCriteria(librarySetId,librarySearchCriteria);
-    return ResponseEntity.ok(cqlLibraries);
-  }
-
 
   @PostMapping
   public ResponseEntity<CqlLibrary> createCqlLibrary(

@@ -251,6 +251,51 @@ class CqlLibraryControllerTest {
   }
 
   @Test
+  void getCqlLibrariesWithNullSearchCriteria() {
+    List<LibraryListDTO> cqlLibraries = List.of(libraryList);
+    Page<LibraryListDTO> pageResult = new PageImpl<>(cqlLibraries);
+
+    when(cqlLibraryService.getLibrariesByCriteria(eq(null), eq(false), any(), any()))
+        .thenReturn(pageResult);
+
+    Principal principal = mock(Principal.class);
+    when(principal.getName()).thenReturn("test.user");
+
+    ResponseEntity<Page<LibraryListDTO>> response =
+        cqlLibraryController.fetchLibrariesByCriteria(principal, false, null, 10, 0, null);
+
+    verify(cqlLibraryService, times(1)).getLibrariesByCriteria(eq(null), eq(false), any(), any());
+    verifyNoMoreInteractions(cqlLibraryService);
+
+    assertNotNull(response.getBody());
+    assertFalse(response.getBody().isEmpty());
+    assertEquals("testCqlLibraryId", response.getBody().getContent().get(0).getId());
+  }
+
+  @Test
+  void getCqlLibrariesWithNoResults() {
+    Page<LibraryListDTO> emptyPage = Page.empty();
+
+    when(cqlLibraryService.getLibrariesByCriteria(
+            eq(librarySearchCriteria), eq(false), any(), any()))
+        .thenReturn(emptyPage);
+
+    Principal principal = mock(Principal.class);
+    when(principal.getName()).thenReturn("test.user");
+
+    ResponseEntity<Page<LibraryListDTO>> response =
+        cqlLibraryController.fetchLibrariesByCriteria(
+            principal, false, librarySearchCriteria, 10, 0, null);
+
+    verify(cqlLibraryService, times(1))
+        .getLibrariesByCriteria(eq(librarySearchCriteria), eq(false), any(), any());
+
+    assertNotNull(response.getBody());
+    assertTrue(response.getBody().isEmpty());
+    assertEquals(0, response.getBody().getTotalElements());
+  }
+
+  @Test
   void testSaveCqlLibrary() {
     ArgumentCaptor<CqlLibrary> saveCqlLibraryArgCaptor = ArgumentCaptor.forClass(CqlLibrary.class);
     doReturn(cqlLibrary).when(cqlLibraryRepository).save(any());
@@ -707,14 +752,17 @@ class CqlLibraryControllerTest {
   @Test
   public void testGetLibrariesByLibrarySetId() {
     List<LibraryListDTO> cqlLibraries = List.of(libraryList);
+    LibrarySearchCriteria librarySearchCriteria = new LibrarySearchCriteria();
 
-    when(cqlLibraryService.getLibrariesByLibrarySetId(eq("test"), eq(true)))
+    when(cqlLibraryService.getLibrariesByLibrarySetId(
+            eq("test"), eq(true), eq(librarySearchCriteria)))
         .thenReturn(cqlLibraries);
 
     ResponseEntity<List<LibraryListDTO>> response =
-        cqlLibraryController.getLibrariesByLibrarySetId("test", true);
+        cqlLibraryController.getLibrariesByLibrarySetId("test", true, librarySearchCriteria);
 
-    verify(cqlLibraryService, times(1)).getLibrariesByLibrarySetId(eq("test"), eq(true));
+    verify(cqlLibraryService, times(1))
+        .getLibrariesByLibrarySetId(eq("test"), eq(true), eq(librarySearchCriteria));
     verifyNoMoreInteractions(cqlLibraryService);
 
     assertNotNull(response.getBody());
