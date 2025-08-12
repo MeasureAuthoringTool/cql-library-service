@@ -3,6 +3,7 @@ package gov.cms.madie.cqllibraryservice.repositories;
 import gov.cms.madie.cqllibraryservice.dto.*;
 import gov.cms.madie.cqllibraryservice.services.AppConfigService;
 import gov.cms.madie.models.access.RoleEnum;
+import gov.cms.madie.models.common.OwnershipType;
 import gov.cms.madie.models.library.CqlLibrary;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.data.domain.Page;
@@ -47,7 +48,7 @@ public class CqlLibrarySearchServiceImpl implements CqlLibrarySearchService {
       String userId,
       Pageable pageable,
       LibrarySearchCriteria librarySearchCriteria,
-      boolean filterByCurrentUser) {
+      OwnershipType ownershipType) {
     LookupOperation lookupOperation = getLookupOperation();
     UnwindOperation unwindOperation = unwind("librarySet");
 
@@ -57,20 +58,23 @@ public class CqlLibrarySearchServiceImpl implements CqlLibrarySearchService {
         && StringUtils.isNotBlank(librarySearchCriteria.getSearchField())) {
       appendAdditionalSearchCriteria(criteria, librarySearchCriteria);
     }
+
     Criteria librarySetCriteria = new Criteria();
-    if (filterByCurrentUser && StringUtils.isNotBlank(userId)) {
-      librarySetCriteria =
-          new Criteria()
-              .orOperator(
-                  Criteria.where("librarySet.owner").is(userId),
-                  Criteria.where("librarySet.acls.userId"),
-                  Criteria.where("librarySet.acls")
-                      .elemMatch(
-                          Criteria.where("userId")
-                              .regex("^\\Q" + userId + "\\E$", "i")
-                              .and("roles")
-                              .in(RoleEnum.SHARED_WITH)));
+
+    if (StringUtils.isNotBlank(userId)) {
+      if (ownershipType == OwnershipType.OWNED) {
+        librarySetCriteria = Criteria.where("librarySet.owner").is(userId);
+      } else if (ownershipType == OwnershipType.SHARED) {
+        librarySetCriteria =
+            Criteria.where("librarySet.acls")
+                .elemMatch(
+                    Criteria.where("userId")
+                        .regex("^\\Q" + userId + "\\E$", "i")
+                        .and("roles")
+                        .in(RoleEnum.SHARED_WITH));
+      }
     }
+
     MatchOperation matchOperation = match(new Criteria().andOperator(criteria, librarySetCriteria));
 
     FacetOperation facets =

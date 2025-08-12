@@ -49,7 +49,7 @@ class CqlLibraryServiceTest {
   @Mock private ActionLogService actionLogService;
 
   @Test
-  public void testGetLibrariesByCriteria() {
+  public void testGetOwnedLibrariesByCriteria() {
     var librarySearchCriteria =
         LibrarySearchCriteria.builder().searchField("measureSearchCriteria").build();
     PageRequest initialPage = PageRequest.of(0, 10);
@@ -58,10 +58,11 @@ class CqlLibraryServiceTest {
     Page<CqlLibrary> activeLibraries = new PageImpl<>(List.of(lib1));
     doReturn(activeLibraries)
         .when(cqlLibraryRepository)
-        .searchLibrariesByCriteria(eq("test.user"), any(PageRequest.class), any(), eq(true));
+        .searchLibrariesByCriteria(
+            eq("test.user"), any(PageRequest.class), any(), eq(OwnershipType.OWNED));
     Object libraries =
         cqlLibraryService.getLibrariesByCriteria(
-            librarySearchCriteria, true, initialPage, "test.user");
+            librarySearchCriteria, OwnershipType.OWNED, initialPage, "test.user");
     assertNotNull(libraries);
   }
 

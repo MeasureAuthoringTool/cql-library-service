@@ -13,6 +13,7 @@ import gov.cms.madie.cqllibraryservice.utils.LibraryUtils;
 import gov.cms.madie.models.access.AclOperation;
 import gov.cms.madie.models.access.AclSpecification;
 import gov.cms.madie.models.common.ActionType;
+import gov.cms.madie.models.common.OwnershipType;
 import gov.cms.madie.models.dto.LibraryUsage;
 import gov.cms.madie.models.library.CqlLibrary;
 import gov.cms.madie.models.library.CqlLibraryDraft;
@@ -63,8 +64,7 @@ public class CqlLibraryController {
   @PutMapping("/searches")
   public ResponseEntity<Page<LibraryListDTO>> fetchLibrariesByCriteria(
       Principal principal,
-      @RequestParam(required = false, defaultValue = "false", name = "currentUser")
-          boolean filterByCurrentUser,
+      @RequestParam(required = false, defaultValue = "ALL", name = "ownershipType") OwnershipType ownershipType,
       @RequestBody(required = false) LibrarySearchCriteria librarySearchCriteria,
       @RequestParam(required = false, defaultValue = "10", name = "limit") int limit,
       @RequestParam(required = false, defaultValue = "0", name = "page") int page,
@@ -92,7 +92,7 @@ public class CqlLibraryController {
     }
     Page<LibraryListDTO> cqlLibraries =
         cqlLibraryService.getLibrariesByCriteria(
-            librarySearchCriteria, filterByCurrentUser, pageReq, username);
+            librarySearchCriteria, ownershipType, pageReq, username);
     return ResponseEntity.ok(cqlLibraries);
   }
 
