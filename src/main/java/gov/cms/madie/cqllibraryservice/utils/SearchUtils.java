@@ -34,36 +34,48 @@ public class SearchUtils {
       switch (property) {
         case "version":
           String[] versionParts = searchField.split("\\.");
-          if (versionParts.length == 3
-              && isNumeric(versionParts[0])
-              && isNumeric(versionParts[1])
-              && isNumeric(versionParts[2])) {
-            Criteria otherCriteria = Criteria.where("version").is(Version.parse(searchField));
-            orConditions.add(otherCriteria);
-          } else if (versionParts.length == 2
-              && isNumeric(versionParts[0])
-              && isNumeric(versionParts[1])) {
-            int major = Integer.parseInt(versionParts[0]);
-            int minor = Integer.parseInt(versionParts[1]);
-            Criteria otherCriteria =
-                Criteria.where("version.major").is(major).and("version.minor").is(minor);
-            Criteria additionalCriteria =
-                Criteria.where("version.minor").is(major).and("version.revisionNumber").is(minor);
-            orConditions.add(otherCriteria);
-            orConditions.add(additionalCriteria);
-          } else if (versionParts.length == 1) {
-            if (isNumeric(versionParts[0])) {
-              int anyMatch = Integer.parseInt(versionParts[0]);
-              Criteria majorMatch = Criteria.where("version.major").is(anyMatch);
-              Criteria minorMatch = Criteria.where("version.minor").is(anyMatch);
-              Criteria patchMatch = Criteria.where("version.revisionNumber").is(anyMatch);
-              orConditions.add(majorMatch);
-              orConditions.add(minorMatch);
-              orConditions.add(patchMatch);
-            } else if (effectiveProperties.size() == 1) {
-              Criteria noVersionMatch = Criteria.where("version.major").is(versionParts[0]);
-              orConditions.add(noVersionMatch);
+          boolean allPartsNumeric = true;
+          for (String part : versionParts) {
+            if (!isNumeric(part)) {
+              allPartsNumeric = false;
+              break;
             }
+          }
+          if (allPartsNumeric) {
+            if (versionParts.length == 3
+                && isNumeric(versionParts[0])
+                && isNumeric(versionParts[1])
+                && isNumeric(versionParts[2])) {
+              Criteria otherCriteria = Criteria.where("version").is(Version.parse(searchField));
+              orConditions.add(otherCriteria);
+            } else if (versionParts.length == 2
+                && isNumeric(versionParts[0])
+                && isNumeric(versionParts[1])) {
+              int major = Integer.parseInt(versionParts[0]);
+              int minor = Integer.parseInt(versionParts[1]);
+              Criteria otherCriteria =
+                  Criteria.where("version.major").is(major).and("version.minor").is(minor);
+              Criteria additionalCriteria =
+                  Criteria.where("version.minor").is(major).and("version.revisionNumber").is(minor);
+              orConditions.add(otherCriteria);
+              orConditions.add(additionalCriteria);
+            } else if (versionParts.length == 1) {
+              if (isNumeric(versionParts[0])) {
+                int anyMatch = Integer.parseInt(versionParts[0]);
+                Criteria majorMatch = Criteria.where("version.major").is(anyMatch);
+                Criteria minorMatch = Criteria.where("version.minor").is(anyMatch);
+                Criteria patchMatch = Criteria.where("version.revisionNumber").is(anyMatch);
+                orConditions.add(majorMatch);
+                orConditions.add(minorMatch);
+                orConditions.add(patchMatch);
+              } else if (effectiveProperties.size() == 1) {
+                Criteria noVersionMatch = Criteria.where("version.major").is(versionParts[0]);
+                orConditions.add(noVersionMatch);
+              }
+            }
+          } else {
+            Criteria noVersionMatch = Criteria.where("version.major").is(versionParts[0]);
+            orConditions.add(noVersionMatch);
           }
           break;
         case "library":
