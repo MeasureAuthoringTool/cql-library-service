@@ -24,6 +24,7 @@ import gov.cms.madie.models.access.AclOperation;
 import gov.cms.madie.models.access.AclSpecification;
 import gov.cms.madie.models.access.RoleEnum;
 import gov.cms.madie.models.common.ActionType;
+import gov.cms.madie.models.common.OwnershipType;
 import gov.cms.madie.models.dto.LibraryUsage;
 import gov.cms.madie.models.library.CqlLibrary;
 import gov.cms.madie.models.library.CqlLibraryDraft;
@@ -101,12 +102,12 @@ class CqlLibraryControllerTest {
   }
 
   @Test
-  void getCqlLibrariesWithoutCurrentUserFilter() {
+  void getCqlLibrariesWithOwnedOwnershipType() {
     List<LibraryListDTO> cqlLibraries = List.of(libraryList);
     Page<LibraryListDTO> pageResult = new PageImpl<>(cqlLibraries);
 
     when(cqlLibraryService.getLibrariesByCriteria(
-            eq(librarySearchCriteria), eq(false), any(), any()))
+            eq(librarySearchCriteria), eq(OwnershipType.OWNED), any(), any()))
         .thenReturn(pageResult);
 
     Principal principal = mock(Principal.class);
@@ -114,10 +115,60 @@ class CqlLibraryControllerTest {
 
     ResponseEntity<Page<LibraryListDTO>> response =
         cqlLibraryController.fetchLibrariesByCriteria(
-            principal, false, librarySearchCriteria, 10, 0, "");
+            principal, OwnershipType.OWNED, librarySearchCriteria, 10, 0, "");
 
     verify(cqlLibraryService, times(1))
-        .getLibrariesByCriteria(eq(librarySearchCriteria), eq(false), any(), any());
+        .getLibrariesByCriteria(eq(librarySearchCriteria), eq(OwnershipType.OWNED), any(), any());
+    verifyNoMoreInteractions(cqlLibraryService);
+
+    assertNotNull(response.getBody());
+    assertFalse(response.getBody().isEmpty());
+    assertEquals("testCqlLibraryId", response.getBody().getContent().get(0).getId());
+  }
+
+  @Test
+  void getCqlLibrariesWithSharedOwnershipType() {
+    List<LibraryListDTO> cqlLibraries = List.of(libraryList);
+    Page<LibraryListDTO> pageResult = new PageImpl<>(cqlLibraries);
+
+    when(cqlLibraryService.getLibrariesByCriteria(
+            eq(librarySearchCriteria), eq(OwnershipType.SHARED), any(), any()))
+        .thenReturn(pageResult);
+
+    Principal principal = mock(Principal.class);
+    when(principal.getName()).thenReturn("test.user");
+
+    ResponseEntity<Page<LibraryListDTO>> response =
+        cqlLibraryController.fetchLibrariesByCriteria(
+            principal, OwnershipType.SHARED, librarySearchCriteria, 10, 0, "");
+
+    verify(cqlLibraryService, times(1))
+        .getLibrariesByCriteria(eq(librarySearchCriteria), eq(OwnershipType.SHARED), any(), any());
+    verifyNoMoreInteractions(cqlLibraryService);
+
+    assertNotNull(response.getBody());
+    assertFalse(response.getBody().isEmpty());
+    assertEquals("testCqlLibraryId", response.getBody().getContent().get(0).getId());
+  }
+
+  @Test
+  void getCqlLibrariesWithAllOwnershipType() {
+    List<LibraryListDTO> cqlLibraries = List.of(libraryList);
+    Page<LibraryListDTO> pageResult = new PageImpl<>(cqlLibraries);
+
+    when(cqlLibraryService.getLibrariesByCriteria(
+            eq(librarySearchCriteria), eq(OwnershipType.ALL), any(), any()))
+        .thenReturn(pageResult);
+
+    Principal principal = mock(Principal.class);
+    when(principal.getName()).thenReturn("test.user");
+
+    ResponseEntity<Page<LibraryListDTO>> response =
+        cqlLibraryController.fetchLibrariesByCriteria(
+            principal, OwnershipType.ALL, librarySearchCriteria, 10, 0, "");
+
+    verify(cqlLibraryService, times(1))
+        .getLibrariesByCriteria(eq(librarySearchCriteria), eq(OwnershipType.ALL), any(), any());
     verifyNoMoreInteractions(cqlLibraryService);
 
     assertNotNull(response.getBody());
@@ -131,7 +182,7 @@ class CqlLibraryControllerTest {
     Page<LibraryListDTO> pageResult = new PageImpl<>(cqlLibraries);
 
     when(cqlLibraryService.getLibrariesByCriteria(
-            eq(librarySearchCriteria), eq(false), any(), any()))
+            eq(librarySearchCriteria), eq(OwnershipType.ALL), any(), any()))
         .thenReturn(pageResult);
 
     Principal principal = mock(Principal.class);
@@ -139,10 +190,15 @@ class CqlLibraryControllerTest {
 
     ResponseEntity<Page<LibraryListDTO>> response =
         cqlLibraryController.fetchLibrariesByCriteria(
-            principal, false, librarySearchCriteria, 10, 0, "badsortinfo,worsesortinfo,asdf");
+            principal,
+            OwnershipType.ALL,
+            librarySearchCriteria,
+            10,
+            0,
+            "badsortinfo,worsesortinfo,asdf");
 
     verify(cqlLibraryService, times(1))
-        .getLibrariesByCriteria(eq(librarySearchCriteria), eq(false), any(), any());
+        .getLibrariesByCriteria(eq(librarySearchCriteria), eq(OwnershipType.ALL), any(), any());
     verifyNoMoreInteractions(cqlLibraryService);
 
     assertNotNull(response.getBody());
@@ -156,7 +212,7 @@ class CqlLibraryControllerTest {
     Page<LibraryListDTO> pageResult = new PageImpl<>(cqlLibraries);
 
     when(cqlLibraryService.getLibrariesByCriteria(
-            eq(librarySearchCriteria), eq(false), any(), any()))
+            eq(librarySearchCriteria), eq(OwnershipType.ALL), any(), any()))
         .thenReturn(pageResult);
 
     Principal principal = mock(Principal.class);
@@ -164,10 +220,10 @@ class CqlLibraryControllerTest {
 
     ResponseEntity<Page<LibraryListDTO>> response =
         cqlLibraryController.fetchLibrariesByCriteria(
-            principal, false, librarySearchCriteria, 10, 0, "draft,false");
+            principal, OwnershipType.ALL, librarySearchCriteria, 10, 0, "draft,false");
 
     verify(cqlLibraryService, times(1))
-        .getLibrariesByCriteria(eq(librarySearchCriteria), eq(false), any(), any());
+        .getLibrariesByCriteria(eq(librarySearchCriteria), eq(OwnershipType.ALL), any(), any());
     verifyNoMoreInteractions(cqlLibraryService);
 
     assertNotNull(response.getBody());
@@ -181,7 +237,7 @@ class CqlLibraryControllerTest {
     Page<LibraryListDTO> pageResult = new PageImpl<>(cqlLibraries);
 
     when(cqlLibraryService.getLibrariesByCriteria(
-            eq(librarySearchCriteria), eq(false), any(), any()))
+            eq(librarySearchCriteria), eq(OwnershipType.ALL), any(), any()))
         .thenReturn(pageResult);
 
     Principal principal = mock(Principal.class);
@@ -189,10 +245,10 @@ class CqlLibraryControllerTest {
 
     ResponseEntity<Page<LibraryListDTO>> response =
         cqlLibraryController.fetchLibrariesByCriteria(
-            principal, false, librarySearchCriteria, 10, 0, "draft,true");
+            principal, OwnershipType.ALL, librarySearchCriteria, 10, 0, "draft,true");
 
     verify(cqlLibraryService, times(1))
-        .getLibrariesByCriteria(eq(librarySearchCriteria), eq(false), any(), any());
+        .getLibrariesByCriteria(eq(librarySearchCriteria), eq(OwnershipType.ALL), any(), any());
     verifyNoMoreInteractions(cqlLibraryService);
 
     assertNotNull(response.getBody());
@@ -206,7 +262,7 @@ class CqlLibraryControllerTest {
     Page<LibraryListDTO> pageResult = new PageImpl<>(cqlLibraries);
 
     when(cqlLibraryService.getLibrariesByCriteria(
-            eq(librarySearchCriteria), eq(false), any(), any()))
+            eq(librarySearchCriteria), eq(OwnershipType.ALL), any(), any()))
         .thenReturn(pageResult);
 
     Principal principal = mock(Principal.class);
@@ -214,35 +270,10 @@ class CqlLibraryControllerTest {
 
     ResponseEntity<Page<LibraryListDTO>> response =
         cqlLibraryController.fetchLibrariesByCriteria(
-            principal, false, librarySearchCriteria, 10, 0, null);
+            principal, OwnershipType.ALL, librarySearchCriteria, 10, 0, null);
 
     verify(cqlLibraryService, times(1))
-        .getLibrariesByCriteria(eq(librarySearchCriteria), eq(false), any(), any());
-    verifyNoMoreInteractions(cqlLibraryService);
-
-    assertNotNull(response.getBody());
-    assertFalse(response.getBody().isEmpty());
-    assertEquals("testCqlLibraryId", response.getBody().getContent().get(0).getId());
-  }
-
-  @Test
-  void getCqlLibrariesWithCurrentUserFilter() {
-    List<LibraryListDTO> cqlLibraries = List.of(libraryList);
-    Page<LibraryListDTO> pageResult = new PageImpl<>(cqlLibraries);
-
-    when(cqlLibraryService.getLibrariesByCriteria(
-            eq(librarySearchCriteria), eq(true), any(), any()))
-        .thenReturn(pageResult);
-
-    Principal principal = mock(Principal.class);
-    when(principal.getName()).thenReturn("test.user");
-
-    ResponseEntity<Page<LibraryListDTO>> response =
-        cqlLibraryController.fetchLibrariesByCriteria(
-            principal, true, librarySearchCriteria, 10, 0, "");
-
-    verify(cqlLibraryService, times(1))
-        .getLibrariesByCriteria(eq(librarySearchCriteria), eq(true), any(), any());
+        .getLibrariesByCriteria(eq(librarySearchCriteria), eq(OwnershipType.ALL), any(), any());
     verifyNoMoreInteractions(cqlLibraryService);
 
     assertNotNull(response.getBody());
@@ -255,16 +286,18 @@ class CqlLibraryControllerTest {
     List<LibraryListDTO> cqlLibraries = List.of(libraryList);
     Page<LibraryListDTO> pageResult = new PageImpl<>(cqlLibraries);
 
-    when(cqlLibraryService.getLibrariesByCriteria(eq(null), eq(false), any(), any()))
+    when(cqlLibraryService.getLibrariesByCriteria(eq(null), eq(OwnershipType.ALL), any(), any()))
         .thenReturn(pageResult);
 
     Principal principal = mock(Principal.class);
     when(principal.getName()).thenReturn("test.user");
 
     ResponseEntity<Page<LibraryListDTO>> response =
-        cqlLibraryController.fetchLibrariesByCriteria(principal, false, null, 10, 0, null);
+        cqlLibraryController.fetchLibrariesByCriteria(
+            principal, OwnershipType.ALL, null, 10, 0, null);
 
-    verify(cqlLibraryService, times(1)).getLibrariesByCriteria(eq(null), eq(false), any(), any());
+    verify(cqlLibraryService, times(1))
+        .getLibrariesByCriteria(eq(null), eq(OwnershipType.ALL), any(), any());
     verifyNoMoreInteractions(cqlLibraryService);
 
     assertNotNull(response.getBody());
@@ -277,7 +310,7 @@ class CqlLibraryControllerTest {
     Page<LibraryListDTO> emptyPage = Page.empty();
 
     when(cqlLibraryService.getLibrariesByCriteria(
-            eq(librarySearchCriteria), eq(false), any(), any()))
+            eq(librarySearchCriteria), eq(OwnershipType.ALL), any(), any()))
         .thenReturn(emptyPage);
 
     Principal principal = mock(Principal.class);
@@ -285,10 +318,10 @@ class CqlLibraryControllerTest {
 
     ResponseEntity<Page<LibraryListDTO>> response =
         cqlLibraryController.fetchLibrariesByCriteria(
-            principal, false, librarySearchCriteria, 10, 0, null);
+            principal, OwnershipType.ALL, librarySearchCriteria, 10, 0, null);
 
     verify(cqlLibraryService, times(1))
-        .getLibrariesByCriteria(eq(librarySearchCriteria), eq(false), any(), any());
+        .getLibrariesByCriteria(eq(librarySearchCriteria), eq(OwnershipType.ALL), any(), any());
 
     assertNotNull(response.getBody());
     assertTrue(response.getBody().isEmpty());

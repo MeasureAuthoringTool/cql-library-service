@@ -3,6 +3,7 @@ package gov.cms.madie.cqllibraryservice.repositories;
 import gov.cms.madie.cqllibraryservice.dto.*;
 import gov.cms.madie.cqllibraryservice.services.AppConfigService;
 import gov.cms.madie.models.library.CqlLibrary;
+import gov.cms.madie.models.common.OwnershipType;
 import org.bson.Document;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -76,16 +77,16 @@ public class CqlLibrarySearchServiceImplTest {
   }
 
   @Test
-  public void testFindLibraries() {
+  public void testFindOwnedLibraries() {
     when(appConfigService.isFlagEnabled(MadieFeatureFlag.LIBRARY_SEARCH)).thenReturn(false);
     // page size 3 from 0-2
     PageRequest pageRequest = PageRequest.of(0, 3);
-    List<LibraryListDTO> allLibraries = List.of(library1, library2, library3, library4, library5);
+    List<LibraryListDTO> ownedLibraries = List.of(library1, library2, library3, library4, library5);
 
     FacetDTO facetDTO =
         FacetDTO.builder()
             .queryResults(List.of(library1, library2, library3))
-            .count(Arrays.asList(allLibraries.toArray()))
+            .count(Arrays.asList(ownedLibraries.toArray()))
             .build();
 
     AggregationResults pagedResults = new AggregationResults<>(List.of(facetDTO), new Document());
@@ -94,7 +95,8 @@ public class CqlLibrarySearchServiceImplTest {
         .thenReturn(pagedResults);
 
     Page<LibraryListDTO> page =
-        cqlLibrarySearchServiceImpl.searchLibrariesByCriteria("john", pageRequest, null, true);
+        cqlLibrarySearchServiceImpl.searchLibrariesByCriteria(
+            "john", pageRequest, null, OwnershipType.OWNED);
     assertEquals(page.getTotalElements(), 5);
     assertEquals(page.getTotalPages(), 2);
     assertEquals(page.getContent().size(), 3);
@@ -105,7 +107,37 @@ public class CqlLibrarySearchServiceImplTest {
   }
 
   @Test
-  public void testFindMyActiveLibrariesWithSearchTerm() {
+  public void testFindSharedLibraries() {
+    when(appConfigService.isFlagEnabled(MadieFeatureFlag.LIBRARY_SEARCH)).thenReturn(false);
+    // page size 3 from 0-2
+    PageRequest pageRequest = PageRequest.of(0, 3);
+    List<LibraryListDTO> sharedLibraries = List.of(library1, library2, library3);
+
+    FacetDTO facetDTO =
+        FacetDTO.builder()
+            .queryResults(List.of(library1, library2, library3))
+            .count(Arrays.asList(sharedLibraries.toArray()))
+            .build();
+
+    AggregationResults pagedResults = new AggregationResults<>(List.of(facetDTO), new Document());
+
+    when(mongoTemplate.aggregate(any(Aggregation.class), (Class<?>) any(), any()))
+        .thenReturn(pagedResults);
+
+    Page<LibraryListDTO> page =
+        cqlLibrarySearchServiceImpl.searchLibrariesByCriteria(
+            "john", pageRequest, null, OwnershipType.SHARED);
+    assertEquals(page.getTotalElements(), 3);
+    assertEquals(page.getTotalPages(), 1);
+    assertEquals(page.getContent().size(), 3);
+    List<LibraryListDTO> page1Libraries = page.getContent();
+    assertEquals(page1Libraries.get(0).getId(), library1.getId());
+    assertEquals(page1Libraries.get(1).getId(), library2.getId());
+    assertEquals(page1Libraries.get(2).getId(), library3.getId());
+  }
+
+  @Test
+  public void testFindOwnedLibrariesWithSearchTerm() {
     when(appConfigService.isFlagEnabled(MadieFeatureFlag.LIBRARY_SEARCH)).thenReturn(false);
     PageRequest pageRequest = PageRequest.of(0, 3);
 
@@ -119,7 +151,7 @@ public class CqlLibrarySearchServiceImplTest {
     var librarySearchCriteria = LibrarySearchCriteria.builder().searchField("test").build();
     Page<LibraryListDTO> page =
         cqlLibrarySearchServiceImpl.searchLibrariesByCriteria(
-            "john", pageRequest, librarySearchCriteria, true);
+            "john", pageRequest, librarySearchCriteria, OwnershipType.OWNED);
     assertEquals(page.getTotalElements(), 2);
     assertEquals(page.getTotalPages(), 1);
     assertEquals(page.getContent().size(), 2);
@@ -129,7 +161,7 @@ public class CqlLibrarySearchServiceImplTest {
   }
 
   @Test
-  public void testFindLibrariesInSets() {
+  public void testFindOwnedLibrariesInSets() {
     when(appConfigService.isFlagEnabled(MadieFeatureFlag.LIBRARY_SEARCH)).thenReturn(true);
     // page size 3 from 0-2
     PageRequest pageRequest = PageRequest.of(0, 3);
@@ -138,11 +170,11 @@ public class CqlLibrarySearchServiceImplTest {
     LibrarySetMatchCountDTO match2 = new LibrarySetMatchCountDTO("setId2", 1, "lib3");
     List<LibrarySetMatchCountDTO> matchResults = List.of(match1, match2);
 
-    List<LibraryListDTO> allLibraries = List.of(library1, library2, library3, library4, library5);
+    List<LibraryListDTO> ownedLibraries = List.of(library1, library2, library3, library4, library5);
     FacetDTO facetDTO =
         FacetDTO.builder()
             .queryResults(List.of(library1, library2, library3))
-            .count(Arrays.asList(allLibraries.toArray()))
+            .count(Arrays.asList(ownedLibraries.toArray()))
             .build();
 
     when(mongoTemplate.aggregate(any(Aggregation.class), (Class<?>) any(), any()))
@@ -161,7 +193,8 @@ public class CqlLibrarySearchServiceImplTest {
             });
 
     Page<LibraryListDTO> page =
-        cqlLibrarySearchServiceImpl.searchLibrariesByCriteria("john", pageRequest, null, true);
+        cqlLibrarySearchServiceImpl.searchLibrariesByCriteria(
+            "john", pageRequest, null, OwnershipType.OWNED);
     assertEquals(page.getTotalElements(), 3);
     assertEquals(page.getTotalPages(), 1);
     assertEquals(page.getContent().size(), 3);
@@ -181,7 +214,8 @@ public class CqlLibrarySearchServiceImplTest {
         .thenReturn(new AggregationResults<>(Collections.emptyList(), new Document()));
 
     Page<LibraryListDTO> page =
-        cqlLibrarySearchServiceImpl.searchLibrariesByCriteria("john", pageRequest, null, true);
+        cqlLibrarySearchServiceImpl.searchLibrariesByCriteria(
+            "john", pageRequest, null, OwnershipType.OWNED);
 
     assertTrue(page.getContent().isEmpty());
     assertEquals(0, page.getTotalElements());
@@ -201,7 +235,8 @@ public class CqlLibrarySearchServiceImplTest {
         .thenReturn(new AggregationResults<>(List.of(facetDTO), new Document()));
 
     Page<LibraryListDTO> page =
-        cqlLibrarySearchServiceImpl.searchLibrariesByCriteria("user", pageRequest, criteria, true);
+        cqlLibrarySearchServiceImpl.searchLibrariesByCriteria(
+            "user", pageRequest, criteria, OwnershipType.OWNED);
 
     assertEquals(1, page.getTotalElements());
     assertEquals(1, page.getContent().size());
@@ -220,7 +255,8 @@ public class CqlLibrarySearchServiceImplTest {
         .thenReturn(new AggregationResults<>(List.of(facetDTO), new Document()));
 
     Page<LibraryListDTO> page =
-        cqlLibrarySearchServiceImpl.searchLibrariesByCriteria("john", pageRequest, null, false);
+        cqlLibrarySearchServiceImpl.searchLibrariesByCriteria(
+            "john", pageRequest, null, OwnershipType.SHARED);
 
     assertEquals(1, page.getTotalElements());
     assertEquals(1, page.getContent().size());

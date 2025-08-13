@@ -3,6 +3,7 @@ package gov.cms.madie.cqllibraryservice.repositories;
 import gov.cms.madie.cqllibraryservice.dto.*;
 import gov.cms.madie.cqllibraryservice.services.AppConfigService;
 import gov.cms.madie.models.access.RoleEnum;
+import gov.cms.madie.models.common.OwnershipType;
 import gov.cms.madie.models.library.CqlLibrary;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.data.domain.Page;
@@ -39,17 +40,18 @@ public class CqlLibrarySearchServiceImpl implements CqlLibrarySearchService {
         .as("librarySet");
   }
 
-  private Criteria getAclCriteria(String userId) {
-    return new Criteria()
-        .orOperator(
-            Criteria.where("librarySet.owner").is(userId),
-            Criteria.where("librarySet.acls.userId"),
-            Criteria.where("librarySet.acls")
-                .elemMatch(
-                    Criteria.where("userId")
-                        .regex("^\\Q" + userId + "\\E$", "i")
-                        .and("roles")
-                        .in(RoleEnum.SHARED_WITH)));
+  private Criteria getAclCriteria(String userId, OwnershipType ownershipType) {
+    if (ownershipType == OwnershipType.OWNED) {
+      return Criteria.where("librarySet.owner").is(userId);
+    } else if (ownershipType == OwnershipType.SHARED) {
+      return Criteria.where("librarySet.acls")
+          .elemMatch(
+              Criteria.where("userId")
+                  .regex("^\\Q" + userId + "\\E$", "i")
+                  .and("roles")
+                  .in(RoleEnum.SHARED_WITH));
+    }
+    return new Criteria();
   }
 
   public CqlLibrarySearchServiceImpl(
@@ -63,7 +65,7 @@ public class CqlLibrarySearchServiceImpl implements CqlLibrarySearchService {
       String userId,
       Pageable pageable,
       LibrarySearchCriteria librarySearchCriteria,
-      boolean filterByCurrentUser) {
+      OwnershipType ownershipType) {
     LookupOperation lookupOperation = getLookupOperation();
     UnwindOperation unwindOperation = unwind("librarySet");
 
@@ -73,10 +75,12 @@ public class CqlLibrarySearchServiceImpl implements CqlLibrarySearchService {
         && StringUtils.isNotBlank(librarySearchCriteria.getSearchField())) {
       appendAdditionalSearchCriteria(criteria, librarySearchCriteria);
     }
+
     Criteria librarySetCriteria = new Criteria();
-    if (filterByCurrentUser && StringUtils.isNotBlank(userId)) {
-      librarySetCriteria = getAclCriteria(userId);
+    if (StringUtils.isNotBlank(userId)) {
+      librarySetCriteria = getAclCriteria(userId, ownershipType);
     }
+
     MatchOperation matchOperation = match(new Criteria().andOperator(criteria, librarySetCriteria));
 
     FacetOperation facets =
@@ -136,14 +140,10 @@ public class CqlLibrarySearchServiceImpl implements CqlLibrarySearchService {
               sortByVersionAndDraft,
               groupByLibrarySet,
               replaceRoot,
-              sort(Sort.by(Sort.Direction.DESC, "lastModifiedAt")),
-              skip(pageable.getOffset()),
-              limit(pageable.getPageSize()));
-      List<LibraryListDTO> libraries =
-          mongoTemplate
-              .aggregate(pipeline, CqlLibrary.class, LibraryListDTO.class)
-              .getMappedResults();
-      for (LibraryListDTO dto : libraries) {
+              facets);
+      List<FacetDTO> results =
+          mongoTemplate.aggregate(pipeline, CqlLibrary.class, FacetDTO.class).getMappedResults();
+      for (LibraryListDTO dto : results.get(0).getQueryResults()) {
         LibrarySetMatchCountDTO matchInfo = matchInfoMap.get(dto.getLibrarySetId());
 
         if (matchInfo != null) {
@@ -161,7 +161,7 @@ public class CqlLibrarySearchServiceImpl implements CqlLibrarySearchService {
         }
       }
       long totalSize = matchInfoMap.size();
-      return new PageImpl<>(libraries, pageable, totalSize);
+      return new PageImpl<>(results.get(0).getQueryResults(), pageable, totalSize);
 
     } else {
       Aggregation pipeline =
