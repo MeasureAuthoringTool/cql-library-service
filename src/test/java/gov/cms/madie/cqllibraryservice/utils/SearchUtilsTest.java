@@ -49,6 +49,17 @@ class SearchUtilsTest {
   }
 
   @Test
+  void testAppendVersionSearchCriteriaInvalidVersion() {
+    Criteria base = new Criteria();
+    LibrarySearchCriteria input = new LibrarySearchCriteria("QDM v5", List.of("version"));
+
+    SearchUtils.appendAdditionalSearchCriteria(base, input);
+
+    String json = base.getCriteriaObject().toJson();
+    assertThat(json).contains("__NO_MATCH__");
+  }
+
+  @Test
   void testAppendLibrarySearchCriteria() {
     Criteria base = new Criteria();
     LibrarySearchCriteria input = new LibrarySearchCriteria("TestLib", List.of("library"));
@@ -97,5 +108,17 @@ class SearchUtilsTest {
     assertThat(json).contains("cqlLibraryName");
     assertThat(json).contains("model");
     assertThat(json).contains("5.2.000");
+  }
+
+  @Test
+  void testAppendSearchCriteriaWithUnrecognizedProperty() {
+    Criteria base = new Criteria();
+    LibrarySearchCriteria input = new LibrarySearchCriteria("customVal", List.of("customField"));
+
+    SearchUtils.appendAdditionalSearchCriteria(base, input);
+
+    String json = base.getCriteriaObject().toJson();
+    assertThat(json).contains("customField");
+    assertThat(json).contains("customVal");
   }
 }

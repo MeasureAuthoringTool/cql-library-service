@@ -17,5 +17,7 @@ public interface CqlLibrarySearchService {
       OwnershipType ownershipType);
 
   List<LibraryListDTO> findLibrariesByLibrarySetId(
-      String librarySetId, boolean sortByLatestVersion);
+      String librarySetId,
+      boolean sortByLatestVersion,
+      LibrarySearchCriteria librarySearchCriteria);
 }

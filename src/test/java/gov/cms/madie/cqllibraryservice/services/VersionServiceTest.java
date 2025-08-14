@@ -394,7 +394,7 @@ class VersionServiceTest {
 
     LibraryListDTO libraryDto =
         LibraryListDTO.builder().id("testCqlLibraryId").model(ModelType.QI_CORE.getValue()).build();
-    when(cqlLibraryService.getLibrariesByLibrarySetId(anyString(), anyBoolean()))
+    when(cqlLibraryService.getLibrariesByLibrarySetId(anyString(), anyBoolean(), any()))
         .thenReturn((List.of(libraryDto)));
 
     versionService.createDraft(
@@ -435,7 +435,7 @@ class VersionServiceTest {
 
     LibraryListDTO libraryDto =
         LibraryListDTO.builder().id("testCqlLibraryId").model(ModelType.QI_CORE.getValue()).build();
-    when(cqlLibraryService.getLibrariesByLibrarySetId(anyString(), anyBoolean()))
+    when(cqlLibraryService.getLibrariesByLibrarySetId(anyString(), anyBoolean(), any()))
         .thenReturn((List.of(libraryDto)));
 
     versionService.createDraft(
@@ -475,7 +475,7 @@ class VersionServiceTest {
 
     LibraryListDTO libraryDto =
         LibraryListDTO.builder().id("testCqlLibraryId").model(ModelType.QI_CORE.getValue()).build();
-    when(cqlLibraryService.getLibrariesByLibrarySetId(anyString(), anyBoolean()))
+    when(cqlLibraryService.getLibrariesByLibrarySetId(anyString(), anyBoolean(), any()))
         .thenReturn((List.of(libraryDto)));
 
     versionService.createDraft(
@@ -629,7 +629,7 @@ class VersionServiceTest {
             .build();
     LibraryListDTO libraryDto =
         LibraryListDTO.builder().id("testCqlLibraryId").model(ModelType.QI_CORE.getValue()).build();
-    when(cqlLibraryService.getLibrariesByLibrarySetId(anyString(), anyBoolean()))
+    when(cqlLibraryService.getLibrariesByLibrarySetId(anyString(), anyBoolean(), any()))
         .thenReturn((List.of(libraryDto)));
     boolean result = versionService.isQiCore411AndHasOtherQiCoreLibrary(existingCqlLibrary);
     assertFalse(result);
@@ -648,7 +648,7 @@ class VersionServiceTest {
             .id("testCqlLibraryId2")
             .model(ModelType.QDM_5_6.getValue())
             .build();
-    when(cqlLibraryService.getLibrariesByLibrarySetId(anyString(), anyBoolean()))
+    when(cqlLibraryService.getLibrariesByLibrarySetId(anyString(), anyBoolean(), any()))
         .thenReturn((List.of(libraryDto)));
     boolean result = versionService.isQiCore411AndHasOtherQiCoreLibrary(existingCqlLibrary);
     assertFalse(result);
@@ -667,7 +667,7 @@ class VersionServiceTest {
             .id("testCqlLibraryId2")
             .model(ModelType.QI_CORE_6_0_0.getValue())
             .build();
-    when(cqlLibraryService.getLibrariesByLibrarySetId(anyString(), anyBoolean()))
+    when(cqlLibraryService.getLibrariesByLibrarySetId(anyString(), anyBoolean(), any()))
         .thenReturn((List.of(libraryDto)));
     boolean result = versionService.isQiCore411AndHasOtherQiCoreLibrary(existingCqlLibrary);
     assertTrue(result);
@@ -686,7 +686,7 @@ class VersionServiceTest {
             .id("testCqlLibraryId2")
             .model(ModelType.QI_CORE_7_0_0.getValue())
             .build();
-    when(cqlLibraryService.getLibrariesByLibrarySetId(anyString(), anyBoolean()))
+    when(cqlLibraryService.getLibrariesByLibrarySetId(anyString(), anyBoolean(), any()))
         .thenReturn((List.of(libraryDto)));
     boolean result = versionService.isQiCore411AndHasOtherQiCoreLibrary(existingCqlLibrary);
     assertTrue(result);
@@ -745,7 +745,7 @@ class VersionServiceTest {
             .id("testCqlLibraryId2")
             .model(ModelType.QI_CORE_6_0_0.getValue())
             .build();
-    when(cqlLibraryService.getLibrariesByLibrarySetId(anyString(), anyBoolean()))
+    when(cqlLibraryService.getLibrariesByLibrarySetId(anyString(), anyBoolean(), any()))
         .thenReturn((List.of(libraryDto)));
 
     assertThrows(

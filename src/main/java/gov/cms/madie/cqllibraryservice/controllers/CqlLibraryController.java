@@ -64,7 +64,8 @@ public class CqlLibraryController {
   @PutMapping("/searches")
   public ResponseEntity<Page<LibraryListDTO>> fetchLibrariesByCriteria(
       Principal principal,
-      @RequestParam(required = false, defaultValue = "ALL", name = "ownershipType") OwnershipType ownershipType,
+      @RequestParam(required = false, defaultValue = "ALL", name = "ownershipType")
+          OwnershipType ownershipType,
       @RequestBody(required = false) LibrarySearchCriteria librarySearchCriteria,
       @RequestParam(required = false, defaultValue = "10", name = "limit") int limit,
       @RequestParam(required = false, defaultValue = "0", name = "page") int page,
@@ -127,12 +128,14 @@ public class CqlLibraryController {
     return ResponseEntity.ok(cqlLibraryService.getLibrarySetBySetId(setId));
   }
 
-  @GetMapping("/byLibrarySetId")
+  @PutMapping("/byLibrarySetId")
   public ResponseEntity<List<LibraryListDTO>> getLibrariesByLibrarySetId(
       @RequestParam(name = "librarySetId") String librarySetId,
-      @RequestParam(defaultValue = "true") boolean sortByLatestVersion) {
+      @RequestParam(defaultValue = "true") boolean sortByLatestVersion,
+      @RequestBody(required = false) LibrarySearchCriteria librarySearchCriteria) {
     List<LibraryListDTO> cqlLibraries =
-        cqlLibraryService.getLibrariesByLibrarySetId(librarySetId, sortByLatestVersion);
+        cqlLibraryService.getLibrariesByLibrarySetId(
+            librarySetId, sortByLatestVersion, librarySearchCriteria);
     return ResponseEntity.ok(cqlLibraries);
   }
 
