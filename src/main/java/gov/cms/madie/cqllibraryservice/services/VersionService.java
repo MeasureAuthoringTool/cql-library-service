@@ -221,7 +221,7 @@ public class VersionService {
     if (ModelType.QI_CORE.getValue().equalsIgnoreCase(cqlLibrary.getModel())) {
 
       List<LibraryListDTO> cqlLibraries =
-          cqlLibraryService.getLibrariesByLibrarySetId(cqlLibrary.getLibrarySetId(), true);
+          cqlLibraryService.getLibrariesByLibrarySetId(cqlLibrary.getLibrarySetId(), true, null);
       Optional<LibraryListDTO> libsWithSameSet =
           cqlLibraries.stream()
               .filter(

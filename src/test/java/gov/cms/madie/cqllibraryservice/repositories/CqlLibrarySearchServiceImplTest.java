@@ -2,11 +2,11 @@ package gov.cms.madie.cqllibraryservice.repositories;
 
 import gov.cms.madie.cqllibraryservice.dto.*;
 import gov.cms.madie.cqllibraryservice.services.AppConfigService;
+import gov.cms.madie.models.library.CqlLibrary;
 import gov.cms.madie.models.common.OwnershipType;
 import org.bson.Document;
 
 import org.junit.jupiter.api.BeforeEach;
-
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -20,11 +20,13 @@ import org.springframework.data.mongodb.core.aggregation.AggregationResults;
 import org.springframework.data.mongodb.repository.config.EnableMongoRepositories;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.when;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 @EnableMongoRepositories(basePackages = "com.gov.madie.measure.repository")
@@ -164,8 +166,9 @@ public class CqlLibrarySearchServiceImplTest {
     // page size 3 from 0-2
     PageRequest pageRequest = PageRequest.of(0, 3);
 
-    LibrarySetIdDTO librarySetIdDTO1 = LibrarySetIdDTO.builder().id("setIdi").build();
-    LibrarySetIdDTO librarySetIdDTO2 = LibrarySetIdDTO.builder().id("setId2").build();
+    LibrarySetMatchCountDTO match1 = new LibrarySetMatchCountDTO("setIdi", 2, "lib1");
+    LibrarySetMatchCountDTO match2 = new LibrarySetMatchCountDTO("setId2", 1, "lib3");
+    List<LibrarySetMatchCountDTO> matchResults = List.of(match1, match2);
 
     List<LibraryListDTO> ownedLibraries = List.of(library1, library2, library3, library4, library5);
     FacetDTO facetDTO =
@@ -180,9 +183,11 @@ public class CqlLibrarySearchServiceImplTest {
               Class<?> outputClass = invocation.getArgument(2);
               if (outputClass.equals(FacetDTO.class)) {
                 return new AggregationResults<>(List.of(facetDTO), new Document());
-              } else if (outputClass.equals(LibrarySetIdDTO.class)) {
+              } else if (outputClass.equals(LibrarySetMatchCountDTO.class)) {
+                return new AggregationResults<>(matchResults, new Document());
+              } else if (outputClass.equals(LibraryListDTO.class)) {
                 return new AggregationResults<>(
-                    List.of(librarySetIdDTO1, librarySetIdDTO2), new Document());
+                    List.of(library1, library2, library3), new Document());
               }
               return null;
             });
@@ -197,5 +202,161 @@ public class CqlLibrarySearchServiceImplTest {
     assertEquals(page1Libraries.get(0).getId(), library1.getId());
     assertEquals(page1Libraries.get(1).getId(), library2.getId());
     assertEquals(page1Libraries.get(2).getId(), library3.getId());
+  }
+
+  @Test
+  public void testFindLibrariesInSetsWhenNoMatchFound() {
+    when(appConfigService.isFlagEnabled(MadieFeatureFlag.LIBRARY_SEARCH)).thenReturn(true);
+    PageRequest pageRequest = PageRequest.of(0, 3);
+
+    when(mongoTemplate.aggregate(
+            any(Aggregation.class), eq(CqlLibrary.class), eq(LibrarySetMatchCountDTO.class)))
+        .thenReturn(new AggregationResults<>(Collections.emptyList(), new Document()));
+
+    Page<LibraryListDTO> page =
+        cqlLibrarySearchServiceImpl.searchLibrariesByCriteria(
+            "john", pageRequest, null, OwnershipType.OWNED);
+
+    assertTrue(page.getContent().isEmpty());
+    assertEquals(0, page.getTotalElements());
+  }
+
+  @Test
+  public void testSearchCriteriaWithEmptySearchField() {
+    when(appConfigService.isFlagEnabled(MadieFeatureFlag.LIBRARY_SEARCH)).thenReturn(false);
+    PageRequest pageRequest = PageRequest.of(0, 2);
+
+    LibrarySearchCriteria criteria = LibrarySearchCriteria.builder().searchField("").build();
+
+    FacetDTO facetDTO =
+        FacetDTO.builder().queryResults(List.of(library1)).count(List.of(1)).build();
+
+    when(mongoTemplate.aggregate(any(Aggregation.class), eq(CqlLibrary.class), eq(FacetDTO.class)))
+        .thenReturn(new AggregationResults<>(List.of(facetDTO), new Document()));
+
+    Page<LibraryListDTO> page =
+        cqlLibrarySearchServiceImpl.searchLibrariesByCriteria(
+            "user", pageRequest, criteria, OwnershipType.OWNED);
+
+    assertEquals(1, page.getTotalElements());
+    assertEquals(1, page.getContent().size());
+    assertEquals(library1.getId(), page.getContent().get(0).getId());
+  }
+
+  @Test
+  public void testSearchLibrariesWithoutFilteringByUser() {
+    when(appConfigService.isFlagEnabled(MadieFeatureFlag.LIBRARY_SEARCH)).thenReturn(false);
+    PageRequest pageRequest = PageRequest.of(0, 1);
+
+    FacetDTO facetDTO =
+        FacetDTO.builder().queryResults(List.of(library1)).count(List.of(1)).build();
+
+    when(mongoTemplate.aggregate(any(Aggregation.class), eq(CqlLibrary.class), eq(FacetDTO.class)))
+        .thenReturn(new AggregationResults<>(List.of(facetDTO), new Document()));
+
+    Page<LibraryListDTO> page =
+        cqlLibrarySearchServiceImpl.searchLibrariesByCriteria(
+            "john", pageRequest, null, OwnershipType.SHARED);
+
+    assertEquals(1, page.getTotalElements());
+    assertEquals(1, page.getContent().size());
+  }
+
+  @Test
+  void testFindLibrariesByLibrarySetIdWithoutSearchCriteriaAndWithoutSorting() {
+    String librarySetId = "set123";
+    boolean sortByLatestVersion = false;
+
+    List<LibraryListDTO> mockResults = List.of(new LibraryListDTO(), new LibraryListDTO());
+
+    AggregationResults<LibraryListDTO> mockAggregationResults =
+        new AggregationResults<>(mockResults, new Document());
+
+    when(mongoTemplate.aggregate(
+            any(Aggregation.class), eq(CqlLibrary.class), eq(LibraryListDTO.class)))
+        .thenReturn(mockAggregationResults);
+
+    List<LibraryListDTO> results =
+        cqlLibrarySearchServiceImpl.findLibrariesByLibrarySetId(
+            librarySetId, sortByLatestVersion, null);
+
+    assertEquals(2, results.size());
+    verify(mongoTemplate)
+        .aggregate(any(Aggregation.class), eq(CqlLibrary.class), eq(LibraryListDTO.class));
+  }
+
+  @Test
+  void testFindLibrariesByLibrarySetIdWithoutSearchCriteriaWithSorting() {
+    String librarySetId = "set123";
+    boolean sortByLatestVersion = true;
+
+    List<LibraryListDTO> mockResults = List.of(new LibraryListDTO());
+
+    AggregationResults<LibraryListDTO> mockAggregationResults =
+        new AggregationResults<>(mockResults, new Document());
+
+    when(mongoTemplate.aggregate(
+            any(Aggregation.class), eq(CqlLibrary.class), eq(LibraryListDTO.class)))
+        .thenReturn(mockAggregationResults);
+
+    List<LibraryListDTO> results =
+        cqlLibrarySearchServiceImpl.findLibrariesByLibrarySetId(
+            librarySetId, sortByLatestVersion, null);
+
+    assertEquals(1, results.size());
+    verify(mongoTemplate)
+        .aggregate(any(Aggregation.class), eq(CqlLibrary.class), eq(LibraryListDTO.class));
+  }
+
+  @Test
+  void testFindLibrariesByLibrarySetIdWithSearchCriteriaLibraryAndVersion() {
+    String librarySetId = "set456";
+    boolean sortByLatestVersion = false;
+
+    LibrarySearchCriteria searchCriteria = new LibrarySearchCriteria();
+    searchCriteria.setSearchField("sample");
+    searchCriteria.setOptionalSearchProperties(List.of("library", "version"));
+
+    List<LibraryListDTO> mockResults = List.of();
+
+    AggregationResults<LibraryListDTO> mockAggregationResults =
+        new AggregationResults<>(mockResults, new Document());
+
+    when(mongoTemplate.aggregate(
+            any(Aggregation.class), eq(CqlLibrary.class), eq(LibraryListDTO.class)))
+        .thenReturn(mockAggregationResults);
+
+    List<LibraryListDTO> results =
+        cqlLibrarySearchServiceImpl.findLibrariesByLibrarySetId(
+            librarySetId, sortByLatestVersion, searchCriteria);
+
+    assertNotNull(results);
+    verify(mongoTemplate)
+        .aggregate(any(Aggregation.class), eq(CqlLibrary.class), eq(LibraryListDTO.class));
+  }
+
+  @Test
+  void testFindLibrariesByLibrarySetIdWithSearchCriteria() {
+    String librarySetId = "set789";
+    boolean sortByLatestVersion = false;
+
+    LibrarySearchCriteria searchCriteria = new LibrarySearchCriteria();
+    searchCriteria.setSearchField("1.0.0");
+    searchCriteria.setOptionalSearchProperties(List.of("version"));
+
+    AggregationResults<LibraryListDTO> mockAggregationResults =
+        new AggregationResults<>(Collections.emptyList(), new Document());
+
+    when(mongoTemplate.aggregate(
+            any(Aggregation.class), eq(CqlLibrary.class), eq(LibraryListDTO.class)))
+        .thenReturn(mockAggregationResults);
+
+    List<LibraryListDTO> results =
+        cqlLibrarySearchServiceImpl.findLibrariesByLibrarySetId(
+            librarySetId, sortByLatestVersion, searchCriteria);
+
+    assertNotNull(results);
+    verify(mongoTemplate)
+        .aggregate(any(Aggregation.class), eq(CqlLibrary.class), eq(LibraryListDTO.class));
   }
 }

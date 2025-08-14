@@ -69,13 +69,11 @@ public class SearchUtils {
                 orConditions.add(minorMatch);
                 orConditions.add(patchMatch);
               } else if (effectiveProperties.size() == 1) {
-                Criteria noVersionMatch = Criteria.where("version.major").is(versionParts[0]);
-                orConditions.add(noVersionMatch);
+                orConditions.add(Criteria.where("version.major").is("__NO_MATCH__"));
               }
             }
           } else {
-            Criteria noVersionMatch = Criteria.where("version.major").is(versionParts[0]);
-            orConditions.add(noVersionMatch);
+            orConditions.add(Criteria.where("version.major").is("__NO_MATCH__"));
           }
           break;
         case "library":
