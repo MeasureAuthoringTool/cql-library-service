@@ -2,9 +2,13 @@ package gov.cms.madie.cqllibraryservice.services;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 
 import org.springframework.stereotype.Service;
+
+import com.nimbusds.oauth2.sdk.util.CollectionUtils;
 
 import gov.cms.madie.cqllibraryservice.dto.LockInfo;
 import gov.cms.madie.cqllibraryservice.exceptions.DuplicateKeyException;
@@ -71,5 +75,26 @@ public class CqlLibraryLockService {
       }
     }
     return null;
+  }
+
+  public synchronized List<String> unlockByUser(String userName) {
+    List<String> deleteMesssages = new ArrayList<>();
+    deleteMesssages.add("Delete library locks for harpId: " + userName);
+    List<CqlLibraryLock> existingLocks = cqlLibraryLockRepository.findAllByLockedBy(userName);
+    log.info(
+        "locks found by harpId: "
+            + userName
+            + (CollectionUtils.isNotEmpty(existingLocks) ? existingLocks.size() : " none"));
+    if (CollectionUtils.isNotEmpty(existingLocks)) {
+      existingLocks.stream()
+          .forEach(
+              existingLock -> {
+                cqlLibraryLockRepository.deleteByCqlLibraryId(existingLock.getCqlLibraryId());
+                deleteMesssages.add("Deleted library lock: " + existingLock.getCqlLibraryId());
+              });
+    } else {
+      deleteMesssages.add("No library locks found for harpId: " + userName);
+    }
+    return deleteMesssages;
   }
 }
