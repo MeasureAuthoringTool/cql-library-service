@@ -36,9 +36,9 @@ public class CqlLibraryLockControllerTest {
 
     ResponseEntity<LockInfo> response = controller.addCqlLibraryLock("cqlLibrayId", principal);
     assertNotNull(response);
-    assertEquals(response.getBody().getLockedBy(), "test.user");
+    assertEquals("test.user", response.getBody().getLockedBy());
     assertFalse(response.getBody().isLocked());
-    assertEquals(response.getBody().getLockedId(), "cqlLibrayId");
+    assertEquals("cqlLibrayId", response.getBody().getLockedId());
   }
 
   @Test
@@ -49,8 +49,8 @@ public class CqlLibraryLockControllerTest {
 
     ResponseEntity<LockInfo> response = controller.unlockCqlLibrary("cqlLibrayId", principal);
     assertNotNull(response);
-    assertEquals(response.getBody().getLockedBy(), "test.user");
+    assertEquals("test.user", response.getBody().getLockedBy());
     assertFalse(response.getBody().isLocked());
-    assertEquals(response.getBody().getLockedId(), "cqlLibrayId");
+    assertEquals("cqlLibrayId", response.getBody().getLockedId());
   }
 }

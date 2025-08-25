@@ -48,8 +48,8 @@ public class CqlLibraryLockServiceTest {
 
     LockInfo lockInfo = service.lockCqlLibrary("libraryId", "test.user");
 
-    assertEquals(lockInfo.getLockedId(), "libraryId");
-    assertEquals(lockInfo.getLockedBy(), "test.user");
+    assertEquals("libraryId", lockInfo.getLockedId());
+    assertEquals("test.user", lockInfo.getLockedBy());
     assertTrue(lockInfo.isLocked());
   }
 
@@ -60,8 +60,8 @@ public class CqlLibraryLockServiceTest {
 
     LockInfo lockInfo = service.lockCqlLibrary("libraryId", "test.user");
 
-    assertEquals(lockInfo.getLockedId(), "libraryId");
-    assertEquals(lockInfo.getLockedBy(), "test.user");
+    assertEquals("libraryId", lockInfo.getLockedId());
+    assertEquals("test.user", lockInfo.getLockedBy());
     assertTrue(lockInfo.isLocked());
   }
 
@@ -104,7 +104,7 @@ public class CqlLibraryLockServiceTest {
 
     assertNotNull(lockInfo);
     assertTrue(lockInfo.isLocked());
-    assertEquals(lockInfo.getLockedId(), "libraryId");
-    assertEquals(lockInfo.getLockedBy(), "test.user");
+    assertEquals("libraryId", lockInfo.getLockedId());
+    assertEquals("test.user", lockInfo.getLockedBy());
   }
 }
