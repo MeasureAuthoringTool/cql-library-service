@@ -47,7 +47,7 @@ public class CqlLibraryLockController {
       @Value("${admin-api-key}") String apiKey,
       @RequestHeader(name = "harpId") String harpId,
       Principal principal) {
-    log.info("Unlock measures, test cases for user: " + harpId);
+    log.info("Unlock all libraries for the user: " + harpId);
     List<String> messages = cqlLibraryLockService.unlockByUser(harpId);
     return ResponseEntity.ok(messages);
   }
