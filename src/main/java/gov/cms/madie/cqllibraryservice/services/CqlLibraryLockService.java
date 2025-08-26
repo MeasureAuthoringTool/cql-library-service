@@ -82,12 +82,9 @@ public class CqlLibraryLockService {
     deleteMessages.add("Delete library locks for harpId: " + userName);
     List<CqlLibraryLock> existingLocks = cqlLibraryLockRepository.findAllByLockedBy(userName);
     log.info(
-        "locks found by harpId: "
-            + userName
-            + " "
-            + (CollectionUtils.isNotEmpty(existingLocks)
-                ? existingLocks.size()
-                : " No locks found for harpId: " + userName));
+        (CollectionUtils.isNotEmpty(existingLocks) ? existingLocks.size() : "No")
+            + " library locks found for harpId: "
+            + userName);
     if (CollectionUtils.isNotEmpty(existingLocks)) {
       existingLocks.forEach(
           existingLock -> {
