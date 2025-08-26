@@ -55,7 +55,7 @@ public class CqlLibraryLockService {
     return lockInfo;
   }
 
-  public synchronized LockInfo unlockCqlLibrary(String libraryId, String userName) {
+  public LockInfo unlockCqlLibrary(String libraryId, String userName) {
     Optional<CqlLibraryLock> existingLock = cqlLibraryLockRepository.findByCqlLibraryId(libraryId);
     if (existingLock.isPresent()) {
       if (existingLock.get().getLockedBy().equals(userName)) {
@@ -77,24 +77,23 @@ public class CqlLibraryLockService {
     return null;
   }
 
-  public synchronized List<String> unlockByUser(String userName) {
-    List<String> deleteMesssages = new ArrayList<>();
-    deleteMesssages.add("Delete library locks for harpId: " + userName);
+  public List<String> unlockByUser(String userName) {
+    List<String> deleteMessages = new ArrayList<>();
+    deleteMessages.add("Delete library locks for harpId: " + userName);
     List<CqlLibraryLock> existingLocks = cqlLibraryLockRepository.findAllByLockedBy(userName);
     log.info(
         "locks found by harpId: "
             + userName
             + (CollectionUtils.isNotEmpty(existingLocks) ? existingLocks.size() : " none"));
     if (CollectionUtils.isNotEmpty(existingLocks)) {
-      existingLocks.stream()
-          .forEach(
-              existingLock -> {
-                cqlLibraryLockRepository.deleteByCqlLibraryId(existingLock.getCqlLibraryId());
-                deleteMesssages.add("Deleted library lock: " + existingLock.getCqlLibraryId());
-              });
+      existingLocks.forEach(
+          existingLock -> {
+            cqlLibraryLockRepository.deleteByCqlLibraryId(existingLock.getCqlLibraryId());
+            deleteMessages.add("Deleted library lock for Id: " + existingLock.getCqlLibraryId());
+          });
     } else {
-      deleteMesssages.add("No library locks found for harpId: " + userName);
+      deleteMessages.add("No library locks found for harpId: " + userName);
     }
-    return deleteMesssages;
+    return deleteMessages;
   }
 }

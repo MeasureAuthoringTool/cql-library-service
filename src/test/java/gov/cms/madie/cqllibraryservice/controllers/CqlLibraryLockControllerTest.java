@@ -60,9 +60,8 @@ public class CqlLibraryLockControllerTest {
   @Test
   public void testUnlockAllByUser() {
     Principal principal = mock(Principal.class);
-    //    when(principal.getName()).thenReturn("test.user");
     String msg1 = "Delete library locks for harpId: test.user";
-    String msg2 = "Deleted library lock: cqlLibrayId";
+    String msg2 = "Deleted library lock for Id: cqlLibrayId";
     when(service.unlockByUser(anyString())).thenReturn(List.of(msg1, msg2));
 
     MockHttpServletRequest request = new MockHttpServletRequest();

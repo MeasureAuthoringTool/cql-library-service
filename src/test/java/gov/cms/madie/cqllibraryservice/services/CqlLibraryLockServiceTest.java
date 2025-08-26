@@ -119,7 +119,7 @@ public class CqlLibraryLockServiceTest {
     List<String> results = service.unlockByUser("test.user");
 
     String msg1 = "Delete library locks for harpId: test.user";
-    String msg2 = "Deleted library lock: cqlLibraryId";
+    String msg2 = "Deleted library lock for Id: cqlLibraryId";
     List<String> expected = List.of(msg1, msg2);
     assertEquals(expected, results);
   }
