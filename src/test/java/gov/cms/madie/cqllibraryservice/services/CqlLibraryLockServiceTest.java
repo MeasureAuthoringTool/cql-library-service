@@ -10,6 +10,8 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
 
 import java.time.Instant;
+import java.util.Collections;
+import java.util.List;
 import java.util.Optional;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -106,5 +108,31 @@ public class CqlLibraryLockServiceTest {
     assertTrue(lockInfo.isLocked());
     assertEquals("libraryId", lockInfo.getLockedId());
     assertEquals("test.user", lockInfo.getLockedBy());
+  }
+
+  @Test
+  public void testUnlockByUser() {
+    CqlLibraryLock libraryLock =
+        CqlLibraryLock.builder().cqlLibraryId("cqlLibraryId").lockedBy("test.user").build();
+    when(repository.findAllByLockedBy(anyString())).thenReturn(List.of(libraryLock));
+
+    List<String> results = service.unlockByUser("test.user");
+
+    String msg1 = "Delete library locks for harpId: test.user";
+    String msg2 = "Deleted library lock for Id: cqlLibraryId";
+    List<String> expected = List.of(msg1, msg2);
+    assertEquals(expected, results);
+  }
+
+  @Test
+  public void testUnlockByUserLocksNotFound() {
+    when(repository.findAllByLockedBy(anyString())).thenReturn(Collections.emptyList());
+
+    List<String> results = service.unlockByUser("test.user");
+
+    String msg1 = "Delete library locks for harpId: test.user";
+    String msg2 = "No library locks found for harpId: test.user";
+    List<String> expected = List.of(msg1, msg2);
+    assertEquals(expected, results);
   }
 }
