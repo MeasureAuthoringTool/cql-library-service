@@ -84,7 +84,10 @@ public class CqlLibraryLockService {
     log.info(
         "locks found by harpId: "
             + userName
-            + (CollectionUtils.isNotEmpty(existingLocks) ? existingLocks.size() : " none"));
+            + " "
+            + (CollectionUtils.isNotEmpty(existingLocks)
+                ? existingLocks.size()
+                : " No locks found for harpId: " + userName));
     if (CollectionUtils.isNotEmpty(existingLocks)) {
       existingLocks.forEach(
           existingLock -> {
