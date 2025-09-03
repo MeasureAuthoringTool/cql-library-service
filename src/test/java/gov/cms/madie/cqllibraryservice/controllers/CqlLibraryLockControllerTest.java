@@ -74,4 +74,51 @@ public class CqlLibraryLockControllerTest {
     assertTrue(response.getBody().get(0).contains(msg1));
     assertTrue(response.getBody().get(1).contains(msg2));
   }
+
+  @Test
+  public void testUnlockAll() {
+    Principal principal = mock(Principal.class);
+    when(principal.getName()).thenReturn("test.user");
+    String msg1 = "Delete library locks for harpId: test.user";
+    when(service.unlockByUser(anyString())).thenReturn(List.of(msg1));
+
+    MockHttpServletRequest request = new MockHttpServletRequest();
+    ResponseEntity<List<String>> response = controller.unlockAll(request, principal);
+
+    assertNotNull(response);
+    assertEquals(1, response.getBody().size());
+    assertTrue(response.getBody().get(0).contains(msg1));
+  }
+
+  @Test
+  public void testAddCqlLibraryLockWhenAlreadyLocked() {
+    Principal principal = mock(Principal.class);
+    when(principal.getName()).thenReturn("test.user");
+
+    LockInfo lockedInfo =
+        LockInfo.builder().isLocked(true).lockedBy("other.user").lockedId("cqlLibrayId").build();
+
+    when(service.lockCqlLibrary(anyString(), anyString())).thenReturn(lockedInfo);
+
+    ResponseEntity<LockInfo> response = controller.addCqlLibraryLock("cqlLibrayId", principal);
+    assertNotNull(response);
+    assertTrue(response.getBody().isLocked());
+    assertEquals("other.user", response.getBody().getLockedBy());
+  }
+
+  @Test
+  public void testUnlockCqlLibraryWhenLockedByDifferentUser() {
+    Principal principal = mock(Principal.class);
+    when(principal.getName()).thenReturn("test.user");
+
+    LockInfo lockedInfo =
+        LockInfo.builder().isLocked(true).lockedBy("other.user").lockedId("cqlLibrayId").build();
+
+    when(service.unlockCqlLibrary(anyString(), anyString())).thenReturn(lockedInfo);
+
+    ResponseEntity<LockInfo> response = controller.unlockCqlLibrary("cqlLibrayId", principal);
+    assertNotNull(response);
+    assertTrue(response.getBody().isLocked());
+    assertEquals("other.user", response.getBody().getLockedBy());
+  }
 }

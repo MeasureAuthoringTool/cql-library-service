@@ -1,6 +1,7 @@
 package gov.cms.madie.cqllibraryservice.controllers;
 
 import java.security.Principal;
+import java.util.ArrayList;
 import java.util.List;
 
 import org.springframework.beans.factory.annotation.Value;
@@ -38,6 +39,15 @@ public class CqlLibraryLockController {
     log.info("User: " + principal.getName() + " unlock library: " + libraryId);
     return ResponseEntity.ok(
         cqlLibraryLockService.unlockCqlLibrary(libraryId, principal.getName()));
+  }
+
+  @DeleteMapping("/libraries/unlock")
+  public ResponseEntity<List<String>> unlockAll(HttpServletRequest request, Principal principal) {
+    final String username = principal.getName();
+    log.info("Unlock measures, test cases for user: " + username);
+    List<String> messages = new ArrayList<>();
+    messages.addAll(cqlLibraryLockService.unlockByUser(username));
+    return ResponseEntity.ok(messages);
   }
 
   @PutMapping("/admin/unlock")
