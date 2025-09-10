@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestHeader;
+import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import gov.cms.madie.cqllibraryservice.dto.LockInfo;
@@ -21,18 +22,19 @@ import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @RestController
+@RequestMapping("/cql-libraries")
 @RequiredArgsConstructor
 public class CqlLibraryLockController {
   private final CqlLibraryLockService cqlLibraryLockService;
 
-  @PostMapping("/libraries/{libraryId}/lock")
+  @PostMapping("/{libraryId}/lock")
   public ResponseEntity<LockInfo> addCqlLibraryLock(
       @PathVariable String libraryId, Principal principal) {
     log.info("User: " + principal.getName() + " lock library: " + libraryId);
     return ResponseEntity.ok(cqlLibraryLockService.lockCqlLibrary(libraryId, principal.getName()));
   }
 
-  @DeleteMapping("/libraries/{libraryId}/unlock")
+  @DeleteMapping("/{libraryId}/unlock")
   public ResponseEntity<LockInfo> unlockCqlLibrary(
       @PathVariable String libraryId, Principal principal) {
     log.info("User: " + principal.getName() + " unlock library: " + libraryId);
@@ -40,7 +42,7 @@ public class CqlLibraryLockController {
         cqlLibraryLockService.unlockCqlLibrary(libraryId, principal.getName()));
   }
 
-  @PutMapping("/admin/unlock")
+  @PutMapping("/admin/unlockAll")
   @PreAuthorize("#request.getHeader('api-key') == #apiKey")
   public ResponseEntity<List<String>> unlockAllByUser(
       HttpServletRequest request,
