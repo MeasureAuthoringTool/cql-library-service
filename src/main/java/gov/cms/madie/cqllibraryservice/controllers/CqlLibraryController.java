@@ -29,6 +29,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
+import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import jakarta.servlet.http.HttpServletRequest;
 
@@ -260,10 +261,11 @@ public class CqlLibraryController {
       HttpServletRequest request,
       @PathVariable("id") String id,
       @RequestParam(name = "userid") String userid,
-      @Value("${admin-api-key}") String apiKey) {
+      @Value("${admin-api-key}") String apiKey,
+      Principal principal) {
     ResponseEntity<String> response = ResponseEntity.badRequest().body("Library does not exist.");
 
-    if (cqlLibraryService.changeOwnership(id, userid)) {
+    if (cqlLibraryService.changeOwnership(id, userid, false, principal.getName())) {
       response =
           ResponseEntity.ok()
               .contentType(MediaType.TEXT_PLAIN)
@@ -360,5 +362,21 @@ public class CqlLibraryController {
       @RequestBody Map<String, List<String>> libraryUserIdMap, Principal principal) {
     return ResponseEntity.ok(
         cqlLibraryService.unshareLibraries(libraryUserIdMap, principal.getName()));
+  }
+
+  @PutMapping("/transfer")
+  public ResponseEntity<Boolean> transferMeasures(
+      @RequestBody List<String> cqlLibraryIds,
+      @RequestHeader(name = "harpId") String harpId,
+      @RequestParam(defaultValue = "false") boolean retainShareAccess,
+      Principal principal,
+      @RequestHeader("Authorization") String accessToken) {
+    log.info("transferMeasures to [{}] ", harpId);
+    if (CollectionUtils.isEmpty(cqlLibraryIds)) {
+      return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(false);
+    }
+    return ResponseEntity.ok(
+        cqlLibraryService.transferLibraries(
+            cqlLibraryIds, harpId, retainShareAccess, principal.getName()));
   }
 }

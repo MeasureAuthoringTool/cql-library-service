@@ -23,6 +23,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -1532,16 +1533,20 @@ public class CqlLibraryControllerMvcTest {
   public void testChangeOwnership() throws Exception {
     String libraryId = "f225481c-921e-4015-9e14-e5046bfac9ff";
 
-    doReturn(true).when(cqlLibraryService).changeOwnership(eq(libraryId), eq("testUser"));
+    doReturn(true)
+        .when(cqlLibraryService)
+        .changeOwnership(eq(libraryId), eq("testUser"), anyBoolean(), anyString());
 
     mockMvc
         .perform(
             put("/cql-libraries/" + libraryId + "/ownership?userid=testUser")
+                .with(user(TEST_USER_ID))
                 .header(TEST_API_KEY_HEADER, TEST_API_KEY_HEADER_VALUE))
         .andExpect(status().isOk())
         .andExpect(content().string("testUser granted ownership to Library successfully."));
 
-    verify(cqlLibraryService, times(1)).changeOwnership(eq(libraryId), eq("testUser"));
+    verify(cqlLibraryService, times(1))
+        .changeOwnership(eq(libraryId), eq("testUser"), eq(false), anyString());
   }
 
   @Test
@@ -1912,5 +1917,53 @@ public class CqlLibraryControllerMvcTest {
     assertEquals(
         result.getResponse().getContentAsString(),
         "{\"libraryId2\":[{\"userId\":\"userId2\",\"roles\":[\"SHARED_WITH\"]}]}");
+  }
+
+  @Test
+  public void testTransferLibraries() throws Exception {
+    String libraryId = "f225481c-921e-4015-9e14-e5046bfac9ff";
+
+    doReturn(true)
+        .when(cqlLibraryService)
+        .transferLibraries(eq(List.of(libraryId)), eq("testUser"), eq(false), eq("testUser"));
+
+    mockMvc
+        .perform(
+            put("/cql-libraries/transfer")
+                .with(user(TEST_USER_ID))
+                .with(csrf())
+                .header("harpId", "testUser")
+                .header("Authorization", "test-okta")
+                .queryParam("retainShareAccess", "true")
+                .content(new ObjectMapper().writeValueAsString(List.of(libraryId)))
+                .contentType(MediaType.APPLICATION_JSON)
+                .accept(MediaType.APPLICATION_JSON))
+        .andDo(print())
+        .andExpect(status().isOk());
+
+    verify(cqlLibraryService, times(1))
+        .transferLibraries(eq(List.of(libraryId)), eq("testUser"), eq(true), eq(TEST_USER_ID));
+  }
+
+  @Test
+  public void testTransferLibrariesNullLibraryIds() throws Exception {
+    String libraryId = "f225481c-921e-4015-9e14-e5046bfac9ff";
+
+    mockMvc
+        .perform(
+            put("/cql-libraries/transfer")
+                .with(user(TEST_USER_ID))
+                .with(csrf())
+                .header("harpId", "testUser")
+                .header("Authorization", "test-okta")
+                .queryParam("retainShareAccess", "true")
+                .content(new ObjectMapper().writeValueAsString(Collections.emptyList()))
+                .contentType(MediaType.APPLICATION_JSON)
+                .accept(MediaType.APPLICATION_JSON))
+        .andDo(print())
+        .andExpect(status().isBadRequest());
+
+    verify(cqlLibraryService, times(0))
+        .transferLibraries(eq(List.of(libraryId)), eq("testUser"), eq(true), eq(TEST_USER_ID));
   }
 }

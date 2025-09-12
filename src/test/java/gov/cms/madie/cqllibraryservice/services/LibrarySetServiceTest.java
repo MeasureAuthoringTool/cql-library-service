@@ -207,7 +207,7 @@ class LibrarySetServiceTest {
     when(librarySetRepository.findByLibrarySetId(anyString())).thenReturn(Optional.of(librarySet));
     when(librarySetRepository.save(any(LibrarySet.class))).thenReturn(updatedLibrarySet);
 
-    LibrarySet result = librarySetService.updateOwnership("1", "testUser");
+    LibrarySet result = librarySetService.updateOwnership("1", "testUser", false, "adminUser");
     assertThat(result.getId(), is(equalTo(updatedLibrarySet.getId())));
     assertThat(result.getOwner(), is(equalTo(updatedLibrarySet.getOwner())));
   }
@@ -219,7 +219,7 @@ class LibrarySetServiceTest {
     Exception ex =
         assertThrows(
             ResourceNotFoundException.class,
-            () -> librarySetService.updateOwnership("1", "testUser"));
+            () -> librarySetService.updateOwnership("1", "testUser", false, "adminUser"));
     verify(librarySetRepository, times(1)).findByLibrarySetId(anyString());
     verify(librarySetRepository, times(0)).save(any(LibrarySet.class));
   }

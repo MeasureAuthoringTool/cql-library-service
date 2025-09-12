@@ -132,12 +132,14 @@ public class CqlLibraryService {
     return librarySet.getAcls();
   }
 
-  public boolean changeOwnership(String id, String userid) {
+  public boolean changeOwnership(
+      String id, String userid, boolean retainShareAccess, String conductedBy) {
     boolean result = false;
     Optional<CqlLibrary> persistedCqlLibrary = cqlLibraryRepository.findById(id);
     if (persistedCqlLibrary.isPresent()) {
       CqlLibrary cqlLibrary = persistedCqlLibrary.get();
-      librarySetService.updateOwnership(cqlLibrary.getLibrarySetId(), userid);
+      librarySetService.updateOwnership(
+          cqlLibrary.getLibrarySetId(), userid, retainShareAccess, conductedBy);
       result = true;
     }
     return result;
@@ -453,5 +455,14 @@ public class CqlLibraryService {
                             && acl.getRoles().stream().anyMatch(allowedRoles::contains)))) {
       throw new UnauthorizedException(target, targetId, username);
     }
+  }
+
+  public boolean transferLibraries(
+      List<String> libraryIds, String harpId, boolean retainShareAccess, String conductedBy) {
+    boolean result = true;
+    for (String libraryId : libraryIds) {
+      changeOwnership(libraryId, harpId, retainShareAccess, conductedBy);
+    }
+    return result;
   }
 }
