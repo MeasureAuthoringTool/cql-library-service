@@ -14,7 +14,7 @@
   <name>cql-library-service</name>
   <description>Service layer for the CqlLibrary capabilities of MADiE</description>
   <properties>
-    <cqframework.version>3.27.0</cqframework.version>
+    <cqframework.version>3.29.0</cqframework.version>
     <java.version>17</java.version>
     <maven.compiler.source>${java.version}</maven.compiler.source>
     <maven.compiler.target>${java.version}</maven.compiler.target>
