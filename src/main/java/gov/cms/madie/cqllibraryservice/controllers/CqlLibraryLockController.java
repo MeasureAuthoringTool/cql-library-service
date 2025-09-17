@@ -46,7 +46,7 @@ public class CqlLibraryLockController {
   @DeleteMapping("/libraries/unlock")
   public ResponseEntity<List<String>> unlockAll(HttpServletRequest request, Principal principal) {
     final String username = principal.getName();
-    log.info("Unlock measures, test cases for user: " + username);
+    log.info("Unlock libraries for user: " + username);
     List<String> messages = new ArrayList<>();
     messages.addAll(cqlLibraryLockService.unlockByUser(username));
     return ResponseEntity.ok(messages);
