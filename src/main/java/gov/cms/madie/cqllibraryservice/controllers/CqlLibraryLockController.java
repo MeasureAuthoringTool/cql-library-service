@@ -1,17 +1,13 @@
 package gov.cms.madie.cqllibraryservice.controllers;
 
 import java.security.Principal;
-
 import java.util.ArrayList;
 import java.util.List;
 
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -49,18 +45,6 @@ public class CqlLibraryLockController {
     log.info("Unlock libraries for user: " + username);
     List<String> messages = new ArrayList<>();
     messages.addAll(cqlLibraryLockService.unlockByUser(username));
-    return ResponseEntity.ok(messages);
-  }
-
-  @PutMapping("/admin/unlock")
-  @PreAuthorize("#request.getHeader('api-key') == #apiKey")
-  public ResponseEntity<List<String>> unlockAllByUser(
-      HttpServletRequest request,
-      @Value("${admin-api-key}") String apiKey,
-      @RequestHeader(name = "harpId") String harpId,
-      Principal principal) {
-    log.info("Unlock all libraries for the user: " + harpId);
-    List<String> messages = cqlLibraryLockService.unlockByUser(harpId);
     return ResponseEntity.ok(messages);
   }
 }
