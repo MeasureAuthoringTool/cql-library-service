@@ -3,11 +3,13 @@ package gov.cms.madie.cqllibraryservice.controllers;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import java.security.Principal;
+import java.util.List;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -15,6 +17,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.ResponseEntity;
+import org.springframework.mock.web.MockHttpServletRequest;
 
 import gov.cms.madie.cqllibraryservice.dto.LockInfo;
 import gov.cms.madie.cqllibraryservice.services.CqlLibraryLockService;
@@ -52,5 +55,52 @@ public class CqlLibraryLockControllerTest {
     assertEquals("test.user", response.getBody().getLockedBy());
     assertFalse(response.getBody().isLocked());
     assertEquals("cqlLibrayId", response.getBody().getLockedId());
+  }
+
+  @Test
+  public void testUnlockAll() {
+    Principal principal = mock(Principal.class);
+    when(principal.getName()).thenReturn("test.user");
+    String msg1 = "Delete library locks for harpId: test.user";
+    when(service.unlockByUser(anyString())).thenReturn(List.of(msg1));
+
+    MockHttpServletRequest request = new MockHttpServletRequest();
+    ResponseEntity<List<String>> response = controller.unlockAll(request, principal);
+
+    assertNotNull(response);
+    assertEquals(1, response.getBody().size());
+    assertTrue(response.getBody().get(0).contains(msg1));
+  }
+
+  @Test
+  public void testAddCqlLibraryLockWhenAlreadyLocked() {
+    Principal principal = mock(Principal.class);
+    when(principal.getName()).thenReturn("test.user");
+
+    LockInfo lockedInfo =
+        LockInfo.builder().isLocked(true).lockedBy("other.user").lockedId("cqlLibrayId").build();
+
+    when(service.lockCqlLibrary(anyString(), anyString())).thenReturn(lockedInfo);
+
+    ResponseEntity<LockInfo> response = controller.addCqlLibraryLock("cqlLibrayId", principal);
+    assertNotNull(response);
+    assertTrue(response.getBody().isLocked());
+    assertEquals("other.user", response.getBody().getLockedBy());
+  }
+
+  @Test
+  public void testUnlockCqlLibraryWhenLockedByDifferentUser() {
+    Principal principal = mock(Principal.class);
+    when(principal.getName()).thenReturn("test.user");
+
+    LockInfo lockedInfo =
+        LockInfo.builder().isLocked(true).lockedBy("other.user").lockedId("cqlLibrayId").build();
+
+    when(service.unlockCqlLibrary(anyString(), anyString())).thenReturn(lockedInfo);
+
+    ResponseEntity<LockInfo> response = controller.unlockCqlLibrary("cqlLibrayId", principal);
+    assertNotNull(response);
+    assertTrue(response.getBody().isLocked());
+    assertEquals("other.user", response.getBody().getLockedBy());
   }
 }
