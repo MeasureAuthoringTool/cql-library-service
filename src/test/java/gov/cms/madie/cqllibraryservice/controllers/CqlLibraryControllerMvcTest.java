@@ -1923,9 +1923,9 @@ public class CqlLibraryControllerMvcTest {
   public void testTransferLibraries() throws Exception {
     String libraryId = "f225481c-921e-4015-9e14-e5046bfac9ff";
 
-    doReturn(true)
+    doReturn(Collections.emptyList())
         .when(cqlLibraryService)
-        .transferLibraries(eq(List.of(libraryId)), eq("testUser"), eq(false), eq("testUser"));
+        .transferLibraries(eq(List.of(libraryId)), eq("testUser"), eq(false), eq(TEST_USER_ID));
 
     mockMvc
         .perform(
@@ -1943,6 +1943,34 @@ public class CqlLibraryControllerMvcTest {
 
     verify(cqlLibraryService, times(1))
         .transferLibraries(eq(List.of(libraryId)), eq("testUser"), eq(true), eq(TEST_USER_ID));
+  }
+
+  @Test
+  public void testTransferLibrariesPartialResults() throws Exception {
+    String libraryId = "f225481c-921e-4015-9e14-e5046bfac9ff";
+
+    doReturn(List.of("1"))
+        .when(cqlLibraryService)
+        .transferLibraries(
+            eq(List.of(libraryId, "1")), eq("testUser"), eq(false), eq(TEST_USER_ID));
+
+    mockMvc
+        .perform(
+            put("/cql-libraries/transfer")
+                .with(user(TEST_USER_ID))
+                .with(csrf())
+                .header("harpId", "testUser")
+                .header("Authorization", "test-okta")
+                .queryParam("retainShareAccess", "false")
+                .content(new ObjectMapper().writeValueAsString(List.of(libraryId, "1")))
+                .contentType(MediaType.APPLICATION_JSON)
+                .accept(MediaType.APPLICATION_JSON))
+        .andDo(print())
+        .andExpect(status().isPartialContent());
+
+    verify(cqlLibraryService, times(1))
+        .transferLibraries(
+            eq(List.of(libraryId, "1")), eq("testUser"), eq(false), eq(TEST_USER_ID));
   }
 
   @Test

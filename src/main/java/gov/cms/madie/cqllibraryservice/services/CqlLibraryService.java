@@ -457,12 +457,14 @@ public class CqlLibraryService {
     }
   }
 
-  public boolean transferLibraries(
+  public List<String> transferLibraries(
       List<String> libraryIds, String harpId, boolean retainShareAccess, String conductedBy) {
-    boolean result = true;
+    List<String> failedLibraries = new ArrayList<>();
     for (String libraryId : libraryIds) {
-      changeOwnership(libraryId, harpId, retainShareAccess, conductedBy);
+      if (!changeOwnership(libraryId, harpId, retainShareAccess, conductedBy)) {
+        failedLibraries.add(libraryId);
+      }
     }
-    return result;
+    return failedLibraries;
   }
 }

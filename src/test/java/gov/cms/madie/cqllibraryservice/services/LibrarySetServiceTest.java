@@ -6,6 +6,7 @@ import gov.cms.madie.cqllibraryservice.repositories.LibrarySetRepository;
 import gov.cms.madie.models.access.AclOperation;
 import gov.cms.madie.models.access.AclSpecification;
 import gov.cms.madie.models.access.RoleEnum;
+import gov.cms.madie.models.common.ActionType;
 import gov.cms.madie.models.library.CqlLibrary;
 import gov.cms.madie.models.library.LibrarySet;
 import org.bson.Document;
@@ -202,14 +203,50 @@ class LibrarySetServiceTest {
 
   @Test
   public void testUpdateOwnership() {
-    LibrarySet updatedLibrarySet = librarySet;
-    updatedLibrarySet.setOwner("testUser");
-    when(librarySetRepository.findByLibrarySetId(anyString())).thenReturn(Optional.of(librarySet));
+    LibrarySet oldLibrarySet = LibrarySet.builder().librarySetId("1").owner("oldOwner").build();
+    LibrarySet updatedLibrarySet = LibrarySet.builder().librarySetId("1").owner("newOwner").build();
+    when(librarySetRepository.findByLibrarySetId(anyString()))
+        .thenReturn(Optional.of(oldLibrarySet));
     when(librarySetRepository.save(any(LibrarySet.class))).thenReturn(updatedLibrarySet);
 
-    LibrarySet result = librarySetService.updateOwnership("1", "testUser", false, "adminUser");
+    LibrarySet result = librarySetService.updateOwnership("1", "newOwner", false, "adminUser");
     assertThat(result.getId(), is(equalTo(updatedLibrarySet.getId())));
     assertThat(result.getOwner(), is(equalTo(updatedLibrarySet.getOwner())));
+    verify(actionLogService, times(1))
+        .logAction(
+            "1",
+            ActionType.OWNERSHIP_TRANSFER,
+            "adminUser",
+            "librarySetActionLog",
+            "Transferred from oldOwner to newOwner");
+  }
+
+  @Test
+  public void updateOwnershipRetainsShareAccessForOriginalOwner() {
+    LibrarySet librarySet = LibrarySet.builder().librarySetId("1").owner("oldOwner").build();
+    LibrarySet updatedLibrarySet =
+        LibrarySet.builder()
+            .librarySetId("1")
+            .owner("newOwner")
+            .acls(
+                List.of(
+                    AclSpecification.builder()
+                        .userId("oldOwner")
+                        .roles(Set.of(RoleEnum.SHARED_WITH))
+                        .build()))
+            .build();
+
+    when(librarySetRepository.findByLibrarySetId("1")).thenReturn(Optional.of(librarySet));
+    when(librarySetRepository.save(any(LibrarySet.class))).thenReturn(updatedLibrarySet);
+
+    LibrarySet result = librarySetService.updateOwnership("1", "newOwner", true, "adminUser");
+
+    assertEquals("newOwner", result.getOwner());
+    assertEquals(1, result.getAcls().size());
+    assertEquals("oldOwner", result.getAcls().get(0).getUserId());
+    assertTrue(result.getAcls().get(0).getRoles().contains(RoleEnum.SHARED_WITH));
+    verify(actionLogService, times(1))
+        .logShareAccessControlAction("1", ActionType.SHARED, "adminUser", "oldOwner");
   }
 
   @Test

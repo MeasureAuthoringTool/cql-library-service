@@ -22,12 +22,7 @@ import gov.cms.madie.cqllibraryservice.repositories.CqlLibraryRepository;
 
 import java.security.Principal;
 import java.time.Instant;
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
 
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -365,18 +360,23 @@ public class CqlLibraryController {
   }
 
   @PutMapping("/transfer")
-  public ResponseEntity<Boolean> transferMeasures(
+  public ResponseEntity<List<String>> transferLibraries(
       @RequestBody List<String> cqlLibraryIds,
       @RequestHeader(name = "harpId") String harpId,
       @RequestParam(defaultValue = "false") boolean retainShareAccess,
       Principal principal,
       @RequestHeader("Authorization") String accessToken) {
-    log.info("transferMeasures to [{}] ", harpId);
+    log.info("transferLibraries to [{}] ", harpId);
     if (CollectionUtils.isEmpty(cqlLibraryIds)) {
-      return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(false);
+      return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Collections.emptyList());
     }
-    return ResponseEntity.ok(
+    List<String> failedTransfers =
         cqlLibraryService.transferLibraries(
-            cqlLibraryIds, harpId, retainShareAccess, principal.getName()));
+            cqlLibraryIds, harpId, retainShareAccess, principal.getName());
+    if (CollectionUtils.isEmpty(failedTransfers)) {
+      return ResponseEntity.ok().body(failedTransfers);
+    } else {
+      return ResponseEntity.status(HttpStatus.PARTIAL_CONTENT).body(failedTransfers);
+    }
   }
 }
