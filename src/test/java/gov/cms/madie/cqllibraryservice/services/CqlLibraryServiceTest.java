@@ -241,9 +241,11 @@ class CqlLibraryServiceTest {
         CqlLibrary.builder().id("123").librarySetId("123").librarySet(librarySet).build();
     Optional<CqlLibrary> persistedLibrary = Optional.of(library);
     when(cqlLibraryRepository.findById(anyString())).thenReturn(persistedLibrary);
-    when(librarySetService.updateOwnership(anyString(), anyString())).thenReturn(new LibrarySet());
+    when(librarySetService.updateOwnership(anyString(), anyString(), anyBoolean(), anyString()))
+        .thenReturn(new LibrarySet());
 
-    boolean result = cqlLibraryService.changeOwnership(library.getId(), "user123");
+    boolean result =
+        cqlLibraryService.changeOwnership(library.getId(), "user123", false, "adminUser");
     assertTrue(result);
   }
 
