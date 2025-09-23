@@ -615,6 +615,14 @@ class CqlLibraryControllerTest {
     assertThat(updatedLibrary.getLastModifiedAt().isAfter(createdTime), is(true));
     assertThat(updatedLibrary.getLastModifiedBy(), is(equalTo("User2")));
     assertThat(updatedLibrary.getIncludedLibraries().size(), is(equalTo(1)));
+    verify(actionLogService, times(1))
+        .logAction(
+            targetIdArgumentCaptor.capture(),
+            actionTypeArgumentCaptor.capture(),
+            anyString(),
+            anyString());
+    assertThat(targetIdArgumentCaptor.getValue(), is(equalTo("Library1_ID")));
+    assertThat(actionTypeArgumentCaptor.getValue(), is(equalTo(ActionType.UPDATED)));
   }
 
   @Test
@@ -645,6 +653,23 @@ class CqlLibraryControllerTest {
     assertThat(output, is(notNullValue()));
     assertThat(output.getStatusCode(), is(equalTo(HttpStatus.CREATED)));
     assertThat(output.getBody(), is(equalTo(draft)));
+  }
+
+  @Test
+  void logsUpdateActionSuccessfully() {
+    String savedCqlLibraryId = "testCqlLibraryId";
+    String username = "testUser";
+
+    actionLogService.logAction(savedCqlLibraryId, ActionType.UPDATED, username, "actionLog");
+
+    verify(actionLogService, times(1))
+        .logAction(
+            targetIdArgumentCaptor.capture(),
+            actionTypeArgumentCaptor.capture(),
+            anyString(),
+            anyString());
+    assertThat(targetIdArgumentCaptor.getValue(), is(equalTo("testCqlLibraryId")));
+    assertThat(actionTypeArgumentCaptor.getValue(), is(equalTo(ActionType.UPDATED)));
   }
 
   @Test

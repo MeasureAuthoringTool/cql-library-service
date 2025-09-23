@@ -176,6 +176,12 @@ public class VersionService {
         "User [{}] successfully created a draft cql library with ID [{}]",
         username,
         savedCqlLibrary.getId());
+    actionLogService.logAction(
+        savedCqlLibrary.getId(),
+        ActionType.DRAFTED,
+        username,
+        "actionLog",
+        String.format("Draft created from version %s", cqlLibrary.getVersion()));
     return savedCqlLibrary;
   }
 
