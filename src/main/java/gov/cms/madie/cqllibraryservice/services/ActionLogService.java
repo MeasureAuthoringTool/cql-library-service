@@ -79,7 +79,10 @@ public class ActionLogService {
     librarySetActionLogs.ifPresent(
         log -> {
           if (CollectionUtils.isNotEmpty(log.getActions())) {
-            combinedActionLogs.addAll(log.getActions());
+            combinedActionLogs.addAll(
+                log.getActions().stream()
+                    .filter(action -> action.getActionType() != ActionType.CREATED)
+                    .toList());
           }
         });
 

@@ -8,6 +8,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
+import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 import gov.cms.madie.cqllibraryservice.dto.LibrarySearchCriteria;
 import gov.cms.madie.cqllibraryservice.dto.LibrarySetDTO;
 import gov.cms.madie.cqllibraryservice.dto.LibraryListDTO;
@@ -955,5 +956,55 @@ class CqlLibraryServiceTest {
     assertTrue(updatedSharedLibraries.containsKey(libraryId1));
 
     assertThat(updatedSharedLibraries.get(libraryId1), is(equalTo(List.of(aclSpecification1))));
+  }
+
+  @Test
+  void throwsInvalidRequestExceptionWhenCqlLibraryIdIsBlank() {
+    String cqlLibraryId = " ";
+    String userName = "testUser";
+
+    Exception exception =
+        assertThrows(
+            InvalidRequestException.class,
+            () -> cqlLibraryService.getCqlLibraryHistory(cqlLibraryId, userName));
+
+    assertThat(exception.getMessage(), is(equalTo("Cql Library ID cannot be null or empty.")));
+  }
+
+  @Test
+  void throwsResourceNotFoundExceptionWhenCqlLibraryDoesNotExist() {
+    String cqlLibraryId = "nonExistentId";
+    String userName = "testUser";
+
+    when(cqlLibraryRepository.findById(cqlLibraryId)).thenReturn(Optional.empty());
+
+    Exception exception =
+        assertThrows(
+            ResourceNotFoundException.class,
+            () -> cqlLibraryService.getCqlLibraryHistory(cqlLibraryId, userName));
+
+    assertThat(exception.getMessage(), is(equalTo("Cql Library does not exist: " + cqlLibraryId)));
+  }
+
+  @Test
+  void returnsCqlLibraryHistoryWhenLibraryExists() {
+    String cqlLibraryId = "existingId";
+    String userName = "testUser";
+    String librarySetId = "librarySetId";
+
+    CqlLibrary library = CqlLibrary.builder().id(cqlLibraryId).librarySetId(librarySetId).build();
+    List<Action> actions =
+        List.of(
+            Action.builder().actionType(ActionType.CREATED).build(),
+            Action.builder().actionType(ActionType.UPDATED).build());
+
+    when(cqlLibraryRepository.findById(cqlLibraryId)).thenReturn(Optional.of(library));
+    when(actionLogService.findCqlLibraryHistory(cqlLibraryId, librarySetId)).thenReturn(actions);
+
+    List<Action> result = cqlLibraryService.getCqlLibraryHistory(cqlLibraryId, userName);
+
+    assertThat(result.size(), is(equalTo(2)));
+    assertThat(result.get(0).getActionType(), is(equalTo(ActionType.CREATED)));
+    assertThat(result.get(1).getActionType(), is(equalTo(ActionType.UPDATED)));
   }
 }
