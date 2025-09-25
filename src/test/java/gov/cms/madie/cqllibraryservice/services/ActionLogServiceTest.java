@@ -2,9 +2,7 @@ package gov.cms.madie.cqllibraryservice.services;
 
 import gov.cms.madie.cqllibraryservice.repositories.CqlLibraryActionLogRepository;
 import gov.cms.madie.cqllibraryservice.repositories.LibrarySetActionLogRepository;
-import gov.cms.madie.models.common.AccessControlAction;
-import gov.cms.madie.models.common.Action;
-import gov.cms.madie.models.common.ActionType;
+import gov.cms.madie.models.common.*;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -12,6 +10,9 @@ import org.mockito.Captor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+
+import java.util.List;
+import java.util.Optional;
 
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.CoreMatchers.is;
@@ -107,5 +108,104 @@ class ActionLogServiceTest {
     assertThat(value.getActionType(), is(equalTo(ActionType.SHARED)));
     assertThat(value.getPerformedBy(), is(equalTo("secondUser")));
     assertThat(value.getSharedWith(), is(equalTo("sharedWith")));
+  }
+
+  @Test
+  void returnsCombinedCreatedActionLogWhenBothRepositoriesHaveCreatedLogs() {
+    String cqlLibraryId = "cqlLibraryId";
+    String librarySetId = "librarySetId";
+
+    LibraryActionLog libraryActionLog = new LibraryActionLog();
+    libraryActionLog.setActions(
+        List.of(
+            Action.builder().actionType(ActionType.CREATED).build(),
+            Action.builder().actionType(ActionType.UPDATED).build()));
+
+    LibrarySetActionLog librarySetActionLog =
+        LibrarySetActionLog.builder()
+            .actions(
+                List.of(
+                    AccessControlAction.builder().actionType(ActionType.SHARED).build(),
+                    AccessControlAction.builder().actionType(ActionType.CREATED).build()))
+            .build();
+
+    when(cqlLibraryHistoryRepository.findByTargetId(cqlLibraryId))
+        .thenReturn(Optional.of(libraryActionLog));
+    when(librarySetActionLogRepository.findByTargetId(librarySetId))
+        .thenReturn(Optional.of(librarySetActionLog));
+
+    List<Action> result = actionLogService.findCqlLibraryHistory(cqlLibraryId, librarySetId);
+
+    assertThat(result.size(), is(3));
+    assertThat(
+        result.stream().anyMatch(action -> action.getActionType() == ActionType.CREATED), is(true));
+    assertThat(
+        result.stream().anyMatch(action -> action.getActionType() == ActionType.UPDATED), is(true));
+    assertThat(
+        result.stream().anyMatch(action -> action.getActionType() == ActionType.SHARED), is(true));
+  }
+
+  @Test
+  void returnsEmptyListWhenBothRepositoriesReturnEmpty() {
+    String cqlLibraryId = "cqlLibraryId";
+    String librarySetId = "librarySetId";
+
+    when(cqlLibraryHistoryRepository.findByTargetId(cqlLibraryId)).thenReturn(Optional.empty());
+    when(librarySetActionLogRepository.findByTargetId(librarySetId)).thenReturn(Optional.empty());
+
+    List<Action> result = actionLogService.findCqlLibraryHistory(cqlLibraryId, librarySetId);
+
+    assertThat(result.isEmpty(), is(true));
+  }
+
+  @Test
+  void returnsOnlyLibraryActionsWhenLibrarySetRepositoryReturnsEmpty() {
+    String cqlLibraryId = "cqlLibraryId";
+    String librarySetId = "librarySetId";
+
+    LibraryActionLog libraryActionLog = new LibraryActionLog();
+    libraryActionLog.setActions(
+        List.of(
+            Action.builder().actionType(ActionType.CREATED).build(),
+            Action.builder().actionType(ActionType.UPDATED).build()));
+
+    when(cqlLibraryHistoryRepository.findByTargetId(cqlLibraryId))
+        .thenReturn(Optional.of(libraryActionLog));
+    when(librarySetActionLogRepository.findByTargetId(librarySetId)).thenReturn(Optional.empty());
+
+    List<Action> result = actionLogService.findCqlLibraryHistory(cqlLibraryId, librarySetId);
+
+    assertThat(result.size(), is(2));
+    assertThat(
+        result.stream().anyMatch(action -> action.getActionType() == ActionType.CREATED), is(true));
+    assertThat(
+        result.stream().anyMatch(action -> action.getActionType() == ActionType.UPDATED), is(true));
+  }
+
+  @Test
+  void returnsOnlyLibrarySetActionsWhenLibraryRepositoryReturnsEmpty() {
+    String cqlLibraryId = "cqlLibraryId";
+    String librarySetId = "librarySetId";
+
+    LibrarySetActionLog librarySetActionLog =
+        LibrarySetActionLog.builder()
+            .actions(
+                List.of(
+                    AccessControlAction.builder().actionType(ActionType.SHARED).build(),
+                    AccessControlAction.builder().actionType(ActionType.CREATED).build()))
+            .build();
+
+    when(cqlLibraryHistoryRepository.findByTargetId(cqlLibraryId)).thenReturn(Optional.empty());
+    when(librarySetActionLogRepository.findByTargetId(librarySetId))
+        .thenReturn(Optional.of(librarySetActionLog));
+
+    List<Action> result = actionLogService.findCqlLibraryHistory(cqlLibraryId, librarySetId);
+
+    assertThat(result.size(), is(1));
+    assertThat(
+        result.stream().anyMatch(action -> action.getActionType() == ActionType.SHARED), is(true));
+    assertThat(
+        result.stream().anyMatch(action -> action.getActionType() == ActionType.CREATED),
+        is(false));
   }
 }

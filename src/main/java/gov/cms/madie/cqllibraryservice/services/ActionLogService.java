@@ -5,10 +5,14 @@ import gov.cms.madie.cqllibraryservice.repositories.LibrarySetActionLogRepositor
 import gov.cms.madie.models.common.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.collections4.CollectionUtils;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
+import java.util.Optional;
 
 @Slf4j
 @RequiredArgsConstructor
@@ -55,5 +59,33 @@ public class ActionLogService {
 
   public LibrarySetActionLog findLibrarySetActionLogByTargetId(final String targetId) {
     return librarySetActionLogRepository.findByTargetId(targetId).orElse(null);
+  }
+
+  public List<Action> findCqlLibraryHistory(String cqlLibraryId, String librarySetId) {
+    Optional<LibraryActionLog> libraryActionLogs =
+        cqlLibraryHistoryRepository.findByTargetId(cqlLibraryId);
+    Optional<LibrarySetActionLog> librarySetActionLogs =
+        librarySetActionLogRepository.findByTargetId(librarySetId);
+
+    List<Action> combinedActionLogs = new ArrayList<>();
+
+    libraryActionLogs.ifPresent(
+        log -> {
+          if (CollectionUtils.isNotEmpty(log.getActions())) {
+            combinedActionLogs.addAll(log.getActions());
+          }
+        });
+
+    librarySetActionLogs.ifPresent(
+        log -> {
+          if (CollectionUtils.isNotEmpty(log.getActions())) {
+            combinedActionLogs.addAll(
+                log.getActions().stream()
+                    .filter(action -> action.getActionType() != ActionType.CREATED)
+                    .toList());
+          }
+        });
+
+    return combinedActionLogs;
   }
 }

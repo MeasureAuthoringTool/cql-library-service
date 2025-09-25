@@ -1,5 +1,6 @@
 package gov.cms.madie.cqllibraryservice.services;
 
+import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 import gov.cms.madie.cqllibraryservice.dto.LibrarySearchCriteria;
 import gov.cms.madie.cqllibraryservice.dto.LibrarySetDTO;
 import gov.cms.madie.cqllibraryservice.dto.LibraryListDTO;
@@ -9,11 +10,7 @@ import gov.cms.madie.cqllibraryservice.repositories.LibrarySetRepository;
 import gov.cms.madie.models.access.AclOperation;
 import gov.cms.madie.models.access.AclSpecification;
 import gov.cms.madie.models.access.RoleEnum;
-import gov.cms.madie.models.common.AccessControlAction;
-import gov.cms.madie.models.common.ActionType;
-import gov.cms.madie.models.common.LibrarySetActionLog;
-import gov.cms.madie.models.common.Version;
-import gov.cms.madie.models.common.OwnershipType;
+import gov.cms.madie.models.common.*;
 import gov.cms.madie.models.dto.LibraryUsage;
 import gov.cms.madie.models.library.CqlLibrary;
 import gov.cms.madie.cqllibraryservice.repositories.CqlLibraryRepository;
@@ -466,5 +463,26 @@ public class CqlLibraryService {
       }
     }
     return failedLibraries;
+  }
+
+  public List<Action> getCqlLibraryHistory(String cqlLibraryId, String userName) {
+    if (StringUtils.isBlank(cqlLibraryId)) {
+      throw new InvalidRequestException("Cql Library ID cannot be null or empty.");
+    }
+
+    Optional<CqlLibrary> persistedCqlLibrary = cqlLibraryRepository.findById(cqlLibraryId);
+    if (persistedCqlLibrary.isEmpty()) {
+      throw new ResourceNotFoundException("Cql Library does not exist: " + cqlLibraryId);
+    }
+
+    List<Action> cqlLibraryHistory =
+        actionLogService.findCqlLibraryHistory(
+            cqlLibraryId, persistedCqlLibrary.get().getLibrarySetId());
+    log.info(
+        "User [{}] successfully retrieved the history of the cql library with ID [{}]",
+        userName,
+        cqlLibraryId);
+
+    return cqlLibraryHistory;
   }
 }

@@ -12,6 +12,7 @@ import gov.cms.madie.cqllibraryservice.utils.AuthUtils;
 import gov.cms.madie.cqllibraryservice.utils.LibraryUtils;
 import gov.cms.madie.models.access.AclOperation;
 import gov.cms.madie.models.access.AclSpecification;
+import gov.cms.madie.models.common.Action;
 import gov.cms.madie.models.common.ActionType;
 import gov.cms.madie.models.common.OwnershipType;
 import gov.cms.madie.models.dto.LibraryUsage;
@@ -378,5 +379,12 @@ public class CqlLibraryController {
     } else {
       return ResponseEntity.status(HttpStatus.PARTIAL_CONTENT).body(failedTransfers);
     }
+  }
+
+  @GetMapping(value = "/{id}/history")
+  public ResponseEntity<List<Action>> getCqlLibraryHistory(
+      @PathVariable("id") String cqlLibraryId, Principal principal) {
+    return ResponseEntity.ok()
+        .body(cqlLibraryService.getCqlLibraryHistory(cqlLibraryId, principal.getName()));
   }
 }
