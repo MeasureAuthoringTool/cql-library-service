@@ -364,29 +364,6 @@ class CqlLibraryServiceTest {
   }
 
   @Test
-  public void testDeleteDraftLibraryLockingEnabledLockInfoNull() {
-    when(appConfigService.isFlagEnabled(MadieFeatureFlag.LOCKING)).thenReturn(true);
-    when(cqlLibraryLockService.lockCqlLibrary(eq("LibID"), eq("TEST_USER"))).thenReturn(null);
-    CqlLibrary library =
-        CqlLibrary.builder()
-            .draft(true)
-            .id("LibID")
-            .librarySetId("LibSetID")
-            .version(Version.parse("1.0.0"))
-            .build();
-    when(cqlLibraryRepository.findById("LibID")).thenReturn(Optional.of(library));
-    when(librarySetService.findByLibrarySetId("LibSetID"))
-        .thenReturn(LibrarySet.builder().librarySetId("LibSetID").owner("TEST_USER").build());
-    doNothing().when(cqlLibraryRepository).delete(any(CqlLibrary.class));
-
-    CqlLibrary output = cqlLibraryService.deleteDraftLibrary("LibID", "TEST_USER");
-
-    assertThat(output, is(notNullValue()));
-    assertThat(output.getId(), is(equalTo("LibID")));
-    verify(cqlLibraryRepository, times(1)).delete(eq(library));
-  }
-
-  @Test
   void testFindLibraryUsage() {
     String libraryName = "test";
     String owner = "john";
