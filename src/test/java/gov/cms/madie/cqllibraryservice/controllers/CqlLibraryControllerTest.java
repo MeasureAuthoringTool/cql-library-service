@@ -830,14 +830,14 @@ class CqlLibraryControllerTest {
     String username = "testUser";
     when(principal.getName()).thenReturn("testUser");
     List<Action> actions =
-            List.of(
-                    Action.builder().actionType(ActionType.CREATED).build(),
-                    Action.builder().actionType(ActionType.UPDATED).build());
+        List.of(
+            Action.builder().actionType(ActionType.CREATED).build(),
+            Action.builder().actionType(ActionType.UPDATED).build());
 
     when(cqlLibraryService.getCqlLibraryHistory(cqlLibraryId, username)).thenReturn(actions);
 
     ResponseEntity<List<Action>> response =
-            cqlLibraryController.getCqlLibraryHistory(cqlLibraryId, principal);
+        cqlLibraryController.getCqlLibraryHistory(cqlLibraryId, principal);
 
     assertNotNull(response.getBody());
     assertEquals(2, response.getBody().size());
@@ -852,11 +852,11 @@ class CqlLibraryControllerTest {
     when(principal.getName()).thenReturn("testUser");
 
     when(cqlLibraryService.getCqlLibraryHistory(cqlLibraryId, username))
-            .thenThrow(new ResourceNotFoundException("CQL Library", cqlLibraryId));
+        .thenThrow(new ResourceNotFoundException("CQL Library", cqlLibraryId));
 
     assertThrows(
-            ResourceNotFoundException.class,
-            () -> cqlLibraryController.getCqlLibraryHistory(cqlLibraryId, principal));
+        ResourceNotFoundException.class,
+        () -> cqlLibraryController.getCqlLibraryHistory(cqlLibraryId, principal));
   }
 
   @Test
@@ -868,7 +868,7 @@ class CqlLibraryControllerTest {
     when(cqlLibraryService.getCqlLibraryHistory(cqlLibraryId, username)).thenReturn(List.of());
 
     ResponseEntity<List<Action>> response =
-            cqlLibraryController.getCqlLibraryHistory(cqlLibraryId, principal);
+        cqlLibraryController.getCqlLibraryHistory(cqlLibraryId, principal);
 
     assertNotNull(response.getBody());
     assertTrue(response.getBody().isEmpty());
