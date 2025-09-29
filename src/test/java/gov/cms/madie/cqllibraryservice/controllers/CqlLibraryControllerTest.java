@@ -170,7 +170,6 @@ class CqlLibraryControllerTest {
     verify(cqlLibraryService, times(1))
         .getLibrariesByCriteria(eq(librarySearchCriteria), eq(OwnershipType.ALL), any(), any());
     verifyNoMoreInteractions(cqlLibraryService);
-
     assertNotNull(response.getBody());
     assertFalse(response.getBody().isEmpty());
     assertEquals("testCqlLibraryId", response.getBody().getContent().get(0).getId());
