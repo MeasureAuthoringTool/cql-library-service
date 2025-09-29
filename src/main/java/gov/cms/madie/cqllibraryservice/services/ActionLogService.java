@@ -33,7 +33,8 @@ public class ActionLogService {
             .actionType(actionType)
             .performedBy(userId)
             .performedAt(Instant.now())
-            .additionalActionMessage(String.join(", ", additionalActionMessage))
+            .additionalActionMessage(
+                additionalActionMessage != null ? String.join(", ", additionalActionMessage) : "")
             .build(),
         collection);
   }
@@ -52,7 +53,8 @@ public class ActionLogService {
             .performedBy(performedBy)
             .performedAt(Instant.now())
             .sharedWith(sharedWith)
-            .additionalActionMessage(String.join(", ", additionalActionMessage))
+            .additionalActionMessage(
+                additionalActionMessage != null ? String.join(", ", additionalActionMessage) : "")
             .build());
   }
 
