@@ -198,7 +198,9 @@ public class CqlLibraryController {
     cqlLibrary.setLastModifiedBy(username);
     cqlLibrary.setCreatedAt(persistedLibrary.getCreatedAt());
     cqlLibrary.setCreatedBy(persistedLibrary.getCreatedBy());
-    return ResponseEntity.ok(cqlLibraryRepository.save(cqlLibrary));
+    ResponseEntity<CqlLibrary> response = ResponseEntity.ok(cqlLibraryRepository.save(cqlLibrary));
+    actionLogService.logAction(id, ActionType.UPDATED, username, "actionLog");
+    return response;
   }
 
   @GetMapping(value = "/cql", produces = MediaType.TEXT_PLAIN_VALUE)

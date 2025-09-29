@@ -12,7 +12,12 @@ import static org.mockito.Mockito.*;
 
 import gov.cms.madie.cqllibraryservice.dto.LibraryListDTO;
 import gov.cms.madie.cqllibraryservice.dto.LibrarySearchCriteria;
-import gov.cms.madie.cqllibraryservice.exceptions.*;
+import gov.cms.madie.cqllibraryservice.exceptions.DuplicateKeyException;
+import gov.cms.madie.cqllibraryservice.exceptions.InvalidIdException;
+import gov.cms.madie.cqllibraryservice.exceptions.InvalidResourceStateException;
+import gov.cms.madie.cqllibraryservice.exceptions.PermissionDeniedException;
+import gov.cms.madie.cqllibraryservice.exceptions.ResourceNotDraftableException;
+import gov.cms.madie.cqllibraryservice.exceptions.ResourceNotFoundException;
 import gov.cms.madie.cqllibraryservice.services.ActionLogService;
 import gov.cms.madie.cqllibraryservice.services.LibrarySetService;
 import gov.cms.madie.models.access.AclOperation;
@@ -607,6 +612,14 @@ class CqlLibraryControllerTest {
     assertThat(updatedLibrary.getLastModifiedAt().isAfter(createdTime), is(true));
     assertThat(updatedLibrary.getLastModifiedBy(), is(equalTo("User2")));
     assertThat(updatedLibrary.getIncludedLibraries().size(), is(equalTo(1)));
+    verify(actionLogService, times(1))
+        .logAction(
+            targetIdArgumentCaptor.capture(),
+            actionTypeArgumentCaptor.capture(),
+            anyString(),
+            anyString());
+    assertThat(targetIdArgumentCaptor.getValue(), is(equalTo("Library1_ID")));
+    assertThat(actionTypeArgumentCaptor.getValue(), is(equalTo(ActionType.UPDATED)));
   }
 
   @Test
@@ -637,6 +650,23 @@ class CqlLibraryControllerTest {
     assertThat(output, is(notNullValue()));
     assertThat(output.getStatusCode(), is(equalTo(HttpStatus.CREATED)));
     assertThat(output.getBody(), is(equalTo(draft)));
+  }
+
+  @Test
+  void logsUpdateActionSuccessfully() {
+    String savedCqlLibraryId = "testCqlLibraryId";
+    String username = "testUser";
+
+    actionLogService.logAction(savedCqlLibraryId, ActionType.UPDATED, username, "actionLog");
+
+    verify(actionLogService, times(1))
+        .logAction(
+            targetIdArgumentCaptor.capture(),
+            actionTypeArgumentCaptor.capture(),
+            anyString(),
+            anyString());
+    assertThat(targetIdArgumentCaptor.getValue(), is(equalTo("testCqlLibraryId")));
+    assertThat(actionTypeArgumentCaptor.getValue(), is(equalTo(ActionType.UPDATED)));
   }
 
   @Test

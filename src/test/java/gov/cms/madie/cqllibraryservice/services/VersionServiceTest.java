@@ -331,6 +331,30 @@ class VersionServiceTest {
   }
 
   @Test
+  void logsDraftActionSuccessfully() {
+    String savedCqlLibraryId = "testCqlLibraryId";
+    String username = "testUser";
+    String version = "1.0.000";
+
+    actionLogService.logAction(
+        savedCqlLibraryId,
+        ActionType.DRAFTED,
+        username,
+        "actionLog",
+        String.format("Draft created from version %s", version));
+
+    verify(actionLogService, times(1))
+        .logAction(
+            targetIdArgumentCaptor.capture(),
+            actionTypeArgumentCaptor.capture(),
+            anyString(),
+            anyString(),
+            anyString());
+    assertThat(targetIdArgumentCaptor.getValue(), is(equalTo("testCqlLibraryId")));
+    assertThat(actionTypeArgumentCaptor.getValue(), is(equalTo(ActionType.DRAFTED)));
+  }
+
+  @Test
   void testCreateDraftThrowsExceptionForAuthorization() {
     AclSpecification aclSpecification = new AclSpecification();
     aclSpecification.setUserId("sharedUser");
@@ -448,6 +472,15 @@ class VersionServiceTest {
     // version and groupId should not change
     assertThat(savedValue.getVersion(), is(equalTo(existingCqlLibrary.getVersion())));
     assertThat(savedValue.getLibrarySetId(), is(equalTo(existingCqlLibrary.getLibrarySetId())));
+    verify(actionLogService, times(1))
+        .logAction(
+            targetIdArgumentCaptor.capture(),
+            actionTypeArgumentCaptor.capture(),
+            anyString(),
+            anyString(),
+            anyString());
+    assertThat(targetIdArgumentCaptor.getValue(), is(equalTo("testCqlLibraryId")));
+    assertThat(actionTypeArgumentCaptor.getValue(), is(equalTo(ActionType.DRAFTED)));
   }
 
   @Test
