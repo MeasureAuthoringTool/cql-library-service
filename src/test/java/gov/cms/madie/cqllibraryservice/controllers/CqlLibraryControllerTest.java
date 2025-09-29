@@ -23,13 +23,10 @@ import gov.cms.madie.cqllibraryservice.services.LibrarySetService;
 import gov.cms.madie.models.access.AclOperation;
 import gov.cms.madie.models.access.AclSpecification;
 import gov.cms.madie.models.access.RoleEnum;
-import gov.cms.madie.models.common.ActionType;
-import gov.cms.madie.models.common.OwnershipType;
+import gov.cms.madie.models.common.*;
 import gov.cms.madie.models.dto.LibraryUsage;
 import gov.cms.madie.models.library.CqlLibrary;
 import gov.cms.madie.models.library.CqlLibraryDraft;
-import gov.cms.madie.models.common.ModelType;
-import gov.cms.madie.models.common.Version;
 import gov.cms.madie.cqllibraryservice.repositories.CqlLibraryRepository;
 import gov.cms.madie.cqllibraryservice.services.CqlLibraryService;
 import gov.cms.madie.cqllibraryservice.services.VersionService;
@@ -825,5 +822,55 @@ class CqlLibraryControllerTest {
 
     assertNotNull(response.getBody());
     assertEquals("testCqlLibraryId", response.getBody().get(0).getId());
+  }
+
+  @Test
+  void returnsCqlLibraryHistorySuccessfully() {
+    String cqlLibraryId = "testLibraryId";
+    String username = "testUser";
+    when(principal.getName()).thenReturn("testUser");
+    List<Action> actions =
+            List.of(
+                    Action.builder().actionType(ActionType.CREATED).build(),
+                    Action.builder().actionType(ActionType.UPDATED).build());
+
+    when(cqlLibraryService.getCqlLibraryHistory(cqlLibraryId, username)).thenReturn(actions);
+
+    ResponseEntity<List<Action>> response =
+            cqlLibraryController.getCqlLibraryHistory(cqlLibraryId, principal);
+
+    assertNotNull(response.getBody());
+    assertEquals(2, response.getBody().size());
+    assertEquals(ActionType.CREATED, response.getBody().get(0).getActionType());
+    assertEquals(ActionType.UPDATED, response.getBody().get(1).getActionType());
+  }
+
+  @Test
+  void throwsResourceNotFoundExceptionWhenLibraryHistoryNotFound() {
+    String cqlLibraryId = "nonExistentLibraryId";
+    String username = "testUser";
+    when(principal.getName()).thenReturn("testUser");
+
+    when(cqlLibraryService.getCqlLibraryHistory(cqlLibraryId, username))
+            .thenThrow(new ResourceNotFoundException("CQL Library", cqlLibraryId));
+
+    assertThrows(
+            ResourceNotFoundException.class,
+            () -> cqlLibraryController.getCqlLibraryHistory(cqlLibraryId, principal));
+  }
+
+  @Test
+  void returnsEmptyHistoryWhenNoActionsExist() {
+    String cqlLibraryId = "testLibraryId";
+    String username = "testUser";
+    when(principal.getName()).thenReturn("testUser");
+
+    when(cqlLibraryService.getCqlLibraryHistory(cqlLibraryId, username)).thenReturn(List.of());
+
+    ResponseEntity<List<Action>> response =
+            cqlLibraryController.getCqlLibraryHistory(cqlLibraryId, principal);
+
+    assertNotNull(response.getBody());
+    assertTrue(response.getBody().isEmpty());
   }
 }
