@@ -1,5 +1,6 @@
 package gov.cms.madie.cqllibraryservice.dto;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import gov.cms.madie.models.common.ModelType;
@@ -15,6 +16,8 @@ import lombok.experimental.SuperBuilder;
 import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.time.Instant;
+
+import gov.cms.madie.cqllibraryservice.locks.CqlLibraryLock;
 
 @Data
 @Document
@@ -43,4 +46,7 @@ public class LibraryListDTO {
   private Instant lastModifiedAt;
   private boolean draft;
   private boolean hasAssociatedLibraries;
+
+  @JsonInclude(JsonInclude.Include.NON_NULL)
+  private CqlLibraryLock cqlLibraryLock;
 }

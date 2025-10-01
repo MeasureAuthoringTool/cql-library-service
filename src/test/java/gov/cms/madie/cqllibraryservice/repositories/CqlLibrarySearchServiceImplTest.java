@@ -27,6 +27,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
+import gov.cms.madie.cqllibraryservice.locks.CqlLibraryLock;
 
 @ExtendWith(MockitoExtension.class)
 @EnableMongoRepositories(basePackages = "com.gov.madie.measure.repository")
@@ -163,6 +164,7 @@ public class CqlLibrarySearchServiceImplTest {
   @Test
   public void testFindOwnedLibrariesInSets() {
     when(appConfigService.isFlagEnabled(MadieFeatureFlag.LIBRARY_SEARCH)).thenReturn(true);
+      when(appConfigService.isFlagEnabled(MadieFeatureFlag.LOCKING)).thenReturn(false);
     // page size 3 from 0-2
     PageRequest pageRequest = PageRequest.of(0, 3);
 
@@ -260,6 +262,72 @@ public class CqlLibrarySearchServiceImplTest {
 
     assertEquals(1, page.getTotalElements());
     assertEquals(1, page.getContent().size());
+  }
+
+  // New test: lock info removed for current user when LOCKING enabled
+  @Test
+  public void testLockInfoRemovedForCurrentUser() {
+    when(appConfigService.isFlagEnabled(MadieFeatureFlag.LIBRARY_SEARCH)).thenReturn(false);
+    when(appConfigService.isFlagEnabled(MadieFeatureFlag.LOCKING)).thenReturn(true);
+    PageRequest pageRequest = PageRequest.of(0, 1);
+
+    LibraryListDTO lockedByCurrentUser =
+        LibraryListDTO.builder()
+            .id("lock-lib-1")
+            .librarySetId("set-lock-1")
+            .cqlLibraryName("Locked Library")
+            .cqlLibraryLock(
+                CqlLibraryLock.builder().cqlLibraryId("lock-lib-1").lockedBy("john").build())
+            .build();
+
+    FacetDTO facetDTO =
+        FacetDTO.builder().queryResults(List.of(lockedByCurrentUser)).count(List.of(1)).build();
+
+    when(mongoTemplate.aggregate(any(Aggregation.class), eq(CqlLibrary.class), eq(FacetDTO.class)))
+        .thenReturn(new AggregationResults<>(List.of(facetDTO), new Document()));
+
+    Page<LibraryListDTO> page =
+        cqlLibrarySearchServiceImpl.searchLibrariesByCriteria(
+            "john", pageRequest, null, OwnershipType.OWNED);
+
+    assertEquals(1, page.getTotalElements());
+    assertNull(
+        page.getContent().get(0).getCqlLibraryLock());
+  }
+
+  // New test: lock info retained for different user
+  @Test
+  public void testLockInfoRetainedForDifferentUser() {
+    when(appConfigService.isFlagEnabled(MadieFeatureFlag.LIBRARY_SEARCH)).thenReturn(false);
+    when(appConfigService.isFlagEnabled(MadieFeatureFlag.LOCKING)).thenReturn(true);
+    PageRequest pageRequest = PageRequest.of(0, 1);
+
+    LibraryListDTO lockedByOther =
+        LibraryListDTO.builder()
+            .id("lock-lib-2")
+            .librarySetId("set-lock-2")
+            .cqlLibraryName("Locked Library Other")
+            .cqlLibraryLock(
+                CqlLibraryLock.builder().cqlLibraryId("lock-lib-2").lockedBy("someoneElse").build())
+            .build();
+
+    FacetDTO facetDTO =
+        FacetDTO.builder().queryResults(List.of(lockedByOther)).count(List.of(1)).build();
+
+    when(mongoTemplate.aggregate(any(Aggregation.class), eq(CqlLibrary.class), eq(FacetDTO.class)))
+        .thenReturn(new AggregationResults<>(List.of(facetDTO), new Document()));
+
+    Page<LibraryListDTO> page =
+        cqlLibrarySearchServiceImpl.searchLibrariesByCriteria(
+            "john", pageRequest, null, OwnershipType.OWNED);
+
+    assertEquals(1, page.getTotalElements());
+    assertNotNull(
+        page.getContent().get(0).getCqlLibraryLock(), "Lock from another user should be retained");
+    assertEquals(
+        "someoneElse",
+        page.getContent().get(0).getCqlLibraryLock().getLockedBy(),
+        "LockedBy mismatch");
   }
 
   @Test

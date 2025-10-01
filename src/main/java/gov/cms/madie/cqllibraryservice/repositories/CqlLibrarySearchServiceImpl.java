@@ -25,6 +25,7 @@ import java.util.stream.Collectors;
 import static gov.cms.madie.cqllibraryservice.utils.SearchUtils.appendAdditionalSearchCriteria;
 import static org.springframework.data.mongodb.core.aggregation.Aggregation.*;
 import static org.springframework.data.mongodb.core.aggregation.Aggregation.project;
+import org.springframework.data.mongodb.core.aggregation.ArrayOperators;
 
 @Repository
 public class CqlLibrarySearchServiceImpl implements CqlLibrarySearchService {
@@ -40,14 +41,6 @@ public class CqlLibrarySearchServiceImpl implements CqlLibrarySearchService {
         .as("librarySet");
   }
 
-    private LookupOperation getLibraryLockLookup() {
-        return LookupOperation.newLookup()
-                .from("cqlLibraryLock")
-                .localField("_id")
-                .foreignField("_id")
-                .as("cqlLibraryLock");
-    }
-
   private Criteria getAclCriteria(String userId, OwnershipType ownershipType) {
     if (ownershipType == OwnershipType.OWNED) {
       return Criteria.where("librarySet.owner").is(userId);
@@ -62,6 +55,29 @@ public class CqlLibrarySearchServiceImpl implements CqlLibrarySearchService {
     return new Criteria();
   }
 
+  // Build lock-related aggregation stages only if LOCKING feature is enabled
+  private List<AggregationOperation> buildLockLookupStages() {
+    if (!appConfigService.isFlagEnabled(MadieFeatureFlag.LOCKING)) {
+      return Collections.emptyList();
+    }
+    List<AggregationOperation> stages = new ArrayList<>();
+    LookupOperation lockLookupOperation =
+        LookupOperation.newLookup()
+            .from("cqlLibraryLock")
+            .localField("_id")
+            .foreignField("_id")
+            .as("cqlLibraryLock");
+    AddFieldsOperation flattenLockOperation =
+        addFields()
+            .addFieldWithValue(
+                "cqlLibraryLock",
+                ArrayOperators.ArrayElemAt.arrayOf("$cqlLibraryLock").elementAt(0))
+            .build();
+    stages.add(lockLookupOperation);
+    stages.add(flattenLockOperation);
+    return stages;
+  }
+
   public CqlLibrarySearchServiceImpl(
       MongoTemplate mongoTemplate, AppConfigService appConfigService) {
     this.mongoTemplate = mongoTemplate;
@@ -74,7 +90,6 @@ public class CqlLibrarySearchServiceImpl implements CqlLibrarySearchService {
       Pageable pageable,
       LibrarySearchCriteria librarySearchCriteria,
       OwnershipType ownershipType) {
-      LookupOperation libraryLockLookup = getLibraryLockLookup();
     LookupOperation lookupOperation = getLookupOperation();
     UnwindOperation unwindOperation = unwind("librarySet");
 
@@ -131,27 +146,27 @@ public class CqlLibrarySearchServiceImpl implements CqlLibrarySearchService {
         return new PageImpl<>(Collections.emptyList(), pageable, 0);
       }
 
-      // Fetch all libraries associated to each LibrarySetId
       MatchOperation matchLibrarySetIds =
           match(Criteria.where("librarySetId").in(matchedLibrarySetIds));
 
-      // Sort those libraries based on version and draft status
       SortOperation sortByVersionAndDraft = sort(Sort.by(Sort.Direction.DESC, "draft", "version"));
       GroupOperation groupByLibrarySet = group("librarySetId").first("$$ROOT").as("selectedDoc");
 
       ReplaceRootOperation replaceRoot = replaceRoot("selectedDoc");
 
-      Aggregation pipeline =
-          newAggregation(
-              lookupOperation,
-              unwindOperation,
-                  libraryLockLookup,
-                  unwind("cqlLibraryLock"),
-              matchLibrarySetIds,
-              sortByVersionAndDraft,
-              groupByLibrarySet,
-              replaceRoot,
-              facets);
+      List<AggregationOperation> lockStages = buildLockLookupStages();
+
+      List<AggregationOperation> ops = new ArrayList<>();
+      ops.add(lookupOperation);
+      ops.add(unwindOperation);
+      ops.add(matchLibrarySetIds);
+      ops.add(sortByVersionAndDraft);
+      ops.add(groupByLibrarySet);
+      ops.add(replaceRoot);
+      ops.addAll(lockStages);
+      ops.add(facets);
+
+      Aggregation pipeline = newAggregation(ops);
       List<FacetDTO> results =
           mongoTemplate.aggregate(pipeline, CqlLibrary.class, FacetDTO.class).getMappedResults();
       for (LibraryListDTO dto : results.get(0).getQueryResults()) {
@@ -169,6 +184,11 @@ public class CqlLibrarySearchServiceImpl implements CqlLibrarySearchService {
           dto.setHasAssociatedLibraries(hasAssociated);
         } else {
           dto.setHasAssociatedLibraries(false);
+        }
+        if (dto.getCqlLibraryLock() != null
+            && userId != null
+            && userId.equalsIgnoreCase(dto.getCqlLibraryLock().getLockedBy())) {
+          dto.setCqlLibraryLock(null); // Don't show lock info to the user who locked it
         }
       }
       long totalSize = matchInfoMap.size();
