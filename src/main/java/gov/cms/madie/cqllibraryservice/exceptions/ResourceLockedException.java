@@ -1,9 +1,11 @@
 package gov.cms.madie.cqllibraryservice.exceptions;
 
-public class ResourceLockedException extends RuntimeException {
-  private static final String MESSAGE = "User %s cannot lock library with id: %s as %s";
+import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.annotation.ResponseStatus;
 
-  public ResourceLockedException(String user, String id, String cause) {
-    super(String.format(MESSAGE, user, id, cause));
-  }
+@ResponseStatus(HttpStatus.LOCKED) // 423
+public class ResourceLockedException extends RuntimeException {
+    public ResourceLockedException(String resourceType, String id, String lockedBy) {
+        super(resourceType + " with id " + id + " is locked by user " + lockedBy);
+    }
 }

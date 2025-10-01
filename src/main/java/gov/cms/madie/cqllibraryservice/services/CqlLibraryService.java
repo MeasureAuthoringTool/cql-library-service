@@ -161,6 +161,7 @@ public class CqlLibraryService {
               "Could not update resource %s with id: %s. Resource is not a Draft.",
               "CQL Library", id));
     }
+    cqlLibraryLockService.unlockCqlLibrary(cqlLibrary.getId(), userId);
     return cqlLibrary;
   }
 

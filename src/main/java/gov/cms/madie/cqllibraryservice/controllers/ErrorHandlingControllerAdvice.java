@@ -11,6 +11,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.web.error.ErrorAttributeOptions;
 import org.springframework.boot.web.servlet.error.ErrorAttributes;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
@@ -149,6 +150,13 @@ public class ErrorHandlingControllerAdvice {
   Map<String, Object> onInternalServerErrorException(WebRequest request) {
     return getErrorAttributes(request, HttpStatus.INTERNAL_SERVER_ERROR);
   }
+
+    @ExceptionHandler(ResourceLockedException.class)
+    @ResponseStatus(HttpStatus.LOCKED)
+    @ResponseBody
+    Map<String, Object> onResourceLockedException(ResourceLockedException ex, WebRequest request) {
+        return getErrorAttributes(request, HttpStatus.LOCKED);
+    }
 
   private Map<String, Object> getErrorAttributes(WebRequest request, HttpStatus httpStatus) {
     // BINDING_ERRORS and STACK_TRACE are too detailed and confusing to parse

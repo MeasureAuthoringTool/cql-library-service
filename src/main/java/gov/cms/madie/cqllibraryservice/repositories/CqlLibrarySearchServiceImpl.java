@@ -40,6 +40,14 @@ public class CqlLibrarySearchServiceImpl implements CqlLibrarySearchService {
         .as("librarySet");
   }
 
+    private LookupOperation getLibraryLockLookup() {
+        return LookupOperation.newLookup()
+                .from("cqlLibraryLock")
+                .localField("_id")
+                .foreignField("_id")
+                .as("cqlLibraryLock");
+    }
+
   private Criteria getAclCriteria(String userId, OwnershipType ownershipType) {
     if (ownershipType == OwnershipType.OWNED) {
       return Criteria.where("librarySet.owner").is(userId);
@@ -66,6 +74,7 @@ public class CqlLibrarySearchServiceImpl implements CqlLibrarySearchService {
       Pageable pageable,
       LibrarySearchCriteria librarySearchCriteria,
       OwnershipType ownershipType) {
+      LookupOperation libraryLockLookup = getLibraryLockLookup();
     LookupOperation lookupOperation = getLookupOperation();
     UnwindOperation unwindOperation = unwind("librarySet");
 
@@ -136,6 +145,8 @@ public class CqlLibrarySearchServiceImpl implements CqlLibrarySearchService {
           newAggregation(
               lookupOperation,
               unwindOperation,
+                  libraryLockLookup,
+                  unwind("cqlLibraryLock"),
               matchLibrarySetIds,
               sortByVersionAndDraft,
               groupByLibrarySet,
