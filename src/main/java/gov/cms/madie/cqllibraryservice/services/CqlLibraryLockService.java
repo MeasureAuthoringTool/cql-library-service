@@ -6,12 +6,12 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 
 import com.nimbusds.oauth2.sdk.util.CollectionUtils;
 
 import gov.cms.madie.cqllibraryservice.dto.LockInfo;
-import gov.cms.madie.cqllibraryservice.exceptions.DuplicateKeyException;
 import gov.cms.madie.cqllibraryservice.locks.CqlLibraryLock;
 import gov.cms.madie.cqllibraryservice.repositories.CqlLibraryLockRepository;
 import lombok.RequiredArgsConstructor;

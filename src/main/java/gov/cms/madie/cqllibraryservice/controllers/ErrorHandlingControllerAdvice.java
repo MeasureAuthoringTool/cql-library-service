@@ -150,6 +150,13 @@ public class ErrorHandlingControllerAdvice {
     return getErrorAttributes(request, HttpStatus.INTERNAL_SERVER_ERROR);
   }
 
+  @ExceptionHandler(ResourceLockedException.class)
+  @ResponseStatus(HttpStatus.LOCKED)
+  @ResponseBody
+  Map<String, Object> onResourceLockedException(ResourceLockedException ex, WebRequest request) {
+    return getErrorAttributes(request, HttpStatus.LOCKED);
+  }
+
   private Map<String, Object> getErrorAttributes(WebRequest request, HttpStatus httpStatus) {
     // BINDING_ERRORS and STACK_TRACE are too detailed and confusing to parse
     // Let's just add a list of simplified validation errors

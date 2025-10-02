@@ -1,10 +1,7 @@
 package gov.cms.madie.cqllibraryservice.services;
 
 import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
-import gov.cms.madie.cqllibraryservice.dto.LibrarySearchCriteria;
-import gov.cms.madie.cqllibraryservice.dto.LibrarySetDTO;
-import gov.cms.madie.cqllibraryservice.dto.LibraryListDTO;
-import gov.cms.madie.cqllibraryservice.dto.SharedUser;
+import gov.cms.madie.cqllibraryservice.dto.*;
 import gov.cms.madie.cqllibraryservice.exceptions.*;
 import gov.cms.madie.cqllibraryservice.repositories.LibrarySetRepository;
 import gov.cms.madie.models.access.AclOperation;
@@ -37,6 +34,8 @@ public class CqlLibraryService {
   private final ActionLogService actionLogService;
   private LibrarySetService librarySetService;
   private MeasureServiceClient measureServiceClient;
+  private final AppConfigService appConfigService;
+  private final CqlLibraryLockService cqlLibraryLockService;
 
   public Page<LibraryListDTO> getLibrariesByCriteria(
       LibrarySearchCriteria librarySearchCriteria,
@@ -143,6 +142,13 @@ public class CqlLibraryService {
   }
 
   public CqlLibrary deleteDraftLibrary(final String id, final String userId) {
+    if (appConfigService.isFlagEnabled(MadieFeatureFlag.LOCKING)) {
+      LockInfo lockInfo = cqlLibraryLockService.lockCqlLibrary(id, userId);
+      if (lockInfo != null && lockInfo.isLocked() && !lockInfo.getLockedBy().equals(userId)) {
+        throw new ResourceLockedException(
+            "Unable to delete CQL Library", id, lockInfo.getLockedBy());
+      }
+    }
     CqlLibrary cqlLibrary = findCqlLibraryById(id);
     if (!userId.equalsIgnoreCase(cqlLibrary.getLibrarySet().getOwner())) {
       throw new PermissionDeniedException("CQL Library", cqlLibrary.getId(), userId);
@@ -156,6 +162,7 @@ public class CqlLibraryService {
               "Could not update resource %s with id: %s. Resource is not a Draft.",
               "CQL Library", id));
     }
+    cqlLibraryLockService.unlockCqlLibrary(cqlLibrary.getId(), userId);
     return cqlLibrary;
   }
 
