@@ -145,7 +145,8 @@ public class CqlLibraryService {
     if (appConfigService.isFlagEnabled(MadieFeatureFlag.LOCKING)) {
       LockInfo lockInfo = cqlLibraryLockService.lockCqlLibrary(id, userId);
       if (lockInfo != null && lockInfo.isLocked() && !lockInfo.getLockedBy().equals(userId)) {
-        throw new ResourceLockedException("Unable to delete CQL Library", id, lockInfo.getLockedBy());
+        throw new ResourceLockedException(
+            "Unable to delete CQL Library", id, lockInfo.getLockedBy());
       }
     }
     CqlLibrary cqlLibrary = findCqlLibraryById(id);
