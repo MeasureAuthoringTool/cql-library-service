@@ -331,7 +331,7 @@ public class CqlLibraryService {
         performedBy,
         libraryUserIdMap);
 
-    verifyShareAuthorization(libraryUserIdMap, performedBy);
+    verifyShareAuthorization(libraryUserIdMap, performedBy, true);
 
     libraryUserIdMap.forEach(
         (LibraryId, userIds) -> {
@@ -359,7 +359,7 @@ public class CqlLibraryService {
 
     Map<String, List<AclSpecification>> libraryIdToAclSpecification = new HashMap<>();
 
-    verifyShareAuthorization(libraryUserIdMap, username);
+    verifyShareAuthorization(libraryUserIdMap, username, false);
 
     libraryUserIdMap.forEach(
         (libraryId, userIds) -> {
@@ -379,7 +379,7 @@ public class CqlLibraryService {
   }
 
   private void verifyShareAuthorization(
-      Map<String, List<String>> libraryUserIdMap, String username) {
+      Map<String, List<String>> libraryUserIdMap, String username, boolean ownerOnly) {
     log.info(
         "User [{}] has called verifyShareAuthorization to determine whether operation with [{}]"
             + " is allowed to be performed",
@@ -401,7 +401,8 @@ public class CqlLibraryService {
                     libraryId);
                 throw new ResourceNotFoundException("Library does not exist: " + libraryId);
               }
-              verifyAuthorization(username, library, null);
+              verifyAuthorization(
+                  username, library, ownerOnly ? List.of() : List.of(RoleEnum.SHARED_WITH));
             });
 
     log.info(
