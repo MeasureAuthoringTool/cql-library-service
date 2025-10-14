@@ -426,7 +426,7 @@ public class CqlLibraryService {
         .map(
             userId ->
                 AclSpecification.builder()
-                    .userId(userId.toLowerCase())
+                    .userId(userId)
                     .roles(Set.of(RoleEnum.SHARED_WITH))
                     .build())
         .toList();

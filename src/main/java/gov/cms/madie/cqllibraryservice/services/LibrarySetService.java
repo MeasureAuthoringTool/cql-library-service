@@ -174,10 +174,12 @@ public class LibrarySetService {
     if (CollectionUtils.isEmpty(librarySet.getAcls())) {
       return null;
     }
-    return librarySet.getAcls().stream()
-        .filter(existingAcl -> Objects.equals(existingAcl.getUserId(), userId))
-        .findFirst()
-        .orElse(null);
+    AclSpecification aclSpecification =
+        librarySet.getAcls().stream()
+            .filter(existingAcl -> existingAcl.getUserId().equalsIgnoreCase(userId))
+            .findFirst()
+            .orElse(null);
+    return aclSpecification;
   }
 
   public LibrarySet updateOwnership(
