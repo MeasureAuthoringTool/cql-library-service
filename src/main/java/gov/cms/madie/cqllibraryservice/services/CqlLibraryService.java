@@ -404,6 +404,7 @@ public class CqlLibraryService {
               verifyAuthorization(
                   username, library, ownerOnly ? List.of() : List.of(RoleEnum.SHARED_WITH));
             });
+
     log.info(
         "User [{}] successfully called verifyShareAuthorization and determined that operation "
             + "with [{}] is allowed to be performed",
