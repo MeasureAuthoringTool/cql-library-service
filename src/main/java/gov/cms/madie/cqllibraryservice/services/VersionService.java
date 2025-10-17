@@ -97,8 +97,10 @@ public class VersionService {
         username,
         savedCqlLibrary.getId());
 
-    cqlLibraryLockService.unlockCqlLibrary(id, username);
-    log.info("user: [{}] had unlocked Library: [{}]", username, id);
+    if (appConfigService.isFlagEnabled(MadieFeatureFlag.LOCKING)) {
+      cqlLibraryLockService.unlockCqlLibrary(id, username);
+      log.info("user: [{}] had unlocked Library: [{}]", username, id);
+    }
 
     return savedCqlLibrary;
   }
