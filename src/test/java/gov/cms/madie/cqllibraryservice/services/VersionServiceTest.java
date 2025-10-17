@@ -197,6 +197,7 @@ class VersionServiceTest {
             targetIdArgumentCaptor.capture(),
             actionTypeArgumentCaptor.capture(),
             anyString(),
+            anyString(),
             anyString());
     assertThat(targetIdArgumentCaptor.getValue(), is(equalTo("testCqlLibraryId")));
     assertThat(actionTypeArgumentCaptor.getValue(), is(equalTo(ActionType.VERSIONED_MAJOR)));
@@ -223,6 +224,7 @@ class VersionServiceTest {
         .logAction(
             targetIdArgumentCaptor.capture(),
             actionTypeArgumentCaptor.capture(),
+            anyString(),
             anyString(),
             anyString());
     assertThat(targetIdArgumentCaptor.getValue(), is(equalTo("testCqlLibraryId")));
@@ -693,6 +695,7 @@ class VersionServiceTest {
             targetIdArgumentCaptor.capture(),
             actionTypeArgumentCaptor.capture(),
             anyString(),
+            anyString(),
             anyString());
     assertThat(targetIdArgumentCaptor.getValue(), is(equalTo("testCqlLibraryId")));
     assertThat(actionTypeArgumentCaptor.getValue(), is(equalTo(ActionType.VERSIONED_MAJOR)));
@@ -731,6 +734,7 @@ class VersionServiceTest {
             targetIdArgumentCaptor.capture(),
             actionTypeArgumentCaptor.capture(),
             anyString(),
+            anyString(),
             anyString());
     assertThat(targetIdArgumentCaptor.getValue(), is(equalTo("testCqlLibraryId")));
     assertThat(actionTypeArgumentCaptor.getValue(), is(equalTo(ActionType.VERSIONED_MAJOR)));
@@ -767,6 +771,7 @@ class VersionServiceTest {
         .logAction(
             targetIdArgumentCaptor.capture(),
             actionTypeArgumentCaptor.capture(),
+            anyString(),
             anyString(),
             anyString());
     assertThat(targetIdArgumentCaptor.getValue(), is(equalTo("testCqlLibraryId")));

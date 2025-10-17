@@ -138,7 +138,13 @@ public class LibrarySetService {
       actionLogDetails.forEach(
           (userId, actionType) -> {
             actionLogService.logShareAccessControlAction(
-                librarySet.getLibrarySetId(), actionType, performedBy, userId);
+                librarySet.getLibrarySetId(),
+                actionType,
+                performedBy,
+                userId,
+                String.format(
+                    actionType == ActionType.UNSHARED ? "Unshared with - %s" : "Shared with - %s",
+                    userId));
           });
       return updatedLibrarySet;
     } else {
