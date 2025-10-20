@@ -224,7 +224,11 @@ public class LibrarySetService {
           String.format("Transferred from %s to %s", originalOwner, userId));
       if (retainShareAccess) {
         actionLogService.logShareAccessControlAction(
-            librarySet.getLibrarySetId(), ActionType.SHARED, conductedBy, originalOwner);
+            librarySet.getLibrarySetId(),
+            ActionType.SHARED,
+            conductedBy,
+            originalOwner,
+            String.format("Transferred from %s to %s", originalOwner, userId));
       }
       return updatedLibrarySet;
     } else {
