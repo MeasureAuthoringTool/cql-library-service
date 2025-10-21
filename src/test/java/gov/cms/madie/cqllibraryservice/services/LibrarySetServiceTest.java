@@ -253,7 +253,7 @@ class LibrarySetServiceTest {
             ActionType.SHARED,
             "adminUser",
             "oldOwner",
-            "Transferred from oldOwner to newOwner");
+            "Shared with - newOwner");
   }
 
   @Test

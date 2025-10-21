@@ -228,7 +228,7 @@ public class LibrarySetService {
             ActionType.SHARED,
             conductedBy,
             originalOwner,
-            String.format("Transferred from %s to %s", originalOwner, userId));
+            String.format("Shared with - %s", userId));
       }
       return updatedLibrarySet;
     } else {
