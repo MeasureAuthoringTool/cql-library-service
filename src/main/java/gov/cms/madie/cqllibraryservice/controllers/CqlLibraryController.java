@@ -261,16 +261,21 @@ public class CqlLibraryController {
       @RequestParam(name = "userid") String userid,
       @Value("${admin-api-key}") String apiKey,
       Principal principal) {
-    ResponseEntity<String> response = ResponseEntity.badRequest().body("Library does not exist.");
-
-    if (cqlLibraryService.changeOwnership(id, userid, false, principal.getName())) {
-      response =
-          ResponseEntity.ok()
-              .contentType(MediaType.TEXT_PLAIN)
-              .body(String.format("%s granted ownership to Library successfully.", userid));
+    try {
+      cqlLibraryService.changeOwnership(id, userid, false, principal.getName());
+      return ResponseEntity.ok(userid + " granted ownership to Library successfully.");
+    } catch (ResourceNotFoundException e) {
+      return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Library does not exist.");
+    } catch (RuntimeException e) {
+      log.error(
+          "Failed to change ownership for Library [{}] to user [{}]: {}",
+          id,
+          userid,
+          e.getMessage(),
+          e);
+      return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+          .body("Failed to grant ownership.");
     }
-
-    return response;
   }
 
   @PutMapping("/{id}/acls")

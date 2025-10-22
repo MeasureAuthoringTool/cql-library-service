@@ -242,16 +242,97 @@ class CqlLibraryServiceTest {
   @Test
   public void testChangeOwnership() {
     LibrarySet librarySet = LibrarySet.builder().librarySetId("123").owner("testUser").build();
+
     CqlLibrary library =
         CqlLibrary.builder().id("123").librarySetId("123").librarySet(librarySet).build();
+
     Optional<CqlLibrary> persistedLibrary = Optional.of(library);
+
     when(cqlLibraryRepository.findById(anyString())).thenReturn(persistedLibrary);
     when(librarySetService.updateOwnership(anyString(), anyString(), anyBoolean(), anyString()))
         .thenReturn(new LibrarySet());
 
-    boolean result =
-        cqlLibraryService.changeOwnership(library.getId(), "user123", false, "adminUser");
-    assertTrue(result);
+    cqlLibraryService.changeOwnership(library.getId(), "user123", false, "adminUser");
+
+    verify(cqlLibraryRepository, times(1)).findById(library.getId());
+    verify(librarySetService, times(1))
+        .updateOwnership(
+            eq(librarySet.getLibrarySetId()), eq("user123"), eq(false), eq("adminUser"));
+  }
+
+  @Test
+  void testChangeOwnershipLibraryDoesNotExist() {
+    when(cqlLibraryRepository.findById(anyString())).thenReturn(Optional.empty());
+
+    assertThrows(
+        ResourceNotFoundException.class,
+        () -> {
+          cqlLibraryService.changeOwnership("lib123", "newUser", true, "adminUser");
+        });
+  }
+
+  @Test
+  void testChangeOwnershipUpdateThrowsResourceNotFound() {
+    CqlLibrary library = CqlLibrary.builder().id("libraryId").librarySetId("librarySetId").build();
+
+    when(cqlLibraryRepository.findById(anyString())).thenReturn(Optional.of(library));
+    when(librarySetService.updateOwnership(anyString(), anyString(), anyBoolean(), anyString()))
+        .thenThrow(new ResourceNotFoundException("LibrarySet", "id", "librarySetId"));
+
+    assertThrows(
+        ResourceNotFoundException.class,
+        () -> cqlLibraryService.changeOwnership("libraryId", "newUser", true, "adminUser"));
+  }
+
+  @Test
+  void testChangeOwnershipUpdateThrowsRuntimeException() {
+    CqlLibrary library = CqlLibrary.builder().id("libraryId").librarySetId("librarySetId").build();
+
+    when(cqlLibraryRepository.findById(anyString())).thenReturn(Optional.of(library));
+    when(librarySetService.updateOwnership(anyString(), anyString(), anyBoolean(), anyString()))
+        .thenThrow(new RuntimeException("Something went wrong"));
+
+    InternalServerErrorException exception =
+        assertThrows(
+            InternalServerErrorException.class,
+            () -> cqlLibraryService.changeOwnership("libraryId", "newUser", true, "adminUser"));
+
+    assertEquals("Failed to change ownership for library libraryId", exception.getMessage());
+
+    verify(cqlLibraryRepository, times(1)).findById("libraryId");
+    verify(librarySetService, times(1))
+        .updateOwnership(eq("librarySetId"), eq("newUser"), eq(true), eq("adminUser"));
+  }
+
+  @Test
+  void testTransferLibrariesWithRuntimeException() {
+    List<String> libraryIds = List.of("lib1", "lib2", "lib3");
+    String harpId = "newOwner";
+    boolean retainShareAccess = true;
+    String conductedBy = "adminUser";
+
+    // Spy the service to override changeOwnership behavior
+    CqlLibraryService spyService = spy(cqlLibraryService);
+
+    // Simulate changeOwnership throwing RuntimeException for "lib2"
+    doNothing().when(spyService).changeOwnership("lib1", harpId, retainShareAccess, conductedBy);
+    doThrow(new RuntimeException("Ownership transfer failed"))
+        .when(spyService)
+        .changeOwnership("lib2", harpId, retainShareAccess, conductedBy);
+    doNothing().when(spyService).changeOwnership("lib3", harpId, retainShareAccess, conductedBy);
+
+    // Execute transferLibraries
+    List<String> failedLibraries =
+        spyService.transferLibraries(libraryIds, harpId, retainShareAccess, conductedBy);
+
+    // Verify that only "lib2" failed
+    assertEquals(1, failedLibraries.size());
+    assertTrue(failedLibraries.contains("lib2"));
+
+    // Verify changeOwnership was called for all libraries
+    verify(spyService, times(1)).changeOwnership("lib1", harpId, retainShareAccess, conductedBy);
+    verify(spyService, times(1)).changeOwnership("lib2", harpId, retainShareAccess, conductedBy);
+    verify(spyService, times(1)).changeOwnership("lib3", harpId, retainShareAccess, conductedBy);
   }
 
   @Test

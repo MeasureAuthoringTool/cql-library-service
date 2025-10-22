@@ -128,17 +128,30 @@ public class CqlLibraryService {
     return librarySet.getAcls();
   }
 
-  public boolean changeOwnership(
+  public void changeOwnership(
       String id, String userid, boolean retainShareAccess, String conductedBy) {
-    boolean result = false;
-    Optional<CqlLibrary> persistedCqlLibrary = cqlLibraryRepository.findById(id);
-    if (persistedCqlLibrary.isPresent()) {
-      CqlLibrary cqlLibrary = persistedCqlLibrary.get();
+    CqlLibrary cqlLibrary =
+        cqlLibraryRepository
+            .findById(id)
+            .orElseThrow(
+                () -> {
+                  log.error(
+                      "Library with library id [{}] cannot change ownership to user [{}]. Library may not exist.",
+                      id,
+                      userid);
+                  return new ResourceNotFoundException("CqlLibrary", "id", id);
+                });
+
+    try {
       librarySetService.updateOwnership(
           cqlLibrary.getLibrarySetId(), userid, retainShareAccess, conductedBy);
-      result = true;
+    } catch (RuntimeException e) {
+      if (e instanceof ResourceNotFoundException) {
+        throw e;
+      }
+      log.error("Error changing ownership for library [{}] to user [{}]", id, userid, e);
+      throw new InternalServerErrorException("Failed to change ownership for library " + id);
     }
-    return result;
   }
 
   public CqlLibrary deleteDraftLibrary(final String id, final String userId) {
@@ -466,7 +479,14 @@ public class CqlLibraryService {
       List<String> libraryIds, String harpId, boolean retainShareAccess, String conductedBy) {
     List<String> failedLibraries = new ArrayList<>();
     for (String libraryId : libraryIds) {
-      if (!changeOwnership(libraryId, harpId, retainShareAccess, conductedBy)) {
+      try {
+        changeOwnership(libraryId, harpId, retainShareAccess, conductedBy);
+      } catch (RuntimeException e) {
+        log.warn(
+            "Failed to transfer ownership of library [{}] to [{}]: {}",
+            libraryId,
+            harpId,
+            e.getMessage());
         failedLibraries.add(libraryId);
       }
     }
