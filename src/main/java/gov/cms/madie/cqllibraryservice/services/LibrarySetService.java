@@ -216,7 +216,8 @@ public class LibrarySetService {
 
     LibrarySet updatedLibrarySet = librarySetRepository.save(librarySet);
     log.info(
-        "Library set [{}] ownership transferred from original owner [{}] to new owner [{}] by user [{}]",
+        "Library set [{}] ownership transferred from original owner [{}] "
+            + "to new owner [{}] by user [{}]",
         updatedLibrarySet.getId(),
         originalOwner,
         userId,

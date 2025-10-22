@@ -136,7 +136,8 @@ public class CqlLibraryService {
             .orElseThrow(
                 () -> {
                   log.error(
-                      "Library with library id [{}] cannot change ownership to user [{}]. Library may not exist.",
+                      "Library with library id [{}] cannot change "
+                          + "ownership to user [{}]. Library may not exist.",
                       id,
                       userid);
                   return new ResourceNotFoundException("CqlLibrary", "id", id);
