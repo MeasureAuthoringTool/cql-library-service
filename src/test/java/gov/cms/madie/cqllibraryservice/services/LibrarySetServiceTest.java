@@ -143,14 +143,16 @@ class LibrarySetServiceTest {
             .build();
     when(librarySetRepository.findByLibrarySetId(anyString())).thenReturn(Optional.of(librarySet));
     when(librarySetRepository.save(any(LibrarySet.class))).thenReturn(updatedLibrarySet);
-    when(actionLogService.logShareAccessControlAction(any(), any(), any(), any())).thenReturn(true);
+    when(actionLogService.logShareAccessControlAction(any(), any(), any(), any(), any()))
+        .thenReturn(true);
 
     LibrarySet librarySet = librarySetService.updateLibrarySetAcls("1", aclOperation, "username");
     assertThat(librarySet.getId(), is(equalTo(updatedLibrarySet.getId())));
     assertThat(librarySet.getOwner(), is(equalTo(updatedLibrarySet.getOwner())));
     assertThat(librarySet.getAcls().size(), is(equalTo(2)));
 
-    verify(actionLogService, times(1)).logShareAccessControlAction(any(), any(), any(), any());
+    verify(actionLogService, times(1))
+        .logShareAccessControlAction(any(), any(), any(), any(), any());
   }
 
   @Test
@@ -246,7 +248,12 @@ class LibrarySetServiceTest {
     assertEquals("oldOwner", result.getAcls().get(0).getUserId());
     assertTrue(result.getAcls().get(0).getRoles().contains(RoleEnum.SHARED_WITH));
     verify(actionLogService, times(1))
-        .logShareAccessControlAction("1", ActionType.SHARED, "adminUser", "oldOwner");
+        .logShareAccessControlAction(
+            "1",
+            ActionType.SHARED,
+            "adminUser",
+            "oldOwner",
+            "Shared with - newOwner");
   }
 
   @Test

@@ -90,7 +90,8 @@ public class VersionService {
         cqlLibrary.getId(),
         isMajor ? ActionType.VERSIONED_MAJOR : ActionType.VERSIONED_MINOR,
         username,
-        "actionLog");
+        "actionLog",
+        String.format("Versioned to %s", cqlLibrary.getVersion()));
 
     log.info(
         "User [{}] successfully versioned cql library with ID [{}]",
