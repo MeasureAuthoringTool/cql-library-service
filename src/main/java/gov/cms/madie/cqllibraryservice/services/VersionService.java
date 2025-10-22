@@ -1,6 +1,8 @@
 package gov.cms.madie.cqllibraryservice.services;
 
 import gov.cms.madie.cqllibraryservice.dto.LibraryListDTO;
+import gov.cms.madie.cqllibraryservice.dto.LockInfo;
+import gov.cms.madie.cqllibraryservice.dto.MadieFeatureFlag;
 import gov.cms.madie.cqllibraryservice.exceptions.*;
 import gov.cms.madie.cqllibraryservice.utils.AuthUtils;
 import gov.cms.madie.models.common.ActionType;
@@ -29,10 +31,26 @@ public class VersionService {
   private final ActionLogService actionLogService;
   private final CqlLibraryRepository cqlLibraryRepository;
   private final ElmTranslatorClient elmTranslatorClient;
+  private final AppConfigService appConfigService;
+  private final CqlLibraryLockService cqlLibraryLockService;
 
   public CqlLibrary createVersion(String id, boolean isMajor, String username, String accessToken) {
     CqlLibrary cqlLibrary = cqlLibraryService.findCqlLibraryById(id);
     validateCqlLibrary(cqlLibrary, username);
+
+    if (appConfigService.isFlagEnabled(MadieFeatureFlag.LOCKING)) {
+      LockInfo lockInfo = cqlLibraryLockService.lockCqlLibrary(id, username);
+      log.info("user: [{}] is trying to lock Library: [{}]", username, id);
+      if (lockInfo != null && lockInfo.isLocked() && !lockInfo.getLockedBy().equals(username)) {
+        log.info(
+            "user: [{}] can't version Library: [{}], because library is locked by: [{}]",
+            username,
+            id,
+            lockInfo.getLockedBy());
+        throw new ResourceLockedException(
+            "Unable to version library. Locked while being edited by " + lockInfo.getLockedBy());
+      }
+    }
 
     cqlLibrary.setDraft(false);
     cqlLibrary.setLastModifiedAt(Instant.now());
@@ -72,12 +90,18 @@ public class VersionService {
         cqlLibrary.getId(),
         isMajor ? ActionType.VERSIONED_MAJOR : ActionType.VERSIONED_MINOR,
         username,
-        "actionLog");
+        "actionLog",
+        String.format("Versioned to %s", cqlLibrary.getVersion()));
 
     log.info(
         "User [{}] successfully versioned cql library with ID [{}]",
         username,
         savedCqlLibrary.getId());
+
+    if (appConfigService.isFlagEnabled(MadieFeatureFlag.LOCKING)) {
+      cqlLibraryLockService.unlockCqlLibrary(id, username);
+      log.info("user: [{}] had unlocked Library: [{}]", username, id);
+    }
 
     return savedCqlLibrary;
   }

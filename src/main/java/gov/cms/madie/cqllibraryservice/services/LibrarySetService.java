@@ -138,7 +138,13 @@ public class LibrarySetService {
       actionLogDetails.forEach(
           (userId, actionType) -> {
             actionLogService.logShareAccessControlAction(
-                librarySet.getLibrarySetId(), actionType, performedBy, userId);
+                librarySet.getLibrarySetId(),
+                actionType,
+                performedBy,
+                userId,
+                String.format(
+                    actionType == ActionType.UNSHARED ? "Unshared with - %s" : "Shared with - %s",
+                    userId));
           });
       return updatedLibrarySet;
     } else {
@@ -218,7 +224,11 @@ public class LibrarySetService {
           String.format("Transferred from %s to %s", originalOwner, userId));
       if (retainShareAccess) {
         actionLogService.logShareAccessControlAction(
-            librarySet.getLibrarySetId(), ActionType.SHARED, conductedBy, originalOwner);
+            librarySet.getLibrarySetId(),
+            ActionType.SHARED,
+            conductedBy,
+            originalOwner,
+            String.format("Shared with - %s", userId));
       }
       return updatedLibrarySet;
     } else {
