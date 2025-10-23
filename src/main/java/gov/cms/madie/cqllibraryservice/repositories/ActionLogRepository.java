@@ -1,7 +1,11 @@
 package gov.cms.madie.cqllibraryservice.repositories;
 
+import java.util.Collection;
+import java.util.List;
+
 import gov.cms.madie.models.common.AccessControlAction;
 import gov.cms.madie.models.common.Action;
+import gov.cms.madie.models.common.LibraryActionLog;
 
 public interface ActionLogRepository {
 
@@ -18,4 +22,10 @@ public interface ActionLogRepository {
   boolean pushEvent(String targetId, Action action, String collection);
 
   boolean pushEvent(String targetId, AccessControlAction action);
+
+  List<LibraryActionLog> findAllActionLogs();
+
+  Collection<LibraryActionLog> saveAllActionLogs(List<LibraryActionLog> actionLogs);
+
+  void removeActionsByUsers(List<String> users, Class<?> clazz);
 }

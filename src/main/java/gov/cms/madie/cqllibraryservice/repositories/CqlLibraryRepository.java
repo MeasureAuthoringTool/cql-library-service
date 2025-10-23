@@ -3,6 +3,7 @@ package gov.cms.madie.cqllibraryservice.repositories;
 import gov.cms.madie.models.common.Version;
 import gov.cms.madie.models.library.CqlLibrary;
 
+import java.util.Collection;
 import java.util.List;
 
 import org.springframework.data.mongodb.repository.Aggregation;
@@ -41,4 +42,6 @@ public interface CqlLibraryRepository
       String librarySetId, boolean draft, boolean active);
 
   int countAllByLibrarySetIdAndActiveAndIdIsNot(String librarySetId, boolean active, String id);
+
+  List<CqlLibrary> findByLibrarySetIdIn(Collection<String> librarySetIds);
 }
