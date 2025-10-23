@@ -146,10 +146,9 @@ public class CqlLibraryService {
     try {
       librarySetService.updateOwnership(
           cqlLibrary.getLibrarySetId(), userid, retainShareAccess, conductedBy);
+    } catch (ResourceNotFoundException e) {
+      throw e;
     } catch (RuntimeException e) {
-      if (e instanceof ResourceNotFoundException) {
-        throw e;
-      }
       log.error("Error changing ownership for library [{}] to user [{}]", id, userid, e);
       throw new InternalServerErrorException("Failed to change ownership for library " + id);
     }
