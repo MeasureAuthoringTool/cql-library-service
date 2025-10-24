@@ -74,7 +74,7 @@ public class DeleteTestLibrariesChangeUnit {
   // for logging purpose
   void checkActionLogs(ActionLogRepository actionLogRepository) {
     List<LibraryActionLog> actionLogs = actionLogRepository.findAllActionLogs();
-    log.info("ActionLog total = " + actionLogs.size());
+    log.info("ActionLog total = {}", actionLogs.size());
 
     filteredActionLogs =
         actionLogs.stream()
