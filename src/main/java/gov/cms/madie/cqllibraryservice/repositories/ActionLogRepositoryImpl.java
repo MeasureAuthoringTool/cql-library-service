@@ -68,9 +68,7 @@ public class ActionLogRepositoryImpl implements ActionLogRepository {
 
   @Override
   @Transactional
-  public void removeActionsByUsers(List<String> users, Class<?> targetClass) {
-    final String className = targetClass.getSimpleName();
-    final String collection = Character.toLowerCase(className.charAt(0)) + className.substring(1);
+  public void removeActionsByUsers(List<String> users, String collection) {
     log.debug("Removing Actions performed by users: [{}] from collection: [{}]", users, collection);
     Query query = new Query(Criteria.where("actions.performedBy").in(users));
     Update update =

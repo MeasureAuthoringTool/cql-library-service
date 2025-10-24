@@ -122,15 +122,14 @@ class ActionLogRepositoryImplTest {
     when(mongoTemplate.updateMulti(any(Query.class), any(Update.class), anyString()))
         .thenReturn(updateResult);
 
-    actionLogRepository.removeActionsByUsers(
-        Arrays.asList("testUser1", "testUser2"), LibraryActionLog.class);
+    actionLogRepository.removeActionsByUsers(Arrays.asList("testUser1", "testUser2"), "actionLog");
 
     // Verify updateMulti called
     verify(mongoTemplate)
         .updateMulti(
             argThat(q -> q.getQueryObject().toString().contains("actions.performedBy")),
             any(Update.class),
-            eq("libraryActionLog"));
+            eq("actionLog"));
 
     // Verify remove called for empty actions
     verify(mongoTemplate)
@@ -139,6 +138,6 @@ class ActionLogRepositoryImplTest {
                 q ->
                     q.getQueryObject().toString().contains("actions")
                         && q.getQueryObject().toString().contains("$size")),
-            eq("libraryActionLog"));
+            eq("actionLog"));
   }
 }

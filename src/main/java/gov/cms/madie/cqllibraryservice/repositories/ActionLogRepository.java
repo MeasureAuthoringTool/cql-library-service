@@ -27,5 +27,5 @@ public interface ActionLogRepository {
 
   Collection<LibraryActionLog> saveAllActionLogs(List<LibraryActionLog> actionLogs);
 
-  void removeActionsByUsers(List<String> users, Class<?> clazz);
+  void removeActionsByUsers(List<String> users, String collection);
 }

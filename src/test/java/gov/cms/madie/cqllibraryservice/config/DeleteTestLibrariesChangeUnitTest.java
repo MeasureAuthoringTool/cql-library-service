@@ -67,7 +67,7 @@ public class DeleteTestLibrariesChangeUnitTest {
   @BeforeEach
   void init() {
     ReflectionTestUtils.setField(changeUnit, "userSet", userSet);
-
+    ReflectionTestUtils.setField(changeUnit, "users", users);
     ReflectionTestUtils.setField(changeUnit, "filteredActionLogs", List.of(actionLog));
     ReflectionTestUtils.setField(
         changeUnit, "filteredLibrarySetActionLogs", List.of(librarySetActionLog));
@@ -78,12 +78,23 @@ public class DeleteTestLibrariesChangeUnitTest {
   @Test
   void testDeleteActionLogs() {
     when(actionLogRepository.findAllActionLogs()).thenReturn(List.of(actionLog));
-    doNothing().when(actionLogRepository).removeActionsByUsers(anyList(), any());
+    doNothing().when(actionLogRepository).removeActionsByUsers(anyList(), anyString());
 
     changeUnit.deleteActionLogs(actionLogRepository);
 
     verify(actionLogRepository, times(1)).findAllActionLogs();
-    verify(actionLogRepository, times(1)).removeActionsByUsers(anyList(), any());
+    verify(actionLogRepository, times(1)).removeActionsByUsers(anyList(), anyString());
+  }
+
+  @Test
+  void testDeleteActionLogsNoDelete() {
+    when(actionLogRepository.findAllActionLogs()).thenReturn(Collections.emptyList());
+    ReflectionTestUtils.setField(changeUnit, "filteredActionLogs", Collections.emptyList());
+
+    changeUnit.deleteActionLogs(actionLogRepository);
+
+    verify(actionLogRepository, times(1)).findAllActionLogs();
+    verify(actionLogRepository, times(0)).removeActionsByUsers(anyList(), anyString());
   }
 
   @Test
@@ -95,6 +106,18 @@ public class DeleteTestLibrariesChangeUnitTest {
 
     verify(librarySetActionLogRepository, times(1)).findAll();
     verify(librarySetActionLogRepository, times(1)).removeActionsByUsers(anyList(), any());
+  }
+
+  @Test
+  void testDeleteLibrarySetActionLogsNoDelete() {
+    when(librarySetActionLogRepository.findAll()).thenReturn(Collections.emptyList());
+    ReflectionTestUtils.setField(
+        changeUnit, "filteredLibrarySetActionLogs", Collections.emptyList());
+
+    changeUnit.deleteLibrarySetActionLogs(librarySetActionLogRepository);
+
+    verify(librarySetActionLogRepository, times(1)).findAll();
+    verify(librarySetActionLogRepository, times(0)).removeActionsByUsers(anyList(), any());
   }
 
   @Test

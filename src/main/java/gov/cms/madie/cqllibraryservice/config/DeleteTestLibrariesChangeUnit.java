@@ -13,7 +13,6 @@ import gov.cms.madie.cqllibraryservice.repositories.ActionLogRepositoryImpl;
 import gov.cms.madie.cqllibraryservice.repositories.CqlLibraryRepository;
 import gov.cms.madie.cqllibraryservice.repositories.LibrarySetActionLogRepository;
 import gov.cms.madie.cqllibraryservice.repositories.LibrarySetRepository;
-import gov.cms.madie.models.common.ActionLog;
 import gov.cms.madie.models.common.LibraryActionLog;
 import gov.cms.madie.models.common.LibrarySetActionLog;
 import gov.cms.madie.models.library.LibrarySet;
@@ -63,12 +62,18 @@ public class DeleteTestLibrariesChangeUnit {
 
   void deleteActionLogs(ActionLogRepository actionLogRepository) {
     checkActionLogs(actionLogRepository);
-    actionLogRepository.removeActionsByUsers(users, ActionLog.class);
+    if (CollectionUtils.isNotEmpty(filteredActionLogs)) {
+      log.info("ActionLogs to be deleted = " + filteredActionLogs.size());
+      actionLogRepository.removeActionsByUsers(users, "actionLog");
+    }
   }
 
   void deleteLibrarySetActionLogs(LibrarySetActionLogRepository librarySetActionLogRepository) {
     checkLibrarySetActionLogs(librarySetActionLogRepository);
-    librarySetActionLogRepository.removeActionsByUsers(users, LibrarySetActionLog.class);
+    if (CollectionUtils.isNotEmpty(filteredLibrarySetActionLogs)) {
+      log.info("LibrarySetActionLogs to be deleted = " + filteredLibrarySetActionLogs.size());
+      librarySetActionLogRepository.removeActionsByUsers(users, "librarySetActionLog");
+    }
   }
 
   // for logging purpose
@@ -83,7 +88,6 @@ public class DeleteTestLibrariesChangeUnit {
                     log.getActions().stream()
                         .allMatch(action -> users.contains(action.getPerformedBy())))
             .toList();
-    log.info("filteredActionLogs size  = " + filteredActionLogs.size());
   }
 
   // for logging purpose
@@ -97,7 +101,6 @@ public class DeleteTestLibrariesChangeUnit {
                     log.getActions().stream()
                         .allMatch(action -> userSet.contains(action.getPerformedBy())))
             .toList();
-    log.info("filteredLibrarySetActionLogs size  = " + filteredLibrarySetActionLogs.size());
   }
 
   void deleteLibraries(
