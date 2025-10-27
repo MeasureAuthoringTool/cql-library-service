@@ -2006,7 +2006,7 @@ public class CqlLibraryControllerMvcTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .accept(MediaType.APPLICATION_JSON))
         .andDo(print())
-        .andExpect(status().isPartialContent());
+        .andExpect(status().isMultiStatus());
 
     verify(cqlLibraryService, times(1))
         .transferLibraries(

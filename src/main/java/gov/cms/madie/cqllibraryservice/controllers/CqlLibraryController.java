@@ -367,6 +367,19 @@ public class CqlLibraryController {
         cqlLibraryService.unshareLibraries(libraryUserIdMap, principal.getName()));
   }
 
+  /**
+   * Handles transfer of multiple libraries to a new owner (identified by harpId).
+   *
+   * <p>Validates the input list of library IDs. Delegates transfer logic to CqlLibraryService,
+   * which attempts to reassign each library. Returns:
+   *
+   * <ul>
+   *   <li>200 OK if all transfers succeed.
+   *   <li>400 BAD REQUEST if the input list is empty.
+   *   <li>207 MULTI_STATUS if some transfers fail, returning only the failed library IDs in the
+   *       body.
+   * </ul>
+   */
   @PutMapping("/transfer")
   public ResponseEntity<List<String>> transferLibraries(
       @RequestBody List<String> cqlLibraryIds,
@@ -384,7 +397,7 @@ public class CqlLibraryController {
     if (CollectionUtils.isEmpty(failedTransfers)) {
       return ResponseEntity.ok().body(failedTransfers);
     } else {
-      return ResponseEntity.status(HttpStatus.PARTIAL_CONTENT).body(failedTransfers);
+      return ResponseEntity.status(HttpStatus.MULTI_STATUS).body(failedTransfers);
     }
   }
 
