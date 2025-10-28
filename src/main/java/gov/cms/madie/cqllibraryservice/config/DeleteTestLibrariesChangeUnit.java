@@ -76,7 +76,7 @@ public class DeleteTestLibrariesChangeUnit {
     }
   }
 
-  // for logging purpose
+  // for logging and setting roll back data
   void checkActionLogs(ActionLogRepository actionLogRepository) {
     List<LibraryActionLog> actionLogs = actionLogRepository.findAllActionLogs();
     log.info("ActionLog total = {}", actionLogs.size());
@@ -90,7 +90,7 @@ public class DeleteTestLibrariesChangeUnit {
             .toList();
   }
 
-  // for logging purpose
+  // for logging and setting roll back data
   void checkLibrarySetActionLogs(LibrarySetActionLogRepository librarySetActionLogRepository) {
     List<LibrarySetActionLog> actionLogs = librarySetActionLogRepository.findAll();
     log.info("LibrarySetActionLog total = " + actionLogs.size());
@@ -132,40 +132,44 @@ public class DeleteTestLibrariesChangeUnit {
   }
 
   int rollBackActionLogs(ActionLogRepositoryImpl actionLogRepository) {
+    int size = 0;
     if (CollectionUtils.isNotEmpty(filteredActionLogs)) {
       List<LibraryActionLog> saved =
           (List<LibraryActionLog>) actionLogRepository.saveAllActionLogs(filteredActionLogs);
-      log.info("Roll back ActionLog: " + (saved != null ? saved.size() : " null"));
-      return saved != null ? saved.size() : 0;
+      size = saved != null ? saved.size() : 0;
+      log.info("Roll back ActionLog: " + size);
     }
-    return 0;
+    return size;
   }
 
   int rollBackLibrarySetActionLog(LibrarySetActionLogRepository librarySetActionLogRepository) {
+    int size = 0;
     if (CollectionUtils.isNotEmpty(filteredLibrarySetActionLogs)) {
       List<LibrarySetActionLog> saved =
           librarySetActionLogRepository.saveAll(filteredLibrarySetActionLogs);
-      log.info("Roll back LibrarySetActionLog: " + (saved != null ? saved.size() : " null"));
-      return saved != null ? saved.size() : 0;
+      size = saved != null ? saved.size() : 0;
+      log.info("Roll back LibrarySetActionLog: " + size);
     }
-    return 0;
+    return size;
   }
 
   int rollBackCqlLibraries(CqlLibraryRepository cqlLibraryRepository) {
+    int size = 0;
     if (CollectionUtils.isNotEmpty(filteredLibraries)) {
       List<CqlLibrary> saved = cqlLibraryRepository.saveAll(filteredLibraries);
-      log.info("Roll back CqlLibrary: " + (saved != null ? saved.size() : " null"));
-      return saved != null ? saved.size() : 0;
+      size = saved != null ? saved.size() : 0;
+      log.info("Roll back CqlLibrary: " + size);
     }
-    return 0;
+    return size;
   }
 
   int rollBackCqlLibrarySets(LibrarySetRepository librarySetRepository) {
+    int size = 0;
     if (CollectionUtils.isNotEmpty(filteredLibrarySets)) {
       List<LibrarySet> saved = librarySetRepository.saveAll(filteredLibrarySets);
-      log.info("Roll back LibrarySet: " + (saved != null ? saved.size() : " null"));
-      return saved != null ? saved.size() : 0;
+      size = saved != null ? saved.size() : 0;
+      log.info("Roll back LibrarySet: " + size);
     }
-    return 0;
+    return size;
   }
 }
