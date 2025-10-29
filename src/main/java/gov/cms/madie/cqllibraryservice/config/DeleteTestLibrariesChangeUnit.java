@@ -28,6 +28,9 @@ public class DeleteTestLibrariesChangeUnit {
   private final List<String> users =
       Arrays.asList("cvasile", "bwelch", "pvasireddy", "colin.sullivan", "adongare");
   private final Set<String> userSet = new HashSet<>(users);
+  // reserved LibrarySets and CqlLibraries (cqlLibraryName: 'SDEFHIR4', 'StatusNew')
+  private final List<String> WHITE_LISTED_LIBRARYSET_IDS =
+      Arrays.asList("0839c438-a145-4c01-8444-c725e58b4c2f", "1214294e-9ed3-406e-b08f-6996d671a0e9");
 
   private List<LibraryActionLog> filteredActionLogs = new ArrayList<>();
   private List<LibrarySetActionLog> filteredLibrarySetActionLogs = new ArrayList<>();
@@ -42,42 +45,44 @@ public class DeleteTestLibrariesChangeUnit {
       ActionLogRepositoryImpl actionLogRepository,
       LibrarySetActionLogRepository librarySetActionLogRepository) {
 
-    // 1. delete ActionLogs and CqlLibraryLogs
-    deleteActionLogs(actionLogRepository);
-    deleteLibrarySetActionLogs(librarySetActionLogRepository);
-
-    // 2. delete CqlLibrary and LibrarySet
     List<LibrarySet> librarySets = librarySetRepository.findAll();
     filteredLibrarySets =
-        librarySets.stream().filter(ms -> userSet.contains(ms.getOwner())).toList();
+        librarySets.stream()
+            .filter(
+                librarySet ->
+                    userSet.contains(librarySet.getOwner())
+                        && !WHITE_LISTED_LIBRARYSET_IDS.contains(librarySet.getLibrarySetId()))
+            .toList();
     if (CollectionUtils.isNotEmpty(filteredLibrarySets)) {
       List<String> filteredLibrarySetIds =
           filteredLibrarySets.stream().map(LibrarySet::getLibrarySetId).toList();
       filteredLibraries = cqlLibraryRepository.findByLibrarySetIdIn(filteredLibrarySetIds);
 
-      deleteLibraries(cqlLibraryRepository, filteredLibraries);
+      if (CollectionUtils.isNotEmpty(filteredLibraries)) {
+        List<String> filteredLibraryIds =
+            filteredLibraries.stream().map(CqlLibrary::getId).toList();
+
+        deleteLibraries(cqlLibraryRepository, filteredLibraries);
+
+        deleteActionLogs(actionLogRepository, filteredLibraryIds, filteredLibrarySetIds);
+        deleteLibrarySetActionLogs(
+            librarySetActionLogRepository, filteredLibraryIds, filteredLibrarySetIds);
+      }
       deleteLibrarySets(librarySetRepository, filteredLibrarySets);
     }
   }
 
-  void deleteActionLogs(ActionLogRepository actionLogRepository) {
-    checkActionLogs(actionLogRepository);
-    if (CollectionUtils.isNotEmpty(filteredActionLogs)) {
-      log.info("ActionLogs to be deleted = " + filteredActionLogs.size());
-      actionLogRepository.removeActionsByUsers(users, "actionLog");
-    }
+  void deleteLibraries(
+      CqlLibraryRepository cqlLibraryRepository, List<CqlLibrary> filteredLibraries) {
+    cqlLibraryRepository.deleteAll(filteredLibraries);
+    log.info("Deleted Libraries: {}", filteredLibraries.size());
   }
 
-  void deleteLibrarySetActionLogs(LibrarySetActionLogRepository librarySetActionLogRepository) {
-    checkLibrarySetActionLogs(librarySetActionLogRepository);
-    if (CollectionUtils.isNotEmpty(filteredLibrarySetActionLogs)) {
-      log.info("LibrarySetActionLogs to be deleted = " + filteredLibrarySetActionLogs.size());
-      librarySetActionLogRepository.removeActionsByUsers(users, "librarySetActionLog");
-    }
-  }
+  void deleteActionLogs(
+      ActionLogRepository actionLogRepository,
+      List<String> filteredLibraryIds,
+      List<String> filteredLibrarySetIds) {
 
-  // for logging and setting roll back data
-  void checkActionLogs(ActionLogRepository actionLogRepository) {
     List<LibraryActionLog> actionLogs = actionLogRepository.findAllActionLogs();
     log.info("ActionLog total = {}", actionLogs.size());
 
@@ -86,35 +91,49 @@ public class DeleteTestLibrariesChangeUnit {
             .filter(
                 log ->
                     log.getActions().stream()
-                        .allMatch(action -> users.contains(action.getPerformedBy())))
+                                .allMatch(
+                                    action ->
+                                        users.contains(
+                                            action.getPerformedBy())) // for orphaned ActionLogs
+                            && !filteredLibraryIds.contains(log.getTargetId())
+                            && !filteredLibrarySetIds.contains(log.getTargetId())
+                            && !WHITE_LISTED_LIBRARYSET_IDS.contains(log.getTargetId())
+                        || filteredLibraryIds.contains(log.getTargetId())
+                        || filteredLibrarySetIds.contains(log.getTargetId()))
             .toList();
+
+    if (CollectionUtils.isNotEmpty(filteredActionLogs)) {
+      log.info("ActionLogs to be deleted = {}", filteredActionLogs.size());
+      List<String> targetIds =
+          filteredActionLogs.stream().map(LibraryActionLog::getTargetId).toList();
+      actionLogRepository.deleteByTargetIds(targetIds, "actionLog");
+    }
   }
 
-  // for logging and setting roll back data
-  void checkLibrarySetActionLogs(LibrarySetActionLogRepository librarySetActionLogRepository) {
+  void deleteLibrarySetActionLogs(
+      LibrarySetActionLogRepository librarySetActionLogRepository,
+      List<String> filteredLibraryIds,
+      List<String> filteredLibrarySetIds) {
     List<LibrarySetActionLog> actionLogs = librarySetActionLogRepository.findAll();
-    log.info("LibrarySetActionLog total = " + actionLogs.size());
+    log.info("LibrarySetActionLog total = {}", actionLogs.size());
     filteredLibrarySetActionLogs =
         actionLogs.stream()
             .filter(
                 log ->
-                    log.getActions().stream()
-                        .allMatch(action -> userSet.contains(action.getPerformedBy())))
+                    filteredLibraryIds.contains(log.getTargetId())
+                        || filteredLibrarySetIds.contains(log.getTargetId()))
             .toList();
-  }
-
-  void deleteLibraries(
-      CqlLibraryRepository cqlLibraryRepository, List<CqlLibrary> filteredLibraries) {
-    if (CollectionUtils.isNotEmpty(filteredLibraries)) {
-      cqlLibraryRepository.deleteAll(filteredLibraries);
-      log.info("Deleted Libraries: " + filteredLibraries.size());
+    if (CollectionUtils.isNotEmpty(filteredLibrarySetActionLogs)) {
+      log.info("LibrarySetActionLogs to be deleted = {}", filteredLibrarySetActionLogs.size());
+      librarySetActionLogRepository.deleteByTargetIds(filteredLibraryIds, "librarySetActionLog");
+      librarySetActionLogRepository.deleteByTargetIds(filteredLibrarySetIds, "librarySetActionLog");
     }
   }
 
   void deleteLibrarySets(
       LibrarySetRepository librarySetRepository, List<LibrarySet> filteredLibrarySets) {
     librarySetRepository.deleteAll(filteredLibrarySets);
-    log.info("Deleted LibrarySets: " + filteredLibrarySets.size());
+    log.info("Deleted LibrarySets: {}", filteredLibrarySets.size());
   }
 
   @RollbackExecution
@@ -137,7 +156,7 @@ public class DeleteTestLibrariesChangeUnit {
       List<LibraryActionLog> saved =
           (List<LibraryActionLog>) actionLogRepository.saveAllActionLogs(filteredActionLogs);
       size = saved != null ? saved.size() : 0;
-      log.info("Roll back ActionLog: " + size);
+      log.info("Roll back ActionLog: {}", size);
     }
     return size;
   }
@@ -148,7 +167,7 @@ public class DeleteTestLibrariesChangeUnit {
       List<LibrarySetActionLog> saved =
           librarySetActionLogRepository.saveAll(filteredLibrarySetActionLogs);
       size = saved != null ? saved.size() : 0;
-      log.info("Roll back LibrarySetActionLog: " + size);
+      log.info("Roll back LibrarySetActionLog: {}", size);
     }
     return size;
   }
@@ -158,7 +177,7 @@ public class DeleteTestLibrariesChangeUnit {
     if (CollectionUtils.isNotEmpty(filteredLibraries)) {
       List<CqlLibrary> saved = cqlLibraryRepository.saveAll(filteredLibraries);
       size = saved != null ? saved.size() : 0;
-      log.info("Roll back CqlLibrary: " + size);
+      log.info("Roll back CqlLibrary: {}", size);
     }
     return size;
   }
@@ -168,7 +187,7 @@ public class DeleteTestLibrariesChangeUnit {
     if (CollectionUtils.isNotEmpty(filteredLibrarySets)) {
       List<LibrarySet> saved = librarySetRepository.saveAll(filteredLibrarySets);
       size = saved != null ? saved.size() : 0;
-      log.info("Roll back LibrarySet: " + size);
+      log.info("Roll back LibrarySet: {}", size);
     }
     return size;
   }

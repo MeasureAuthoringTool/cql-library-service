@@ -1,5 +1,6 @@
 package gov.cms.madie.cqllibraryservice.repositories;
 
+import com.mongodb.client.result.DeleteResult;
 import com.mongodb.client.result.UpdateResult;
 import gov.cms.madie.models.common.AccessControlAction;
 import gov.cms.madie.models.common.Action;
@@ -20,7 +21,6 @@ import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import java.util.Arrays;
 import java.util.List;
 
 @ExtendWith(MockitoExtension.class)
@@ -117,27 +117,11 @@ class ActionLogRepositoryImplTest {
   }
 
   @Test
-  void testRemovesActionsAndDeletesEmptyLogs() {
-    UpdateResult updateResult = UpdateResult.acknowledged(2, 2L, null);
-    when(mongoTemplate.updateMulti(any(Query.class), any(Update.class), anyString()))
-        .thenReturn(updateResult);
-
-    actionLogRepository.removeActionsByUsers(Arrays.asList("testUser1", "testUser2"), "actionLog");
-
-    // Verify updateMulti called
-    verify(mongoTemplate)
-        .updateMulti(
-            argThat(q -> q.getQueryObject().toString().contains("actions.performedBy")),
-            any(Update.class),
-            eq("actionLog"));
-
-    // Verify remove called for empty actions
-    verify(mongoTemplate)
-        .remove(
-            argThat(
-                q ->
-                    q.getQueryObject().toString().contains("actions")
-                        && q.getQueryObject().toString().contains("$size")),
-            eq("actionLog"));
+  void testDeleteByTargetIds() {
+    List<String> targetIds = List.of("id1", "id2");
+    when(mongoTemplate.remove(any(Query.class), eq("actionLog")))
+        .thenReturn(DeleteResult.acknowledged(2));
+    actionLogRepository.deleteByTargetIds(targetIds, "actionLog");
+    verify(mongoTemplate).remove(any(Query.class), eq("actionLog"));
   }
 }

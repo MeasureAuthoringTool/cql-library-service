@@ -1,5 +1,6 @@
 package gov.cms.madie.cqllibraryservice.repositories;
 
+import com.mongodb.client.result.DeleteResult;
 import com.mongodb.client.result.UpdateResult;
 
 import gov.cms.madie.models.common.AccessControlAction;
@@ -16,7 +17,6 @@ import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.data.mongodb.core.query.Update;
 import org.springframework.stereotype.Repository;
-import org.springframework.transaction.annotation.Transactional;
 
 @Slf4j
 @Repository
@@ -67,21 +67,10 @@ public class ActionLogRepositoryImpl implements ActionLogRepository {
   }
 
   @Override
-  @Transactional
-  public void removeActionsByUsers(List<String> users, String collection) {
-    log.debug("Removing Actions performed by users: [{}] from collection: [{}]", users, collection);
-    Query query = new Query(Criteria.where("actions.performedBy").in(users));
-    Update update =
-        new Update().pull("actions", Query.query(Criteria.where("performedBy").in(users)));
-
-    UpdateResult result = mongoTemplate.updateMulti(query, update, collection);
-    log.debug(
-        "removeActionsByUsers: UpdateResult: matchedAcount = "
-            + result.getMatchedCount()
-            + " modifiedCount = "
-            + result.getModifiedCount());
-
-    Query emptyActionsQuery = new Query(Criteria.where("actions").size(0));
-    mongoTemplate.remove(emptyActionsQuery, collection);
+  public void deleteByTargetIds(List<String> targetIds, String collection) {
+    Query query = new Query(Criteria.where("targetId").in(targetIds));
+    log.info("Deleting from collection: {}", collection);
+    DeleteResult result = mongoTemplate.remove(query, collection);
+    log.info("deleteByTargetIds: UpdateResult: deletedCount =  {}", result.getDeletedCount());
   }
 }
