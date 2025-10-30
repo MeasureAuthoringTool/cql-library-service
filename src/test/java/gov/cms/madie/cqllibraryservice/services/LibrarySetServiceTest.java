@@ -249,11 +249,7 @@ class LibrarySetServiceTest {
     assertTrue(result.getAcls().get(0).getRoles().contains(RoleEnum.SHARED_WITH));
     verify(actionLogService, times(1))
         .logShareAccessControlAction(
-            "1",
-            ActionType.SHARED,
-            "adminUser",
-            "oldOwner",
-            "Shared with - newOwner");
+            "1", ActionType.SHARED, "adminUser", "oldOwner", "Shared with - newOwner");
   }
 
   @Test
