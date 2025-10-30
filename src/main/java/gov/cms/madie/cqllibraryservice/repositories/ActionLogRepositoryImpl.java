@@ -8,6 +8,7 @@ import gov.cms.madie.models.common.LibraryActionLog;
 import gov.cms.madie.models.common.LibrarySetActionLog;
 import lombok.extern.slf4j.Slf4j;
 
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 
@@ -22,6 +23,9 @@ import org.springframework.transaction.annotation.Transactional;
 @Repository
 public class ActionLogRepositoryImpl implements ActionLogRepository {
 
+  // reserved LibrarySets and CqlLibraries (cqlLibraryName: 'SDEFHIR4')
+  private final List<String> WHITE_LISTED_TARGET_IDS =
+      Arrays.asList("0839c438-a145-4c01-8444-c725e58b4c2f", "6659f88da7713a45189fa9f6");
   private final MongoTemplate mongoTemplate;
 
   public ActionLogRepositoryImpl(MongoTemplate mongoTemplate) {
@@ -70,12 +74,18 @@ public class ActionLogRepositoryImpl implements ActionLogRepository {
   @Transactional
   public void removeActionsByUsers(List<String> users, String collection) {
     log.debug("Removing Actions performed by users: [{}] from collection: [{}]", users, collection);
-    Query query = new Query(Criteria.where("actions.performedBy").in(users));
+    //    Query query = new Query(Criteria.where("actions.performedBy").in(users));
+    Query query =
+        new Query(
+            new Criteria()
+                .andOperator(
+                    Criteria.where("actions.performedBy").in(users),
+                    Criteria.where("targetId").nin(WHITE_LISTED_TARGET_IDS)));
     Update update =
         new Update().pull("actions", Query.query(Criteria.where("performedBy").in(users)));
 
     UpdateResult result = mongoTemplate.updateMulti(query, update, collection);
-    log.debug(
+    log.info(
         "removeActionsByUsers: UpdateResult: matchedAcount = "
             + result.getMatchedCount()
             + " modifiedCount = "

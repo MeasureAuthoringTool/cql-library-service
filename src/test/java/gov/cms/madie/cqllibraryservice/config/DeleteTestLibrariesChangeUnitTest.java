@@ -1,5 +1,6 @@
 package gov.cms.madie.cqllibraryservice.config;
 
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
@@ -11,6 +12,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+import org.apache.commons.collections4.CollectionUtils;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -64,6 +66,11 @@ public class DeleteTestLibrariesChangeUnitTest {
       LibrarySet.builder().librarySetId("testLibrarySetId").owner("testUser").build();
   private CqlLibrary cqlLibrary = CqlLibrary.builder().librarySetId("testLibrarySetId").build();
 
+  private final List<String> WHITE_LISTED_LIBRARYSET_IDS =
+      Arrays.asList("testLibrarySetIdWhiteListed");
+  private final List<String> WHITE_LISTED_TARGET_IDS =
+      Arrays.asList("testLibrarySetIdWhiteListed", "testLibraryIdWhiteListed");
+
   @BeforeEach
   void init() {
     ReflectionTestUtils.setField(changeUnit, "userSet", userSet);
@@ -73,6 +80,80 @@ public class DeleteTestLibrariesChangeUnitTest {
         changeUnit, "filteredLibrarySetActionLogs", List.of(librarySetActionLog));
     ReflectionTestUtils.setField(changeUnit, "filteredLibraries", List.of(cqlLibrary));
     ReflectionTestUtils.setField(changeUnit, "filteredLibrarySets", List.of(librarySet));
+
+    ReflectionTestUtils.setField(
+        changeUnit, "WHITE_LISTED_LIBRARYSET_IDS", WHITE_LISTED_LIBRARYSET_IDS);
+    ReflectionTestUtils.setField(changeUnit, "WHITE_LISTED_TARGET_IDS", WHITE_LISTED_TARGET_IDS);
+  }
+
+  @Test
+  void testCheckActionLogsNoMatch() {
+    action.setPerformedBy("anotherUser");
+    actionLog.setActions(List.of(action));
+    when(actionLogRepository.findAllActionLogs()).thenReturn(List.of(actionLog));
+
+    changeUnit.checkActionLogs(actionLogRepository);
+
+    List<LibraryActionLog> actionLogs =
+        (List<LibraryActionLog>) ReflectionTestUtils.getField(changeUnit, "filteredActionLogs");
+
+    assertTrue(CollectionUtils.isEmpty(actionLogs));
+  }
+
+  @Test
+  void testCheckActionLogsWhiteListed() {
+    actionLog.setTargetId("testLibrarySetIdWhiteListed");
+    when(actionLogRepository.findAllActionLogs()).thenReturn(List.of(actionLog));
+
+    changeUnit.checkActionLogs(actionLogRepository);
+
+    List<LibraryActionLog> actionLogs =
+        (List<LibraryActionLog>) ReflectionTestUtils.getField(changeUnit, "filteredActionLogs");
+
+    assertTrue(CollectionUtils.isEmpty(actionLogs));
+  }
+
+  @Test
+  void testCheckActionLogsFiltered() {
+    actionLog.setTargetId("random");
+    actionLog.setActions(List.of(action));
+    when(actionLogRepository.findAllActionLogs()).thenReturn(List.of(actionLog));
+
+    changeUnit.checkActionLogs(actionLogRepository);
+
+    List<LibraryActionLog> actionLogs =
+        (List<LibraryActionLog>) ReflectionTestUtils.getField(changeUnit, "filteredActionLogs");
+
+    assertFalse(CollectionUtils.isEmpty(actionLogs));
+  }
+
+  @Test
+  void testCheckLibrarySetActionLogsNoMatch() {
+    accessControlAction.setPerformedBy("anotherUser");
+    librarySetActionLog.setActions(List.of(accessControlAction));
+    when(librarySetActionLogRepository.findAll()).thenReturn(List.of(librarySetActionLog));
+
+    changeUnit.checkLibrarySetActionLogs(librarySetActionLogRepository);
+
+    List<LibrarySetActionLog> actionLogs =
+        (List<LibrarySetActionLog>)
+            ReflectionTestUtils.getField(changeUnit, "filteredLibrarySetActionLogs");
+
+    assertTrue(CollectionUtils.isEmpty(actionLogs));
+  }
+
+  @Test
+  void testCheckLibrarySetActionLogsWhiteListed() {
+    librarySetActionLog.setTargetId("testLibrarySetIdWhiteListed");
+    when(librarySetActionLogRepository.findAll()).thenReturn(List.of(librarySetActionLog));
+
+    changeUnit.checkLibrarySetActionLogs(librarySetActionLogRepository);
+
+    List<LibrarySetActionLog> actionLogs =
+        (List<LibrarySetActionLog>)
+            ReflectionTestUtils.getField(changeUnit, "filteredLibrarySetActionLogs");
+
+    assertTrue(CollectionUtils.isEmpty(actionLogs));
   }
 
   @Test
@@ -183,6 +264,54 @@ public class DeleteTestLibrariesChangeUnitTest {
     doNothing().when(librarySetActionLogRepository).removeActionsByUsers(anyList(), any());
 
     when(librarySetRepository.findAll()).thenReturn(Collections.emptyList());
+
+    changeUnit.deleteTestLibraries(
+        cqlLibraryRepository,
+        librarySetRepository,
+        actionLogRepository,
+        librarySetActionLogRepository);
+
+    verify(actionLogRepository, times(1)).findAllActionLogs();
+    verify(actionLogRepository, times(1)).removeActionsByUsers(anyList(), any());
+
+    verify(cqlLibraryRepository, times(0)).deleteAll(anyList());
+    verify(librarySetRepository, times(0)).deleteAll(anyList());
+  }
+
+  @Test
+  void testDeleteTestLibrariesNoTestUser() {
+    when(actionLogRepository.findAllActionLogs()).thenReturn(List.of(actionLog));
+    doNothing().when(actionLogRepository).removeActionsByUsers(anyList(), any());
+
+    when(librarySetActionLogRepository.findAll()).thenReturn(List.of(librarySetActionLog));
+    doNothing().when(librarySetActionLogRepository).removeActionsByUsers(anyList(), any());
+
+    librarySet.setOwner("anotherUser");
+    when(librarySetRepository.findAll()).thenReturn(List.of(librarySet));
+
+    changeUnit.deleteTestLibraries(
+        cqlLibraryRepository,
+        librarySetRepository,
+        actionLogRepository,
+        librarySetActionLogRepository);
+
+    verify(actionLogRepository, times(1)).findAllActionLogs();
+    verify(actionLogRepository, times(1)).removeActionsByUsers(anyList(), any());
+
+    verify(cqlLibraryRepository, times(0)).deleteAll(anyList());
+    verify(librarySetRepository, times(0)).deleteAll(anyList());
+  }
+
+  @Test
+  void testDeleteTestLibrariesWhiteListed() {
+    when(actionLogRepository.findAllActionLogs()).thenReturn(List.of(actionLog));
+    doNothing().when(actionLogRepository).removeActionsByUsers(anyList(), any());
+
+    when(librarySetActionLogRepository.findAll()).thenReturn(List.of(librarySetActionLog));
+    doNothing().when(librarySetActionLogRepository).removeActionsByUsers(anyList(), any());
+
+    librarySet.setLibrarySetId("testLibrarySetIdWhiteListed");
+    when(librarySetRepository.findAll()).thenReturn(List.of(librarySet));
 
     changeUnit.deleteTestLibraries(
         cqlLibraryRepository,
