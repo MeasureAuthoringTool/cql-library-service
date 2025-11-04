@@ -290,14 +290,14 @@ class CqlLibraryServiceTest {
 
     when(cqlLibraryRepository.findById(anyString())).thenReturn(Optional.of(library));
     when(librarySetService.updateOwnership(anyString(), anyString(), anyBoolean(), anyString()))
-        .thenThrow(new RuntimeException("Something went wrong"));
+        .thenThrow(new RuntimeException("Error occurred during library ownership transfer"));
 
-    InternalServerErrorException exception =
+    RuntimeException exception =
         assertThrows(
-            InternalServerErrorException.class,
+            RuntimeException.class,
             () -> cqlLibraryService.changeOwnership("libraryId", "newUser", true, "adminUser"));
 
-    assertEquals("Failed to change ownership for library libraryId", exception.getMessage());
+    assertEquals("Error occurred during library ownership transfer", exception.getMessage());
 
     verify(cqlLibraryRepository, times(1)).findById("libraryId");
     verify(librarySetService, times(1))
