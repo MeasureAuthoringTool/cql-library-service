@@ -261,16 +261,21 @@ public class CqlLibraryController {
       @RequestParam(name = "userid") String userid,
       @Value("${admin-api-key}") String apiKey,
       Principal principal) {
-    ResponseEntity<String> response = ResponseEntity.badRequest().body("Library does not exist.");
-
-    if (cqlLibraryService.changeOwnership(id, userid, false, principal.getName())) {
-      response =
-          ResponseEntity.ok()
-              .contentType(MediaType.TEXT_PLAIN)
-              .body(String.format("%s granted ownership to Library successfully.", userid));
+    try {
+      cqlLibraryService.changeOwnership(id, userid, false, principal.getName());
+      return ResponseEntity.ok(userid + " granted ownership to Library successfully.");
+    } catch (ResourceNotFoundException e) {
+      return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Library does not exist.");
+    } catch (RuntimeException e) {
+      log.error(
+          "Failed to change ownership for Library [{}] to user [{}]: {}",
+          id,
+          userid,
+          e.getMessage(),
+          e);
+      return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+          .body("Failed to grant ownership.");
     }
-
-    return response;
   }
 
   @PutMapping("/{id}/acls")
@@ -362,6 +367,19 @@ public class CqlLibraryController {
         cqlLibraryService.unshareLibraries(libraryUserIdMap, principal.getName()));
   }
 
+  /**
+   * Handles transfer of multiple libraries to a new owner (identified by harpId).
+   *
+   * <p>Validates the input list of library IDs. Delegates transfer logic to CqlLibraryService,
+   * which attempts to reassign each library. Returns:
+   *
+   * <ul>
+   *   <li>200 OK if all transfers succeed.
+   *   <li>400 BAD REQUEST if the input list is empty.
+   *   <li>207 MULTI_STATUS if some transfers fail, returning only the failed library IDs in the
+   *       body.
+   * </ul>
+   */
   @PutMapping("/transfer")
   public ResponseEntity<List<String>> transferLibraries(
       @RequestBody List<String> cqlLibraryIds,
@@ -377,9 +395,9 @@ public class CqlLibraryController {
         cqlLibraryService.transferLibraries(
             cqlLibraryIds, harpId, retainShareAccess, principal.getName());
     if (CollectionUtils.isEmpty(failedTransfers)) {
-      return ResponseEntity.ok().body(failedTransfers);
+      return ResponseEntity.ok().build();
     } else {
-      return ResponseEntity.status(HttpStatus.PARTIAL_CONTENT).body(failedTransfers);
+      return ResponseEntity.status(HttpStatus.MULTI_STATUS).body(failedTransfers);
     }
   }
 

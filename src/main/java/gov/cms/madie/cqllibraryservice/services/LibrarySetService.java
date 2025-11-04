@@ -191,54 +191,52 @@ public class LibrarySetService {
   public LibrarySet updateOwnership(
       String librarySetId, String userId, boolean retainShareAccess, String conductedBy) {
     Optional<LibrarySet> optionalLibrarySet = librarySetRepository.findByLibrarySetId(librarySetId);
-    if (optionalLibrarySet.isPresent()) {
-      LibrarySet librarySet = optionalLibrarySet.get();
-      String originalOwner = librarySet.getOwner();
-      librarySet.setOwner(userId);
-      if (retainShareAccess) {
-        List<AclSpecification> acls =
-            !CollectionUtils.isEmpty(librarySet.getAcls())
-                ? librarySet.getAcls()
-                : new ArrayList<>();
-        acls.add(
-            AclSpecification.builder()
-                .userId(originalOwner)
-                .roles(Set.of(RoleEnum.SHARED_WITH))
-                .build());
-        librarySet.setAcls(acls);
-      }
 
-      LibrarySet updatedLibrarySet = librarySetRepository.save(librarySet);
-      log.info(
-          "Library set: [{}] has been transferred ownership from original owner: [{}] "
-              + "to new owner: [{}] by user: [{}]",
-          updatedLibrarySet.getId(),
-          originalOwner,
-          userId,
-          conductedBy);
-      actionLogService.logAction(
-          updatedLibrarySet.getLibrarySetId(),
-          ActionType.OWNERSHIP_TRANSFER,
-          conductedBy,
-          "librarySetActionLog",
-          String.format("Transferred from %s to %s", originalOwner, userId));
-      if (retainShareAccess) {
-        actionLogService.logShareAccessControlAction(
-            librarySet.getLibrarySetId(),
-            ActionType.SHARED,
-            conductedBy,
-            originalOwner,
-            String.format("Shared with - %s", userId));
-      }
-      return updatedLibrarySet;
-    } else {
-      String error =
-          String.format(
-              "Library with set id `%s` can not change ownership `%s`, Library set may not exist.",
-              librarySetId, userId);
-      log.error(error);
+    if (optionalLibrarySet.isEmpty()) {
+      log.error(
+          ("Library with set id [%s] cannot change ownership to user [%s]. Library set may not "
+                  + "exist.")
+              .formatted(librarySetId, userId));
       throw new ResourceNotFoundException("LibrarySet", "id", librarySetId);
     }
+
+    LibrarySet librarySet = optionalLibrarySet.get();
+    String originalOwner = librarySet.getOwner();
+    librarySet.setOwner(userId);
+    if (retainShareAccess) {
+      List<AclSpecification> acls =
+          !CollectionUtils.isEmpty(librarySet.getAcls()) ? librarySet.getAcls() : new ArrayList<>();
+      acls.add(
+          AclSpecification.builder()
+              .userId(originalOwner)
+              .roles(Set.of(RoleEnum.SHARED_WITH))
+              .build());
+      librarySet.setAcls(acls);
+    }
+
+    LibrarySet updatedLibrarySet = librarySetRepository.save(librarySet);
+    log.info(
+        "Library set [{}] ownership transferred from original owner [{}] "
+            + "to new owner [{}] by user [{}]",
+        updatedLibrarySet.getId(),
+        originalOwner,
+        userId,
+        conductedBy);
+    actionLogService.logAction(
+        updatedLibrarySet.getLibrarySetId(),
+        ActionType.OWNERSHIP_TRANSFER,
+        conductedBy,
+        "librarySetActionLog",
+        String.format("Transferred from %s to %s", originalOwner, userId));
+    if (retainShareAccess) {
+      actionLogService.logShareAccessControlAction(
+          librarySet.getLibrarySetId(),
+          ActionType.SHARED,
+          conductedBy,
+          originalOwner,
+          String.format("Shared with - %s", userId));
+    }
+    return updatedLibrarySet;
   }
 
   private LookupOperation getLookupOperation() {

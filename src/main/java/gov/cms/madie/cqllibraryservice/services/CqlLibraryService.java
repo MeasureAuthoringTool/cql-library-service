@@ -129,17 +129,33 @@ public class CqlLibraryService {
     return librarySet.getAcls();
   }
 
-  public boolean changeOwnership(
+  public void changeOwnership(
       String id, String userid, boolean retainShareAccess, String conductedBy) {
-    boolean result = false;
-    Optional<CqlLibrary> persistedCqlLibrary = cqlLibraryRepository.findById(id);
-    if (persistedCqlLibrary.isPresent()) {
-      CqlLibrary cqlLibrary = persistedCqlLibrary.get();
+    CqlLibrary cqlLibrary =
+        cqlLibraryRepository
+            .findById(id)
+            .orElseThrow(
+                () -> {
+                  log.error(
+                      "Library with library id [{}] cannot change "
+                          + "ownership to user [{}]. Library may not exist.",
+                      id,
+                      userid);
+                  return new ResourceNotFoundException("CqlLibrary", "id", id);
+                });
+
+    try {
       librarySetService.updateOwnership(
           cqlLibrary.getLibrarySetId(), userid, retainShareAccess, conductedBy);
-      result = true;
+    } catch (RuntimeException e) {
+      log.error(
+          "User [{}] failed to change ownership of library [{}] to user [{}]",
+          conductedBy,
+          id,
+          userid,
+          e);
+      throw e;
     }
-    return result;
   }
 
   public CqlLibrary deleteDraftLibrary(final String id, final String userId) {
@@ -468,12 +484,16 @@ public class CqlLibraryService {
       try {
         CqlLibrary cqlLibrary = findCqlLibraryById(libraryId);
         AuthUtils.checkOwnership(cqlLibrary, conductedBy);
-        if (!changeOwnership(libraryId, harpId, retainShareAccess, conductedBy)) {
-          failedLibraries.add(libraryId);
-        }
-      } catch (ResourceNotFoundException | PermissionDeniedException e) {
-        log.error("Failed to transfer library [{}]: {}", libraryId, e.getMessage());
-        throw e;
+
+        changeOwnership(libraryId, harpId, retainShareAccess, conductedBy);
+      } catch (RuntimeException e) {
+        log.warn(
+            "User [{}] failed to change ownership of library [{}] to user [{}]",
+            conductedBy,
+            libraryId,
+            harpId,
+            e);
+        failedLibraries.add(libraryId);
       }
     }
     return failedLibraries;
