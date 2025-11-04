@@ -234,10 +234,6 @@ public class LibrarySetService {
         originalOwner,
         userId,
         conductedBy);
-    log.info(
-        "SUCCESS: Ownership transfer completed for library set [{}]. New owner: [{}]",
-        librarySetId,
-        userId);
     actionLogService.logAction(
         updatedLibrarySet.getLibrarySetId(),
         ActionType.OWNERSHIP_TRANSFER,
