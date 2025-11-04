@@ -357,11 +357,10 @@ class CqlLibraryServiceTest {
         .when(cqlLibraryService)
         .changeOwnership(libraryId, user, true, user);
 
-    List<String> failedLibraries =
-        cqlLibraryService.transferLibraries(List.of(libraryId), user, true, user);
-
-    assertEquals(1, failedLibraries.size());
-    assertTrue(failedLibraries.contains(libraryId));
+    // ResourceNotFoundException should be re-thrown, not caught
+    assertThrows(
+        ResourceNotFoundException.class,
+        () -> cqlLibraryService.transferLibraries(List.of(libraryId), user, true, user));
 
     verify(cqlLibraryService).findCqlLibraryById(libraryId);
     verify(cqlLibraryService).changeOwnership(libraryId, user, true, user);

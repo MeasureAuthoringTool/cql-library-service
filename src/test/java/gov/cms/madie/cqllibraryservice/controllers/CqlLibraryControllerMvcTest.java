@@ -1563,7 +1563,8 @@ public class CqlLibraryControllerMvcTest {
                 .with(user(TEST_USER_ID))
                 .header(TEST_API_KEY_HEADER, TEST_API_KEY_HEADER_VALUE))
         .andExpect(status().isNotFound())
-        .andExpect(content().string("Library does not exist."));
+        .andExpect(jsonPath("$.status").value(404))
+        .andExpect(jsonPath("$.error").value("Not Found"));
 
     verify(cqlLibraryService, times(1))
         .changeOwnership(eq(libraryId), eq("testUser"), eq(false), anyString());
@@ -1577,13 +1578,17 @@ public class CqlLibraryControllerMvcTest {
         .when(cqlLibraryService)
         .changeOwnership(eq(libraryId), eq("testUser"), anyBoolean(), anyString());
 
-    mockMvc
-        .perform(
-            put("/cql-libraries/" + libraryId + "/ownership?userid=testUser")
-                .with(user(TEST_USER_ID))
-                .header(TEST_API_KEY_HEADER, TEST_API_KEY_HEADER_VALUE))
-        .andExpect(status().isInternalServerError())
-        .andExpect(content().string("Failed to grant ownership."));
+    // RuntimeException will propagate as an exception since there's no global handler for it
+    try {
+      mockMvc.perform(
+          put("/cql-libraries/" + libraryId + "/ownership?userid=testUser")
+              .with(user(TEST_USER_ID))
+              .header(TEST_API_KEY_HEADER, TEST_API_KEY_HEADER_VALUE));
+      // Should not reach here
+      org.junit.jupiter.api.Assertions.fail("Expected an exception to be thrown");
+    } catch (Exception e) {
+      // Expected - RuntimeException causes an exception during request processing
+    }
 
     verify(cqlLibraryService, times(1))
         .changeOwnership(eq(libraryId), eq("testUser"), eq(false), anyString());
