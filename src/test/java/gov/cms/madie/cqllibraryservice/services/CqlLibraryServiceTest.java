@@ -27,6 +27,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
@@ -43,7 +44,7 @@ import gov.cms.madie.cqllibraryservice.dto.LockInfo;
 @ExtendWith(MockitoExtension.class)
 class CqlLibraryServiceTest {
 
-  @InjectMocks private CqlLibraryService cqlLibraryService;
+  @Spy @InjectMocks private CqlLibraryService cqlLibraryService;
   @Mock private CqlLibraryRepository cqlLibraryRepository;
   @Mock private LibrarySetService librarySetService;
   @Mock private MeasureServiceClient measureServiceClient;
@@ -305,34 +306,65 @@ class CqlLibraryServiceTest {
   }
 
   @Test
-  void testTransferLibrariesWithRuntimeException() {
-    List<String> libraryIds = List.of("lib1", "lib2", "lib3");
-    String harpId = "newOwner";
-    boolean retainShareAccess = true;
-    String conductedBy = "adminUser";
+  public void testTransferLibraries() {
+    String libraryId = "libraryId";
+    String user = "user123";
 
-    // Spy the service to override changeOwnership behavior
-    CqlLibraryService spyService = spy(cqlLibraryService);
+    LibrarySet librarySet =
+        LibrarySet.builder().librarySetId("librarySetId").owner("owner").build();
 
-    // Simulate changeOwnership throwing RuntimeException for "lib2"
-    doNothing().when(spyService).changeOwnership("lib1", harpId, retainShareAccess, conductedBy);
-    doThrow(new RuntimeException("Ownership transfer failed"))
-        .when(spyService)
-        .changeOwnership("lib2", harpId, retainShareAccess, conductedBy);
-    doNothing().when(spyService).changeOwnership("lib3", harpId, retainShareAccess, conductedBy);
+    CqlLibrary library =
+        CqlLibrary.builder()
+            .id(libraryId)
+            .librarySetId("librarySetId")
+            .librarySet(librarySet)
+            .build();
 
-    // Execute transferLibraries
+    when(cqlLibraryRepository.findById(libraryId)).thenReturn(Optional.of(library));
+    when(librarySetService.findByLibrarySetId("librarySetId")).thenReturn(librarySet);
+
+    doNothing()
+        .when(cqlLibraryService)
+        .changeOwnership(eq(libraryId), eq(user), eq(true), eq("owner"));
+
     List<String> failedLibraries =
-        spyService.transferLibraries(libraryIds, harpId, retainShareAccess, conductedBy);
+        cqlLibraryService.transferLibraries(List.of(libraryId), user, true, "owner");
 
-    // Verify that only "lib2" failed
+    assertTrue(failedLibraries.isEmpty());
+
+    verify(cqlLibraryService).findCqlLibraryById(libraryId);
+    verify(cqlLibraryService).changeOwnership(libraryId, user, true, "owner");
+  }
+
+  @Test
+  public void testTransferLibrariesLibraryNotFound() {
+    String libraryId = "libraryId";
+    String user = "user123";
+
+    LibrarySet librarySet = LibrarySet.builder().librarySetId("librarySetId").owner(user).build();
+
+    CqlLibrary library =
+        CqlLibrary.builder()
+            .id(libraryId)
+            .librarySetId("librarySetId")
+            .librarySet(librarySet)
+            .build();
+
+    when(cqlLibraryRepository.findById(libraryId)).thenReturn(Optional.of(library));
+    when(librarySetService.findByLibrarySetId("librarySetId")).thenReturn(librarySet);
+
+    doThrow(new ResourceNotFoundException("CqlLibrary", "id", libraryId))
+        .when(cqlLibraryService)
+        .changeOwnership(libraryId, user, true, user);
+
+    List<String> failedLibraries =
+        cqlLibraryService.transferLibraries(List.of(libraryId), user, true, user);
+
     assertEquals(1, failedLibraries.size());
-    assertTrue(failedLibraries.contains("lib2"));
+    assertTrue(failedLibraries.contains(libraryId));
 
-    // Verify changeOwnership was called for all libraries
-    verify(spyService, times(1)).changeOwnership("lib1", harpId, retainShareAccess, conductedBy);
-    verify(spyService, times(1)).changeOwnership("lib2", harpId, retainShareAccess, conductedBy);
-    verify(spyService, times(1)).changeOwnership("lib3", harpId, retainShareAccess, conductedBy);
+    verify(cqlLibraryService).findCqlLibraryById(libraryId);
+    verify(cqlLibraryService).changeOwnership(libraryId, user, true, user);
   }
 
   @Test
@@ -497,9 +529,7 @@ class CqlLibraryServiceTest {
     Exception ex =
         assertThrows(
             GeneralConflictException.class,
-            () ->
-                cqlLibraryService.deleteLibraryAlongWithVersions(
-                    libraryName, "token", anyString()));
+            () -> cqlLibraryService.deleteLibraryAlongWithVersions(libraryName, "token", "harpId"));
     assertThat(
         ex.getMessage(), is(equalTo("Library is being used actively, hence can not be deleted.")));
   }
@@ -516,9 +546,7 @@ class CqlLibraryServiceTest {
     Exception ex =
         assertThrows(
             GeneralConflictException.class,
-            () ->
-                cqlLibraryService.deleteLibraryAlongWithVersions(
-                    libraryName, "token", anyString()));
+            () -> cqlLibraryService.deleteLibraryAlongWithVersions(libraryName, "token", "harpId"));
     assertThat(
         ex.getMessage(), is(equalTo("Library is being used actively, hence can not be deleted.")));
   }
@@ -530,9 +558,7 @@ class CqlLibraryServiceTest {
     Exception ex =
         assertThrows(
             ResourceNotFoundException.class,
-            () ->
-                cqlLibraryService.deleteLibraryAlongWithVersions(
-                    libraryName, "token", anyString()));
+            () -> cqlLibraryService.deleteLibraryAlongWithVersions(libraryName, "token", "harpId"));
     assertThat(
         ex.getMessage(), is(equalTo("Could not find resource Library with name: " + libraryName)));
   }
