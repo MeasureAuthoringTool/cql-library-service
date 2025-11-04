@@ -35,7 +35,7 @@ public class VersionService {
   private final CqlLibraryLockService cqlLibraryLockService;
 
   public CqlLibrary createVersion(String id, boolean isMajor, String username, String accessToken) {
-    CqlLibrary cqlLibrary = cqlLibraryService.findCqlLibraryById(id);
+    CqlLibrary cqlLibrary = cqlLibraryService.findCqlLibraryById(id, username);
     validateCqlLibrary(cqlLibrary, username);
 
     if (appConfigService.isFlagEnabled(MadieFeatureFlag.LOCKING)) {
@@ -147,7 +147,7 @@ public class VersionService {
   }
 
   public CqlLibrary createDraft(String id, String cqlLibraryName, String model, String username) {
-    CqlLibrary cqlLibrary = cqlLibraryService.findCqlLibraryById(id);
+    CqlLibrary cqlLibrary = cqlLibraryService.findCqlLibraryById(id, username);
 
     if (!Objects.equals(cqlLibraryName, cqlLibrary.getCqlLibraryName())) {
       cqlLibraryService.checkDuplicateCqlLibraryName(cqlLibraryName);

@@ -368,15 +368,20 @@ class CqlLibraryControllerTest {
 
   @Test
   public void testGetCqlLibraryThrowsExceptionForNotFound() {
+    Principal principal = mock(Principal.class);
+    when(principal.getName()).thenReturn("test.user");
     doThrow(new ResourceNotFoundException("CQL Library", "Library1"))
         .when(cqlLibraryService)
-        .findCqlLibraryById(anyString());
+        .findCqlLibraryById(anyString(), anyString());
     assertThrows(
-        ResourceNotFoundException.class, () -> cqlLibraryController.getCqlLibrary("Library1"));
+        ResourceNotFoundException.class,
+        () -> cqlLibraryController.getCqlLibrary("Library1", principal));
   }
 
   @Test
   public void testGetCqlLibraryReturnsLibrary() {
+    Principal principal = mock(Principal.class);
+    when(principal.getName()).thenReturn("test.user");
     CqlLibrary library =
         CqlLibrary.builder()
             .id("Library1_ID")
@@ -384,8 +389,9 @@ class CqlLibraryControllerTest {
             .cql("library testCql version '1.0.000'")
             .model(ModelType.QI_CORE.getValue())
             .build();
-    when(cqlLibraryService.findCqlLibraryById(anyString())).thenReturn(library);
-    ResponseEntity<CqlLibrary> output = cqlLibraryController.getCqlLibrary("Library1_ID");
+    when(cqlLibraryService.findCqlLibraryById(anyString(), anyString())).thenReturn(library);
+    ResponseEntity<CqlLibrary> output =
+        cqlLibraryController.getCqlLibrary("Library1_ID", principal);
     assertNotNull(output);
     assertEquals(library, output.getBody());
   }
@@ -471,13 +477,14 @@ class CqlLibraryControllerTest {
 
   @Test
   public void testUpdateCqlLibraryThrowsExceptionForNotFound() {
+    when(principal.getName()).thenReturn("test.user");
     final String pathId = "Library1_ID";
     final CqlLibrary updatingLibrary =
         CqlLibrary.builder().id("Library1_ID").cqlLibraryName("NewName").build();
 
     doThrow(new ResourceNotFoundException("CQL Library", updatingLibrary.getId()))
         .when(cqlLibraryService)
-        .findCqlLibraryById(anyString());
+        .findCqlLibraryById(anyString(), anyString());
 
     assertThrows(
         ResourceNotFoundException.class,
@@ -501,7 +508,8 @@ class CqlLibraryControllerTest {
     final CqlLibrary updatingLibrary =
         existingLibrary.toBuilder().id("Library1_ID").cqlLibraryName("NewName").build();
 
-    when(cqlLibraryService.findCqlLibraryById(anyString())).thenReturn(existingLibrary);
+    when(cqlLibraryService.findCqlLibraryById(anyString(), anyString()))
+        .thenReturn(existingLibrary);
     when(cqlLibraryService.isCqlLibraryNameChanged(any(CqlLibrary.class), any(CqlLibrary.class)))
         .thenReturn(true);
     doThrow(new DuplicateKeyException("cqlLibraryName", "Library name must be unique."))
@@ -530,7 +538,8 @@ class CqlLibraryControllerTest {
     final CqlLibrary updatingLibrary =
         existingLibrary.toBuilder().id("Library1_ID").cqlLibraryName("NewName").draft(true).build();
 
-    when(cqlLibraryService.findCqlLibraryById(anyString())).thenReturn(existingLibrary);
+    when(cqlLibraryService.findCqlLibraryById(anyString(), anyString()))
+        .thenReturn(existingLibrary);
     assertThrows(
         InvalidResourceStateException.class,
         () -> cqlLibraryController.updateCqlLibrary(pathId, updatingLibrary, principal));
@@ -553,7 +562,8 @@ class CqlLibraryControllerTest {
     final CqlLibrary updatingLibrary =
         existingLibrary.toBuilder().id("Library1_ID").cqlLibraryName("NewName").draft(true).build();
 
-    when(cqlLibraryService.findCqlLibraryById(anyString())).thenReturn(existingLibrary);
+    when(cqlLibraryService.findCqlLibraryById(anyString(), anyString()))
+        .thenReturn(existingLibrary);
     assertThrows(
         PermissionDeniedException.class,
         () -> cqlLibraryController.updateCqlLibrary(pathId, updatingLibrary, principal));
@@ -589,7 +599,8 @@ class CqlLibraryControllerTest {
             .draft(false)
             .build();
 
-    when(cqlLibraryService.findCqlLibraryById(anyString())).thenReturn(existingLibrary);
+    when(cqlLibraryService.findCqlLibraryById(anyString(), anyString()))
+        .thenReturn(existingLibrary);
     when(cqlLibraryService.isCqlLibraryNameChanged(any(CqlLibrary.class), any(CqlLibrary.class)))
         .thenReturn(true);
     doNothing().when(cqlLibraryService).checkDuplicateCqlLibraryName(anyString());

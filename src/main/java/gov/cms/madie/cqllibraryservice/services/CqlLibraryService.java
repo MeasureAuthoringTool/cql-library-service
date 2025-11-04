@@ -3,6 +3,7 @@ package gov.cms.madie.cqllibraryservice.services;
 import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 import gov.cms.madie.cqllibraryservice.dto.*;
 import gov.cms.madie.cqllibraryservice.exceptions.*;
+import gov.cms.madie.cqllibraryservice.locks.CqlLibraryLock;
 import gov.cms.madie.cqllibraryservice.repositories.LibrarySetRepository;
 import gov.cms.madie.models.access.AclOperation;
 import gov.cms.madie.models.access.AclSpecification;
@@ -10,6 +11,7 @@ import gov.cms.madie.models.access.RoleEnum;
 import gov.cms.madie.models.common.*;
 import gov.cms.madie.models.dto.LibraryUsage;
 import gov.cms.madie.models.library.CqlLibrary;
+import gov.cms.madie.models.library.CqlLibraryLockInfo;
 import gov.cms.madie.cqllibraryservice.repositories.CqlLibraryRepository;
 import gov.cms.madie.models.library.LibrarySet;
 import gov.cms.madie.models.measure.ElmJson;
@@ -102,12 +104,23 @@ public class CqlLibraryService {
     }
   }
 
-  public CqlLibrary findCqlLibraryById(String id) {
+  public CqlLibrary findCqlLibraryById(String id, String username) {
     Optional<CqlLibrary> optionalLibrary = cqlLibraryRepository.findById(id);
     if (optionalLibrary.isPresent()) {
       CqlLibrary cqlLibrary = optionalLibrary.get();
       LibrarySet librarySet = librarySetService.findByLibrarySetId(cqlLibrary.getLibrarySetId());
       cqlLibrary.setLibrarySet(librarySet);
+
+      if (appConfigService.isFlagEnabled(MadieFeatureFlag.LOCKING)) {
+        CqlLibraryLock lock = cqlLibraryLockService.findByCqlLibraryId(id);
+        cqlLibrary.setCqlLibraryLock(
+            lock != null && !username.equalsIgnoreCase(lock.getLockedBy())
+                ? CqlLibraryLockInfo.builder()
+                    .cqlLibraryId(lock.getCqlLibraryId())
+                    .lockedBy(lock.getLockedBy())
+                    .build()
+                : null);
+      }
       return cqlLibrary;
     }
     log.error("CqlLibrary with library ID [{}] was not found", id);
@@ -149,7 +162,7 @@ public class CqlLibraryService {
             "Unable to delete CQL Library", id, lockInfo.getLockedBy());
       }
     }
-    CqlLibrary cqlLibrary = findCqlLibraryById(id);
+    CqlLibrary cqlLibrary = findCqlLibraryById(id, userId);
     if (!userId.equalsIgnoreCase(cqlLibrary.getLibrarySet().getOwner())) {
       throw new PermissionDeniedException("CQL Library", cqlLibrary.getId(), userId);
     }
@@ -265,11 +278,12 @@ public class CqlLibraryService {
         > 0;
   }
 
-  public Map<String, List<SharedUser>> getSharedLibraries(List<String> libraryIds) {
+  public Map<String, List<SharedUser>> getSharedLibraries(
+      List<String> libraryIds, String username) {
     Map<String, List<SharedUser>> sharedLibraries = new HashMap<>();
 
     for (String libraryId : libraryIds) {
-      CqlLibrary library = findCqlLibraryById(libraryId);
+      CqlLibrary library = findCqlLibraryById(libraryId, username);
 
       if (library == null) {
         throw new ResourceNotFoundException("Library does not exist: " + libraryId);
@@ -390,7 +404,7 @@ public class CqlLibraryService {
         .keySet()
         .forEach(
             libraryId -> {
-              CqlLibrary library = findCqlLibraryById(libraryId);
+              CqlLibrary library = findCqlLibraryById(libraryId, username);
 
               if (library == null) {
                 log.error(
