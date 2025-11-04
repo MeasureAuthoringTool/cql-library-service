@@ -486,6 +486,8 @@ public class CqlLibraryService {
         AuthUtils.checkOwnership(cqlLibrary, conductedBy);
 
         changeOwnership(libraryId, harpId, retainShareAccess, conductedBy);
+      } catch (PermissionDeniedException | ResourceNotFoundException | UnauthorizedException e) {
+        throw e;
       } catch (RuntimeException e) {
         log.warn(
             "User [{}] failed to change ownership of library [{}] to user [{}]",

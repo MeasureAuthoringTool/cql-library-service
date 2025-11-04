@@ -202,6 +202,18 @@ public class LibrarySetService {
 
     LibrarySet librarySet = optionalLibrarySet.get();
     String originalOwner = librarySet.getOwner();
+
+    // Verify that the user conducting the transfer is the current owner
+    if (!originalOwner.equalsIgnoreCase(conductedBy)) {
+      log.error(
+          "User [{}] is not authorized to change ownership of library set"
+              + " [{}]. Current owner is [{}]",
+          conductedBy,
+          librarySetId,
+          originalOwner);
+      throw new gov.cms.madie.cqllibraryservice.exceptions.PermissionDeniedException(
+          "LibrarySet", librarySetId, conductedBy);
+    }
     librarySet.setOwner(userId);
     if (retainShareAccess) {
       List<AclSpecification> acls =
@@ -222,6 +234,10 @@ public class LibrarySetService {
         originalOwner,
         userId,
         conductedBy);
+    log.info(
+        "SUCCESS: Ownership transfer completed for library set [{}]. New owner: [{}]",
+        librarySetId,
+        userId);
     actionLogService.logAction(
         updatedLibrarySet.getLibrarySetId(),
         ActionType.OWNERSHIP_TRANSFER,
