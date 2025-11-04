@@ -395,7 +395,7 @@ public class CqlLibraryController {
         cqlLibraryService.transferLibraries(
             cqlLibraryIds, harpId, retainShareAccess, principal.getName());
     if (CollectionUtils.isEmpty(failedTransfers)) {
-      return ResponseEntity.ok().body(failedTransfers);
+      return ResponseEntity.ok().build();
     } else {
       return ResponseEntity.status(HttpStatus.MULTI_STATUS).body(failedTransfers);
     }

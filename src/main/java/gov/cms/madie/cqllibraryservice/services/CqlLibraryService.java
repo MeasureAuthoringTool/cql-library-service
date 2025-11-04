@@ -147,11 +147,14 @@ public class CqlLibraryService {
     try {
       librarySetService.updateOwnership(
           cqlLibrary.getLibrarySetId(), userid, retainShareAccess, conductedBy);
-    } catch (ResourceNotFoundException e) {
-      throw e;
     } catch (RuntimeException e) {
-      log.error("Error changing ownership for library [{}] to user [{}]", id, userid, e);
-      throw new InternalServerErrorException("Failed to change ownership for library " + id);
+      log.error(
+          "User [{}] failed to change ownership of library [{}] to user [{}]",
+          conductedBy,
+          id,
+          userid,
+          e);
+      throw e;
     }
   }
 
@@ -484,7 +487,7 @@ public class CqlLibraryService {
 
         changeOwnership(libraryId, harpId, retainShareAccess, conductedBy);
       } catch (RuntimeException e) {
-        log.error(
+        log.warn(
             "User [{}] failed to change ownership of library [{}] to user [{}]",
             conductedBy,
             libraryId,
