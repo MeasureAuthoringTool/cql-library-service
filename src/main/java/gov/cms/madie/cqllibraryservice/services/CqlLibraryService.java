@@ -4,6 +4,7 @@ import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 import gov.cms.madie.cqllibraryservice.dto.*;
 import gov.cms.madie.cqllibraryservice.exceptions.*;
 import gov.cms.madie.cqllibraryservice.repositories.LibrarySetRepository;
+import gov.cms.madie.cqllibraryservice.utils.AuthUtils;
 import gov.cms.madie.models.access.AclOperation;
 import gov.cms.madie.models.access.AclSpecification;
 import gov.cms.madie.models.access.RoleEnum;
@@ -404,7 +405,6 @@ public class CqlLibraryService {
         .forEach(
             libraryId -> {
               CqlLibrary library = findCqlLibraryById(libraryId);
-
               if (library == null) {
                 log.error(
                     "User [{}] called verifyShareAuthorization with libraryUserIdMap [{}] but "
@@ -417,7 +417,6 @@ public class CqlLibraryService {
               verifyAuthorization(
                   username, library, ownerOnly ? List.of() : List.of(RoleEnum.SHARED_WITH));
             });
-
     log.info(
         "User [{}] successfully called verifyShareAuthorization and determined that operation "
             + "with [{}] is allowed to be performed",
@@ -480,13 +479,17 @@ public class CqlLibraryService {
     List<String> failedLibraries = new ArrayList<>();
     for (String libraryId : libraryIds) {
       try {
+        CqlLibrary cqlLibrary = findCqlLibraryById(libraryId);
+        AuthUtils.checkOwnership(cqlLibrary, conductedBy);
+
         changeOwnership(libraryId, harpId, retainShareAccess, conductedBy);
       } catch (RuntimeException e) {
-        log.warn(
-            "Failed to transfer ownership of library [{}] to [{}]: {}",
+        log.error(
+            "User [{}] failed to change ownership of library [{}] to user [{}]",
+            conductedBy,
             libraryId,
             harpId,
-            e.getMessage());
+            e);
         failedLibraries.add(libraryId);
       }
     }
@@ -497,12 +500,10 @@ public class CqlLibraryService {
     if (StringUtils.isBlank(cqlLibraryId)) {
       throw new InvalidRequestException("Cql Library ID cannot be null or empty.");
     }
-
     Optional<CqlLibrary> persistedCqlLibrary = cqlLibraryRepository.findById(cqlLibraryId);
     if (persistedCqlLibrary.isEmpty()) {
       throw new ResourceNotFoundException("Cql Library does not exist: " + cqlLibraryId);
     }
-
     List<Action> cqlLibraryHistory =
         actionLogService.findCqlLibraryHistory(
             cqlLibraryId, persistedCqlLibrary.get().getLibrarySetId());
@@ -510,7 +511,6 @@ public class CqlLibraryService {
         "User [{}] successfully retrieved the history of the cql library with ID [{}]",
         userName,
         cqlLibraryId);
-
     return cqlLibraryHistory;
   }
 }
