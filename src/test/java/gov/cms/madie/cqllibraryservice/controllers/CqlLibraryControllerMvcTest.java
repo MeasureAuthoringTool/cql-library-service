@@ -1538,7 +1538,7 @@ public class CqlLibraryControllerMvcTest {
   public void testChangeOwnership() throws Exception {
     String libraryId = "f225481c-921e-4015-9e14-e5046bfac9ff";
 
-    doReturn(true)
+    doNothing()
         .when(cqlLibraryService)
         .changeOwnership(eq(libraryId), eq("testUser"), anyBoolean(), anyString());
 
@@ -1549,6 +1549,46 @@ public class CqlLibraryControllerMvcTest {
                 .header(TEST_API_KEY_HEADER, TEST_API_KEY_HEADER_VALUE))
         .andExpect(status().isOk())
         .andExpect(content().string("testUser granted ownership to Library successfully."));
+
+    verify(cqlLibraryService, times(1))
+        .changeOwnership(eq(libraryId), eq("testUser"), eq(false), anyString());
+  }
+
+  @Test
+  public void testChangeOwnershipNotFound() throws Exception {
+    String libraryId = "nonexistentId";
+
+    doThrow(new ResourceNotFoundException("CqlLibrary", "id", libraryId))
+        .when(cqlLibraryService)
+        .changeOwnership(eq(libraryId), eq("testUser"), anyBoolean(), anyString());
+
+    mockMvc
+        .perform(
+            put("/cql-libraries/" + libraryId + "/ownership?userid=testUser")
+                .with(user(TEST_USER_ID))
+                .header(TEST_API_KEY_HEADER, TEST_API_KEY_HEADER_VALUE))
+        .andExpect(status().isNotFound())
+        .andExpect(content().string("Library does not exist."));
+
+    verify(cqlLibraryService, times(1))
+        .changeOwnership(eq(libraryId), eq("testUser"), eq(false), anyString());
+  }
+
+  @Test
+  public void testChangeOwnershipInternalError() throws Exception {
+    String libraryId = "f225481c-921e-4015-9e14-e5046bfac9ff";
+
+    doThrow(new RuntimeException("Something went wrong"))
+        .when(cqlLibraryService)
+        .changeOwnership(eq(libraryId), eq("testUser"), anyBoolean(), anyString());
+
+    mockMvc
+        .perform(
+            put("/cql-libraries/" + libraryId + "/ownership?userid=testUser")
+                .with(user(TEST_USER_ID))
+                .header(TEST_API_KEY_HEADER, TEST_API_KEY_HEADER_VALUE))
+        .andExpect(status().isInternalServerError())
+        .andExpect(content().string("Failed to grant ownership."));
 
     verify(cqlLibraryService, times(1))
         .changeOwnership(eq(libraryId), eq("testUser"), eq(false), anyString());
@@ -1973,7 +2013,7 @@ public class CqlLibraryControllerMvcTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .accept(MediaType.APPLICATION_JSON))
         .andDo(print())
-        .andExpect(status().isPartialContent());
+        .andExpect(status().isMultiStatus());
 
     verify(cqlLibraryService, times(1))
         .transferLibraries(
