@@ -336,7 +336,7 @@ class CqlLibraryServiceTest {
 
     assertTrue(failedLibraries.isEmpty());
 
-    verify(cqlLibraryService).findCqlLibraryById(libraryId);
+    verify(cqlLibraryService).findCqlLibraryById(libraryId, user);
     verify(cqlLibraryService).changeOwnership(libraryId, user, true, "owner");
   }
 
@@ -367,7 +367,7 @@ class CqlLibraryServiceTest {
     assertEquals(1, failedLibraries.size());
     assertTrue(failedLibraries.contains(libraryId));
 
-    verify(cqlLibraryService).findCqlLibraryById(libraryId);
+    verify(cqlLibraryService).findCqlLibraryById(libraryId, user);
     verify(cqlLibraryService).changeOwnership(libraryId, user, true, user);
   }
 

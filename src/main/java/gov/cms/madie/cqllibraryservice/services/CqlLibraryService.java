@@ -496,7 +496,7 @@ public class CqlLibraryService {
     List<String> failedLibraries = new ArrayList<>();
     for (String libraryId : libraryIds) {
       try {
-        CqlLibrary cqlLibrary = findCqlLibraryById(libraryId, conductedBy);
+        CqlLibrary cqlLibrary = findCqlLibraryById(libraryId, harpId);
         AuthUtils.checkOwnership(cqlLibrary, conductedBy);
 
         changeOwnership(libraryId, harpId, retainShareAccess, conductedBy);
