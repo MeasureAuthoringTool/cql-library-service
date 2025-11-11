@@ -14,6 +14,7 @@ import gov.cms.madie.cqllibraryservice.dto.LibrarySetDTO;
 import gov.cms.madie.cqllibraryservice.dto.LibraryListDTO;
 import gov.cms.madie.cqllibraryservice.dto.SharedUser;
 import gov.cms.madie.cqllibraryservice.exceptions.*;
+import gov.cms.madie.cqllibraryservice.locks.CqlLibraryLock;
 import gov.cms.madie.cqllibraryservice.repositories.LibrarySetRepository;
 import gov.cms.madie.models.access.AclSpecification;
 import gov.cms.madie.models.access.RoleEnum;
@@ -53,6 +54,8 @@ class CqlLibraryServiceTest {
   @Mock private ActionLogService actionLogService;
   @Mock private AppConfigService appConfigService;
   @Mock private CqlLibraryLockService cqlLibraryLockService;
+
+  private final String USERNAME = "testUserName";
 
   @Test
   public void testGetOwnedLibrariesByCriteria() {
@@ -225,7 +228,7 @@ class CqlLibraryServiceTest {
     when(cqlLibraryRepository.findById(anyString())).thenReturn(Optional.of(lib));
     when(librarySetService.findByLibrarySetId(anyString())).thenReturn(new LibrarySet());
 
-    CqlLibrary cqlLib = cqlLibraryService.findCqlLibraryById(id);
+    CqlLibrary cqlLib = cqlLibraryService.findCqlLibraryById(id, USERNAME);
     assertEquals(cqlLib.getId(), id);
     assertNotNull(cqlLib.getLibrarySet());
   }
@@ -236,7 +239,8 @@ class CqlLibraryServiceTest {
     when(cqlLibraryRepository.findById(anyString())).thenReturn(Optional.empty());
     Exception ex =
         assertThrows(
-            ResourceNotFoundException.class, () -> cqlLibraryService.findCqlLibraryById(id));
+            ResourceNotFoundException.class,
+            () -> cqlLibraryService.findCqlLibraryById(id, USERNAME));
     assertEquals(ex.getMessage(), "Could not find resource CQL Library with id: " + id);
   }
 
@@ -332,7 +336,7 @@ class CqlLibraryServiceTest {
 
     assertTrue(failedLibraries.isEmpty());
 
-    verify(cqlLibraryService).findCqlLibraryById(libraryId);
+    verify(cqlLibraryService).findCqlLibraryById(libraryId, user);
     verify(cqlLibraryService).changeOwnership(libraryId, user, true, "owner");
   }
 
@@ -363,7 +367,7 @@ class CqlLibraryServiceTest {
     assertEquals(1, failedLibraries.size());
     assertTrue(failedLibraries.contains(libraryId));
 
-    verify(cqlLibraryService).findCqlLibraryById(libraryId);
+    verify(cqlLibraryService).findCqlLibraryById(libraryId, user);
     verify(cqlLibraryService).changeOwnership(libraryId, user, true, user);
   }
 
@@ -746,7 +750,8 @@ class CqlLibraryServiceTest {
     when(cqlLibraryRepository.findById(libraryId1)).thenReturn(Optional.empty());
 
     assertThrows(
-        ResourceNotFoundException.class, () -> cqlLibraryService.getSharedLibraries(libraryIds));
+        ResourceNotFoundException.class,
+        () -> cqlLibraryService.getSharedLibraries(libraryIds, USERNAME));
   }
 
   @Test
@@ -758,7 +763,7 @@ class CqlLibraryServiceTest {
 
     assertThrows(
         ResourceNotFoundException.class,
-        () -> cqlLibraryService.getSharedLibraries(List.of("libraryId1")));
+        () -> cqlLibraryService.getSharedLibraries(List.of("libraryId1"), USERNAME));
   }
 
   @Test
@@ -806,7 +811,7 @@ class CqlLibraryServiceTest {
     when(cqlLibraryRepository.findById("libraryId2")).thenReturn(Optional.ofNullable(library2));
 
     Map<String, List<SharedUser>> sharedLibraries =
-        cqlLibraryService.getSharedLibraries(libraryIds);
+        cqlLibraryService.getSharedLibraries(libraryIds, USERNAME);
 
     assertThat(sharedLibraries.size(), is(equalTo(2)));
 
@@ -900,7 +905,7 @@ class CqlLibraryServiceTest {
         .thenReturn(librarySetActionLog);
 
     Map<String, List<SharedUser>> sharedLibraries =
-        cqlLibraryService.getSharedLibraries(libraryIds);
+        cqlLibraryService.getSharedLibraries(libraryIds, USERNAME);
 
     assertThat(sharedLibraries.size(), is(equalTo(2)));
 
@@ -1160,5 +1165,58 @@ class CqlLibraryServiceTest {
     assertThat(result.size(), is(equalTo(2)));
     assertThat(result.get(0).getActionType(), is(equalTo(ActionType.CREATED)));
     assertThat(result.get(1).getActionType(), is(equalTo(ActionType.UPDATED)));
+  }
+
+  @Test
+  void testFindCqlLibraryByIdWhenFeatureFlagIsOn() {
+    String id = "1";
+    CqlLibrary lib =
+        CqlLibrary.builder().id(id).cqlLibraryName("XyZ").librarySetId("1-2-3-4").build();
+    when(cqlLibraryRepository.findById(anyString())).thenReturn(Optional.of(lib));
+    when(librarySetService.findByLibrarySetId(anyString())).thenReturn(new LibrarySet());
+
+    when(appConfigService.isFlagEnabled(MadieFeatureFlag.LOCKING)).thenReturn(true);
+    when(cqlLibraryLockService.findByCqlLibraryId(anyString()))
+        .thenReturn(CqlLibraryLock.builder().lockedBy("another.user").build());
+
+    CqlLibrary cqlLib = cqlLibraryService.findCqlLibraryById(id, USERNAME);
+    assertEquals(cqlLib.getId(), id);
+    assertNotNull(cqlLib.getLibrarySet());
+    assertNotNull(cqlLib.getCqlLibraryLock());
+  }
+
+  @Test
+  void testFindCqlLibraryByIdNoLock() {
+    String id = "1";
+    CqlLibrary lib =
+        CqlLibrary.builder().id(id).cqlLibraryName("XyZ").librarySetId("1-2-3-4").build();
+    when(cqlLibraryRepository.findById(anyString())).thenReturn(Optional.of(lib));
+    when(librarySetService.findByLibrarySetId(anyString())).thenReturn(new LibrarySet());
+
+    when(appConfigService.isFlagEnabled(MadieFeatureFlag.LOCKING)).thenReturn(true);
+    when(cqlLibraryLockService.findByCqlLibraryId(anyString())).thenReturn(null);
+
+    CqlLibrary cqlLib = cqlLibraryService.findCqlLibraryById(id, USERNAME);
+    assertEquals(cqlLib.getId(), id);
+    assertNotNull(cqlLib.getLibrarySet());
+    assertNull(cqlLib.getCqlLibraryLock());
+  }
+
+  @Test
+  void testFindCqlLibraryByIdLockedBySelf() {
+    String id = "1";
+    CqlLibrary lib =
+        CqlLibrary.builder().id(id).cqlLibraryName("XyZ").librarySetId("1-2-3-4").build();
+    when(cqlLibraryRepository.findById(anyString())).thenReturn(Optional.of(lib));
+    when(librarySetService.findByLibrarySetId(anyString())).thenReturn(new LibrarySet());
+
+    when(appConfigService.isFlagEnabled(MadieFeatureFlag.LOCKING)).thenReturn(true);
+    when(cqlLibraryLockService.findByCqlLibraryId(anyString()))
+        .thenReturn(CqlLibraryLock.builder().lockedBy(USERNAME).build());
+
+    CqlLibrary cqlLib = cqlLibraryService.findCqlLibraryById(id, USERNAME);
+    assertEquals(cqlLib.getId(), id);
+    assertNotNull(cqlLib.getLibrarySet());
+    assertNull(cqlLib.getCqlLibraryLock());
   }
 }

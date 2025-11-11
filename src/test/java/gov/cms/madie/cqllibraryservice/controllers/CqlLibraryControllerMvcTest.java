@@ -471,11 +471,11 @@ public class CqlLibraryControllerMvcTest {
   public void testGetCqlLibraryReturns404() throws Exception {
     doThrow(new ResourceNotFoundException("CQL Library", "Library1_ID"))
         .when(cqlLibraryService)
-        .findCqlLibraryById(anyString());
+        .findCqlLibraryById(anyString(), anyString());
     mockMvc
         .perform(get("/cql-libraries/Libary1_ID").with(user(TEST_USER_ID)).with(csrf()))
         .andExpect(status().isNotFound());
-    verify(cqlLibraryService, times(1)).findCqlLibraryById(anyString());
+    verify(cqlLibraryService, times(1)).findCqlLibraryById(anyString(), anyString());
   }
 
   @Test
@@ -491,7 +491,8 @@ public class CqlLibraryControllerMvcTest {
             .lastModifiedAt(createdTime)
             .lastModifiedBy("User1")
             .build();
-    when(cqlLibraryService.findCqlLibraryById(anyString())).thenReturn(existingLibrary);
+    when(cqlLibraryService.findCqlLibraryById(anyString(), anyString()))
+        .thenReturn(existingLibrary);
     mockMvc
         .perform(get("/cql-libraries/Libary1_ID").with(user(TEST_USER_ID)).with(csrf()))
         .andExpect(status().isOk())
@@ -501,7 +502,7 @@ public class CqlLibraryControllerMvcTest {
         .andExpect(jsonPath("$.lastModifiedBy").value("User1"))
         .andExpect(jsonPath("$.createdAt").value(is(equalTo(createdTime.toString()))))
         .andExpect(jsonPath("$.lastModifiedAt").value(is(equalTo(createdTime.toString()))));
-    verify(cqlLibraryService, times(1)).findCqlLibraryById(anyString());
+    verify(cqlLibraryService, times(1)).findCqlLibraryById(anyString(), anyString());
   }
 
   @Test
@@ -692,7 +693,7 @@ public class CqlLibraryControllerMvcTest {
     String json = toJsonString(updatingLibrary);
     doThrow(new ResourceNotFoundException("CQL Library", "Library1_ID"))
         .when(cqlLibraryService)
-        .findCqlLibraryById(anyString());
+        .findCqlLibraryById(anyString(), anyString());
     mockMvc
         .perform(
             put("/cql-libraries/Library1_ID")
@@ -704,7 +705,7 @@ public class CqlLibraryControllerMvcTest {
         .andExpect(
             jsonPath("$.message")
                 .value("Could not find resource CQL Library with id: Library1_ID"));
-    verify(cqlLibraryService, times(1)).findCqlLibraryById(anyString());
+    verify(cqlLibraryService, times(1)).findCqlLibraryById(anyString(), anyString());
   }
 
   @Test
@@ -727,7 +728,8 @@ public class CqlLibraryControllerMvcTest {
     final CqlLibrary updatingLibrary =
         existingLibrary.toBuilder().id("Library1_ID").cqlLibraryName("NewName").build();
     String json = toJsonString(updatingLibrary);
-    when(cqlLibraryService.findCqlLibraryById(anyString())).thenReturn(existingLibrary);
+    when(cqlLibraryService.findCqlLibraryById(anyString(), anyString()))
+        .thenReturn(existingLibrary);
     when(cqlLibraryService.isCqlLibraryNameChanged(any(CqlLibrary.class), any(CqlLibrary.class)))
         .thenReturn(true);
     doThrow(new DuplicateKeyException("cqlLibraryName", "Library name must be unique."))
@@ -744,7 +746,7 @@ public class CqlLibraryControllerMvcTest {
         .andExpect(status().isBadRequest())
         .andExpect(
             jsonPath("$.validationErrors.cqlLibraryName").value("Library name must be unique."));
-    verify(cqlLibraryService, times(1)).findCqlLibraryById(anyString());
+    verify(cqlLibraryService, times(1)).findCqlLibraryById(anyString(), anyString());
     verify(cqlLibraryService, times(1))
         .isCqlLibraryNameChanged(any(CqlLibrary.class), any(CqlLibrary.class));
   }
@@ -769,7 +771,8 @@ public class CqlLibraryControllerMvcTest {
     final CqlLibrary updatingLibrary =
         existingLibrary.toBuilder().id("Library1_ID").cqlLibraryName("NewName").build();
     String json = toJsonString(updatingLibrary);
-    when(cqlLibraryService.findCqlLibraryById(anyString())).thenReturn(existingLibrary);
+    when(cqlLibraryService.findCqlLibraryById(anyString(), anyString()))
+        .thenReturn(existingLibrary);
 
     mockMvc
         .perform(
@@ -783,7 +786,7 @@ public class CqlLibraryControllerMvcTest {
             jsonPath("$.message")
                 .value(
                     "Could not update resource CQL Library with id: Library1_ID. Resource is not a Draft."));
-    verify(cqlLibraryService, times(1)).findCqlLibraryById(anyString());
+    verify(cqlLibraryService, times(1)).findCqlLibraryById(anyString(), anyString());
   }
 
   @Test
@@ -806,7 +809,8 @@ public class CqlLibraryControllerMvcTest {
     final CqlLibrary updatingLibrary =
         existingLibrary.toBuilder().id("Library1_ID").cqlLibraryName("NewName").build();
     String json = toJsonString(updatingLibrary);
-    when(cqlLibraryService.findCqlLibraryById(anyString())).thenReturn(existingLibrary);
+    when(cqlLibraryService.findCqlLibraryById(anyString(), anyString()))
+        .thenReturn(existingLibrary);
 
     mockMvc
         .perform(
@@ -816,7 +820,7 @@ public class CqlLibraryControllerMvcTest {
                 .content(json)
                 .contentType(MediaType.APPLICATION_JSON_VALUE))
         .andExpect(status().isForbidden());
-    verify(cqlLibraryService, times(1)).findCqlLibraryById(anyString());
+    verify(cqlLibraryService, times(1)).findCqlLibraryById(anyString(), anyString());
   }
 
   @Test
@@ -844,7 +848,8 @@ public class CqlLibraryControllerMvcTest {
             .librarySetId(TEST_LIBRARYSET_ID)
             .build();
     String json = toJsonString(updatingLibrary);
-    when(cqlLibraryService.findCqlLibraryById(anyString())).thenReturn(existingLibrary);
+    when(cqlLibraryService.findCqlLibraryById(anyString(), anyString()))
+        .thenReturn(existingLibrary);
     when(cqlLibraryService.isCqlLibraryNameChanged(any(CqlLibrary.class), any(CqlLibrary.class)))
         .thenReturn(false);
     when(cqlLibraryRepository.save(any(CqlLibrary.class))).thenReturn(updatingLibrary);
@@ -858,7 +863,7 @@ public class CqlLibraryControllerMvcTest {
         .andExpect(status().isOk())
         .andExpect(content().contentType(MediaType.APPLICATION_JSON_VALUE))
         .andExpect(content().json(toJsonString(updatingLibrary)));
-    verify(cqlLibraryService, times(1)).findCqlLibraryById(anyString());
+    verify(cqlLibraryService, times(1)).findCqlLibraryById(anyString(), anyString());
     verify(cqlLibraryRepository, times(1)).save(cqlLibraryArgumentCaptor.capture());
     CqlLibrary savedValue = cqlLibraryArgumentCaptor.getValue();
     assertThat(savedValue, is(notNullValue()));
@@ -1147,8 +1152,8 @@ public class CqlLibraryControllerMvcTest {
     LibrarySet librarySet = LibrarySet.builder().acls(acls).owner("owner1").build();
     lib1.setLibrarySet(librarySet);
     lib2.setLibrarySet(librarySet);
-    when(cqlLibraryService.findCqlLibraryById(eq("12345"))).thenReturn(lib1);
-    when(cqlLibraryService.findCqlLibraryById(eq("6789"))).thenReturn(lib2);
+    when(cqlLibraryService.findCqlLibraryById(eq("12345"), anyString())).thenReturn(lib1);
+    when(cqlLibraryService.findCqlLibraryById(eq("6789"), anyString())).thenReturn(lib2);
 
     mockMvc
         .perform(
@@ -1166,7 +1171,7 @@ public class CqlLibraryControllerMvcTest {
 
   @Test
   public void testAdminMeasureGetSharedWithResourceNotFoundException() throws Exception {
-    when(cqlLibraryService.findCqlLibraryById(anyString())).thenReturn(null);
+    when(cqlLibraryService.findCqlLibraryById(anyString(), anyString())).thenReturn(null);
 
     MvcResult result =
         mockMvc
@@ -1192,7 +1197,7 @@ public class CqlLibraryControllerMvcTest {
     List<AclSpecification> acls = List.of(acl1);
     LibrarySet librarySet = LibrarySet.builder().acls(acls).owner("owner1").build();
     testLibrary.setLibrarySet(librarySet);
-    when(cqlLibraryService.findCqlLibraryById(anyString())).thenReturn(testLibrary);
+    when(cqlLibraryService.findCqlLibraryById(anyString(), anyString())).thenReturn(testLibrary);
 
     MvcResult result =
         mockMvc
@@ -1222,7 +1227,7 @@ public class CqlLibraryControllerMvcTest {
     List<AclSpecification> acls = List.of(acl1);
     LibrarySet librarySet = LibrarySet.builder().acls(acls).owner("owner1").build();
     testLibrary.setLibrarySet(librarySet);
-    when(cqlLibraryService.findCqlLibraryById(anyString())).thenReturn(testLibrary);
+    when(cqlLibraryService.findCqlLibraryById(anyString(), anyString())).thenReturn(testLibrary);
 
     mockMvc
         .perform(
@@ -1243,7 +1248,7 @@ public class CqlLibraryControllerMvcTest {
 
     LibrarySet librarySet = LibrarySet.builder().acls(null).owner("owner1").build();
     testLibrary.setLibrarySet(librarySet);
-    when(cqlLibraryService.findCqlLibraryById(anyString())).thenReturn(testLibrary);
+    when(cqlLibraryService.findCqlLibraryById(anyString(), anyString())).thenReturn(testLibrary);
 
     mockMvc
         .perform(
@@ -1847,7 +1852,9 @@ public class CqlLibraryControllerMvcTest {
     sharedLibraries.put(libraryId1, List.of(sharedUser1));
     sharedLibraries.put(libraryId2, List.of(sharedUser1, sharedUser2));
 
-    doReturn(sharedLibraries).when(cqlLibraryService).getSharedLibraries(eq(libraryIds));
+    doReturn(sharedLibraries)
+        .when(cqlLibraryService)
+        .getSharedLibraries(eq(libraryIds), anyString());
 
     mockMvc
         .perform(
@@ -1861,7 +1868,7 @@ public class CqlLibraryControllerMvcTest {
                 .string(
                     "{\"libraryId1\":[{\"userId\":\"userId1\",\"performedAt\":\"2025-03-17T10:00:00Z\"}],\"libraryId2\":[{\"userId\":\"userId1\",\"performedAt\":\"2025-03-17T10:00:00Z\"},{\"userId\":\"userId2\",\"performedAt\":\"2025-03-17T10:00:00Z\"}]}"));
 
-    verify(cqlLibraryService, times(1)).getSharedLibraries(eq(libraryIds));
+    verify(cqlLibraryService, times(1)).getSharedLibraries(eq(libraryIds), anyString());
   }
 
   @Test

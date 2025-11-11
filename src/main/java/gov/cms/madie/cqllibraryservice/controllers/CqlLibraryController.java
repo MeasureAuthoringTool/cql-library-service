@@ -103,8 +103,10 @@ public class CqlLibraryController {
   }
 
   @GetMapping("/{id}")
-  public ResponseEntity<CqlLibrary> getCqlLibrary(@PathVariable("id") String id) {
-    return ResponseEntity.ok(cqlLibraryService.findCqlLibraryById(id));
+  public ResponseEntity<CqlLibrary> getCqlLibrary(
+      @PathVariable("id") String id, Principal principal) {
+    final String username = principal.getName();
+    return ResponseEntity.ok(cqlLibraryService.findCqlLibraryById(id, username));
   }
 
   @GetMapping("/versioned")
@@ -179,7 +181,8 @@ public class CqlLibraryController {
       throw new InvalidIdException("CQL Library", "Update (PUT)", "(PUT [base]/[resource]/[id])");
     }
 
-    CqlLibrary persistedLibrary = cqlLibraryService.findCqlLibraryById(cqlLibrary.getId());
+    CqlLibrary persistedLibrary =
+        cqlLibraryService.findCqlLibraryById(cqlLibrary.getId(), username);
     AuthUtils.checkAccessPermissions(persistedLibrary, username);
     if (!persistedLibrary.isDraft()) {
       throw new InvalidResourceStateException("CQL Library", id);
@@ -296,11 +299,13 @@ public class CqlLibraryController {
       HttpServletRequest request,
       @Value("${admin-api-key}") String apiKey,
       @RequestHeader(name = "harpId") String harpId,
-      @RequestParam(name = "measureids") String measureids) {
+      @RequestParam(name = "measureids") String measureids,
+      Principal principal) {
+    final String username = principal.getName();
     List<Map<String, Object>> results = new ArrayList<>();
     String[] ids = StringUtils.split(measureids, ",");
     for (String id : ids) {
-      CqlLibrary library = cqlLibraryService.findCqlLibraryById(id);
+      CqlLibrary library = cqlLibraryService.findCqlLibraryById(id, username);
       if (library != null) {
         if (!library.getLibrarySet().getOwner().equals(harpId)) {
           throw new HarpIdMismatchException(
@@ -323,7 +328,8 @@ public class CqlLibraryController {
   @DeleteMapping("/{id}")
   public ResponseEntity<CqlLibrary> hardDeleteLibrary(
       @PathVariable("id") String id, Principal principal) {
-    return ResponseEntity.ok(cqlLibraryService.deleteDraftLibrary(id, principal.getName()));
+    final String username = principal.getName();
+    return ResponseEntity.ok(cqlLibraryService.deleteDraftLibrary(id, username));
   }
 
   @DeleteMapping("/{libraryName}/delete-all-versions")
@@ -341,8 +347,9 @@ public class CqlLibraryController {
 
   @GetMapping("/shared")
   public ResponseEntity<Map<String, List<SharedUser>>> getSharedLibraries(
-      @RequestParam(name = "libraryIds") List<String> libraryIds) {
-    return ResponseEntity.ok().body(cqlLibraryService.getSharedLibraries(libraryIds));
+      @RequestParam(name = "libraryIds") List<String> libraryIds, Principal principal) {
+    final String username = principal.getName();
+    return ResponseEntity.ok().body(cqlLibraryService.getSharedLibraries(libraryIds, username));
   }
 
   @GetMapping("/recentsByLibrarySetId")
