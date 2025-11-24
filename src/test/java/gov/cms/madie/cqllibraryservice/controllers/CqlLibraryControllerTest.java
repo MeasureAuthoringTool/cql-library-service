@@ -16,6 +16,7 @@ import gov.cms.madie.cqllibraryservice.exceptions.DuplicateKeyException;
 import gov.cms.madie.cqllibraryservice.exceptions.InvalidIdException;
 import gov.cms.madie.cqllibraryservice.exceptions.InvalidResourceStateException;
 import gov.cms.madie.cqllibraryservice.exceptions.PermissionDeniedException;
+import gov.cms.madie.cqllibraryservice.exceptions.ResourceLockedException;
 import gov.cms.madie.cqllibraryservice.exceptions.ResourceNotDraftableException;
 import gov.cms.madie.cqllibraryservice.exceptions.ResourceNotFoundException;
 import gov.cms.madie.cqllibraryservice.services.ActionLogService;
@@ -27,6 +28,7 @@ import gov.cms.madie.models.common.*;
 import gov.cms.madie.models.dto.LibraryUsage;
 import gov.cms.madie.models.library.CqlLibrary;
 import gov.cms.madie.models.library.CqlLibraryDraft;
+import gov.cms.madie.models.library.CqlLibraryLockInfo;
 import gov.cms.madie.cqllibraryservice.repositories.CqlLibraryRepository;
 import gov.cms.madie.cqllibraryservice.services.CqlLibraryService;
 import gov.cms.madie.cqllibraryservice.services.VersionService;
@@ -883,5 +885,49 @@ class CqlLibraryControllerTest {
 
     assertNotNull(response.getBody());
     assertTrue(response.getBody().isEmpty());
+  }
+
+  @Test
+  public void testUpdateCqlLibraryThrowsResourceLockedException() {
+    Principal principal = mock(Principal.class);
+    when(principal.getName()).thenReturn("test.user");
+
+    final String pathId = "Library1_ID";
+    final Instant createdTime = Instant.now().minus(100, ChronoUnit.MINUTES);
+    final CqlLibrary existingLibrary =
+        CqlLibrary.builder()
+            .id("Library1_ID")
+            .cqlLibraryName("Library1")
+            .model(ModelType.QI_CORE.getValue())
+            .cql("library testCql version '1.0.000'")
+            .draft(true)
+            .createdAt(createdTime)
+            .createdBy("User2")
+            .librarySet(
+                LibrarySet.builder().librarySetId("testLibrarySetId").owner("test.user").build())
+            .lastModifiedAt(createdTime)
+            .lastModifiedBy("test.user")
+            .cqlLibraryLock(CqlLibraryLockInfo.builder().lockedBy("anotherUser").build())
+            .build();
+    final CqlLibrary updatingLibrary =
+        existingLibrary.toBuilder()
+            .id("Library1_ID")
+            .cqlLibraryName("NewName")
+            .cql("new cql")
+            .draft(false)
+            .build();
+
+    when(cqlLibraryService.findCqlLibraryById(anyString(), anyString()))
+        .thenReturn(existingLibrary);
+
+    ResourceLockedException exception =
+        assertThrows(
+            ResourceLockedException.class,
+            () -> cqlLibraryController.updateCqlLibrary(pathId, updatingLibrary, principal));
+
+    assertThat(
+        exception.getMessage(),
+        is(equalTo("Unable to update Cql Library. Cql Library is locked by: anotherUser")));
+    verify(cqlLibraryService, times(1)).findCqlLibraryById(pathId, "test.user");
   }
 }

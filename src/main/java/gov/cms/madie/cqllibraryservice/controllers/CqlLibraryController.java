@@ -7,6 +7,7 @@ import gov.cms.madie.cqllibraryservice.dto.SharedUser;
 import gov.cms.madie.cqllibraryservice.exceptions.HarpIdMismatchException;
 import gov.cms.madie.cqllibraryservice.exceptions.InvalidIdException;
 import gov.cms.madie.cqllibraryservice.exceptions.InvalidResourceStateException;
+import gov.cms.madie.cqllibraryservice.exceptions.ResourceLockedException;
 import gov.cms.madie.cqllibraryservice.services.*;
 import gov.cms.madie.cqllibraryservice.utils.AuthUtils;
 import gov.cms.madie.cqllibraryservice.utils.LibraryUtils;
@@ -183,6 +184,11 @@ public class CqlLibraryController {
 
     CqlLibrary persistedLibrary =
         cqlLibraryService.findCqlLibraryById(cqlLibrary.getId(), username);
+    if (persistedLibrary.getCqlLibraryLock() != null) {
+      throw new ResourceLockedException(
+          "Unable to update Cql Library. Cql Library is locked by: "
+              + persistedLibrary.getCqlLibraryLock().getLockedBy());
+    }
     AuthUtils.checkAccessPermissions(persistedLibrary, username);
     if (!persistedLibrary.isDraft()) {
       throw new InvalidResourceStateException("CQL Library", id);
@@ -190,6 +196,7 @@ public class CqlLibraryController {
     if (cqlLibraryService.isCqlLibraryNameChanged(cqlLibrary, persistedLibrary)) {
       cqlLibraryService.checkDuplicateCqlLibraryName(cqlLibrary.getCqlLibraryName());
     }
+    // cqlLibraryService.checkCqlLibraryLocked(cqlLibrary.getId(), username);
     // update includedLibraries if cql changed
     if (!StringUtils.equals(cqlLibrary.getCql(), persistedLibrary.getCql())) {
       cqlLibrary.setIncludedLibraries(LibraryUtils.getIncludedLibraries(cqlLibrary.getCql()));
