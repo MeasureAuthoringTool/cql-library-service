@@ -196,7 +196,6 @@ public class CqlLibraryController {
     if (cqlLibraryService.isCqlLibraryNameChanged(cqlLibrary, persistedLibrary)) {
       cqlLibraryService.checkDuplicateCqlLibraryName(cqlLibrary.getCqlLibraryName());
     }
-    // cqlLibraryService.checkCqlLibraryLocked(cqlLibrary.getId(), username);
     // update includedLibraries if cql changed
     if (!StringUtils.equals(cqlLibrary.getCql(), persistedLibrary.getCql())) {
       cqlLibrary.setIncludedLibraries(LibraryUtils.getIncludedLibraries(cqlLibrary.getCql()));
