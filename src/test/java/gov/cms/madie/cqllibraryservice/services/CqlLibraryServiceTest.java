@@ -398,7 +398,7 @@ class CqlLibraryServiceTest {
         .thenReturn(LibrarySet.builder().librarySetId("LibSetID").owner("TEST_USER").build());
 
     assertThrows(
-        GeneralConflictException.class,
+        InvalidResourceStateException.class,
         () -> cqlLibraryService.deleteDraftLibrary("LibID", "TEST_USER"));
   }
 

@@ -46,54 +46,67 @@ public class CqlLibraryService {
     if (cqlLibrary == null || StringUtils.isBlank(cqlLibrary.getId())) {
       throw new BadRequestObjectException("CQL Library or CQL Library ID cannot be null.");
     }
-
     if (StringUtils.isBlank(username)) {
       throw new BadRequestObjectException("Harp id cannot be null or empty.");
     }
 
-    // Retrieve the persisted library and validate access
     CqlLibrary persistedLibrary = findCqlLibraryById(cqlLibrary.getId(), username);
     AuthUtils.checkAccessPermissions(persistedLibrary, username);
 
-    // Validate that library is in draft state
-    if (!persistedLibrary.isDraft()) {
-      throw new InvalidResourceStateException("CQL Library", cqlLibrary.getId());
-    }
+    enforceDraftState(persistedLibrary);
+    enforceLocking(cqlLibrary.getId(), username);
+    ensureUniqueName(cqlLibrary, persistedLibrary);
+    refreshIncludedLibraries(cqlLibrary, persistedLibrary);
+    preserveImmutableFields(cqlLibrary, persistedLibrary);
+    stampModificationMetadata(cqlLibrary, username);
 
-    if (appConfigService.isFlagEnabled(MadieFeatureFlag.LOCKING)) {
-      LockInfo lockInfo = cqlLibraryLockService.lockCqlLibrary(persistedLibrary.getId(), username);
-      if (lockInfo != null && lockInfo.isLocked() && !lockInfo.getLockedBy().equals(username)) {
-        throw new ResourceLockedException(
-            "Unable to update CQL Library", cqlLibrary.getId(), lockInfo.getLockedBy());
-      }
-    }
-
-    // Check for duplicate library name if name was changed
-    if (isCqlLibraryNameChanged(cqlLibrary, persistedLibrary)) {
-      checkDuplicateCqlLibraryName(cqlLibrary.getCqlLibraryName());
-    }
-
-    // Update includedLibraries if cql changed
-    if (!StringUtils.equals(cqlLibrary.getCql(), persistedLibrary.getCql())) {
-      cqlLibrary.setIncludedLibraries(LibraryUtils.getIncludedLibraries(cqlLibrary.getCql()));
-    }
-
-    // Preserve fields that should not be changed
-    cqlLibrary.setLibrarySet(persistedLibrary.getLibrarySet());
-    cqlLibrary.setDraft(persistedLibrary.isDraft());
-    cqlLibrary.setVersion(persistedLibrary.getVersion());
-    cqlLibrary.setCreatedAt(persistedLibrary.getCreatedAt());
-    cqlLibrary.setCreatedBy(persistedLibrary.getCreatedBy());
-
-    // Set modification metadata
-    cqlLibrary.setLastModifiedAt(Instant.now());
-    cqlLibrary.setLastModifiedBy(username);
-
-    // Save and log action
     CqlLibrary savedLibrary = cqlLibraryRepository.save(cqlLibrary);
     actionLogService.logAction(savedLibrary.getId(), ActionType.UPDATED, username, "actionLog");
 
     return savedLibrary;
+  }
+
+  private void enforceDraftState(CqlLibrary persistedLibrary) {
+    if (!persistedLibrary.isDraft()) {
+      throw new InvalidResourceStateException("CQL Library", persistedLibrary.getId());
+    }
+  }
+
+  private void enforceLocking(String libraryId, String username) {
+    if (!appConfigService.isFlagEnabled(MadieFeatureFlag.LOCKING)) {
+      return;
+    }
+    LockInfo lockInfo = cqlLibraryLockService.lockCqlLibrary(libraryId, username);
+    if (lockInfo != null && lockInfo.isLocked() && !lockInfo.getLockedBy().equals(username)) {
+      throw new ResourceLockedException(
+          "Unable to update CQL Library", libraryId, lockInfo.getLockedBy());
+    }
+  }
+
+  private void ensureUniqueName(CqlLibrary updatedLibrary, CqlLibrary persistedLibrary) {
+    if (isCqlLibraryNameChanged(updatedLibrary, persistedLibrary)) {
+      checkDuplicateCqlLibraryName(updatedLibrary.getCqlLibraryName());
+    }
+  }
+
+  private void refreshIncludedLibraries(CqlLibrary updatedLibrary, CqlLibrary persistedLibrary) {
+    if (!StringUtils.equals(updatedLibrary.getCql(), persistedLibrary.getCql())) {
+      updatedLibrary.setIncludedLibraries(
+          LibraryUtils.getIncludedLibraries(updatedLibrary.getCql()));
+    }
+  }
+
+  private void preserveImmutableFields(CqlLibrary updatedLibrary, CqlLibrary persistedLibrary) {
+    updatedLibrary.setLibrarySet(persistedLibrary.getLibrarySet());
+    updatedLibrary.setDraft(persistedLibrary.isDraft());
+    updatedLibrary.setVersion(persistedLibrary.getVersion());
+    updatedLibrary.setCreatedAt(persistedLibrary.getCreatedAt());
+    updatedLibrary.setCreatedBy(persistedLibrary.getCreatedBy());
+  }
+
+  private void stampModificationMetadata(CqlLibrary cqlLibrary, String username) {
+    cqlLibrary.setLastModifiedAt(Instant.now());
+    cqlLibrary.setLastModifiedBy(username);
   }
 
   public Page<LibraryListDTO> getLibrariesByCriteria(
@@ -228,26 +241,14 @@ public class CqlLibraryService {
   }
 
   public CqlLibrary deleteDraftLibrary(final String id, final String userId) {
-    if (appConfigService.isFlagEnabled(MadieFeatureFlag.LOCKING)) {
-      LockInfo lockInfo = cqlLibraryLockService.lockCqlLibrary(id, userId);
-      if (lockInfo != null && lockInfo.isLocked() && !lockInfo.getLockedBy().equals(userId)) {
-        throw new ResourceLockedException(
-            "Unable to delete CQL Library", id, lockInfo.getLockedBy());
-      }
-    }
+    enforceLocking(id, userId);
     CqlLibrary cqlLibrary = findCqlLibraryById(id, userId);
     if (!userId.equalsIgnoreCase(cqlLibrary.getLibrarySet().getOwner())) {
       throw new PermissionDeniedException("CQL Library", cqlLibrary.getId(), userId);
     }
 
-    if (cqlLibrary.isDraft()) {
-      cqlLibraryRepository.delete(cqlLibrary);
-    } else {
-      throw new GeneralConflictException(
-          String.format(
-              "Could not update resource %s with id: %s. Resource is not a Draft.",
-              "CQL Library", id));
-    }
+    enforceDraftState(cqlLibrary);
+    cqlLibraryRepository.delete(cqlLibrary);
     cqlLibraryLockService.unlockCqlLibrary(cqlLibrary.getId(), userId);
     return cqlLibrary;
   }
