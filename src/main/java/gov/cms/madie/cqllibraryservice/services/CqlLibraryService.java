@@ -58,8 +58,8 @@ public class CqlLibraryService {
     ensureUniqueName(cqlLibrary, persistedLibrary);
     refreshIncludedLibraries(cqlLibrary, persistedLibrary);
     preserveImmutableFields(cqlLibrary, persistedLibrary);
-    stampModificationMetadata(cqlLibrary, username);
-
+    cqlLibrary.setLastModifiedAt(Instant.now());
+    cqlLibrary.setLastModifiedBy(username);
     CqlLibrary savedLibrary = cqlLibraryRepository.save(cqlLibrary);
     actionLogService.logAction(savedLibrary.getId(), ActionType.UPDATED, username, "actionLog");
 
@@ -102,11 +102,6 @@ public class CqlLibraryService {
     updatedLibrary.setVersion(persistedLibrary.getVersion());
     updatedLibrary.setCreatedAt(persistedLibrary.getCreatedAt());
     updatedLibrary.setCreatedBy(persistedLibrary.getCreatedBy());
-  }
-
-  private void stampModificationMetadata(CqlLibrary cqlLibrary, String username) {
-    cqlLibrary.setLastModifiedAt(Instant.now());
-    cqlLibrary.setLastModifiedBy(username);
   }
 
   public Page<LibraryListDTO> getLibrariesByCriteria(
