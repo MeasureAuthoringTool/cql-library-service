@@ -58,8 +58,10 @@ public class CqlLibraryService {
     ensureUniqueName(cqlLibrary, persistedLibrary);
     refreshIncludedLibraries(cqlLibrary, persistedLibrary);
     preserveImmutableFields(cqlLibrary, persistedLibrary);
+
     cqlLibrary.setLastModifiedAt(Instant.now());
     cqlLibrary.setLastModifiedBy(username);
+
     CqlLibrary savedLibrary = cqlLibraryRepository.save(cqlLibrary);
     actionLogService.logAction(savedLibrary.getId(), ActionType.UPDATED, username, "actionLog");
 
