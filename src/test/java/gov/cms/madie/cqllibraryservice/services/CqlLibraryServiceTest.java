@@ -37,6 +37,7 @@ import org.springframework.data.domain.PageRequest;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneId;
+import java.time.temporal.ChronoUnit;
 import java.util.*;
 
 import gov.cms.madie.cqllibraryservice.dto.MadieFeatureFlag;
@@ -1218,5 +1219,252 @@ class CqlLibraryServiceTest {
     assertEquals(cqlLib.getId(), id);
     assertNotNull(cqlLib.getLibrarySet());
     assertNull(cqlLib.getCqlLibraryLock());
+  }
+
+  @Test
+  public void testUpdateCqlLibraryThrowsExceptionForNullLibrary() {
+    assertThrows(
+        BadRequestObjectException.class, () -> cqlLibraryService.updateCqlLibrary(null, USERNAME));
+  }
+
+  @Test
+  public void testUpdateCqlLibraryThrowsExceptionForNullId() {
+    assertThrows(
+        BadRequestObjectException.class,
+        () -> cqlLibraryService.updateCqlLibrary(CqlLibrary.builder().build(), USERNAME));
+  }
+
+  @Test
+  public void testUpdateCqlLibraryThrowsExceptionForNullUser() {
+    assertThrows(
+        BadRequestObjectException.class,
+        () -> cqlLibraryService.updateCqlLibrary(CqlLibrary.builder().build(), null));
+  }
+
+  @Test
+  public void testUpdateCqlLibraryThrowsExceptionForNotFound() {
+    final CqlLibrary updatingLibrary =
+        CqlLibrary.builder().id("Library1_ID").cqlLibraryName("NewName").build();
+
+    doThrow(new ResourceNotFoundException("CQL Library", updatingLibrary.getId()))
+        .when(cqlLibraryRepository)
+        .findById(anyString());
+
+    assertThrows(
+        ResourceNotFoundException.class,
+        () -> cqlLibraryService.updateCqlLibrary(updatingLibrary, USERNAME));
+  }
+
+  @Test
+  public void testUpdateCqlLibraryThrowsExceptionForNonUniqueNameUpdate() {
+    LibrarySet librarySet =
+        LibrarySet.builder().librarySetId("librarySetId").owner(USERNAME).build();
+    final CqlLibrary existingLibrary =
+        CqlLibrary.builder()
+            .id("Library1_ID")
+            .librarySetId(librarySet.getLibrarySetId())
+            .cqlLibraryName("Library1")
+            .model(ModelType.QI_CORE.getValue())
+            .draft(true)
+            .createdBy("test.user")
+            .librarySet(
+                LibrarySet.builder().librarySetId("testLibrarySetId").owner("test.user").build())
+            .build();
+    final CqlLibrary updatingLibrary =
+        existingLibrary.toBuilder().id("Library1_ID").cqlLibraryName("NewName").build();
+
+    when(cqlLibraryRepository.findById(anyString())).thenReturn(Optional.of(existingLibrary));
+    when(librarySetService.findByLibrarySetId(anyString())).thenReturn(librarySet);
+    when(cqlLibraryRepository.existsByCqlLibraryName(anyString())).thenReturn(true);
+
+    assertThrows(
+        DuplicateKeyException.class,
+        () -> cqlLibraryService.updateCqlLibrary(updatingLibrary, USERNAME));
+  }
+
+  @Test
+  public void testUpdateCqlLibraryThrowsExceptionForNonDraftUpdate() {
+    LibrarySet librarySet =
+        LibrarySet.builder().librarySetId("librarySetId").owner(USERNAME).build();
+    final CqlLibrary existingLibrary =
+        CqlLibrary.builder()
+            .id("Library1_ID")
+            .librarySetId(librarySet.getLibrarySetId())
+            .cqlLibraryName("Library1")
+            .model(ModelType.QI_CORE.getValue())
+            .draft(false)
+            .createdBy("test.user")
+            .librarySet(
+                LibrarySet.builder().librarySetId("testLibrarySetId").owner("test.user").build())
+            .build();
+    final CqlLibrary updatingLibrary =
+        existingLibrary.toBuilder().id("Library1_ID").cqlLibraryName("NewName").build();
+
+    when(cqlLibraryRepository.findById(anyString())).thenReturn(Optional.of(existingLibrary));
+    when(librarySetService.findByLibrarySetId(anyString())).thenReturn(librarySet);
+
+    assertThrows(
+        InvalidResourceStateException.class,
+        () -> cqlLibraryService.updateCqlLibrary(updatingLibrary, USERNAME));
+  }
+
+  @Test
+  public void testUpdateCqlLibraryThrowsPermissionDeniedException() {
+    LibrarySet librarySet =
+        LibrarySet.builder().librarySetId("librarySetId").owner("another user").build();
+    final CqlLibrary existingLibrary =
+        CqlLibrary.builder()
+            .id("Library1_ID")
+            .librarySetId(librarySet.getLibrarySetId())
+            .cqlLibraryName("Library1")
+            .model(ModelType.QI_CORE.getValue())
+            .draft(false)
+            .createdBy("test.user")
+            .librarySet(
+                LibrarySet.builder().librarySetId("testLibrarySetId").owner("test.user").build())
+            .build();
+    final CqlLibrary updatingLibrary =
+        existingLibrary.toBuilder().id("Library1_ID").cqlLibraryName("NewName").build();
+
+    when(cqlLibraryRepository.findById(anyString())).thenReturn(Optional.of(existingLibrary));
+    when(librarySetService.findByLibrarySetId(anyString())).thenReturn(librarySet);
+
+    assertThrows(
+        PermissionDeniedException.class,
+        () -> cqlLibraryService.updateCqlLibrary(updatingLibrary, USERNAME));
+  }
+
+  @Test
+  public void testUpdateCqlLibrarySuccessfullyWithoutLockingFeature() {
+    final String cql =
+        "library testCql version '2.1.000'\n"
+            + "using QICore version '4.1.1'\n"
+            + "include TestLibrary17194110463836086082 version '1.0.000' called Test";
+    final Instant createdTime = Instant.now().minus(100, ChronoUnit.MINUTES);
+    final CqlLibrary existingLibrary =
+        getTestCqlLibrary("L1", "Library1", ModelType.QI_CORE.getValue(), USERNAME);
+    existingLibrary.setCql("library testCql version '1.0.000'");
+    existingLibrary.setCreatedAt(createdTime);
+    existingLibrary.setLastModifiedAt(createdTime);
+    final CqlLibrary updatingLibrary =
+        existingLibrary.toBuilder()
+            .id("L1")
+            .cqlLibraryName("NewName")
+            .cql(cql)
+            .draft(false)
+            .build();
+
+    when(cqlLibraryRepository.findById(anyString())).thenReturn(Optional.of(existingLibrary));
+    when(cqlLibraryRepository.existsByCqlLibraryName(anyString())).thenReturn(false);
+    when(librarySetService.findByLibrarySetId(anyString()))
+        .thenReturn(existingLibrary.getLibrarySet());
+    when(cqlLibraryRepository.save(any(CqlLibrary.class))).thenReturn(updatingLibrary);
+    when(appConfigService.isFlagEnabled(MadieFeatureFlag.LOCKING)).thenReturn(false);
+
+    CqlLibrary updatedLibrary = cqlLibraryService.updateCqlLibrary(updatingLibrary, USERNAME);
+    assertThat(updatedLibrary, is(equalTo(updatingLibrary)));
+    assertThat(updatedLibrary, is(notNullValue()));
+    assertThat(updatedLibrary.getId(), is(equalTo(updatedLibrary.getId())));
+    assertThat(updatedLibrary.getCqlLibraryName(), is(equalTo("NewName")));
+    assertThat(updatedLibrary.getCql(), is(equalTo(cql)));
+    assertThat(updatedLibrary.getCreatedAt(), is(equalTo(createdTime)));
+    assertThat(updatedLibrary.getCreatedBy(), is(equalTo("User2")));
+    assertThat(updatedLibrary.getLastModifiedAt(), is(notNullValue()));
+    assertThat(updatedLibrary.getLastModifiedAt().isAfter(createdTime), is(true));
+    assertThat(updatedLibrary.getLastModifiedBy(), is(equalTo(USERNAME)));
+    assertThat(updatedLibrary.getIncludedLibraries().size(), is(equalTo(1)));
+    verify(actionLogService, times(1))
+        .logAction(anyString(), any(ActionType.class), anyString(), anyString());
+  }
+
+  @Test
+  public void testUpdateLockedCqlLibraryThrowsException() {
+    final CqlLibrary existingLibrary =
+        getTestCqlLibrary("L1", "Library1", ModelType.QI_CORE.getValue(), USERNAME);
+    final CqlLibrary updates =
+        getTestCqlLibrary("L1", "NewName", ModelType.QI_CORE.getValue(), USERNAME);
+
+    when(cqlLibraryRepository.findById(anyString())).thenReturn(Optional.of(existingLibrary));
+    when(librarySetService.findByLibrarySetId(anyString()))
+        .thenReturn(existingLibrary.getLibrarySet());
+    when(appConfigService.isFlagEnabled(MadieFeatureFlag.LOCKING)).thenReturn(true);
+    when(cqlLibraryLockService.lockCqlLibrary(anyString(), anyString()))
+        .thenReturn(LockInfo.builder().isLocked(true).lockedBy("John").build());
+
+    assertThrows(
+        ResourceLockedException.class, () -> cqlLibraryService.updateCqlLibrary(updates, USERNAME));
+
+    verify(cqlLibraryRepository, times(0)).save(any(CqlLibrary.class));
+    verify(actionLogService, times(0))
+        .logAction(anyString(), any(ActionType.class), anyString(), anyString());
+  }
+
+  @Test
+  public void testUpdateUnclockedCqlLibrarySuccessfullyWithLockingFeature() {
+    final String cql =
+        "library testCql version '2.1.000'\n"
+            + "using QICore version '4.1.1'\n"
+            + "include TestLibrary17194110463836086082 version '1.0.000' called Test";
+    final Instant createdTime = Instant.now().minus(100, ChronoUnit.MINUTES);
+    final CqlLibrary existingLibrary =
+        getTestCqlLibrary("L1", "Library1", ModelType.QI_CORE.getValue(), USERNAME);
+    existingLibrary.setCql("library testCql version '1.0.000'");
+    existingLibrary.setCreatedAt(createdTime);
+    existingLibrary.setLastModifiedAt(createdTime);
+    final CqlLibrary updatingLibrary =
+        existingLibrary.toBuilder()
+            .id("L1")
+            .cqlLibraryName("NewName")
+            .cql(cql)
+            .draft(false)
+            .build();
+
+    when(cqlLibraryRepository.findById(anyString())).thenReturn(Optional.of(existingLibrary));
+    when(cqlLibraryRepository.existsByCqlLibraryName(anyString())).thenReturn(false);
+    when(librarySetService.findByLibrarySetId(anyString()))
+        .thenReturn(existingLibrary.getLibrarySet());
+    when(cqlLibraryRepository.save(any(CqlLibrary.class))).thenReturn(updatingLibrary);
+    when(appConfigService.isFlagEnabled(MadieFeatureFlag.LOCKING)).thenReturn(true);
+    when(cqlLibraryLockService.lockCqlLibrary(anyString(), anyString()))
+        .thenReturn(
+            LockInfo.builder()
+                .isLocked(true)
+                .lockedBy(existingLibrary.getLibrarySet().getOwner())
+                .build());
+
+    CqlLibrary updatedLibrary = cqlLibraryService.updateCqlLibrary(updatingLibrary, USERNAME);
+    assertThat(updatedLibrary, is(equalTo(updatingLibrary)));
+    assertThat(updatedLibrary, is(notNullValue()));
+    assertThat(updatedLibrary.getId(), is(equalTo(updatedLibrary.getId())));
+    assertThat(updatedLibrary.getCqlLibraryName(), is(equalTo("NewName")));
+    assertThat(updatedLibrary.getCql(), is(equalTo(cql)));
+    assertThat(updatedLibrary.getCreatedAt(), is(equalTo(createdTime)));
+    assertThat(updatedLibrary.getCreatedBy(), is(equalTo("User2")));
+    assertThat(updatedLibrary.getLastModifiedAt(), is(notNullValue()));
+    assertThat(updatedLibrary.getLastModifiedAt().isAfter(createdTime), is(true));
+    assertThat(updatedLibrary.getLastModifiedBy(), is(equalTo(USERNAME)));
+    assertThat(updatedLibrary.getIncludedLibraries().size(), is(equalTo(1)));
+    verify(actionLogService, times(1))
+        .logAction(anyString(), any(ActionType.class), anyString(), anyString());
+  }
+
+  private CqlLibrary getTestCqlLibrary(String id, String name, String model, String username) {
+    final String cql =
+        "library testCql version '2.1.000'\n"
+            + "using QICore version '4.1.1'\n"
+            + "include TestLibrary17194110463836086082 version '1.0.000' called Test";
+    return CqlLibrary.builder()
+        .id(id)
+        .librarySetId("testLibrarySetId")
+        .cqlLibraryName(name)
+        .model(model)
+        .cql(cql)
+        .draft(true)
+        .createdAt(Instant.now())
+        .createdBy("User2")
+        .librarySet(LibrarySet.builder().librarySetId("testLibrarySetId").owner(USERNAME).build())
+        .lastModifiedAt(Instant.now().plus(1, ChronoUnit.MINUTES))
+        .lastModifiedBy(username)
+        .build();
   }
 }

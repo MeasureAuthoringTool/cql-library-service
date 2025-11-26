@@ -17,6 +17,7 @@ import gov.cms.madie.cqllibraryservice.repositories.CqlLibraryRepository;
 import gov.cms.madie.models.library.LibrarySet;
 import gov.cms.madie.models.measure.ElmJson;
 
+import java.time.Instant;
 import java.util.*;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -25,6 +26,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.apache.commons.collections4.CollectionUtils;
+import gov.cms.madie.cqllibraryservice.utils.LibraryUtils;
 
 @Slf4j
 @Service
@@ -39,6 +41,60 @@ public class CqlLibraryService {
   private MeasureServiceClient measureServiceClient;
   private final AppConfigService appConfigService;
   private final CqlLibraryLockService cqlLibraryLockService;
+
+  public CqlLibrary updateCqlLibrary(CqlLibrary cqlLibrary, String username) {
+    if (cqlLibrary == null || StringUtils.isBlank(cqlLibrary.getId())) {
+      throw new BadRequestObjectException("CQL Library or CQL Library ID cannot be null.");
+    }
+
+    if (StringUtils.isBlank(username)) {
+      throw new BadRequestObjectException("Harp id cannot be null or empty.");
+    }
+
+    // Retrieve the persisted library and validate access
+    CqlLibrary persistedLibrary = findCqlLibraryById(cqlLibrary.getId(), username);
+    AuthUtils.checkAccessPermissions(persistedLibrary, username);
+
+    // Validate that library is in draft state
+    if (!persistedLibrary.isDraft()) {
+      throw new InvalidResourceStateException("CQL Library", cqlLibrary.getId());
+    }
+
+    if (appConfigService.isFlagEnabled(MadieFeatureFlag.LOCKING)) {
+      LockInfo lockInfo = cqlLibraryLockService.lockCqlLibrary(persistedLibrary.getId(), username);
+      if (lockInfo != null && lockInfo.isLocked() && !lockInfo.getLockedBy().equals(username)) {
+        throw new ResourceLockedException(
+            "Unable to update CQL Library", cqlLibrary.getId(), lockInfo.getLockedBy());
+      }
+    }
+
+    // Check for duplicate library name if name was changed
+    if (isCqlLibraryNameChanged(cqlLibrary, persistedLibrary)) {
+      checkDuplicateCqlLibraryName(cqlLibrary.getCqlLibraryName());
+    }
+
+    // Update includedLibraries if cql changed
+    if (!StringUtils.equals(cqlLibrary.getCql(), persistedLibrary.getCql())) {
+      cqlLibrary.setIncludedLibraries(LibraryUtils.getIncludedLibraries(cqlLibrary.getCql()));
+    }
+
+    // Preserve fields that should not be changed
+    cqlLibrary.setLibrarySet(persistedLibrary.getLibrarySet());
+    cqlLibrary.setDraft(persistedLibrary.isDraft());
+    cqlLibrary.setVersion(persistedLibrary.getVersion());
+    cqlLibrary.setCreatedAt(persistedLibrary.getCreatedAt());
+    cqlLibrary.setCreatedBy(persistedLibrary.getCreatedBy());
+
+    // Set modification metadata
+    cqlLibrary.setLastModifiedAt(Instant.now());
+    cqlLibrary.setLastModifiedBy(username);
+
+    // Save and log action
+    CqlLibrary savedLibrary = cqlLibraryRepository.save(cqlLibrary);
+    actionLogService.logAction(savedLibrary.getId(), ActionType.UPDATED, username, "actionLog");
+
+    return savedLibrary;
+  }
 
   public Page<LibraryListDTO> getLibrariesByCriteria(
       LibrarySearchCriteria librarySearchCriteria,
