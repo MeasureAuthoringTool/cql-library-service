@@ -67,7 +67,7 @@ public class CleanUpSharedPermissionsChangeUnit {
                     actionType,
                     "admin",
                     userId,
-                    "Cleaning up share access on owned measure");
+                    "Cleaning up share access on owned library");
               });
           log.info(
               "Logging actions for LibrarySetId: [{}], owner: [{}], size: [{}]",
