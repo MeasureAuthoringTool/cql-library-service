@@ -113,7 +113,7 @@ public class CleanUpSharedPermissionsChangeUnitTest {
 
     changeUnit.rollbackExecution(librarySetRepository);
 
-    verify(librarySetRepository, times(1)).deleteAll();
+    verify(librarySetRepository, times(1)).deleteAll(any(List.class));
     verify(librarySetRepository, times(1)).saveAll(any(List.class));
   }
 }

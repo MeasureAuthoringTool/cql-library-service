@@ -22,6 +22,7 @@ import lombok.extern.slf4j.Slf4j;
 @ChangeUnit(id = "cleanup_shared_permissions_for_owners", order = "1", author = "madie_dev")
 public class CleanUpSharedPermissionsChangeUnit {
   private List<LibrarySet> librarySets = new ArrayList<>();
+  private List<LibrarySet> originalLibrarySets = new ArrayList<>();
   private List<LibrarySet> updatedLibrarySets = new ArrayList<>();
   private final ActionLogService actionLogService;
 
@@ -54,6 +55,8 @@ public class CleanUpSharedPermissionsChangeUnit {
           }
         }
         if (librarySet.getAcls().size() != updatedAcls.size()) {
+          // save to originalLibrarySets before update, for possible roll back
+          originalLibrarySets.add(librarySet);
           librarySet.setAcls(updatedAcls);
           updatedLibrarySets.add(librarySet);
           librarySetRepository.save(librarySet);
@@ -82,7 +85,7 @@ public class CleanUpSharedPermissionsChangeUnit {
   public void rollbackExecution(LibrarySetRepository librarySetRepository) {
     log.debug("Entering rollbackExecution()");
 
-    librarySetRepository.deleteAll();
-    librarySetRepository.saveAll(librarySets);
+    librarySetRepository.deleteAll(updatedLibrarySets);
+    librarySetRepository.saveAll(originalLibrarySets);
   }
 }
