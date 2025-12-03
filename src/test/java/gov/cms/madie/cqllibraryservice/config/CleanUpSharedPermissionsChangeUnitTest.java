@@ -87,7 +87,6 @@ public class CleanUpSharedPermissionsChangeUnitTest {
     verify(actionLogService, times(2))
         .logShareAccessControlAction(
             anyString(), any(ActionType.class), anyString(), anyString(), anyString());
-    // verify(librarySetRepository, times(1)).saveAll(any(List.class));
     verify(librarySetRepository, times(2)).save(any(LibrarySet.class));
   }
 
@@ -104,7 +103,6 @@ public class CleanUpSharedPermissionsChangeUnitTest {
     verify(actionLogService, times(0))
         .logShareAccessControlAction(
             anyString(), any(ActionType.class), anyString(), anyString(), anyString());
-    // verify(librarySetRepository, times(1)).saveAll(any(List.class));
     verify(librarySetRepository, times(0)).save(any(LibrarySet.class));
   }
 
