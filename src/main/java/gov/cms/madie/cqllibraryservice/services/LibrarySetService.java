@@ -202,7 +202,32 @@ public class LibrarySetService {
 
     LibrarySet librarySet = optionalLibrarySet.get();
     String originalOwner = librarySet.getOwner();
+
     librarySet.setOwner(userId);
+
+    boolean previouslyShared = false;
+
+    // Remove SHARED_WITH role from new owner if it exists
+    if (!CollectionUtils.isEmpty(librarySet.getAcls())) {
+      // Find the ACL for the user
+      AclSpecification userAcl =
+          librarySet.getAcls().stream()
+              .filter(acl -> acl.getUserId().equals(userId) && acl.getRoles() != null)
+              .findFirst()
+              .orElse(null);
+
+      if (userAcl != null) {
+        // Remove SHARED_WITH role
+        previouslyShared = userAcl.getRoles().remove(RoleEnum.SHARED_WITH);
+
+        // Remove ACL entirely if no roles remain
+        if (userAcl.getRoles().isEmpty()) {
+          librarySet.getAcls().remove(userAcl);
+        }
+      }
+    }
+
+    // Retain SHARED access for original owner if requested
     if (retainShareAccess) {
       List<AclSpecification> acls =
           !CollectionUtils.isEmpty(librarySet.getAcls()) ? librarySet.getAcls() : new ArrayList<>();
@@ -215,6 +240,7 @@ public class LibrarySetService {
     }
 
     LibrarySet updatedLibrarySet = librarySetRepository.save(librarySet);
+
     log.info(
         "Library set [{}] ownership transferred from original owner [{}] "
             + "to new owner [{}] by user [{}]",
@@ -228,14 +254,35 @@ public class LibrarySetService {
         conductedBy,
         "librarySetActionLog",
         String.format("Transferred from %s to %s", originalOwner, userId));
+
     if (retainShareAccess) {
       actionLogService.logShareAccessControlAction(
-          librarySet.getLibrarySetId(),
+          updatedLibrarySet.getLibrarySetId(),
           ActionType.SHARED,
           conductedBy,
           originalOwner,
-          String.format("Shared with - %s", userId));
+          String.format("Shared with - %s", originalOwner));
+
+      log.info(
+          "Retained SHARED role for user [{}] on library set [{}] after ownership transfer",
+          originalOwner,
+          updatedLibrarySet.getLibrarySetId());
     }
+
+    if (previouslyShared) {
+      actionLogService.logShareAccessControlAction(
+          updatedLibrarySet.getLibrarySetId(),
+          ActionType.UNSHARED,
+          "admin",
+          userId,
+          String.format("%s now has owner permissions instead of share permissions", userId));
+
+      log.info(
+          "Removed SHARED role for user [{}] on library set [{}] after ownership transfer",
+          userId,
+          updatedLibrarySet.getLibrarySetId());
+    }
+
     return updatedLibrarySet;
   }
 

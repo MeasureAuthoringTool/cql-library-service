@@ -248,8 +248,56 @@ class LibrarySetServiceTest {
     assertEquals("oldOwner", result.getAcls().get(0).getUserId());
     assertTrue(result.getAcls().get(0).getRoles().contains(RoleEnum.SHARED_WITH));
     verify(actionLogService, times(1))
+        .logAction(
+            "1",
+            ActionType.OWNERSHIP_TRANSFER,
+            "adminUser",
+            "librarySetActionLog",
+            "Transferred from oldOwner to newOwner");
+    verify(actionLogService, times(1))
         .logShareAccessControlAction(
-            "1", ActionType.SHARED, "adminUser", "oldOwner", "Shared with - newOwner");
+            "1", ActionType.SHARED, "adminUser", "oldOwner", "Shared with - oldOwner");
+  }
+
+  @Test
+  public void updateOwnershipRemovesPreviouslySharedRole() {
+    AclSpecification acl =
+        AclSpecification.builder()
+            .userId("newOwner")
+            .roles(new HashSet<>(Set.of(RoleEnum.SHARED_WITH)))
+            .build();
+
+    LibrarySet librarySet =
+        LibrarySet.builder()
+            .librarySetId("1")
+            .owner("oldOwner")
+            .acls(new ArrayList<>(List.of(acl)))
+            .build();
+
+    LibrarySet updatedLibrarySet =
+        LibrarySet.builder().librarySetId("1").owner("newOwner").acls(new ArrayList<>()).build();
+
+    when(librarySetRepository.findByLibrarySetId("1")).thenReturn(Optional.of(librarySet));
+    when(librarySetRepository.save(any(LibrarySet.class))).thenReturn(updatedLibrarySet);
+
+    LibrarySet result = librarySetService.updateOwnership("1", "newOwner", false, "adminUser");
+
+    assertEquals("newOwner", result.getOwner());
+    assertTrue(result.getAcls().isEmpty());
+    verify(actionLogService, times(1))
+        .logAction(
+            "1",
+            ActionType.OWNERSHIP_TRANSFER,
+            "adminUser",
+            "librarySetActionLog",
+            "Transferred from oldOwner to newOwner");
+    verify(actionLogService, times(1))
+        .logShareAccessControlAction(
+            "1",
+            ActionType.UNSHARED,
+            "admin",
+            "newOwner",
+            "newOwner now has owner permissions instead of share permissions");
   }
 
   @Test

@@ -135,4 +135,18 @@ public class CqlLibraryLockServiceTest {
     List<String> expected = List.of(msg1, msg2);
     assertEquals(expected, results);
   }
+
+  @Test
+  public void testFindByCqlLibraryId() {
+    when(repository.findByCqlLibraryId(anyString())).thenReturn(Optional.of(lock));
+    CqlLibraryLock lock = service.findByCqlLibraryId("testLibraryId");
+    assertNotNull(lock);
+  }
+
+  @Test
+  public void testFindByCqlLibraryIdNotFound() {
+    when(repository.findByCqlLibraryId(anyString())).thenReturn(Optional.empty());
+    CqlLibraryLock lock = service.findByCqlLibraryId("testLibraryId");
+    assertNull(lock);
+  }
 }

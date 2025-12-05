@@ -96,4 +96,9 @@ public class CqlLibraryLockService {
     }
     return deleteMessages;
   }
+
+  public CqlLibraryLock findByCqlLibraryId(String libraryId) {
+    Optional<CqlLibraryLock> existingLock = cqlLibraryLockRepository.findByCqlLibraryId(libraryId);
+    return existingLock.isPresent() ? existingLock.get() : null;
+  }
 }
