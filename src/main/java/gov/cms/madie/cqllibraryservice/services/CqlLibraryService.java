@@ -11,6 +11,7 @@ import gov.cms.madie.models.access.AclSpecification;
 import gov.cms.madie.models.access.RoleEnum;
 import gov.cms.madie.models.common.*;
 import gov.cms.madie.models.dto.LibraryUsage;
+import gov.cms.madie.models.dto.UserDetailsDto;
 import gov.cms.madie.models.library.CqlLibrary;
 import gov.cms.madie.models.library.CqlLibraryLockInfo;
 import gov.cms.madie.cqllibraryservice.repositories.CqlLibraryRepository;
@@ -18,6 +19,8 @@ import gov.cms.madie.models.library.LibrarySet;
 import gov.cms.madie.models.measure.ElmJson;
 
 import java.util.*;
+import java.util.stream.Collectors;
+
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
@@ -39,14 +42,60 @@ public class CqlLibraryService {
   private MeasureServiceClient measureServiceClient;
   private final AppConfigService appConfigService;
   private final CqlLibraryLockService cqlLibraryLockService;
+  private final UserServiceClient userServiceClient;
 
   public Page<LibraryListDTO> getLibrariesByCriteria(
       LibrarySearchCriteria librarySearchCriteria,
       OwnershipType ownershipType,
       Pageable pageReq,
       String username) {
-    return cqlLibraryRepository.searchLibrariesByCriteria(
-        username, pageReq, librarySearchCriteria, ownershipType);
+
+    Page<LibraryListDTO> librariesPage =
+        cqlLibraryRepository.searchLibrariesByCriteria(
+            username, pageReq, librarySearchCriteria, ownershipType);
+    if (appConfigService.isFlagEnabled(MadieFeatureFlag.DISPLAY_OWNER)) {
+      log.debug("Enriching {} libraries with user details", librariesPage.getContent().size());
+      enrichWithUserDetails(librariesPage.getContent());
+    }
+    return librariesPage;
+  }
+
+  private void enrichWithUserDetails(List<LibraryListDTO> libraries) {
+    if (CollectionUtils.isEmpty(libraries)) {
+      log.debug("No libraries to enrich");
+      return;
+    }
+
+    // Extract unique owner HARP IDs
+    List<String> ownerIds =
+        libraries.stream()
+            .map(lib -> lib.getLibrarySet() != null ? lib.getLibrarySet().getOwner() : null)
+            .filter(Objects::nonNull)
+            .distinct()
+            .collect(Collectors.toList());
+
+    log.debug("Found {} unique owner IDs: {}", ownerIds.size(), ownerIds);
+
+    if (ownerIds.isEmpty()) {
+      log.debug("No owner IDs found to fetch user details");
+      return;
+    }
+
+    // Fetch user details in bulk
+    Map<String, UserDetailsDto> userDetailsMap = userServiceClient.getBulkUserDetails(ownerIds);
+
+    // Enrich each measure with user details
+    libraries.forEach(
+        library -> {
+          if (library.getLibrarySet() != null && library.getLibrarySet().getOwner() != null) {
+            String ownerId = library.getLibrarySet().getOwner();
+            UserDetailsDto userDetails = userDetailsMap.get(ownerId);
+
+            if (userDetails != null) {
+              library.setOwner(userDetails.getFirstName());
+            }
+          }
+        });
   }
 
   public void checkDuplicateCqlLibraryName(String cqlLibraryName) {
