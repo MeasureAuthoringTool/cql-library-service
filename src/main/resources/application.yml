@@ -2,7 +2,7 @@ spring:
   data:
     mongodb:
       database: ${MONGO_DATABASE:madiecqllibrary}
-      uri: ${MONGO_URI:mongodb://${DBUSER}:${DBPASS}@localhost:27017/madiecqllibrary}?authSource=admin&maxPoolSize=50&connectTimeoutMS=2000&serverSelectionTimeoutMS=2000
+      uri: ${MONGO_URI:mongodb://localhost:27017/madiecqllibrary}?authSource=admin&maxPoolSize=50&connectTimeoutMS=2000&serverSelectionTimeoutMS=2000
 
 server:
   port: 8082
@@ -19,7 +19,7 @@ madie:
       fhir-base-url: ${FHIR_ELM_TRANSLATOR_SERVICE_URL:http://localhost:8083/api/fhir}
       elm-json-uri: /cql/translator/cql
   user-service:
-    base-url: ${USER_SERVICE_URL:http://localhost:8088/api}
+    base-url: ${USER_SERVICE_URL:http://localhost:8087/api}
   service-config:
     json-url: ${SERVICE_CONFIG_JSON_URL:http://localhost:9000/env-config/serviceConfig.json}
 
@@ -40,4 +40,3 @@ admin-api-key: ${ADMIN_API_KEY:0a51991c}
 mongock:
   migration-scan-package:
     - gov.cms.madie.cqllibraryservice.config
-
