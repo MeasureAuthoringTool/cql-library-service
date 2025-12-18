@@ -388,8 +388,26 @@ public class CqlLibraryService {
     if (StringUtils.isBlank(librarySetId)) {
       throw new BadRequestObjectException("Please provide library set ID.");
     }
-    return cqlLibraryRepository.findLibrariesByLibrarySetId(
-        librarySetId, sortByLatestVersion, librarySearchCriteria);
+    List<LibraryListDTO> librariesByLibrarySetId =
+        cqlLibraryRepository.findLibrariesByLibrarySetId(
+            librarySetId, sortByLatestVersion, librarySearchCriteria);
+
+    if (appConfigService.isFlagEnabled(MadieFeatureFlag.DISPLAY_OWNER)) {
+      log.debug("Enriching {} libraries with user details", librariesByLibrarySetId.size());
+
+      if (CollectionUtils.isNotEmpty(librariesByLibrarySetId)
+          && librariesByLibrarySetId.get(0).getLibrarySet() != null) {
+        UserDetailsDto singleUserDetails =
+            userServiceClient.getSingleUserDetails(
+                librariesByLibrarySetId.get(0).getLibrarySet().getOwner());
+        if (singleUserDetails != null) {
+          librariesByLibrarySetId.forEach(
+              library -> library.setOwner(singleUserDetails.getFirstName()));
+        }
+      }
+    }
+
+    return librariesByLibrarySetId;
   }
 
   public boolean hasAssociatedLibraries(LibraryListDTO library) {
