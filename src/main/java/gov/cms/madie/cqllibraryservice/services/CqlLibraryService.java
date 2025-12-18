@@ -158,10 +158,16 @@ public class CqlLibraryService {
             UserDetailsDto userDetails = userDetailsMap.get(ownerId);
 
             if (userDetails != null) {
-              library.setOwner(userDetails.getFirstName());
+              library.setOwner(getFullName(userDetails));
             }
           }
         });
+  }
+
+  private String getFullName(UserDetailsDto userDetails) {
+    String firstName = userDetails.getFirstName() != null ? userDetails.getFirstName() : "";
+    String lastName = userDetails.getLastName() != null ? userDetails.getLastName() : "";
+    return firstName + " " + lastName;
   }
 
   public void checkDuplicateCqlLibraryName(String cqlLibraryName) {
