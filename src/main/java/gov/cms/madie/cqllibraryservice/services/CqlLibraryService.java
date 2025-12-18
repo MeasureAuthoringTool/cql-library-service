@@ -167,7 +167,7 @@ public class CqlLibraryService {
   private String getFullName(UserDetailsDto userDetails) {
     String firstName = userDetails.getFirstName() != null ? userDetails.getFirstName() : "";
     String lastName = userDetails.getLastName() != null ? userDetails.getLastName() : "";
-    return firstName + " " + lastName;
+    return (firstName + " " + lastName).trim();
   }
 
   public void checkDuplicateCqlLibraryName(String cqlLibraryName) {
