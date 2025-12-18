@@ -408,7 +408,7 @@ public class CqlLibraryService {
                 librariesByLibrarySetId.get(0).getLibrarySet().getOwner());
         if (singleUserDetails != null) {
           librariesByLibrarySetId.forEach(
-              library -> library.setOwner(singleUserDetails.getFirstName()));
+              library -> library.setOwner(getFullName(singleUserDetails)));
         }
       }
     }

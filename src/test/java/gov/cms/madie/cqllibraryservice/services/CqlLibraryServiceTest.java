@@ -20,6 +20,7 @@ import gov.cms.madie.models.access.AclSpecification;
 import gov.cms.madie.models.access.RoleEnum;
 import gov.cms.madie.models.common.*;
 import gov.cms.madie.models.dto.LibraryUsage;
+import gov.cms.madie.models.dto.UserDetailsDto;
 import gov.cms.madie.models.library.CqlLibrary;
 import gov.cms.madie.cqllibraryservice.repositories.CqlLibraryRepository;
 import gov.cms.madie.models.library.LibrarySet;
@@ -55,6 +56,8 @@ class CqlLibraryServiceTest {
   @Mock private ActionLogService actionLogService;
   @Mock private AppConfigService appConfigService;
   @Mock private CqlLibraryLockService cqlLibraryLockService;
+
+  @Mock private UserServiceClient userServiceClient;
 
   private final String USERNAME = "testUserName";
 
@@ -1466,5 +1469,81 @@ class CqlLibraryServiceTest {
         .lastModifiedAt(Instant.now().plus(1, ChronoUnit.MINUTES))
         .lastModifiedBy(username)
         .build();
+  }
+
+  @Test
+  public void getLibrariesByLibrarySetIdReturnsLibrariesWithOwnerDetails() {
+    String librarySetId = "testSetId";
+    String ownerId = "owner123";
+    LibrarySearchCriteria criteria =
+        LibrarySearchCriteria.builder().searchField("testField").build();
+    LibrarySet librarySet = LibrarySet.builder().owner(ownerId).build();
+    LibraryListDTO library =
+        LibraryListDTO.builder().id("L1").librarySetId(librarySetId).librarySet(librarySet).build();
+    UserDetailsDto userDetails = UserDetailsDto.builder().firstName("John").lastName("Doe").build();
+
+    when(cqlLibraryRepository.findLibrariesByLibrarySetId(eq(librarySetId), eq(true), eq(criteria)))
+        .thenReturn(List.of(library));
+    when(appConfigService.isFlagEnabled(MadieFeatureFlag.DISPLAY_OWNER)).thenReturn(true);
+    when(userServiceClient.getSingleUserDetails(eq(ownerId))).thenReturn(userDetails);
+
+    List<LibraryListDTO> result =
+        cqlLibraryService.getLibrariesByLibrarySetId(librarySetId, true, criteria);
+
+    assertNotNull(result);
+    assertEquals(1, result.size());
+    assertEquals("John Doe", result.get(0).getOwner());
+    verify(userServiceClient, times(1)).getSingleUserDetails(eq(ownerId));
+  }
+
+  @Test
+  public void getLibrariesByLibrarySetIdReturnsLibrariesWithoutOwnerDetailsWhenFlagDisabled() {
+    String librarySetId = "testSetId";
+    LibrarySearchCriteria criteria =
+        LibrarySearchCriteria.builder().searchField("testField").build();
+    LibraryListDTO library = LibraryListDTO.builder().id("L1").librarySetId(librarySetId).build();
+
+    when(cqlLibraryRepository.findLibrariesByLibrarySetId(eq(librarySetId), eq(true), eq(criteria)))
+        .thenReturn(List.of(library));
+    when(appConfigService.isFlagEnabled(MadieFeatureFlag.DISPLAY_OWNER)).thenReturn(false);
+
+    List<LibraryListDTO> result =
+        cqlLibraryService.getLibrariesByLibrarySetId(librarySetId, true, criteria);
+
+    assertNotNull(result);
+    assertEquals(1, result.size());
+    assertNull(result.get(0).getOwner());
+    verifyNoInteractions(userServiceClient);
+  }
+
+  @Test
+  public void getLibrariesByLibrarySetIdThrowsExceptionWhenLibrarySetIdIsBlank() {
+    LibrarySearchCriteria criteria =
+        LibrarySearchCriteria.builder().searchField("testField").build();
+
+    Exception exception =
+        assertThrows(
+            BadRequestObjectException.class,
+            () -> cqlLibraryService.getLibrariesByLibrarySetId(" ", true, criteria));
+
+    assertEquals("Please provide library set ID.", exception.getMessage());
+    verifyNoInteractions(cqlLibraryRepository, userServiceClient);
+  }
+
+  @Test
+  public void getLibrariesByLibrarySetIdReturnsEmptyListWhenNoLibrariesFound() {
+    String librarySetId = "testSetId";
+    LibrarySearchCriteria criteria =
+        LibrarySearchCriteria.builder().searchField("testField").build();
+
+    when(cqlLibraryRepository.findLibrariesByLibrarySetId(eq(librarySetId), eq(true), eq(criteria)))
+        .thenReturn(Collections.emptyList());
+
+    List<LibraryListDTO> result =
+        cqlLibraryService.getLibrariesByLibrarySetId(librarySetId, true, criteria);
+
+    assertNotNull(result);
+    assertTrue(result.isEmpty());
+    verifyNoInteractions(userServiceClient);
   }
 }
