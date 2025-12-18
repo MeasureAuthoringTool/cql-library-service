@@ -78,21 +78,17 @@ public class UserServiceClient {
       log.debug("Requesting user details for HARP ID: {}", harpId);
 
       ResponseEntity<UserDetailsDto> responseEntity =
-              userServiceRestTemplate.exchange(
-                      url,
-                      HttpMethod.GET,
-                      request,
-                      UserDetailsDto.class);
+          userServiceRestTemplate.exchange(url, HttpMethod.GET, request, UserDetailsDto.class);
 
       UserDetailsDto response = responseEntity.getBody();
       log.debug("Successfully retrieved user details for HARP ID: {}", harpId);
       return response;
     } catch (Exception e) {
       log.error(
-              "Failed to fetch user details from user service for HARP ID [{}]: {}",
-              harpId,
-              e.getMessage(),
-              e);
+          "Failed to fetch user details from user service for HARP ID [{}]: {}",
+          harpId,
+          e.getMessage(),
+          e);
       return null;
     }
   }
