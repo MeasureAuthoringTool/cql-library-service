@@ -10,7 +10,6 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpRequest;
 import org.springframework.http.client.ClientHttpRequestExecution;
 import org.springframework.http.client.ClientHttpRequestInterceptor;
-import org.springframework.http.client.HttpComponentsClientHttpRequestFactory;
 import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -24,19 +23,13 @@ public class UserServiceClientConfig {
   @Value("${madie.user-service.base-url}")
   private String userServiceBaseUrl;
 
-  @Bean(name = "userServiceRestTemplate")
+  @Bean
   public RestTemplate userServiceRestTemplate(ObjectMapper objectMapper) {
     MappingJackson2HttpMessageConverter messageConverter =
         new MappingJackson2HttpMessageConverter();
     messageConverter.setObjectMapper(objectMapper);
 
-    HttpComponentsClientHttpRequestFactory requestFactory =
-        new HttpComponentsClientHttpRequestFactory();
-    requestFactory.setConnectTimeout(5000);
-    requestFactory.setReadTimeout(10000);
-
     return new RestTemplateBuilder()
-        .requestFactory(() -> requestFactory)
         .additionalMessageConverters(messageConverter)
         .additionalInterceptors(bearerTokenInterceptor())
         .build();

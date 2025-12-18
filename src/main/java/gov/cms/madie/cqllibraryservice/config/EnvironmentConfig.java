@@ -19,4 +19,7 @@ public class EnvironmentConfig {
 
   @Value("${madie.measure-service.base-url}")
   private String measureServiceBaseUrl;
+
+  @Value("${madie.user-service.base-url}")
+  private String userServiceBaseUrl;
 }

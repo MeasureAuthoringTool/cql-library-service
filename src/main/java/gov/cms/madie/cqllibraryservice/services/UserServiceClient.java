@@ -1,17 +1,17 @@
 package gov.cms.madie.cqllibraryservice.services;
 
+import gov.cms.madie.cqllibraryservice.config.EnvironmentConfig;
 import gov.cms.madie.models.dto.DetailsRequestDto;
 import gov.cms.madie.models.dto.UserDetailsDto;
-import lombok.RequiredArgsConstructor;
+import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.stereotype.Component;
+import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
 import org.springframework.web.client.RestTemplate;
 
@@ -20,14 +20,12 @@ import java.util.List;
 import java.util.Map;
 
 @Slf4j
-@Component
-@RequiredArgsConstructor
+@Service
+@AllArgsConstructor
 public class UserServiceClient {
 
   private final RestTemplate userServiceRestTemplate;
-
-  @Value("${madie.user-service.base-url}")
-  private String userServiceBaseUrl;
+  private EnvironmentConfig environmentConfig;
 
   /**
    * Fetches user details in bulk from the user service.
@@ -41,15 +39,11 @@ public class UserServiceClient {
     }
 
     try {
-      String url = userServiceBaseUrl + "/api/users/details";
-
+      String url = environmentConfig.getUserServiceBaseUrl() + "/users/details";
       HttpHeaders headers = new HttpHeaders();
       headers.setContentType(MediaType.APPLICATION_JSON);
-
       DetailsRequestDto requestBody = DetailsRequestDto.builder().harpIds(harpIds).build();
-
       HttpEntity<DetailsRequestDto> request = new HttpEntity<>(requestBody, headers);
-
       log.debug("Requesting user details for HARP IDs: {}", harpIds);
 
       ResponseEntity<Map<String, UserDetailsDto>> responseEntity =
@@ -60,23 +54,8 @@ public class UserServiceClient {
               new ParameterizedTypeReference<Map<String, UserDetailsDto>>() {});
 
       Map<String, UserDetailsDto> response = responseEntity.getBody();
-
-      log.debug("Received response from user service: {}", response);
-
-      if (response != null) {
-        response.forEach(
-            (harpId, details) -> {
-              log.debug(
-                  "User details for {}: firstName={}, lastName={}, email={}",
-                  harpId,
-                  details != null ? details.getFirstName() : "null",
-                  details != null ? details.getLastName() : "null",
-                  details != null ? details.getEmail() : "null");
-            });
-      }
-
+      log.debug("Successfully retrieved user details for HARP IDs: {}", harpIds);
       return response != null ? response : Collections.emptyMap();
-
     } catch (Exception e) {
       log.error(
           "Failed to fetch user details from user service for {} HARP IDs: {}",
@@ -84,6 +63,37 @@ public class UserServiceClient {
           e.getMessage(),
           e);
       return Collections.emptyMap();
+    }
+  }
+
+  public UserDetailsDto getSingleUserDetails(String harpId) {
+    if (harpId == null || harpId.isEmpty()) {
+      return null;
+    }
+    try {
+      String url = environmentConfig.getUserServiceBaseUrl() + "/users/" + harpId + "/details";
+      HttpHeaders headers = new HttpHeaders();
+      headers.setContentType(MediaType.APPLICATION_JSON);
+      HttpEntity<Void> request = new HttpEntity<>(headers);
+      log.debug("Requesting user details for HARP ID: {}", harpId);
+
+      ResponseEntity<UserDetailsDto> responseEntity =
+              userServiceRestTemplate.exchange(
+                      url,
+                      HttpMethod.GET,
+                      request,
+                      UserDetailsDto.class);
+
+      UserDetailsDto response = responseEntity.getBody();
+      log.debug("Successfully retrieved user details for HARP ID: {}", harpId);
+      return response;
+    } catch (Exception e) {
+      log.error(
+              "Failed to fetch user details from user service for HARP ID [{}]: {}",
+              harpId,
+              e.getMessage(),
+              e);
+      return null;
     }
   }
 }
