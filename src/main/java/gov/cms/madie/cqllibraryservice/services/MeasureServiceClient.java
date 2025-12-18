@@ -22,7 +22,7 @@ import java.util.List;
 @AllArgsConstructor
 public class MeasureServiceClient {
   private EnvironmentConfig environmentConfig;
-  private RestTemplate restTemplate;
+  private RestTemplate genericRestTemplate;
 
   public List<LibraryUsage> getLibraryUsageInMeasures(String libraryName, String accessToken) {
     try {
@@ -35,7 +35,7 @@ public class MeasureServiceClient {
       headers.setContentType(MediaType.TEXT_PLAIN);
       headers.set(HttpHeaders.AUTHORIZATION, accessToken);
       ResponseEntity<List<LibraryUsage>> responseEntity =
-          restTemplate.exchange(
+          genericRestTemplate.exchange(
               new RequestEntity<>(headers, HttpMethod.GET, uri),
               new ParameterizedTypeReference<>() {});
       return responseEntity.getBody();

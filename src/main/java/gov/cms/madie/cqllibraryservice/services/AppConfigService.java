@@ -15,13 +15,13 @@ import org.springframework.web.client.RestTemplate;
 @Service
 public class AppConfigService {
   private final AppConfigServiceConfig appConfigServiceConfig;
-  private final RestTemplate appConfigRestTemplate;
+  private final RestTemplate genericRestTemplate;
   private Map<String, Boolean> featureFlags;
 
   @Autowired
   public AppConfigService(
-      RestTemplate appConfigRestTemplate, AppConfigServiceConfig appConfigServiceConfig) {
-    this.appConfigRestTemplate = appConfigRestTemplate;
+      RestTemplate genericRestTemplate, AppConfigServiceConfig appConfigServiceConfig) {
+    this.genericRestTemplate = genericRestTemplate;
     this.appConfigServiceConfig = appConfigServiceConfig;
   }
 
@@ -30,7 +30,7 @@ public class AppConfigService {
   public void refreshAppConfig() {
     try {
       ServiceConfig serviceConfig =
-          appConfigRestTemplate.getForObject(
+          genericRestTemplate.getForObject(
               appConfigServiceConfig.getServiceConfigJsonUrl(), ServiceConfig.class);
       log.info("Initializing cql-library-service with serviceConfig: {}", serviceConfig);
       featureFlags = serviceConfig.getFeatures();

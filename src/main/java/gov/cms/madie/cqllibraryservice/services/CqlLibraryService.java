@@ -11,6 +11,7 @@ import gov.cms.madie.models.access.AclSpecification;
 import gov.cms.madie.models.access.RoleEnum;
 import gov.cms.madie.models.common.*;
 import gov.cms.madie.models.dto.LibraryUsage;
+import gov.cms.madie.models.dto.UserDetailsDto;
 import gov.cms.madie.models.library.CqlLibrary;
 import gov.cms.madie.models.library.CqlLibraryLockInfo;
 import gov.cms.madie.cqllibraryservice.repositories.CqlLibraryRepository;
@@ -19,6 +20,8 @@ import gov.cms.madie.models.measure.ElmJson;
 
 import java.time.Instant;
 import java.util.*;
+import java.util.stream.Collectors;
+
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
@@ -41,6 +44,7 @@ public class CqlLibraryService {
   private MeasureServiceClient measureServiceClient;
   private final AppConfigService appConfigService;
   private final CqlLibraryLockService cqlLibraryLockService;
+  private final UserServiceClient userServiceClient;
 
   public CqlLibrary updateCqlLibrary(CqlLibrary cqlLibrary, String username) {
     if (cqlLibrary == null || StringUtils.isBlank(cqlLibrary.getId())) {
@@ -111,8 +115,59 @@ public class CqlLibraryService {
       OwnershipType ownershipType,
       Pageable pageReq,
       String username) {
-    return cqlLibraryRepository.searchLibrariesByCriteria(
-        username, pageReq, librarySearchCriteria, ownershipType);
+
+    Page<LibraryListDTO> librariesPage =
+        cqlLibraryRepository.searchLibrariesByCriteria(
+            username, pageReq, librarySearchCriteria, ownershipType);
+    if (appConfigService.isFlagEnabled(MadieFeatureFlag.DISPLAY_OWNER)) {
+      log.debug("Enriching {} libraries with user details", librariesPage.getContent().size());
+      enrichWithUserDetails(librariesPage.getContent());
+    }
+    return librariesPage;
+  }
+
+  private void enrichWithUserDetails(List<LibraryListDTO> libraries) {
+    if (CollectionUtils.isEmpty(libraries)) {
+      log.debug("No libraries to enrich");
+      return;
+    }
+
+    // Extract unique owner HARP IDs
+    List<String> ownerIds =
+        libraries.stream()
+            .map(lib -> lib.getLibrarySet() != null ? lib.getLibrarySet().getOwner() : null)
+            .filter(Objects::nonNull)
+            .distinct()
+            .collect(Collectors.toList());
+
+    log.debug("Found {} unique owner IDs: {}", ownerIds.size(), ownerIds);
+
+    if (ownerIds.isEmpty()) {
+      log.debug("No owner IDs found to fetch user details");
+      return;
+    }
+
+    // Fetch user details in bulk
+    Map<String, UserDetailsDto> userDetailsMap = userServiceClient.getBulkUserDetails(ownerIds);
+
+    // Enrich each measure with user details
+    libraries.forEach(
+        library -> {
+          if (library.getLibrarySet() != null && library.getLibrarySet().getOwner() != null) {
+            String ownerId = library.getLibrarySet().getOwner();
+            UserDetailsDto userDetails = userDetailsMap.get(ownerId);
+
+            if (userDetails != null) {
+              library.setOwner(getFullName(userDetails));
+            }
+          }
+        });
+  }
+
+  private String getFullName(UserDetailsDto userDetails) {
+    String firstName = userDetails.getFirstName() != null ? userDetails.getFirstName() : "";
+    String lastName = userDetails.getLastName() != null ? userDetails.getLastName() : "";
+    return firstName + " " + lastName;
   }
 
   public void checkDuplicateCqlLibraryName(String cqlLibraryName) {
@@ -339,8 +394,26 @@ public class CqlLibraryService {
     if (StringUtils.isBlank(librarySetId)) {
       throw new BadRequestObjectException("Please provide library set ID.");
     }
-    return cqlLibraryRepository.findLibrariesByLibrarySetId(
-        librarySetId, sortByLatestVersion, librarySearchCriteria);
+    List<LibraryListDTO> librariesByLibrarySetId =
+        cqlLibraryRepository.findLibrariesByLibrarySetId(
+            librarySetId, sortByLatestVersion, librarySearchCriteria);
+
+    if (appConfigService.isFlagEnabled(MadieFeatureFlag.DISPLAY_OWNER)) {
+      log.debug("Enriching {} libraries with user details", librariesByLibrarySetId.size());
+
+      if (CollectionUtils.isNotEmpty(librariesByLibrarySetId)
+          && librariesByLibrarySetId.get(0).getLibrarySet() != null) {
+        UserDetailsDto singleUserDetails =
+            userServiceClient.getSingleUserDetails(
+                librariesByLibrarySetId.get(0).getLibrarySet().getOwner());
+        if (singleUserDetails != null) {
+          librariesByLibrarySetId.forEach(
+              library -> library.setOwner(getFullName(singleUserDetails)));
+        }
+      }
+    }
+
+    return librariesByLibrarySetId;
   }
 
   public boolean hasAssociatedLibraries(LibraryListDTO library) {

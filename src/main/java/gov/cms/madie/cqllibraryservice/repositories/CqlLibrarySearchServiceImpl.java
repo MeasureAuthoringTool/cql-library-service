@@ -218,13 +218,15 @@ public class CqlLibrarySearchServiceImpl implements CqlLibrarySearchService {
     }
 
     MatchOperation matchOperation = match(criteria);
+    LookupOperation lookupOperation = getLookupOperation();
+    UnwindOperation unwindOperation = unwind("librarySet");
 
     Aggregation aggregation;
     if (sortByLatestVersion) {
       SortOperation sortOperation = sort(Sort.by(Sort.Direction.DESC, "version"));
-      aggregation = newAggregation(matchOperation, sortOperation);
+      aggregation = newAggregation(lookupOperation, unwindOperation, matchOperation, sortOperation);
     } else {
-      aggregation = newAggregation(matchOperation);
+      aggregation = newAggregation(lookupOperation, unwindOperation, matchOperation);
     }
     var result = mongoTemplate.aggregate(aggregation, CqlLibrary.class, LibraryListDTO.class);
     return result.getMappedResults();
