@@ -1,8 +1,7 @@
 package gov.cms.madie.cqllibraryservice.dto;
 
-/** Feature flags relevant to the measure-service */
+/** Feature flags relevant to the cql-library-service */
 public enum MadieFeatureFlag {
-  LIBRARY_SEARCH("LibrarySearch"),
   LOCKING("Locking"),
   DISPLAY_OWNER("DisplayOwner");
 
