@@ -12,6 +12,7 @@ import static org.hamcrest.CoreMatchers.notNullValue;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
@@ -1983,15 +1984,19 @@ public class CqlLibraryControllerMvcTest {
                 .draft(false)
                 .build());
 
-    mockMvc
-        .perform(
-            get("/cql-libraries/cql?name=TestFHIRHelpers&version=1.0.000&model=QI-Core v4.1.1")
-                .with(user(TEST_USER_ID))
-                .with(csrf())
-                .header("Authorization", "test-okta")
-                .contentType(MediaType.APPLICATION_JSON_VALUE))
-        .andExpect(status().isOk())
-        .andExpect(content().string("Test Cql"));
+    MvcResult result =
+        mockMvc
+            .perform(
+                get("/cql-libraries/cql?name=TestFHIRHelpers&version=1.0.000&model=QI-Core v4.1.1")
+                    .with(user(TEST_USER_ID))
+                    .with(csrf())
+                    .header("Authorization", "test-okta")
+                    .contentType(MediaType.APPLICATION_JSON_VALUE))
+            .andExpect(status().isOk())
+            .andExpect(content().string("Test Cql"))
+            .andReturn();
+
+    assertNotNull(result.getResponse().getContentAsString(), "Response content should not be null");
   }
 
   @Test
@@ -2021,13 +2026,6 @@ public class CqlLibraryControllerMvcTest {
             .newFileName("NewLibrary.cql")
             .oldText("Old content 1")
             .newText("New content 1")
-            .build();
-
-    CqlDiffResultDTO diffResult =
-        CqlDiffResultDTO.builder()
-            .comparisons(List.of(comparison))
-            .oldLibraryId(oldLibraryId)
-            .newLibraryId(newLibraryId)
             .build();
 
     // Mocking service calls

@@ -172,4 +172,89 @@ public class CqlDifferentiatorServiceTest {
     assertTrue(comparison.getOldText().contains("  ")); // Should have 2 spaces
     assertTrue(comparison.getNewText().contains("  ")); // Should have 2 spaces
   }
+
+  @Test
+  void compareLibrariesReturnsEmptyListWhenBothLibrariesAreEmpty() {
+    Map<String, String> oldLibraries = new HashMap<>();
+    Map<String, String> newLibraries = new HashMap<>();
+
+    List<CqlFileComparisonDTO> result = service.compareLibraries(oldLibraries, newLibraries, true);
+
+    assertNotNull(result);
+    assertTrue(result.isEmpty());
+  }
+
+  @Test
+  void compareLibrariesHandlesNewFileWithoutMatchInOldLibrary() {
+    Map<String, String> oldLibraries = new HashMap<>();
+    Map<String, String> newLibraries = Map.of("NewFile.cql", "library New version '1.0.0'");
+
+    List<CqlFileComparisonDTO> result = service.compareLibraries(oldLibraries, newLibraries, true);
+
+    assertNotNull(result);
+    assertEquals(1, result.size());
+    CqlFileComparisonDTO comparison = result.get(0);
+    assertEquals("not found", comparison.getOldFileName());
+    assertEquals("NewFile.cql", comparison.getNewFileName());
+    assertEquals("", comparison.getOldText());
+    assertEquals("library New version '1.0.0'", comparison.getNewText());
+  }
+
+  @Test
+  void compareLibrariesNormalizesTextCorrectly() {
+    Map<String, String> oldLibraries =
+        Map.of("File.cql", "library Test\r\n\tdefine \"Test\":\r\n\ttrue");
+    Map<String, String> newLibraries =
+        Map.of("File.cql", "library Test\r\n\tdefine \"Test\":\r\n\tfalse");
+
+    List<CqlFileComparisonDTO> result = service.compareLibraries(oldLibraries, newLibraries, true);
+
+    assertNotNull(result);
+    assertEquals(1, result.size());
+    CqlFileComparisonDTO comparison = result.get(0);
+    assertEquals("library Test\n  define \"Test\":\n  true", comparison.getOldText());
+    assertEquals("library Test\n  define \"Test\":\n  false", comparison.getNewText());
+  }
+
+  @Test
+  void compareLibrariesReordersNewLibraryToMatchOldStructure() {
+    Map<String, String> oldLibraries =
+        Map.of(
+            "File.cql",
+            "library Test\n\ncontext Patient\n\ndefine \"A\": true\n\ndefine \"B\": false");
+    Map<String, String> newLibraries =
+        Map.of(
+            "File.cql",
+            "library Test\n\ncontext Patient\n\ndefine \"B\": false\n\ndefine \"A\": true");
+
+    List<CqlFileComparisonDTO> result = service.compareLibraries(oldLibraries, newLibraries, true);
+
+    assertNotNull(result);
+    assertEquals(1, result.size());
+    CqlFileComparisonDTO comparison = result.get(0);
+    assertTrue(
+        comparison.getNewText().indexOf("define \"A\"")
+            < comparison.getNewText().indexOf("define \"B\""));
+  }
+
+  @Test
+  void compareLibrariesDoesNotReorderWhenAutoReorderIsFalse() {
+    Map<String, String> oldLibraries =
+        Map.of(
+            "File.cql",
+            "library Test\n\ncontext Patient\n\ndefine \"A\": true\n\ndefine \"B\": false");
+    Map<String, String> newLibraries =
+        Map.of(
+            "File.cql",
+            "library Test\n\ncontext Patient\n\ndefine \"B\": false\n\ndefine \"A\": true");
+
+    List<CqlFileComparisonDTO> result = service.compareLibraries(oldLibraries, newLibraries, false);
+
+    assertNotNull(result);
+    assertEquals(1, result.size());
+    CqlFileComparisonDTO comparison = result.get(0);
+    assertTrue(
+        comparison.getNewText().indexOf("define \"B\"")
+            < comparison.getNewText().indexOf("define \"A\""));
+  }
 }
