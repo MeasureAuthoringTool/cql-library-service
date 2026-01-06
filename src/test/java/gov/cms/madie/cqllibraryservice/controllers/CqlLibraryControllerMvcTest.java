@@ -1,10 +1,7 @@
 package gov.cms.madie.cqllibraryservice.controllers;
 
 import gov.cms.madie.cqllibraryservice.config.security.SecurityConfig;
-import gov.cms.madie.cqllibraryservice.dto.LibrarySearchCriteria;
-import gov.cms.madie.cqllibraryservice.dto.LibrarySetDTO;
-import gov.cms.madie.cqllibraryservice.dto.LibraryListDTO;
-import gov.cms.madie.cqllibraryservice.dto.SharedUser;
+import gov.cms.madie.cqllibraryservice.dto.*;
 import gov.cms.madie.cqllibraryservice.exceptions.*;
 import gov.cms.madie.cqllibraryservice.services.*;
 import gov.cms.madie.models.common.ModelType;
@@ -1966,5 +1963,100 @@ public class CqlLibraryControllerMvcTest {
 
     verify(cqlLibraryService, times(0))
         .transferLibraries(eq(List.of(libraryId)), eq("testUser"), eq(true), eq(TEST_USER_ID));
+  }
+
+  @Test
+  public void testGetLibraryCqlReturns200() throws Exception {
+    when(cqlLibraryService.getVersionedCqlLibrary(
+            eq("TestFHIRHelpers"),
+            eq("1.0.000"),
+            eq(Optional.of("QI-Core v4.1.1")),
+            anyBoolean(),
+            anyString(),
+            any()))
+        .thenReturn(
+            CqlLibrary.builder()
+                .cqlLibraryName("TestFHIRHelpers")
+                .version(Version.builder().major(1).minor(0).revisionNumber(0).build())
+                .cql("Test Cql")
+                .model("QI-Core v4.1.1")
+                .draft(false)
+                .build());
+
+    mockMvc
+        .perform(
+            get("/cql-libraries/cql?name=TestFHIRHelpers&version=1.0.000&model=QI-Core v4.1.1")
+                .with(user(TEST_USER_ID))
+                .with(csrf())
+                .header("Authorization", "test-okta")
+                .contentType(MediaType.APPLICATION_JSON_VALUE))
+        .andExpect(status().isOk())
+        .andExpect(content().string("Test Cql"));
+  }
+
+  @Test
+  public void testCompareLibrariesReturnsComparisonResult() throws Exception {
+    String oldLibraryId = "oldLibraryId";
+    String newLibraryId = "newLibraryId";
+
+    // Mocking old and new libraries
+    CqlLibrary oldLibrary =
+        CqlLibrary.builder()
+            .id(oldLibraryId)
+            .cqlLibraryName("OldLibrary")
+            .cql("Old content 1")
+            .build();
+
+    CqlLibrary newLibrary =
+        CqlLibrary.builder()
+            .id(newLibraryId)
+            .cqlLibraryName("NewLibrary")
+            .cql("New content 1")
+            .build();
+
+    // Mocking the comparison result
+    CqlFileComparisonDTO comparison =
+        CqlFileComparisonDTO.builder()
+            .oldFileName("OldLibrary.cql")
+            .newFileName("NewLibrary.cql")
+            .oldText("Old content 1")
+            .newText("New content 1")
+            .build();
+
+    CqlDiffResultDTO diffResult =
+        CqlDiffResultDTO.builder()
+            .comparisons(List.of(comparison))
+            .oldLibraryId(oldLibraryId)
+            .newLibraryId(newLibraryId)
+            .build();
+
+    // Mocking service calls
+    when(cqlLibraryService.findCqlLibraryById(eq(oldLibraryId), anyString()))
+        .thenReturn(oldLibrary);
+    when(cqlLibraryService.findCqlLibraryById(eq(newLibraryId), anyString()))
+        .thenReturn(newLibrary);
+    when(cqlDifferentiatorService.compareLibraries(anyMap(), anyMap(), eq(true)))
+        .thenReturn(List.of(comparison));
+
+    // Perform the request
+    mockMvc
+        .perform(
+            get("/cql-libraries/{oldLibraryId}/compare/{newLibraryId}", oldLibraryId, newLibraryId)
+                .with(user(TEST_USER_ID))
+                .with(csrf())
+                .contentType(MediaType.APPLICATION_JSON_VALUE))
+        .andExpect(status().isOk())
+        .andExpect(content().contentType(MediaType.APPLICATION_JSON_VALUE))
+        .andExpect(jsonPath("$.oldLibraryId").value(oldLibraryId))
+        .andExpect(jsonPath("$.newLibraryId").value(newLibraryId))
+        .andExpect(jsonPath("$.comparisons[0].oldFileName").value("OldLibrary.cql"))
+        .andExpect(jsonPath("$.comparisons[0].newFileName").value("NewLibrary.cql"))
+        .andExpect(jsonPath("$.comparisons[0].oldText").value("Old content 1"))
+        .andExpect(jsonPath("$.comparisons[0].newText").value("New content 1"));
+
+    // Verify interactions
+    verify(cqlLibraryService, times(1)).findCqlLibraryById(eq(oldLibraryId), anyString());
+    verify(cqlLibraryService, times(1)).findCqlLibraryById(eq(newLibraryId), anyString());
+    verify(cqlDifferentiatorService, times(1)).compareLibraries(anyMap(), anyMap(), eq(true));
   }
 }
