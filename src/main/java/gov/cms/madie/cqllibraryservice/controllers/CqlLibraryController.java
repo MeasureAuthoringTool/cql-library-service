@@ -1,9 +1,6 @@
 package gov.cms.madie.cqllibraryservice.controllers;
 
-import gov.cms.madie.cqllibraryservice.dto.LibrarySearchCriteria;
-import gov.cms.madie.cqllibraryservice.dto.LibrarySetDTO;
-import gov.cms.madie.cqllibraryservice.dto.LibraryListDTO;
-import gov.cms.madie.cqllibraryservice.dto.SharedUser;
+import gov.cms.madie.cqllibraryservice.dto.*;
 import gov.cms.madie.cqllibraryservice.exceptions.HarpIdMismatchException;
 import gov.cms.madie.cqllibraryservice.exceptions.InvalidIdException;
 import gov.cms.madie.cqllibraryservice.services.*;
@@ -54,6 +51,7 @@ public class CqlLibraryController {
   private final VersionService versionService;
   private final CqlLibraryService cqlLibraryService;
   private final LibrarySetService librarySetService;
+  private final CqlDifferentiatorService cqlDifferentiatorService;
 
   @PutMapping("/searches")
   public ResponseEntity<Page<LibraryListDTO>> fetchLibrariesByCriteria(
@@ -388,5 +386,60 @@ public class CqlLibraryController {
       @PathVariable("id") String cqlLibraryId, Principal principal) {
     return ResponseEntity.ok()
         .body(cqlLibraryService.getCqlLibraryHistory(cqlLibraryId, principal.getName()));
+  }
+
+  @GetMapping(value = "/{oldLibraryId}/compare/{newLibraryId}")
+  public ResponseEntity<CqlDiffResultDTO> compareLibraries(
+      @PathVariable("oldLibraryId") String oldLibraryId,
+      @PathVariable("newLibraryId") String newLibraryId,
+      @RequestParam(required = false, defaultValue = "true") boolean autoReorder,
+      Principal principal) {
+
+    log.info(
+        "Comparing libraries: old={}, new={}, autoReorder={}",
+        oldLibraryId,
+        newLibraryId,
+        autoReorder);
+
+    final CqlLibrary oldLibrary =
+        cqlLibraryService.findCqlLibraryById(oldLibraryId, principal.getName());
+    final CqlLibrary newLibrary =
+        cqlLibraryService.findCqlLibraryById(newLibraryId, principal.getName());
+
+    if (oldLibrary == null) {
+      throw new ResourceNotFoundException("Cql Library", oldLibraryId);
+    }
+    if (newLibrary == null) {
+      throw new ResourceNotFoundException("Cql Library", newLibraryId);
+    }
+
+    // Extract CQL content - for now, treating single CQL file as a "library"
+    // In future, this could be extended to handle multiple CQL libraries if needed
+    Map<String, String> oldLibraries = new HashMap<>();
+    Map<String, String> newLibraries = new HashMap<>();
+
+    if (StringUtils.isNotBlank(oldLibrary.getCql())) {
+      String oldFileName = oldLibrary.getCqlLibraryName() + ".cql";
+      oldLibraries.put(oldFileName, oldLibrary.getCql());
+    }
+
+    if (StringUtils.isNotBlank(newLibrary.getCql())) {
+      String newFileName = newLibrary.getCqlLibraryName() + ".cql";
+      newLibraries.put(newFileName, newLibrary.getCql());
+    }
+
+    // Perform comparison
+    List<CqlFileComparisonDTO> comparisons =
+        cqlDifferentiatorService.compareLibraries(oldLibraries, newLibraries, autoReorder);
+
+    CqlDiffResultDTO result =
+        CqlDiffResultDTO.builder()
+            .comparisons(comparisons)
+            .oldLibraryId(oldLibraryId)
+            .newLibraryId(newLibraryId)
+            .build();
+
+    log.info("Comparison complete: {} file comparison(s)", comparisons.size());
+    return ResponseEntity.ok(result);
   }
 }

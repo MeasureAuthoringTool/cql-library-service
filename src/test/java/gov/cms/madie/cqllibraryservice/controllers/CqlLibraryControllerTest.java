@@ -10,14 +10,15 @@ import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 
+import gov.cms.madie.cqllibraryservice.dto.CqlDiffResultDTO;
+import gov.cms.madie.cqllibraryservice.dto.CqlFileComparisonDTO;
 import gov.cms.madie.cqllibraryservice.dto.LibraryListDTO;
 import gov.cms.madie.cqllibraryservice.dto.LibrarySearchCriteria;
 import gov.cms.madie.cqllibraryservice.exceptions.InvalidIdException;
 import gov.cms.madie.cqllibraryservice.exceptions.PermissionDeniedException;
 import gov.cms.madie.cqllibraryservice.exceptions.ResourceNotDraftableException;
 import gov.cms.madie.cqllibraryservice.exceptions.ResourceNotFoundException;
-import gov.cms.madie.cqllibraryservice.services.ActionLogService;
-import gov.cms.madie.cqllibraryservice.services.LibrarySetService;
+import gov.cms.madie.cqllibraryservice.services.*;
 import gov.cms.madie.models.access.AclOperation;
 import gov.cms.madie.models.access.AclSpecification;
 import gov.cms.madie.models.access.RoleEnum;
@@ -26,8 +27,7 @@ import gov.cms.madie.models.dto.LibraryUsage;
 import gov.cms.madie.models.library.CqlLibrary;
 import gov.cms.madie.models.library.CqlLibraryDraft;
 import gov.cms.madie.cqllibraryservice.repositories.CqlLibraryRepository;
-import gov.cms.madie.cqllibraryservice.services.CqlLibraryService;
-import gov.cms.madie.cqllibraryservice.services.VersionService;
+
 import java.security.Principal;
 import java.util.List;
 import java.util.Optional;
@@ -55,6 +55,8 @@ class CqlLibraryControllerTest {
   @Mock ActionLogService actionLogService;
 
   @Mock private LibrarySetService librarySetService;
+
+  @Mock private CqlDifferentiatorService cqlDifferentiatorService;
 
   @Mock Principal principal;
 
@@ -740,5 +742,105 @@ class CqlLibraryControllerTest {
 
     assertNotNull(response.getBody());
     assertTrue(response.getBody().isEmpty());
+  }
+
+  @Test
+  void compareLibrariesReturnsCqlDiffResultForValidLibraryIds() {
+    when(principal.getName()).thenReturn("user");
+    CqlLibrary oldCqlLibrary =
+        CqlLibrary.builder()
+            .id("oldLibraryId")
+            .cql("library OldLibrary { define: 'Old CQL' }")
+            .cqlLibraryName("OldLibrary")
+            .build();
+
+    CqlLibrary newCqlLibrary =
+        CqlLibrary.builder()
+            .id("newLibraryId")
+            .cql("library NewLibrary { define: 'New CQL' }")
+            .cqlLibraryName("NewLibrary")
+            .build();
+
+    List<CqlFileComparisonDTO> comparisons =
+        List.of(
+            CqlFileComparisonDTO.builder()
+                .oldFileName("OldLibrary.cql")
+                .newFileName("NewLibrary.cql")
+                .oldText("library OldLibrary { define: 'Old CQL' }")
+                .newText("library NewLibrary { define: 'New CQL' }")
+                .build());
+
+    when(cqlLibraryService.findCqlLibraryById("oldLibraryId", "user")).thenReturn(oldCqlLibrary);
+    when(cqlLibraryService.findCqlLibraryById("newLibraryId", "user")).thenReturn(newCqlLibrary);
+    when(cqlDifferentiatorService.compareLibraries(anyMap(), anyMap(), eq(true)))
+        .thenReturn(comparisons);
+
+    ResponseEntity<CqlDiffResultDTO> response =
+        cqlLibraryController.compareLibraries("oldLibraryId", "newLibraryId", true, principal);
+
+    assertNotNull(response.getBody());
+    assertEquals("oldLibraryId", response.getBody().getOldLibraryId());
+    assertEquals("newLibraryId", response.getBody().getNewLibraryId());
+    assertEquals(1, response.getBody().getComparisons().size());
+    assertEquals("OldLibrary.cql", response.getBody().getComparisons().get(0).getOldFileName());
+    assertEquals("NewLibrary.cql", response.getBody().getComparisons().get(0).getNewFileName());
+    assertEquals(
+        "library OldLibrary { define: 'Old CQL' }",
+        response.getBody().getComparisons().get(0).getOldText());
+    assertEquals(
+        "library NewLibrary { define: 'New CQL' }",
+        response.getBody().getComparisons().get(0).getNewText());
+  }
+
+  @Test
+  void compareLibrariesThrowsResourceNotFoundExceptionForInvalidOldLibraryId() {
+    when(principal.getName()).thenReturn("user");
+    when(cqlLibraryService.findCqlLibraryById("oldLibraryId", "user")).thenReturn(null);
+    assertThrows(
+        ResourceNotFoundException.class,
+        () ->
+            cqlLibraryController.compareLibraries("oldLibraryId", "newLibraryId", true, principal));
+  }
+
+  //
+  @Test
+  void compareLibrariesThrowsResourceNotFoundExceptionForInvalidNewLibraryId() {
+    when(principal.getName()).thenReturn("user");
+    CqlLibrary oldCqlLibrary =
+        CqlLibrary.builder()
+            .id("oldLibraryId")
+            .cql("library OldLibrary { define: 'Old CQL' }")
+            .cqlLibraryName("OldLibrary")
+            .build();
+
+    when(cqlLibraryService.findCqlLibraryById("oldLibraryId", "user")).thenReturn(oldCqlLibrary);
+    when(cqlLibraryService.findCqlLibraryById("newLibraryId", "user")).thenReturn(null);
+
+    assertThrows(
+        ResourceNotFoundException.class,
+        () ->
+            cqlLibraryController.compareLibraries("oldLibraryId", "newLibraryId", true, principal));
+  }
+
+  //
+  @Test
+  void compareLibrariesReturnsEmptyComparisonsForLibrariesWithoutCql() {
+    when(principal.getName()).thenReturn("user");
+    CqlLibrary oldCqlLibrary =
+        CqlLibrary.builder().id("oldLibraryId").cql(null).cqlLibraryName("OldLibrary").build();
+
+    CqlLibrary newCqlLibrary =
+        CqlLibrary.builder().id("newLibraryId").cql(null).cqlLibraryName("NewLibrary").build();
+
+    when(cqlLibraryService.findCqlLibraryById("oldLibraryId", "user")).thenReturn(oldCqlLibrary);
+    when(cqlLibraryService.findCqlLibraryById("newLibraryId", "user")).thenReturn(newCqlLibrary);
+
+    ResponseEntity<CqlDiffResultDTO> response =
+        cqlLibraryController.compareLibraries("oldLibraryId", "newLibraryId", true, principal);
+
+    assertNotNull(response.getBody());
+    assertEquals("oldLibraryId", response.getBody().getOldLibraryId());
+    assertEquals("newLibraryId", response.getBody().getNewLibraryId());
+    assertTrue(response.getBody().getComparisons().isEmpty());
   }
 }
