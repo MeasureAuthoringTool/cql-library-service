@@ -79,28 +79,44 @@ public class CqlLibrarySearchServiceImplTest {
 
   @Test
   public void testFindOwnedLibraries() {
-    when(appConfigService.isFlagEnabled(MadieFeatureFlag.LIBRARY_SEARCH)).thenReturn(false);
     // page size 3 from 0-2
     PageRequest pageRequest = PageRequest.of(0, 3);
-    List<LibraryListDTO> ownedLibraries = List.of(library1, library2, library3, library4, library5);
+
+    List<LibraryListDTO> ownedLibraries = List.of(library1, library2, library3);
 
     FacetDTO facetDTO =
         FacetDTO.builder()
-            .queryResults(List.of(library1, library2, library3))
+            .queryResults(ownedLibraries)
             .count(Arrays.asList(ownedLibraries.toArray()))
             .build();
 
-    AggregationResults pagedResults = new AggregationResults<>(List.of(facetDTO), new Document());
+    List<LibrarySetMatchCountDTO> matchResults =
+        List.of(
+            new LibrarySetMatchCountDTO("setId1", 2, "lib1"),
+            new LibrarySetMatchCountDTO("setId2", 1, "lib3"));
 
     when(mongoTemplate.aggregate(any(Aggregation.class), (Class<?>) any(), any()))
-        .thenReturn(pagedResults);
+        .thenAnswer(
+            invocation -> {
+              Class<?> outputClass = invocation.getArgument(2);
+              if (outputClass.equals(FacetDTO.class)) {
+                return new AggregationResults<>(List.of(facetDTO), new Document());
+              } else if (outputClass.equals(LibrarySetMatchCountDTO.class)) {
+                return new AggregationResults<>(matchResults, new Document());
+              } else if (outputClass.equals(LibraryListDTO.class)) {
+                return new AggregationResults<>(ownedLibraries, new Document());
+              }
+              return null;
+            });
 
     Page<LibraryListDTO> page =
         cqlLibrarySearchServiceImpl.searchLibrariesByCriteria(
             "john", pageRequest, null, OwnershipType.OWNED);
-    assertEquals(page.getTotalElements(), 5);
-    assertEquals(page.getTotalPages(), 2);
+
+    assertEquals(page.getTotalElements(), 3);
+    assertEquals(page.getTotalPages(), 1);
     assertEquals(page.getContent().size(), 3);
+
     List<LibraryListDTO> page1Libraries = page.getContent();
     assertEquals(page1Libraries.get(0).getId(), library1.getId());
     assertEquals(page1Libraries.get(1).getId(), library2.getId());
@@ -109,28 +125,44 @@ public class CqlLibrarySearchServiceImplTest {
 
   @Test
   public void testFindSharedLibraries() {
-    when(appConfigService.isFlagEnabled(MadieFeatureFlag.LIBRARY_SEARCH)).thenReturn(false);
     // page size 3 from 0-2
     PageRequest pageRequest = PageRequest.of(0, 3);
+
     List<LibraryListDTO> sharedLibraries = List.of(library1, library2, library3);
 
     FacetDTO facetDTO =
         FacetDTO.builder()
-            .queryResults(List.of(library1, library2, library3))
+            .queryResults(sharedLibraries)
             .count(Arrays.asList(sharedLibraries.toArray()))
             .build();
 
-    AggregationResults pagedResults = new AggregationResults<>(List.of(facetDTO), new Document());
+    List<LibrarySetMatchCountDTO> matchResults =
+        List.of(
+            new LibrarySetMatchCountDTO("setId1", 2, "lib1"),
+            new LibrarySetMatchCountDTO("setId2", 1, "lib3"));
 
     when(mongoTemplate.aggregate(any(Aggregation.class), (Class<?>) any(), any()))
-        .thenReturn(pagedResults);
+        .thenAnswer(
+            invocation -> {
+              Class<?> outputClass = invocation.getArgument(2);
+              if (outputClass.equals(FacetDTO.class)) {
+                return new AggregationResults<>(List.of(facetDTO), new Document());
+              } else if (outputClass.equals(LibrarySetMatchCountDTO.class)) {
+                return new AggregationResults<>(matchResults, new Document());
+              } else if (outputClass.equals(LibraryListDTO.class)) {
+                return new AggregationResults<>(sharedLibraries, new Document());
+              }
+              return null;
+            });
 
     Page<LibraryListDTO> page =
         cqlLibrarySearchServiceImpl.searchLibrariesByCriteria(
             "john", pageRequest, null, OwnershipType.SHARED);
+
     assertEquals(page.getTotalElements(), 3);
     assertEquals(page.getTotalPages(), 1);
     assertEquals(page.getContent().size(), 3);
+
     List<LibraryListDTO> page1Libraries = page.getContent();
     assertEquals(page1Libraries.get(0).getId(), library1.getId());
     assertEquals(page1Libraries.get(1).getId(), library2.getId());
@@ -139,31 +171,53 @@ public class CqlLibrarySearchServiceImplTest {
 
   @Test
   public void testFindOwnedLibrariesWithSearchTerm() {
-    when(appConfigService.isFlagEnabled(MadieFeatureFlag.LIBRARY_SEARCH)).thenReturn(false);
+    // page size 3 from 0-2
     PageRequest pageRequest = PageRequest.of(0, 3);
 
+    List<LibraryListDTO> ownedLibraries = List.of(library1, library2);
+
     FacetDTO facetDTO =
-        FacetDTO.builder().queryResults(List.of(library1, library2)).count(List.of(1, 2)).build();
-    AggregationResults pagedResults = new AggregationResults<>(List.of(facetDTO), new Document());
+        FacetDTO.builder()
+            .queryResults(ownedLibraries)
+            .count(Arrays.asList(ownedLibraries.toArray()))
+            .build();
+
+    List<LibrarySetMatchCountDTO> matchResults =
+        List.of(
+            new LibrarySetMatchCountDTO("setId1", 1, "lib1"),
+            new LibrarySetMatchCountDTO("setId2", 1, "lib2"));
 
     when(mongoTemplate.aggregate(any(Aggregation.class), (Class<?>) any(), any()))
-        .thenReturn(pagedResults);
+        .thenAnswer(
+            invocation -> {
+              Class<?> outputClass = invocation.getArgument(2);
+              if (outputClass.equals(FacetDTO.class)) {
+                return new AggregationResults<>(List.of(facetDTO), new Document());
+              } else if (outputClass.equals(LibrarySetMatchCountDTO.class)) {
+                return new AggregationResults<>(matchResults, new Document());
+              } else if (outputClass.equals(LibraryListDTO.class)) {
+                return new AggregationResults<>(ownedLibraries, new Document());
+              }
+              return null;
+            });
 
     var librarySearchCriteria = LibrarySearchCriteria.builder().searchField("test").build();
+
     Page<LibraryListDTO> page =
         cqlLibrarySearchServiceImpl.searchLibrariesByCriteria(
             "john", pageRequest, librarySearchCriteria, OwnershipType.OWNED);
+
     assertEquals(page.getTotalElements(), 2);
     assertEquals(page.getTotalPages(), 1);
     assertEquals(page.getContent().size(), 2);
+
     List<LibraryListDTO> page1Libraries = page.getContent();
-    assertEquals(page1Libraries.get(0).getCqlLibraryName(), library1.getCqlLibraryName());
-    assertEquals(page1Libraries.get(1).getCqlLibraryName(), library2.getCqlLibraryName());
+    assertEquals(library1.getCqlLibraryName(), page1Libraries.get(0).getCqlLibraryName());
+    assertEquals(library2.getCqlLibraryName(), page1Libraries.get(1).getCqlLibraryName());
   }
 
   @Test
   public void testFindOwnedLibrariesInSets() {
-    when(appConfigService.isFlagEnabled(MadieFeatureFlag.LIBRARY_SEARCH)).thenReturn(true);
     when(appConfigService.isFlagEnabled(MadieFeatureFlag.LOCKING)).thenReturn(false);
     // page size 3 from 0-2
     PageRequest pageRequest = PageRequest.of(0, 3);
@@ -208,7 +262,6 @@ public class CqlLibrarySearchServiceImplTest {
 
   @Test
   public void testFindLibrariesInSetsWhenNoMatchFound() {
-    when(appConfigService.isFlagEnabled(MadieFeatureFlag.LIBRARY_SEARCH)).thenReturn(true);
     PageRequest pageRequest = PageRequest.of(0, 3);
 
     when(mongoTemplate.aggregate(
@@ -224,49 +277,7 @@ public class CqlLibrarySearchServiceImplTest {
   }
 
   @Test
-  public void testSearchCriteriaWithEmptySearchField() {
-    when(appConfigService.isFlagEnabled(MadieFeatureFlag.LIBRARY_SEARCH)).thenReturn(false);
-    PageRequest pageRequest = PageRequest.of(0, 2);
-
-    LibrarySearchCriteria criteria = LibrarySearchCriteria.builder().searchField("").build();
-
-    FacetDTO facetDTO =
-        FacetDTO.builder().queryResults(List.of(library1)).count(List.of(1)).build();
-
-    when(mongoTemplate.aggregate(any(Aggregation.class), eq(CqlLibrary.class), eq(FacetDTO.class)))
-        .thenReturn(new AggregationResults<>(List.of(facetDTO), new Document()));
-
-    Page<LibraryListDTO> page =
-        cqlLibrarySearchServiceImpl.searchLibrariesByCriteria(
-            "user", pageRequest, criteria, OwnershipType.OWNED);
-
-    assertEquals(1, page.getTotalElements());
-    assertEquals(1, page.getContent().size());
-    assertEquals(library1.getId(), page.getContent().get(0).getId());
-  }
-
-  @Test
-  public void testSearchLibrariesWithoutFilteringByUser() {
-    when(appConfigService.isFlagEnabled(MadieFeatureFlag.LIBRARY_SEARCH)).thenReturn(false);
-    PageRequest pageRequest = PageRequest.of(0, 1);
-
-    FacetDTO facetDTO =
-        FacetDTO.builder().queryResults(List.of(library1)).count(List.of(1)).build();
-
-    when(mongoTemplate.aggregate(any(Aggregation.class), eq(CqlLibrary.class), eq(FacetDTO.class)))
-        .thenReturn(new AggregationResults<>(List.of(facetDTO), new Document()));
-
-    Page<LibraryListDTO> page =
-        cqlLibrarySearchServiceImpl.searchLibrariesByCriteria(
-            "john", pageRequest, null, OwnershipType.SHARED);
-
-    assertEquals(1, page.getTotalElements());
-    assertEquals(1, page.getContent().size());
-  }
-
-  @Test
   public void testLockInfoRemovedForCurrentUser() {
-    when(appConfigService.isFlagEnabled(MadieFeatureFlag.LIBRARY_SEARCH)).thenReturn(true);
     when(appConfigService.isFlagEnabled(MadieFeatureFlag.LOCKING)).thenReturn(true);
     PageRequest pageRequest = PageRequest.of(0, 1);
 
@@ -311,7 +322,6 @@ public class CqlLibrarySearchServiceImplTest {
 
   @Test
   public void testLockInfoRetainedForDifferentUser() {
-    when(appConfigService.isFlagEnabled(MadieFeatureFlag.LIBRARY_SEARCH)).thenReturn(true);
     when(appConfigService.isFlagEnabled(MadieFeatureFlag.LOCKING)).thenReturn(true);
     PageRequest pageRequest = PageRequest.of(0, 1);
 
