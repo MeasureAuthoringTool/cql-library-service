@@ -6,6 +6,7 @@ import gov.cms.madie.cqllibraryservice.dto.LibrarySetDTO;
 import gov.cms.madie.cqllibraryservice.dto.LibraryListDTO;
 import gov.cms.madie.cqllibraryservice.dto.SharedUser;
 import gov.cms.madie.cqllibraryservice.exceptions.*;
+import gov.cms.madie.cqllibraryservice.services.*;
 import gov.cms.madie.models.common.ModelType;
 
 import static org.hamcrest.CoreMatchers.containsString;
@@ -30,7 +31,6 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
-import gov.cms.madie.cqllibraryservice.services.ActionLogService;
 import gov.cms.madie.models.access.AclSpecification;
 import gov.cms.madie.models.access.RoleEnum;
 import gov.cms.madie.models.common.ActionType;
@@ -39,9 +39,6 @@ import gov.cms.madie.models.library.CqlLibrary;
 import gov.cms.madie.models.library.CqlLibraryDraft;
 import gov.cms.madie.models.common.Version;
 import gov.cms.madie.cqllibraryservice.repositories.CqlLibraryRepository;
-import gov.cms.madie.cqllibraryservice.services.CqlLibraryService;
-import gov.cms.madie.cqllibraryservice.services.LibrarySetService;
-import gov.cms.madie.cqllibraryservice.services.VersionService;
 
 import java.time.Clock;
 import java.time.Instant;
@@ -83,7 +80,7 @@ public class CqlLibraryControllerMvcTest {
   @MockitoBean VersionService versionService;
   @MockitoBean CqlLibraryService cqlLibraryService;
   @MockitoBean LibrarySetService librarySetService;
-
+  @MockitoBean private CqlDifferentiatorService cqlDifferentiatorService;
   @MockitoBean ActionLogService actionLogService;
 
   @Captor private ArgumentCaptor<CqlLibrary> cqlLibraryArgumentCaptor;
