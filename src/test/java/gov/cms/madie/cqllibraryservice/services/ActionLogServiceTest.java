@@ -11,6 +11,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 
@@ -118,15 +119,27 @@ class ActionLogServiceTest {
     LibraryActionLog libraryActionLog = new LibraryActionLog();
     libraryActionLog.setActions(
         List.of(
-            Action.builder().actionType(ActionType.CREATED).build(),
-            Action.builder().actionType(ActionType.UPDATED).build()));
+            Action.builder()
+                .actionType(ActionType.CREATED)
+                .performedAt(Instant.parse("2025-12-18T21:17:25.549Z"))
+                .build(),
+            Action.builder()
+                .actionType(ActionType.UPDATED)
+                .performedAt(Instant.parse("2026-12-18T21:17:25.549Z"))
+                .build()));
 
     LibrarySetActionLog librarySetActionLog =
         LibrarySetActionLog.builder()
             .actions(
                 List.of(
-                    AccessControlAction.builder().actionType(ActionType.SHARED).build(),
-                    AccessControlAction.builder().actionType(ActionType.CREATED).build()))
+                    AccessControlAction.builder()
+                        .actionType(ActionType.SHARED)
+                        .performedAt(Instant.parse("2024-12-18T21:17:25.549Z"))
+                        .build(),
+                    AccessControlAction.builder()
+                        .actionType(ActionType.CREATED)
+                        .performedAt(Instant.parse("2023-12-18T21:17:25.549Z"))
+                        .build()))
             .build();
 
     when(cqlLibraryHistoryRepository.findByTargetId(cqlLibraryId))
@@ -137,6 +150,7 @@ class ActionLogServiceTest {
     List<Action> result = actionLogService.findCqlLibraryHistory(cqlLibraryId, librarySetId);
 
     assertThat(result.size(), is(3));
+    assertThat(result.get(0).getPerformedAt(), is(Instant.parse("2026-12-18T21:17:25.549Z")));
     assertThat(
         result.stream().anyMatch(action -> action.getActionType() == ActionType.CREATED), is(true));
     assertThat(
@@ -166,8 +180,14 @@ class ActionLogServiceTest {
     LibraryActionLog libraryActionLog = new LibraryActionLog();
     libraryActionLog.setActions(
         List.of(
-            Action.builder().actionType(ActionType.CREATED).build(),
-            Action.builder().actionType(ActionType.UPDATED).build()));
+            Action.builder()
+                .actionType(ActionType.CREATED)
+                .performedAt(Instant.parse("2024-12-18T21:17:25.549Z"))
+                .build(),
+            Action.builder()
+                .actionType(ActionType.UPDATED)
+                .performedAt(Instant.parse("2025-12-18T21:17:25.549Z"))
+                .build()));
 
     when(cqlLibraryHistoryRepository.findByTargetId(cqlLibraryId))
         .thenReturn(Optional.of(libraryActionLog));
@@ -176,6 +196,7 @@ class ActionLogServiceTest {
     List<Action> result = actionLogService.findCqlLibraryHistory(cqlLibraryId, librarySetId);
 
     assertThat(result.size(), is(2));
+    assertThat(result.get(0).getPerformedAt(), is(Instant.parse("2025-12-18T21:17:25.549Z")));
     assertThat(
         result.stream().anyMatch(action -> action.getActionType() == ActionType.CREATED), is(true));
     assertThat(

@@ -87,6 +87,7 @@ public class ActionLogService {
           }
         });
 
+    combinedActionLogs.sort((a, b) -> b.getPerformedAt().compareTo(a.getPerformedAt()));
     return combinedActionLogs;
   }
 }
