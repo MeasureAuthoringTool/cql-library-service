@@ -117,93 +117,81 @@ public class CqlLibrarySearchServiceImpl implements CqlLibrarySearchService {
                 project(LibraryListDTO.class))
             .as("queryResults");
 
-    if (appConfigService.isFlagEnabled(MadieFeatureFlag.LIBRARY_SEARCH)) {
-      // Find all the libraries that matches the given Criteria and fetch unique librarySetIds
-      List<LibrarySetMatchCountDTO> matchedLibrarySetCounts =
-          mongoTemplate
-              .aggregate(
-                  newAggregation(
-                      lookupOperation,
-                      unwindOperation,
-                      matchOperation,
-                      group("librarySetId")
-                          .count()
-                          .as("matchCount")
-                          .first("_id")
-                          .as("matchedLibraryId")),
-                  CqlLibrary.class,
-                  LibrarySetMatchCountDTO.class)
-              .getMappedResults();
+    // Find all the libraries that matches the given Criteria and fetch unique librarySetIds
+    List<LibrarySetMatchCountDTO> matchedLibrarySetCounts =
+        mongoTemplate
+            .aggregate(
+                newAggregation(
+                    lookupOperation,
+                    unwindOperation,
+                    matchOperation,
+                    group("librarySetId")
+                        .count()
+                        .as("matchCount")
+                        .first("_id")
+                        .as("matchedLibraryId")),
+                CqlLibrary.class,
+                LibrarySetMatchCountDTO.class)
+            .getMappedResults();
 
-      Map<String, LibrarySetMatchCountDTO> matchInfoMap =
-          matchedLibrarySetCounts.stream()
-              .collect(
-                  Collectors.toMap(LibrarySetMatchCountDTO::getLibrarySetId, Function.identity()));
+    Map<String, LibrarySetMatchCountDTO> matchInfoMap =
+        matchedLibrarySetCounts.stream()
+            .collect(
+                Collectors.toMap(LibrarySetMatchCountDTO::getLibrarySetId, Function.identity()));
 
-      List<String> matchedLibrarySetIds = new ArrayList<>(matchInfoMap.keySet());
+    List<String> matchedLibrarySetIds = new ArrayList<>(matchInfoMap.keySet());
 
-      if (matchedLibrarySetIds.isEmpty()) {
-        return new PageImpl<>(Collections.emptyList(), pageable, 0);
-      }
-
-      MatchOperation matchLibrarySetIds =
-          match(Criteria.where("librarySetId").in(matchedLibrarySetIds));
-
-      SortOperation sortByVersionAndDraft = sort(Sort.by(Sort.Direction.DESC, "draft", "version"));
-      GroupOperation groupByLibrarySet = group("librarySetId").first("$$ROOT").as("selectedDoc");
-
-      ReplaceRootOperation replaceRoot = replaceRoot("selectedDoc");
-
-      List<AggregationOperation> lockStages = buildLockLookupStages();
-
-      List<AggregationOperation> ops = new ArrayList<>();
-      ops.add(lookupOperation);
-      ops.add(unwindOperation);
-      ops.add(matchLibrarySetIds);
-      ops.add(sortByVersionAndDraft);
-      ops.add(groupByLibrarySet);
-      ops.add(replaceRoot);
-      ops.addAll(lockStages);
-      ops.add(facets);
-
-      Aggregation pipeline = newAggregation(ops);
-      List<FacetDTO> results =
-          mongoTemplate.aggregate(pipeline, CqlLibrary.class, FacetDTO.class).getMappedResults();
-      for (LibraryListDTO dto : results.get(0).getQueryResults()) {
-        LibrarySetMatchCountDTO matchInfo = matchInfoMap.get(dto.getLibrarySetId());
-
-        if (matchInfo != null) {
-          boolean hasAssociated;
-          if (matchInfo.getMatchCount() > 1) {
-            hasAssociated = true;
-          } else {
-            String selectedId = dto.getId();
-            String matchedId = matchInfo.getMatchedLibraryId();
-            hasAssociated = matchedId != null && !matchedId.equals(selectedId);
-          }
-          dto.setHasAssociatedLibraries(hasAssociated);
-        } else {
-          dto.setHasAssociatedLibraries(false);
-        }
-        if (dto.getCqlLibraryLock() != null
-            && userId != null
-            && userId.equalsIgnoreCase(dto.getCqlLibraryLock().getLockedBy())) {
-          dto.setCqlLibraryLock(null); // Don't show lock info to the user who locked it
-        }
-      }
-      long totalSize = matchInfoMap.size();
-      return new PageImpl<>(results.get(0).getQueryResults(), pageable, totalSize);
-
-    } else {
-      Aggregation pipeline =
-          newAggregation(lookupOperation, unwindOperation, matchOperation, facets);
-
-      List<FacetDTO> results =
-          mongoTemplate.aggregate(pipeline, CqlLibrary.class, FacetDTO.class).getMappedResults();
-
-      return new PageImpl<>(
-          results.get(0).getQueryResults(), pageable, results.get(0).getCount().size());
+    if (matchedLibrarySetIds.isEmpty()) {
+      return new PageImpl<>(Collections.emptyList(), pageable, 0);
     }
+
+    MatchOperation matchLibrarySetIds =
+        match(Criteria.where("librarySetId").in(matchedLibrarySetIds));
+
+    SortOperation sortByVersionAndDraft = sort(Sort.by(Sort.Direction.DESC, "draft", "version"));
+    GroupOperation groupByLibrarySet = group("librarySetId").first("$$ROOT").as("selectedDoc");
+
+    ReplaceRootOperation replaceRoot = replaceRoot("selectedDoc");
+
+    List<AggregationOperation> lockStages = buildLockLookupStages();
+
+    List<AggregationOperation> ops = new ArrayList<>();
+    ops.add(lookupOperation);
+    ops.add(unwindOperation);
+    ops.add(matchLibrarySetIds);
+    ops.add(sortByVersionAndDraft);
+    ops.add(groupByLibrarySet);
+    ops.add(replaceRoot);
+    ops.addAll(lockStages);
+    ops.add(facets);
+
+    Aggregation pipeline = newAggregation(ops);
+    List<FacetDTO> results =
+        mongoTemplate.aggregate(pipeline, CqlLibrary.class, FacetDTO.class).getMappedResults();
+    for (LibraryListDTO dto : results.get(0).getQueryResults()) {
+      LibrarySetMatchCountDTO matchInfo = matchInfoMap.get(dto.getLibrarySetId());
+
+      if (matchInfo != null) {
+        boolean hasAssociated;
+        if (matchInfo.getMatchCount() > 1) {
+          hasAssociated = true;
+        } else {
+          String selectedId = dto.getId();
+          String matchedId = matchInfo.getMatchedLibraryId();
+          hasAssociated = matchedId != null && !matchedId.equals(selectedId);
+        }
+        dto.setHasAssociatedLibraries(hasAssociated);
+      } else {
+        dto.setHasAssociatedLibraries(false);
+      }
+      if (dto.getCqlLibraryLock() != null
+          && userId != null
+          && userId.equalsIgnoreCase(dto.getCqlLibraryLock().getLockedBy())) {
+        dto.setCqlLibraryLock(null); // Don't show lock info to the user who locked it
+      }
+    }
+    long totalSize = matchInfoMap.size();
+    return new PageImpl<>(results.get(0).getQueryResults(), pageable, totalSize);
   }
 
   public List<LibraryListDTO> findLibrariesByLibrarySetId(
