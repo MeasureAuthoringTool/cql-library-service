@@ -227,33 +227,6 @@ public class CqlLibraryController {
         .body(cqlLibraryService.findLibrariesByNameAndModel(libraryName, model));
   }
 
-  @PutMapping(
-      value = "/{id}/ownership",
-      produces = {MediaType.TEXT_PLAIN_VALUE})
-  @PreAuthorize("#request.getHeader('api-key') == #apiKey")
-  public ResponseEntity<String> changeOwnership(
-      HttpServletRequest request,
-      @PathVariable("id") String id,
-      @RequestParam(name = "userid") String userid,
-      @Value("${admin-api-key}") String apiKey,
-      Principal principal) {
-    try {
-      cqlLibraryService.changeOwnership(id, userid, false, principal.getName());
-      return ResponseEntity.ok(userid + " granted ownership to Library successfully.");
-    } catch (ResourceNotFoundException e) {
-      return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Library does not exist.");
-    } catch (RuntimeException e) {
-      log.error(
-          "Failed to change ownership for Library [{}] to user [{}]: {}",
-          id,
-          userid,
-          e.getMessage(),
-          e);
-      return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-          .body("Failed to grant ownership.");
-    }
-  }
-
   @PutMapping("/{id}/acls")
   @PreAuthorize("#request.getHeader('api-key') == #apiKey")
   public ResponseEntity<List<AclSpecification>> updateAccessControl(
