@@ -1546,4 +1546,35 @@ class CqlLibraryServiceTest {
     assertTrue(result.isEmpty());
     verifyNoInteractions(userServiceClient);
   }
+
+  @Test
+  public void testTransferLibrariesByAdmin() {
+    String libraryId = "libraryId";
+    String harpId = "user123";
+
+    LibrarySet librarySet =
+        LibrarySet.builder().librarySetId("librarySetId").owner("owner").build();
+
+    CqlLibrary library =
+        CqlLibrary.builder()
+            .id(libraryId)
+            .librarySetId("librarySetId")
+            .librarySet(librarySet)
+            .build();
+
+    when(cqlLibraryRepository.findById(anyString())).thenReturn(Optional.of(library));
+    when(librarySetService.findByLibrarySetId(anyString())).thenReturn(librarySet);
+
+    doNothing()
+        .when(cqlLibraryService)
+        .changeOwnership(eq(libraryId), eq(harpId), eq(true), eq("admin"));
+
+    List<String> failedLibraries =
+        cqlLibraryService.transferLibraries(List.of(libraryId), harpId, true, "admin");
+
+    assertTrue(failedLibraries.isEmpty());
+
+    verify(cqlLibraryService).findCqlLibraryById(libraryId, harpId);
+    verify(cqlLibraryService).changeOwnership(libraryId, harpId, true, "admin");
+  }
 }

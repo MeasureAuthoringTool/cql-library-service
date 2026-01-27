@@ -624,8 +624,9 @@ public class CqlLibraryService {
     for (String libraryId : libraryIds) {
       try {
         CqlLibrary cqlLibrary = findCqlLibraryById(libraryId, harpId);
-        AuthUtils.checkOwnership(cqlLibrary, conductedBy);
-
+        if (!conductedBy.equalsIgnoreCase("admin")) {
+          AuthUtils.checkOwnership(cqlLibrary, conductedBy);
+        }
         changeOwnership(libraryId, harpId, retainShareAccess, conductedBy);
       } catch (RuntimeException e) {
         log.warn(
