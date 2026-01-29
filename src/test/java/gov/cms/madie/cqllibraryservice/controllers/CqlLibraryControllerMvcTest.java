@@ -1475,7 +1475,7 @@ public class CqlLibraryControllerMvcTest {
         .andExpect(content().string("testUser granted ownership to Library successfully."));
 
     verify(cqlLibraryService, times(1))
-        .changeOwnership(eq(libraryId), eq("testUser"), eq(false), anyString());
+        .changeOwnership(eq(libraryId), eq("testuser"), eq(false), anyString());
   }
 
   @Test
@@ -1484,7 +1484,7 @@ public class CqlLibraryControllerMvcTest {
 
     doThrow(new ResourceNotFoundException("CqlLibrary", "id", libraryId))
         .when(cqlLibraryService)
-        .changeOwnership(eq(libraryId), eq("testUser"), anyBoolean(), anyString());
+        .changeOwnership(eq(libraryId), eq("testuser"), anyBoolean(), anyString());
 
     mockMvc
         .perform(
@@ -1495,7 +1495,7 @@ public class CqlLibraryControllerMvcTest {
         .andExpect(content().string("Library does not exist."));
 
     verify(cqlLibraryService, times(1))
-        .changeOwnership(eq(libraryId), eq("testUser"), eq(false), anyString());
+        .changeOwnership(eq(libraryId), eq("testuser"), eq(false), anyString());
   }
 
   @Test
@@ -1504,7 +1504,7 @@ public class CqlLibraryControllerMvcTest {
 
     doThrow(new RuntimeException("Something went wrong"))
         .when(cqlLibraryService)
-        .changeOwnership(eq(libraryId), eq("testUser"), anyBoolean(), anyString());
+        .changeOwnership(eq(libraryId), eq("testuser"), anyBoolean(), anyString());
 
     mockMvc
         .perform(
@@ -1515,7 +1515,7 @@ public class CqlLibraryControllerMvcTest {
         .andExpect(content().string("Failed to grant ownership."));
 
     verify(cqlLibraryService, times(1))
-        .changeOwnership(eq(libraryId), eq("testUser"), eq(false), anyString());
+        .changeOwnership(eq(libraryId), eq("testuser"), eq(false), anyString());
   }
 
   @Test
@@ -1913,7 +1913,7 @@ public class CqlLibraryControllerMvcTest {
         .andExpect(status().isOk());
 
     verify(cqlLibraryService, times(1))
-        .transferLibraries(eq(List.of(libraryId)), eq("testUser"), eq(true), eq(TEST_USER_ID));
+        .transferLibraries(eq(List.of(libraryId)), eq("testuser"), eq(true), eq(TEST_USER_ID));
   }
 
   @Test
@@ -1923,7 +1923,7 @@ public class CqlLibraryControllerMvcTest {
     doReturn(List.of("1"))
         .when(cqlLibraryService)
         .transferLibraries(
-            eq(List.of(libraryId, "1")), eq("testUser"), eq(false), eq(TEST_USER_ID));
+            eq(List.of(libraryId, "1")), eq("testuser"), eq(false), eq(TEST_USER_ID));
 
     mockMvc
         .perform(
@@ -1941,7 +1941,7 @@ public class CqlLibraryControllerMvcTest {
 
     verify(cqlLibraryService, times(1))
         .transferLibraries(
-            eq(List.of(libraryId, "1")), eq("testUser"), eq(false), eq(TEST_USER_ID));
+            eq(List.of(libraryId, "1")), eq("testuser"), eq(false), eq(TEST_USER_ID));
   }
 
   @Test
