@@ -159,7 +159,7 @@ public class CqlLibrarySearchServiceImpl implements CqlLibrarySearchService {
     ops.add(lookupOperation);
     ops.add(unwindOperation);
     ops.add(matchLibrarySetIds);
-    //    ops.add(sortByVersionAndDraft);
+    ops.add(sortByVersionAndDraft);
     ops.add(groupByLibrarySet);
     ops.add(replaceRoot);
     ops.addAll(lockStages);
