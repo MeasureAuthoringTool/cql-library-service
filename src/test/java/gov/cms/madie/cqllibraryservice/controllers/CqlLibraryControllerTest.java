@@ -401,6 +401,7 @@ class CqlLibraryControllerTest {
             .build();
     final CqlLibrary updatingLibrary =
         existingLibrary.toBuilder().id(null).cqlLibraryName("NewName").build();
+    when(principal.getName()).thenReturn("test.user");
 
     assertThrows(
         InvalidIdException.class,
@@ -418,6 +419,7 @@ class CqlLibraryControllerTest {
             .build();
     final CqlLibrary updatingLibrary =
         existingLibrary.toBuilder().id("").cqlLibraryName("NewName").build();
+    when(principal.getName()).thenReturn("test.user");
 
     assertThrows(
         InvalidIdException.class,
@@ -435,6 +437,7 @@ class CqlLibraryControllerTest {
             .build();
     final CqlLibrary updatingLibrary =
         existingLibrary.toBuilder().id("Library1_ID").cqlLibraryName("NewName").build();
+    when(principal.getName()).thenReturn("test.user");
 
     assertThrows(
         InvalidIdException.class,
@@ -452,6 +455,7 @@ class CqlLibraryControllerTest {
             .build();
     final CqlLibrary updatingLibrary =
         existingLibrary.toBuilder().id("Library1_ID").cqlLibraryName("NewName").build();
+    when(principal.getName()).thenReturn("test.user");
 
     assertThrows(
         InvalidIdException.class,
@@ -463,6 +467,7 @@ class CqlLibraryControllerTest {
     final String pathId = "Library1_ID";
     final CqlLibrary updatingLibrary =
         CqlLibrary.builder().id("Library2_ID").cqlLibraryName("NewName").build();
+    when(principal.getName()).thenReturn("test.user");
 
     assertThrows(
         InvalidIdException.class,
@@ -697,8 +702,8 @@ class CqlLibraryControllerTest {
   @Test
   void returnsCqlLibraryHistorySuccessfully() {
     String cqlLibraryId = "testLibraryId";
-    String username = "testUser";
-    when(principal.getName()).thenReturn("testUser");
+    String username = "testuser";
+    when(principal.getName()).thenReturn("testuser");
     List<Action> actions =
         List.of(
             Action.builder().actionType(ActionType.CREATED).build(),
@@ -718,8 +723,8 @@ class CqlLibraryControllerTest {
   @Test
   void throwsResourceNotFoundExceptionWhenLibraryHistoryNotFound() {
     String cqlLibraryId = "nonExistentLibraryId";
-    String username = "testUser";
-    when(principal.getName()).thenReturn("testUser");
+    String username = "testuser";
+    when(principal.getName()).thenReturn("testuser");
 
     when(cqlLibraryService.getCqlLibraryHistory(cqlLibraryId, username))
         .thenThrow(new ResourceNotFoundException("CQL Library", cqlLibraryId));
@@ -732,8 +737,8 @@ class CqlLibraryControllerTest {
   @Test
   void returnsEmptyHistoryWhenNoActionsExist() {
     String cqlLibraryId = "testLibraryId";
-    String username = "testUser";
-    when(principal.getName()).thenReturn("testUser");
+    String username = "testuser";
+    when(principal.getName()).thenReturn("testuser");
 
     when(cqlLibraryService.getCqlLibraryHistory(cqlLibraryId, username)).thenReturn(List.of());
 

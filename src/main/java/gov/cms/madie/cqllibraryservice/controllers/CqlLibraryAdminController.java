@@ -43,7 +43,7 @@ public class CqlLibraryAdminController {
       @RequestHeader(name = "harpId") String harpId,
       Principal principal) {
     log.info("Unlock all libraries for the user: " + harpId);
-    List<String> messages = cqlLibraryLockService.unlockByUser(harpId);
+    List<String> messages = cqlLibraryLockService.unlockByUser(harpId.toLowerCase());
     return ResponseEntity.ok(messages);
   }
 

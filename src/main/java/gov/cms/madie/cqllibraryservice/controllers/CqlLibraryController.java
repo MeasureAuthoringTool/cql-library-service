@@ -62,7 +62,7 @@ public class CqlLibraryController {
       @RequestParam(required = false, defaultValue = "10", name = "limit") int limit,
       @RequestParam(required = false, defaultValue = "0", name = "page") int page,
       @RequestParam(required = false, name = "sortInfo") String sortInfo) {
-    final String username = principal.getName();
+    final String username = principal.getName().toLowerCase();
     Pageable pageReq;
     // if sortInfo provided
     if (sortInfo != null && !sortInfo.trim().isEmpty()) {
@@ -100,7 +100,7 @@ public class CqlLibraryController {
   @GetMapping("/{id}")
   public ResponseEntity<CqlLibrary> getCqlLibrary(
       @PathVariable("id") String id, Principal principal) {
-    final String username = principal.getName();
+    final String username = principal.getName().toLowerCase();
     return ResponseEntity.ok(cqlLibraryService.findCqlLibraryById(id, username));
   }
 
@@ -137,7 +137,7 @@ public class CqlLibraryController {
   public ResponseEntity<CqlLibrary> createCqlLibrary(
       @Validated(CqlLibrary.ValidationSequence.class) @RequestBody CqlLibrary cqlLibrary,
       Principal principal) {
-    final String username = principal.getName();
+    final String username = principal.getName().toLowerCase();
     log.info("User [{}] is attempting to create a new cql library", username);
 
     cqlLibraryService.checkDuplicateCqlLibraryName(cqlLibrary.getCqlLibraryName());
@@ -169,7 +169,7 @@ public class CqlLibraryController {
       @PathVariable("id") String id,
       @Validated(CqlLibrary.ValidationSequence.class) @RequestBody final CqlLibrary cqlLibrary,
       Principal principal) {
-    final String username = principal.getName();
+    final String username = principal.getName().toLowerCase();
 
     if (StringUtils.isEmpty(id) || !id.equals(cqlLibrary.getId())) {
       log.info("got invalid id [{}] vs cqlLibraryId: [{}]", id, cqlLibrary.getId());
@@ -196,7 +196,7 @@ public class CqlLibraryController {
       Principal principal,
       @RequestHeader("Authorization") String accessToken) {
     return ResponseEntity.ok(
-        versionService.createVersion(id, isMajor, principal.getName(), accessToken));
+        versionService.createVersion(id, isMajor, principal.getName().toLowerCase(), accessToken));
   }
 
   @PostMapping("/draft/{id}")
@@ -206,7 +206,10 @@ public class CqlLibraryController {
       Principal principal) {
     var output =
         versionService.createDraft(
-            id, cqlLibrary.getCqlLibraryName(), cqlLibrary.getModel(), principal.getName());
+            id,
+            cqlLibrary.getCqlLibraryName(),
+            cqlLibrary.getModel(),
+            principal.getName().toLowerCase());
     log.debug("output: {}", output);
     return ResponseEntity.status(HttpStatus.CREATED).body(output);
   }
@@ -247,13 +250,13 @@ public class CqlLibraryController {
       @RequestHeader(name = "harpId") String harpId,
       @RequestParam(name = "measureids") String measureids,
       Principal principal) {
-    final String username = principal.getName();
+    final String username = principal.getName().toLowerCase();
     List<Map<String, Object>> results = new ArrayList<>();
     String[] ids = StringUtils.split(measureids, ",");
     for (String id : ids) {
       CqlLibrary library = cqlLibraryService.findCqlLibraryById(id, username);
       if (library != null) {
-        if (!library.getLibrarySet().getOwner().equals(harpId)) {
+        if (!library.getLibrarySet().getOwner().equalsIgnoreCase(harpId)) {
           throw new HarpIdMismatchException(
               harpId, library.getLibrarySet().getOwner(), library.getId());
         }
@@ -274,7 +277,7 @@ public class CqlLibraryController {
   @DeleteMapping("/{id}")
   public ResponseEntity<CqlLibrary> hardDeleteLibrary(
       @PathVariable("id") String id, Principal principal) {
-    final String username = principal.getName();
+    final String username = principal.getName().toLowerCase();
     return ResponseEntity.ok(cqlLibraryService.deleteDraftLibrary(id, username));
   }
 
@@ -286,7 +289,8 @@ public class CqlLibraryController {
       @RequestHeader("Authorization") String accessToken,
       @RequestHeader(name = "harpId") String harpId,
       @Value("${admin-api-key}") String apiKey) {
-    cqlLibraryService.deleteLibraryAlongWithVersions(libraryName, accessToken, harpId);
+    cqlLibraryService.deleteLibraryAlongWithVersions(
+        libraryName, accessToken, harpId.toLowerCase());
     return ResponseEntity.ok()
         .body("The library and all its associated versions have been removed successfully.");
   }
@@ -294,7 +298,7 @@ public class CqlLibraryController {
   @GetMapping("/shared")
   public ResponseEntity<Map<String, List<SharedUser>>> getSharedLibraries(
       @RequestParam(name = "libraryIds") List<String> libraryIds, Principal principal) {
-    final String username = principal.getName();
+    final String username = principal.getName().toLowerCase();
     return ResponseEntity.ok().body(cqlLibraryService.getSharedLibraries(libraryIds, username));
   }
 
@@ -310,14 +314,14 @@ public class CqlLibraryController {
       @RequestBody Map<String, List<String>> libraryUserIdMap, Principal principal) {
 
     return ResponseEntity.ok(
-        cqlLibraryService.shareLibraries(libraryUserIdMap, principal.getName()));
+        cqlLibraryService.shareLibraries(libraryUserIdMap, principal.getName().toLowerCase()));
   }
 
   @PutMapping("/unshare")
   public ResponseEntity<Map<String, List<AclSpecification>>> unshareLibraries(
       @RequestBody Map<String, List<String>> libraryUserIdMap, Principal principal) {
     return ResponseEntity.ok(
-        cqlLibraryService.unshareLibraries(libraryUserIdMap, principal.getName()));
+        cqlLibraryService.unshareLibraries(libraryUserIdMap, principal.getName().toLowerCase()));
   }
 
   /**
@@ -346,7 +350,10 @@ public class CqlLibraryController {
     }
     List<String> failedTransfers =
         cqlLibraryService.transferLibraries(
-            cqlLibraryIds, harpId, retainShareAccess, principal.getName());
+            cqlLibraryIds,
+            harpId.toLowerCase(),
+            retainShareAccess,
+            principal.getName().toLowerCase());
     if (CollectionUtils.isEmpty(failedTransfers)) {
       return ResponseEntity.ok().build();
     } else {
@@ -358,7 +365,9 @@ public class CqlLibraryController {
   public ResponseEntity<List<Action>> getCqlLibraryHistory(
       @PathVariable("id") String cqlLibraryId, Principal principal) {
     return ResponseEntity.ok()
-        .body(cqlLibraryService.getCqlLibraryHistory(cqlLibraryId, principal.getName()));
+        .body(
+            cqlLibraryService.getCqlLibraryHistory(
+                cqlLibraryId, principal.getName().toLowerCase()));
   }
 
   @GetMapping(value = "/{oldLibraryId}/compare/{newLibraryId}")
@@ -375,9 +384,9 @@ public class CqlLibraryController {
         autoReorder);
 
     final CqlLibrary oldLibrary =
-        cqlLibraryService.findCqlLibraryById(oldLibraryId, principal.getName());
+        cqlLibraryService.findCqlLibraryById(oldLibraryId, principal.getName().toLowerCase());
     final CqlLibrary newLibrary =
-        cqlLibraryService.findCqlLibraryById(newLibraryId, principal.getName());
+        cqlLibraryService.findCqlLibraryById(newLibraryId, principal.getName().toLowerCase());
 
     if (oldLibrary == null) {
       throw new ResourceNotFoundException("Cql Library", oldLibraryId);

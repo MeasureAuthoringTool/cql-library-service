@@ -28,7 +28,8 @@ public class CqlLibraryLockController {
   public ResponseEntity<LockInfo> addCqlLibraryLock(
       @PathVariable String libraryId, Principal principal) {
     log.info("User: " + principal.getName() + " lock library: " + libraryId);
-    return ResponseEntity.ok(cqlLibraryLockService.lockCqlLibrary(libraryId, principal.getName()));
+    return ResponseEntity.ok(
+        cqlLibraryLockService.lockCqlLibrary(libraryId, principal.getName().toLowerCase()));
   }
 
   @DeleteMapping("/{libraryId}/lock")
@@ -36,12 +37,12 @@ public class CqlLibraryLockController {
       @PathVariable String libraryId, Principal principal) {
     log.info("User: " + principal.getName() + " unlock library: " + libraryId);
     return ResponseEntity.ok(
-        cqlLibraryLockService.unlockCqlLibrary(libraryId, principal.getName()));
+        cqlLibraryLockService.unlockCqlLibrary(libraryId, principal.getName().toLowerCase()));
   }
 
   @DeleteMapping("/unlock")
   public ResponseEntity<List<String>> unlockAll(HttpServletRequest request, Principal principal) {
-    final String username = principal.getName();
+    final String username = principal.getName().toLowerCase();
     log.info("Unlock libraries for user: " + username);
     List<String> messages = new ArrayList<>();
     messages.addAll(cqlLibraryLockService.unlockByUser(username));
