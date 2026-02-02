@@ -140,4 +140,16 @@ class ActionLogRepositoryImplTest {
                         && q.getQueryObject().toString().contains("$size")),
             eq("actionLog"));
   }
+
+  @Test
+  void testUpdateAllActionLogs() {
+    LibraryActionLog actionLog1 = LibraryActionLog.builder().id("log1").targetId("target1").build();
+    LibraryActionLog actionLog2 = LibraryActionLog.builder().id("log2").targetId("target2").build();
+    List<LibraryActionLog> actionLogs = List.of(actionLog1, actionLog2);
+
+    actionLogRepository.updateAllActionLogs(actionLogs);
+
+    verify(mongoTemplate).save(actionLog1);
+    verify(mongoTemplate).save(actionLog2);
+  }
 }

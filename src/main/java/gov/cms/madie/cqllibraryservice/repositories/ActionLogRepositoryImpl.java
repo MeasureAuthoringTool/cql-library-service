@@ -94,4 +94,12 @@ public class ActionLogRepositoryImpl implements ActionLogRepository {
     Query emptyActionsQuery = new Query(Criteria.where("actions").size(0));
     mongoTemplate.remove(emptyActionsQuery, collection);
   }
+
+  @Override
+  public Collection<LibraryActionLog> updateAllActionLogs(List<LibraryActionLog> actionLogs) {
+    for (LibraryActionLog log : actionLogs) {
+      mongoTemplate.save(log);
+    }
+    return actionLogs;
+  }
 }
