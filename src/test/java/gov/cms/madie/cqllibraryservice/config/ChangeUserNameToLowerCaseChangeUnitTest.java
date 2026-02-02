@@ -18,7 +18,7 @@ import org.springframework.test.util.ReflectionTestUtils;
 
 import java.util.List;
 
-import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -32,29 +32,29 @@ public class ChangeUserNameToLowerCaseChangeUnitTest {
 
   private final String LOWER_CASE_USER_NAME = "user1";
   private final String UPPER_CASE_USER_NAME = "User1";
-  private CqlLibrary library =
+  private final CqlLibrary library =
       CqlLibrary.builder()
           .id("library1")
           .createdBy(UPPER_CASE_USER_NAME)
           .lastModifiedBy(UPPER_CASE_USER_NAME)
           .build();
-  private LibrarySet librarySet =
+  private final LibrarySet librarySet =
       LibrarySet.builder()
           .id("librarySet1")
           .owner(UPPER_CASE_USER_NAME)
           .acls(List.of(AclSpecification.builder().userId(UPPER_CASE_USER_NAME).build()))
           .build();
-  private LibraryActionLog libraryActionLog =
+  private final LibraryActionLog libraryActionLog =
       LibraryActionLog.builder()
           .id("actionLog1")
           .actions(List.of(Action.builder().performedBy(UPPER_CASE_USER_NAME).build()))
           .build();
-  private LibrarySetActionLog librarySetActionLog =
+  private final LibrarySetActionLog librarySetActionLog =
       LibrarySetActionLog.builder()
           .id("librarySetActionLog1")
           .actions(List.of(AccessControlAction.builder().performedBy(UPPER_CASE_USER_NAME).build()))
           .build();
-  private CqlLibraryLock libraryLock =
+  private final CqlLibraryLock libraryLock =
       CqlLibraryLock.builder().lockedBy(UPPER_CASE_USER_NAME).build();
 
   @Test
@@ -72,33 +72,30 @@ public class ChangeUserNameToLowerCaseChangeUnitTest {
         librarySetActionLogRepository,
         cqlLibraryLockRepository);
 
-    assert changeUnit.getOriginalLibraries().size() == 1;
-    assert changeUnit.getUpdatedLibraries().size() == 1;
+    assertEquals(1, changeUnit.getOriginalLibraries().size());
+    assertEquals(1, changeUnit.getUpdatedLibraries().size());
     CqlLibrary updatedLibrary = changeUnit.getUpdatedLibraries().get(0);
-    assert updatedLibrary.getCreatedBy().equals(LOWER_CASE_USER_NAME);
-    assert updatedLibrary.getLastModifiedBy().equals(LOWER_CASE_USER_NAME);
-    assert changeUnit.getOriginalLibrarySets().size() == 1;
-    assert changeUnit.getUpdatedLibrarySets().size() == 1;
+    assertEquals(LOWER_CASE_USER_NAME, updatedLibrary.getCreatedBy());
+    assertEquals(LOWER_CASE_USER_NAME, updatedLibrary.getLastModifiedBy());
+    assertEquals(1, changeUnit.getOriginalLibrarySets().size());
+    assertEquals(1, changeUnit.getUpdatedLibrarySets().size());
     LibrarySet updatedLibrarySet = changeUnit.getUpdatedLibrarySets().get(0);
-    assert updatedLibrarySet.getOwner().equals(LOWER_CASE_USER_NAME);
-    assert updatedLibrarySet.getAcls().get(0).getUserId().equals(LOWER_CASE_USER_NAME);
-    assert changeUnit.getOriginalLibraryActionLogs().size() == 1;
-    assert changeUnit.getUpdatedLibraryActionLogs().size() == 1;
+    assertEquals(LOWER_CASE_USER_NAME, updatedLibrarySet.getOwner());
+    assertEquals(LOWER_CASE_USER_NAME, updatedLibrarySet.getAcls().get(0).getUserId());
+    assertEquals(1, changeUnit.getOriginalLibraryActionLogs().size());
+    assertEquals(1, changeUnit.getUpdatedLibraryActionLogs().size());
     LibraryActionLog updatedActionLog = changeUnit.getUpdatedLibraryActionLogs().get(0);
-    assert updatedActionLog.getActions().get(0).getPerformedBy().equals(LOWER_CASE_USER_NAME);
-    assert changeUnit.getOriginalLibrarySetActionLogs().size() == 1;
-    assert changeUnit.getUpdatedLibrarySetActionLogs().size() == 1;
+    assertEquals(LOWER_CASE_USER_NAME, updatedActionLog.getActions().get(0).getPerformedBy());
+    assertEquals(1, changeUnit.getOriginalLibrarySetActionLogs().size());
+    assertEquals(1, changeUnit.getUpdatedLibrarySetActionLogs().size());
     LibrarySetActionLog updatedLibrarySetActionLog =
         changeUnit.getUpdatedLibrarySetActionLogs().get(0);
-    assert updatedLibrarySetActionLog
-        .getActions()
-        .get(0)
-        .getPerformedBy()
-        .equals(LOWER_CASE_USER_NAME);
-    assert changeUnit.getOriginalLibraryLocks().size() == 1;
-    assert changeUnit.getUpdatedLibraryLocks().size() == 1;
+    assertEquals(
+        LOWER_CASE_USER_NAME, updatedLibrarySetActionLog.getActions().get(0).getPerformedBy());
+    assertEquals(1, changeUnit.getOriginalLibraryLocks().size());
+    assertEquals(1, changeUnit.getUpdatedLibraryLocks().size());
     CqlLibraryLock updatedLibraryLock = changeUnit.getUpdatedLibraryLocks().get(0);
-    assert updatedLibraryLock.getLockedBy().equals(LOWER_CASE_USER_NAME);
+    assertEquals(LOWER_CASE_USER_NAME, updatedLibraryLock.getLockedBy());
   }
 
   @Test
@@ -127,16 +124,17 @@ public class ChangeUserNameToLowerCaseChangeUnitTest {
         librarySetActionLogRepository,
         cqlLibraryLockRepository);
 
-    assert changeUnit.getOriginalLibraries().size() == 1;
-    assert changeUnit.getUpdatedLibraries().isEmpty();
-    assert changeUnit.getOriginalLibrarySets().size() == 1;
-    assert changeUnit.getUpdatedLibrarySets().isEmpty();
-    assert changeUnit.getOriginalLibraryActionLogs().size() == 1;
-    assert changeUnit.getUpdatedLibraryActionLogs().isEmpty();
-    assert changeUnit.getOriginalLibrarySetActionLogs().size() == 1;
-    assert changeUnit.getUpdatedLibrarySetActionLogs().isEmpty();
-    assert changeUnit.getOriginalLibraryLocks().size() == 1;
-    assert changeUnit.getUpdatedLibraryLocks().isEmpty();
+    assertEquals(1, changeUnit.getOriginalLibraries().size());
+    assertEquals(0, changeUnit.getUpdatedLibraries().size());
+    assertTrue(changeUnit.getUpdatedLibraries().isEmpty());
+    assertEquals(1, changeUnit.getOriginalLibrarySets().size());
+    assertTrue(changeUnit.getUpdatedLibrarySets().isEmpty());
+    assertEquals(1, changeUnit.getOriginalLibraryActionLogs().size());
+    assertTrue(changeUnit.getUpdatedLibraryActionLogs().isEmpty());
+    assertEquals(1, changeUnit.getOriginalLibrarySetActionLogs().size());
+    assertTrue(changeUnit.getUpdatedLibrarySetActionLogs().isEmpty());
+    assertEquals(1, changeUnit.getOriginalLibraryLocks().size());
+    assertTrue(changeUnit.getUpdatedLibraryLocks().isEmpty());
   }
 
   @Test
@@ -154,16 +152,15 @@ public class ChangeUserNameToLowerCaseChangeUnitTest {
         librarySetActionLogRepository,
         cqlLibraryLockRepository);
 
-    assert changeUnit.getOriginalLibraries().isEmpty();
-    assert changeUnit.getUpdatedLibraries().isEmpty();
-    assert changeUnit.getOriginalLibrarySets().isEmpty();
-    assert changeUnit.getUpdatedLibrarySets().isEmpty();
-    assert changeUnit.getOriginalLibraryActionLogs().isEmpty();
-    assert changeUnit.getUpdatedLibraryActionLogs().isEmpty();
-    assert changeUnit.getOriginalLibrarySetActionLogs().isEmpty();
-    assert changeUnit.getUpdatedLibrarySetActionLogs().isEmpty();
-    assert changeUnit.getOriginalLibraryLocks().isEmpty();
-    assert changeUnit.getUpdatedLibraryLocks().isEmpty();
+    assertTrue(changeUnit.getOriginalLibraries().isEmpty());
+    assertTrue(changeUnit.getUpdatedLibraries().isEmpty());
+    assertTrue(changeUnit.getOriginalLibrarySets().isEmpty());
+    assertTrue(changeUnit.getUpdatedLibraryLocks().isEmpty());
+    assertTrue(changeUnit.getOriginalLibraryActionLogs().isEmpty());
+    assertTrue(changeUnit.getUpdatedLibraryActionLogs().isEmpty());
+    assertTrue(changeUnit.getOriginalLibrarySetActionLogs().isEmpty());
+    assertTrue(changeUnit.getUpdatedLibrarySetActionLogs().isEmpty());
+    assertTrue(changeUnit.getOriginalLibraryLocks().isEmpty());
   }
 
   @Test
@@ -179,8 +176,8 @@ public class ChangeUserNameToLowerCaseChangeUnitTest {
         librarySetActionLogRepository,
         cqlLibraryLockRepository);
 
-    assert changeUnit.getOriginalLibraries().size() == 1;
-    assert changeUnit.getUpdatedLibraries().isEmpty();
+    assertEquals(1, changeUnit.getOriginalLibraries().size());
+    assertTrue(changeUnit.getUpdatedLibraries().isEmpty());
   }
 
   @Test
@@ -196,8 +193,8 @@ public class ChangeUserNameToLowerCaseChangeUnitTest {
         librarySetActionLogRepository,
         cqlLibraryLockRepository);
 
-    assert changeUnit.getOriginalLibrarySets().size() == 1;
-    assert changeUnit.getUpdatedLibrarySets().isEmpty();
+    assertEquals(1, changeUnit.getOriginalLibrarySets().size());
+    assertTrue(changeUnit.getUpdatedLibrarySets().isEmpty());
   }
 
   @Test
@@ -212,8 +209,8 @@ public class ChangeUserNameToLowerCaseChangeUnitTest {
         librarySetActionLogRepository,
         cqlLibraryLockRepository);
 
-    assert changeUnit.getOriginalLibraryActionLogs().size() == 1;
-    assert changeUnit.getUpdatedLibraryActionLogs().isEmpty();
+    assertEquals(1, changeUnit.getOriginalLibraryActionLogs().size());
+    assertTrue(changeUnit.getUpdatedLibraryActionLogs().isEmpty());
   }
 
   @Test
@@ -228,8 +225,8 @@ public class ChangeUserNameToLowerCaseChangeUnitTest {
         librarySetActionLogRepository,
         cqlLibraryLockRepository);
 
-    assert changeUnit.getOriginalLibraryActionLogs().size() == 1;
-    assert changeUnit.getUpdatedLibraryActionLogs().isEmpty();
+    assertEquals(1, changeUnit.getOriginalLibraryActionLogs().size());
+    assertTrue(changeUnit.getUpdatedLibraryActionLogs().isEmpty());
   }
 
   @Test
@@ -244,8 +241,8 @@ public class ChangeUserNameToLowerCaseChangeUnitTest {
         librarySetActionLogRepository,
         cqlLibraryLockRepository);
 
-    assert changeUnit.getOriginalLibrarySetActionLogs().size() == 1;
-    assert changeUnit.getUpdatedLibrarySetActionLogs().isEmpty();
+    assertEquals(1, changeUnit.getOriginalLibrarySetActionLogs().size());
+    assertTrue(changeUnit.getUpdatedLibrarySetActionLogs().isEmpty());
   }
 
   @Test
@@ -261,8 +258,8 @@ public class ChangeUserNameToLowerCaseChangeUnitTest {
         librarySetActionLogRepository,
         cqlLibraryLockRepository);
 
-    assert changeUnit.getOriginalLibrarySetActionLogs().size() == 1;
-    assert changeUnit.getUpdatedLibrarySetActionLogs().isEmpty();
+    assertEquals(1, changeUnit.getOriginalLibrarySetActionLogs().size());
+    assertTrue(changeUnit.getUpdatedLibrarySetActionLogs().isEmpty());
   }
 
   @Test
@@ -277,8 +274,8 @@ public class ChangeUserNameToLowerCaseChangeUnitTest {
         librarySetActionLogRepository,
         cqlLibraryLockRepository);
 
-    assert changeUnit.getOriginalLibraryLocks().size() == 1;
-    assert changeUnit.getUpdatedLibraryLocks().isEmpty();
+    assertEquals(1, changeUnit.getOriginalLibraryLocks().size());
+    assertTrue(changeUnit.getUpdatedLibraryLocks().isEmpty());
   }
 
   @Test
@@ -298,11 +295,11 @@ public class ChangeUserNameToLowerCaseChangeUnitTest {
         librarySetActionLogRepository,
         cqlLibraryLockRepository);
 
-    assert changeUnit.getOriginalLibraries().size() == 1;
-    assert changeUnit.getOriginalLibrarySets().size() == 1;
-    assert changeUnit.getOriginalLibraryActionLogs().size() == 1;
-    assert changeUnit.getOriginalLibrarySetActionLogs().size() == 1;
-    assert changeUnit.getOriginalLibraryLocks().size() == 1;
+    assertEquals(1, changeUnit.getOriginalLibraries().size());
+    assertEquals(1, changeUnit.getOriginalLibrarySets().size());
+    assertEquals(1, changeUnit.getOriginalLibraryActionLogs().size());
+    assertEquals(1, changeUnit.getOriginalLibrarySetActionLogs().size());
+    assertEquals(1, changeUnit.getOriginalLibraryLocks().size());
 
     assertDoesNotThrow(
         () -> {
@@ -330,10 +327,10 @@ public class ChangeUserNameToLowerCaseChangeUnitTest {
         librarySetActionLogRepository,
         cqlLibraryLockRepository);
 
-    assert changeUnit.getOriginalLibraries().isEmpty();
-    assert changeUnit.getOriginalLibrarySets().isEmpty();
-    assert changeUnit.getOriginalLibraryActionLogs().isEmpty();
-    assert changeUnit.getOriginalLibrarySetActionLogs().isEmpty();
-    assert changeUnit.getOriginalLibraryLocks().isEmpty();
+    assertTrue(changeUnit.getOriginalLibraries().isEmpty());
+    assertTrue(changeUnit.getOriginalLibrarySets().isEmpty());
+    assertTrue(changeUnit.getOriginalLibraryActionLogs().isEmpty());
+    assertTrue(changeUnit.getOriginalLibrarySetActionLogs().isEmpty());
+    assertTrue(changeUnit.getOriginalLibraryLocks().isEmpty());
   }
 }
