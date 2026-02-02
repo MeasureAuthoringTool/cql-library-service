@@ -1853,7 +1853,7 @@ public class CqlLibraryControllerMvcTest {
         .andExpect(status().isOk());
 
     verify(cqlLibraryService, times(1))
-        .transferLibraries(eq(List.of(libraryId)), eq("testUser"), eq(true), eq(TEST_USER_ID));
+        .transferLibraries(eq(List.of(libraryId)), eq("testuser"), eq(true), eq(TEST_USER_ID));
   }
 
   @Test
@@ -1863,7 +1863,7 @@ public class CqlLibraryControllerMvcTest {
     doReturn(List.of("1"))
         .when(cqlLibraryService)
         .transferLibraries(
-            eq(List.of(libraryId, "1")), eq("testUser"), eq(false), eq(TEST_USER_ID));
+            eq(List.of(libraryId, "1")), eq("testuser"), eq(false), eq(TEST_USER_ID));
 
     mockMvc
         .perform(
@@ -1881,7 +1881,7 @@ public class CqlLibraryControllerMvcTest {
 
     verify(cqlLibraryService, times(1))
         .transferLibraries(
-            eq(List.of(libraryId, "1")), eq("testUser"), eq(false), eq(TEST_USER_ID));
+            eq(List.of(libraryId, "1")), eq("testuser"), eq(false), eq(TEST_USER_ID));
   }
 
   @Test
