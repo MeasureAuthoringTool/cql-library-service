@@ -150,7 +150,7 @@ public class CqlLibraryService {
     // Fetch user details in bulk
     Map<String, UserDetailsDto> userDetailsMap = userServiceClient.getBulkUserDetails(ownerIds);
 
-    // Enrich each measure with user details
+    // Enrich each library with user details
     libraries.forEach(
         library -> {
           if (library.getLibrarySet() != null && library.getLibrarySet().getOwner() != null) {
@@ -582,7 +582,7 @@ public class CqlLibraryService {
         .map(
             userId ->
                 AclSpecification.builder()
-                    .userId(userId)
+                    .userId(userId.toLowerCase())
                     .roles(Set.of(RoleEnum.SHARED_WITH))
                     .build())
         .toList();
