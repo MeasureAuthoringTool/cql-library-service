@@ -158,7 +158,23 @@ public class CqlLibraryService {
             UserDetailsDto userDetails = userDetailsMap.get(ownerId);
 
             if (userDetails != null) {
-              library.setOwner(getFullName(userDetails));
+              String firstName = userDetails.getFirstName();
+              String lastName = userDetails.getLastName();
+
+              String displayName = "";
+              if (StringUtils.isNotBlank(firstName) && StringUtils.isNotBlank(lastName)) {
+                displayName = firstName + " " + lastName;
+              } else if (StringUtils.isNotBlank(firstName)) {
+                displayName = firstName;
+              } else if (StringUtils.isNotBlank(lastName)) {
+                displayName = lastName;
+              }
+              library.setOwner(
+                  StringUtils.isNotBlank(displayName)
+                      ? displayName
+                      : StringUtils.isNotBlank(ownerId) ? ownerId : "-");
+            } else {
+              library.setOwner("-");
             }
           }
         });
