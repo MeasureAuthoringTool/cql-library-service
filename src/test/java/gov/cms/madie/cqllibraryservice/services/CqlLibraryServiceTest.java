@@ -43,6 +43,7 @@ import java.util.*;
 
 import gov.cms.madie.cqllibraryservice.dto.MadieFeatureFlag;
 import gov.cms.madie.cqllibraryservice.dto.LockInfo;
+import org.springframework.data.domain.Pageable;
 
 @ExtendWith(MockitoExtension.class)
 class CqlLibraryServiceTest {
@@ -1576,5 +1577,70 @@ class CqlLibraryServiceTest {
 
     verify(cqlLibraryService).findCqlLibraryById(libraryId, harpId);
     verify(cqlLibraryService).changeOwnership(libraryId, harpId, true, "admin");
+  }
+
+  @Test
+  void testGetUserDetailsWhenNoUserDetailsFound() {
+    LibrarySet librarySet1 = LibrarySet.builder().owner("owner1").build();
+    LibrarySet librarySet2 = LibrarySet.builder().owner("owner2").build();
+    LibraryListDTO library1 = LibraryListDTO.builder().id("L1").librarySet(librarySet1).build();
+    LibraryListDTO library2 = LibraryListDTO.builder().id("L2").librarySet(librarySet2).build();
+    List<LibraryListDTO> libraries = List.of(library1, library2);
+    Page<LibraryListDTO> librariesPage = new PageImpl<>(libraries);
+
+    LibrarySearchCriteria criteria = new LibrarySearchCriteria();
+    OwnershipType ownershipType = OwnershipType.OWNED;
+    Pageable pageable = PageRequest.of(0, 10);
+    String username = "testUser";
+
+    when(cqlLibraryRepository.searchLibrariesByCriteria(
+            username, pageable, criteria, ownershipType))
+        .thenReturn(librariesPage);
+    when(appConfigService.isFlagEnabled(MadieFeatureFlag.DISPLAY_OWNER)).thenReturn(true);
+    when(userServiceClient.getBulkUserDetails(anyList())).thenReturn(Collections.emptyMap());
+
+    Page<LibraryListDTO> result =
+        cqlLibraryService.getLibrariesByCriteria(criteria, ownershipType, pageable, username);
+
+    assertEquals("-", result.getContent().get(0).getOwner());
+    assertEquals("-", result.getContent().get(1).getOwner());
+    verify(userServiceClient, times(1)).getBulkUserDetails(List.of("owner1", "owner2"));
+  }
+
+  @Test
+  void testGetUserDetailsWhenUserDetailsFound() {
+    LibrarySet librarySet1 = LibrarySet.builder().owner("owner1").build();
+    LibrarySet librarySet2 = LibrarySet.builder().owner("owner2").build();
+    LibrarySet librarySet3 = LibrarySet.builder().owner("owner3").build();
+    LibraryListDTO library1 = LibraryListDTO.builder().id("L1").librarySet(librarySet1).build();
+    LibraryListDTO library2 = LibraryListDTO.builder().id("L2").librarySet(librarySet2).build();
+    LibraryListDTO library3 = LibraryListDTO.builder().id("L3").librarySet(librarySet3).build();
+    List<LibraryListDTO> libraries = List.of(library1, library2, library3);
+    Page<LibraryListDTO> librariesPage = new PageImpl<>(libraries);
+
+    LibrarySearchCriteria criteria = new LibrarySearchCriteria();
+    OwnershipType ownershipType = OwnershipType.OWNED;
+    Pageable pageable = PageRequest.of(0, 10);
+    String username = "testUser";
+
+    UserDetailsDto user1 = UserDetailsDto.builder().firstName("John").lastName("Doe").build();
+    UserDetailsDto user2 = UserDetailsDto.builder().firstName("").lastName("").build();
+    UserDetailsDto user3 = UserDetailsDto.builder().firstName(null).lastName(null).build();
+    Map<String, UserDetailsDto> userDetailsMap =
+        Map.of("owner1", user1, "owner2", user2, "owner3", user3);
+
+    when(cqlLibraryRepository.searchLibrariesByCriteria(
+            username, pageable, criteria, ownershipType))
+        .thenReturn(librariesPage);
+    when(appConfigService.isFlagEnabled(MadieFeatureFlag.DISPLAY_OWNER)).thenReturn(true);
+    when(userServiceClient.getBulkUserDetails(anyList())).thenReturn(userDetailsMap);
+
+    Page<LibraryListDTO> result =
+        cqlLibraryService.getLibrariesByCriteria(criteria, ownershipType, pageable, username);
+
+    assertEquals("John Doe", result.getContent().get(0).getOwner());
+    assertEquals("owner2", result.getContent().get(1).getOwner());
+    assertEquals("owner3", result.getContent().get(2).getOwner());
+    verify(userServiceClient, times(1)).getBulkUserDetails(List.of("owner1", "owner2", "owner3"));
   }
 }
