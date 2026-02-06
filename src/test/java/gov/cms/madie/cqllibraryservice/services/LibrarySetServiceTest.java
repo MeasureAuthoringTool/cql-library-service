@@ -406,4 +406,56 @@ class LibrarySetServiceTest {
     assertEquals(1, result.size());
     assertNull(result.get(0));
   }
+
+  @Test
+  void testUpdateOwnershipUserHasAlreadyHadSharedAccess() {
+    String librarySetId = "librarySetId";
+    String originalOwner = "originalOwner";
+    String newOwner = "newOwner";
+    LibrarySet librarySet =
+        LibrarySet.builder()
+            .librarySetId(librarySetId)
+            .owner(originalOwner)
+            .acls(
+                new ArrayList<>(
+                    List.of(
+                        AclSpecification.builder()
+                            .userId(originalOwner)
+                            .roles(new HashSet<>(Set.of(RoleEnum.SHARED_WITH)))
+                            .build())))
+            .build();
+
+    LibrarySet updatedLibrarySet =
+        LibrarySet.builder()
+            .librarySetId(librarySetId)
+            .owner(newOwner)
+            .acls(
+                List.of(
+                    AclSpecification.builder()
+                        .userId(originalOwner)
+                        .roles(new HashSet<>(Set.of(RoleEnum.SHARED_WITH)))
+                        .build()))
+            .build();
+
+    when(librarySetRepository.findByLibrarySetId(anyString())).thenReturn(Optional.of(librarySet));
+    when(librarySetRepository.save(any(LibrarySet.class))).thenReturn(updatedLibrarySet);
+
+    LibrarySet result = librarySetService.updateOwnership(librarySetId, newOwner, true, "admin");
+
+    assertEquals(newOwner, result.getOwner());
+    assertEquals(1, result.getAcls().size());
+    assertEquals(originalOwner, result.getAcls().get(0).getUserId());
+    assertTrue(result.getAcls().get(0).getRoles().contains(RoleEnum.SHARED_WITH));
+    verify(actionLogService, times(1))
+        .logAction(
+            librarySetId,
+            ActionType.OWNERSHIP_TRANSFER,
+            "admin",
+            "librarySetActionLog",
+            "Transferred from originalOwner to newOwner");
+    // No additional share log should be created since originalOwner already had shared access
+    verify(actionLogService, times(0))
+        .logShareAccessControlAction(
+            "1", ActionType.SHARED, "admin", originalOwner, "Shared with - originalOwner");
+  }
 }
