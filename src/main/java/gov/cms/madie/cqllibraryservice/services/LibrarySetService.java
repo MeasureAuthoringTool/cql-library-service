@@ -133,6 +133,7 @@ public class LibrarySetService {
                   }
                 });
       }
+      changeLibrarySetAlcsToLowerCase(librarySet);
       LibrarySet updatedLibrarySet = librarySetRepository.save(librarySet);
       log.info("ACL updated for Library set [{}]", updatedLibrarySet.getId());
       actionLogDetails.forEach(
@@ -231,14 +232,18 @@ public class LibrarySetService {
     if (retainShareAccess) {
       List<AclSpecification> acls =
           !CollectionUtils.isEmpty(librarySet.getAcls()) ? librarySet.getAcls() : new ArrayList<>();
-      acls.add(
-          AclSpecification.builder()
-              .userId(originalOwner)
-              .roles(Set.of(RoleEnum.SHARED_WITH))
-              .build());
+      boolean hasUserAlreadyBeenSharedWith =
+          acls.stream().anyMatch(acl -> originalOwner.equalsIgnoreCase(acl.getUserId()));
+      if (!hasUserAlreadyBeenSharedWith) {
+        acls.add(
+            AclSpecification.builder()
+                .userId(originalOwner.toLowerCase())
+                .roles(Set.of(RoleEnum.SHARED_WITH))
+                .build());
+      }
       librarySet.setAcls(acls);
     }
-
+    changeLibrarySetAlcsToLowerCase(librarySet);
     LibrarySet updatedLibrarySet = librarySetRepository.save(librarySet);
 
     log.info(
@@ -319,5 +324,13 @@ public class LibrarySetService {
       }
     }
     return mostRecentLibraries;
+  }
+
+  private void changeLibrarySetAlcsToLowerCase(LibrarySet librarySet) {
+    String ownerLower = librarySet.getOwner().toLowerCase();
+    librarySet.setOwner(ownerLower);
+    if (CollectionUtils.isNotEmpty(librarySet.getAcls())) {
+      librarySet.getAcls().stream().forEach(acl -> acl.setUserId(acl.getUserId().toLowerCase()));
+    }
   }
 }
