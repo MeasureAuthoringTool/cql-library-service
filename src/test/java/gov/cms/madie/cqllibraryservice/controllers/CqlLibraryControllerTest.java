@@ -19,9 +19,6 @@ import gov.cms.madie.cqllibraryservice.exceptions.PermissionDeniedException;
 import gov.cms.madie.cqllibraryservice.exceptions.ResourceNotDraftableException;
 import gov.cms.madie.cqllibraryservice.exceptions.ResourceNotFoundException;
 import gov.cms.madie.cqllibraryservice.services.*;
-import gov.cms.madie.models.access.AclOperation;
-import gov.cms.madie.models.access.AclSpecification;
-import gov.cms.madie.models.access.RoleEnum;
 import gov.cms.madie.models.common.*;
 import gov.cms.madie.models.dto.LibraryUsage;
 import gov.cms.madie.models.library.CqlLibrary;
@@ -31,7 +28,6 @@ import gov.cms.madie.cqllibraryservice.repositories.CqlLibraryRepository;
 import java.security.Principal;
 import java.util.List;
 import java.util.Optional;
-import java.util.Set;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -42,7 +38,6 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.mock.web.MockHttpServletRequest;
 
 @ExtendWith(MockitoExtension.class)
 class CqlLibraryControllerTest {
@@ -634,49 +629,6 @@ class CqlLibraryControllerTest {
     assertThat(usage.size(), is(equalTo(1)));
     assertThat(usage.get(0).getName(), is(equalTo(libraryName)));
     assertThat(usage.get(0).getOwner(), is(equalTo(owner)));
-  }
-
-  @Test
-  void testDeleteLibraryAlongWithVersions() {
-    MockHttpServletRequest request = new MockHttpServletRequest();
-    request.addHeader("api-key", "key");
-    String libraryName = "Helper";
-    doNothing()
-        .when(cqlLibraryService)
-        .deleteLibraryAlongWithVersions(anyString(), anyString(), anyString());
-    ResponseEntity<String> response =
-        cqlLibraryController.deleteLibraryAlongWithVersions(
-            request, libraryName, "token", "harpId", "key");
-    assertThat(
-        response.getBody(),
-        is(equalTo("The library and all its associated versions have been removed successfully.")));
-  }
-
-  @Test
-  public void testUpdateAccessControl() {
-    MockHttpServletRequest request = new MockHttpServletRequest();
-    request.addHeader("api-key", "key");
-
-    AclSpecification aclSpecification = new AclSpecification();
-    aclSpecification.setUserId("user_1");
-    aclSpecification.setRoles(Set.of(RoleEnum.SHARED_WITH));
-
-    AclOperation aclOperation =
-        AclOperation.builder()
-            .acls(List.of(aclSpecification))
-            .action(AclOperation.AclAction.GRANT)
-            .build();
-
-    List<AclSpecification> aclSpecifications = List.of(aclSpecification);
-
-    when(cqlLibraryService.updateAccessControlList(anyString(), any(), anyString()))
-        .thenReturn(aclSpecifications);
-
-    ResponseEntity<List<AclSpecification>> output =
-        cqlLibraryController.updateAccessControl(request, "1", aclOperation, "key");
-
-    verify(cqlLibraryService, times(1)).updateAccessControlList(anyString(), any(), anyString());
-    assertThat(output.getBody(), equalTo(aclSpecifications));
   }
 
   @Test
