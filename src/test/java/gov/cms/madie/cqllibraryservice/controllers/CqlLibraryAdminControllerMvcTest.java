@@ -39,7 +39,6 @@ import gov.cms.madie.cqllibraryservice.services.VersionService;
 import gov.cms.madie.models.access.AclSpecification;
 import gov.cms.madie.models.access.RoleEnum;
 import gov.cms.madie.models.common.ActionType;
-import gov.cms.madie.models.common.ModelType;
 import gov.cms.madie.models.library.CqlLibrary;
 import gov.cms.madie.models.library.LibrarySet;
 
@@ -65,11 +64,10 @@ public class CqlLibraryAdminControllerMvcTest {
   @Autowired private MockMvc mockMvc;
 
   private static final String TEST_USER_ID = "test-okta-user-id-123";
-  private static final String TEST_LIBRARYSET_ID = "test-okta-user-id-321";
   private static final String TEST_API_KEY_HEADER = "api-key";
   private static final String TEST_API_KEY_HEADER_VALUE = "0a51991c";
-  private static final String MODEL = ModelType.QI_CORE.toString();
   public static final String ELM_SEVERITY = "Info";
+  public static final String TEST_OKTA = "test-okta";
 
   @Test
   public void testAdminMeasureGetSharedWith() throws Exception {
@@ -89,7 +87,7 @@ public class CqlLibraryAdminControllerMvcTest {
                 .with(csrf())
                 .with(user(TEST_USER_ID))
                 .header(TEST_API_KEY_HEADER, TEST_API_KEY_HEADER_VALUE)
-                .header("Authorization", "test-okta")
+                .header("Authorization", TEST_OKTA)
                 .header("harpId", "owner1"))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$[0].libraryId", equalTo("12345")))
@@ -115,7 +113,7 @@ public class CqlLibraryAdminControllerMvcTest {
                     .with(csrf())
                     .with(user(TEST_USER_ID))
                     .header(TEST_API_KEY_HEADER, TEST_API_KEY_HEADER_VALUE)
-                    .header("Authorization", "test-okta")
+                    .header("Authorization", TEST_OKTA)
                     .header("harpId", "owner2"))
             .andExpect(
                 jsonPath("$.message")
@@ -140,7 +138,7 @@ public class CqlLibraryAdminControllerMvcTest {
                 .with(csrf())
                 .with(user(TEST_USER_ID))
                 .header(TEST_API_KEY_HEADER, TEST_API_KEY_HEADER_VALUE)
-                .header("Authorization", "test-okta")
+                .header("Authorization", TEST_OKTA)
                 .header("harpId", "owner1"))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$[0].libraryId", equalTo("12345")))
@@ -158,7 +156,7 @@ public class CqlLibraryAdminControllerMvcTest {
                     .with(csrf())
                     .with(user(TEST_USER_ID))
                     .header(TEST_API_KEY_HEADER, TEST_API_KEY_HEADER_VALUE)
-                    .header("Authorization", "test-okta")
+                    .header("Authorization", TEST_OKTA)
                     .header("harpId", "owner1"))
             .andReturn();
 
@@ -186,7 +184,7 @@ public class CqlLibraryAdminControllerMvcTest {
                 .with(csrf())
                 .with(user(TEST_USER_ID))
                 .header(TEST_API_KEY_HEADER, TEST_API_KEY_HEADER_VALUE)
-                .header("Authorization", "test-okta")
+                .header("Authorization", TEST_OKTA)
                 .header("harpId", "owner1"))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$[0].libraryId", equalTo("12345")))
@@ -205,7 +203,7 @@ public class CqlLibraryAdminControllerMvcTest {
                 delete("/cql-libraries/admin/Test/delete-all-versions")
                     .with(user(TEST_USER_ID))
                     .with(csrf())
-                    .header("Authorization", "test-okta")
+                    .header("Authorization", TEST_OKTA)
                     .header("api-key", "0a51991c")
                     .header("harpId", "owner1"))
             .andReturn();
@@ -226,7 +224,7 @@ public class CqlLibraryAdminControllerMvcTest {
                 delete("/cql-libraries/admin/Test/delete-all-versions")
                     .with(user(TEST_USER_ID))
                     .with(csrf())
-                    .header("Authorization", "test-okta")
+                    .header("Authorization", TEST_OKTA)
                     .header("harpId", "owner1"))
             .andReturn();
     assertEquals(result.getResponse().getStatus(), HttpStatus.FORBIDDEN.value());
