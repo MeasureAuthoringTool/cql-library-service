@@ -70,7 +70,7 @@ public class CqlLibraryAdminControllerMvcTest {
   public static final String TEST_OKTA = "test-okta";
 
   @Test
-  public void testAdminMeasureGetSharedWith() throws Exception {
+  public void testAdminLibraryGetSharedWith() throws Exception {
     CqlLibrary testLibrary = CqlLibrary.builder().id("12345").build();
     AclSpecification acl1 = new AclSpecification();
     acl1.setUserId("raoulduke");
@@ -83,7 +83,7 @@ public class CqlLibraryAdminControllerMvcTest {
 
     mockMvc
         .perform(
-            MockMvcRequestBuilders.get("/cql-libraries/admin/sharedWith?measureids=12345")
+            MockMvcRequestBuilders.get("/cql-libraries/admin/sharedWith?libraryids=12345")
                 .with(csrf())
                 .with(user(TEST_USER_ID))
                 .header(TEST_API_KEY_HEADER, TEST_API_KEY_HEADER_VALUE)
@@ -95,7 +95,7 @@ public class CqlLibraryAdminControllerMvcTest {
   }
 
   @Test
-  public void testAdminMeasureGetSharedWithHarpIdMismatchException() throws Exception {
+  public void testAdminLibraryGetSharedWithHarpIdMismatchException() throws Exception {
     CqlLibrary testLibrary = CqlLibrary.builder().id("12345").build();
     AclSpecification acl1 = new AclSpecification();
     acl1.setUserId("raoulduke");
@@ -109,7 +109,7 @@ public class CqlLibraryAdminControllerMvcTest {
     MvcResult result =
         mockMvc
             .perform(
-                MockMvcRequestBuilders.get("/cql-libraries/admin/sharedWith?measureids=12345")
+                MockMvcRequestBuilders.get("/cql-libraries/admin/sharedWith?libraryids=12345")
                     .with(csrf())
                     .with(user(TEST_USER_ID))
                     .header(TEST_API_KEY_HEADER, TEST_API_KEY_HEADER_VALUE)
@@ -125,7 +125,7 @@ public class CqlLibraryAdminControllerMvcTest {
   }
 
   @Test
-  public void testAdminMeasureGetSharedWithNone() throws Exception {
+  public void testAdminLibraryGetSharedWithNone() throws Exception {
     CqlLibrary testLibrary = CqlLibrary.builder().id("12345").build();
 
     LibrarySet librarySet = LibrarySet.builder().acls(null).owner("owner1").build();
@@ -134,7 +134,7 @@ public class CqlLibraryAdminControllerMvcTest {
 
     mockMvc
         .perform(
-            MockMvcRequestBuilders.get("/cql-libraries/admin/sharedWith?measureids=12345")
+            MockMvcRequestBuilders.get("/cql-libraries/admin/sharedWith?libraryids=12345")
                 .with(csrf())
                 .with(user(TEST_USER_ID))
                 .header(TEST_API_KEY_HEADER, TEST_API_KEY_HEADER_VALUE)
@@ -146,13 +146,13 @@ public class CqlLibraryAdminControllerMvcTest {
   }
 
   @Test
-  public void testAdminMeasureGetSharedWithResourceNotFoundException() throws Exception {
+  public void testAdminLibraryGetSharedWithResourceNotFoundException() throws Exception {
     when(cqlLibraryService.findCqlLibraryById(anyString(), anyString())).thenReturn(null);
 
     MvcResult result =
         mockMvc
             .perform(
-                MockMvcRequestBuilders.get("/cql-libraries/admin/sharedWith?measureids=12345")
+                MockMvcRequestBuilders.get("/cql-libraries/admin/sharedWith?libraryids=12345")
                     .with(csrf())
                     .with(user(TEST_USER_ID))
                     .header(TEST_API_KEY_HEADER, TEST_API_KEY_HEADER_VALUE)
@@ -164,7 +164,7 @@ public class CqlLibraryAdminControllerMvcTest {
   }
 
   @Test
-  public void testAdminMultipleMeasuresGetSharedWith() throws Exception {
+  public void testAdminMultipleLibrariesGetSharedWith() throws Exception {
     CqlLibrary lib1 = CqlLibrary.builder().id("12345").build();
     CqlLibrary lib2 = CqlLibrary.builder().id("6789").build();
     AclSpecification acl1 = new AclSpecification();
@@ -180,7 +180,7 @@ public class CqlLibraryAdminControllerMvcTest {
 
     mockMvc
         .perform(
-            MockMvcRequestBuilders.get("/cql-libraries/admin/sharedWith?measureids=12345,6789")
+            MockMvcRequestBuilders.get("/cql-libraries/admin/sharedWith?libraryids=12345,6789")
                 .with(csrf())
                 .with(user(TEST_USER_ID))
                 .header(TEST_API_KEY_HEADER, TEST_API_KEY_HEADER_VALUE)

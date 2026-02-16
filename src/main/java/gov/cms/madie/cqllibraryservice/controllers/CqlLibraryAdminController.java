@@ -116,7 +116,7 @@ public class CqlLibraryAdminController {
       log.info("Successful libraryIds: [{}]", successLibraryIds);
       return ResponseEntity.ok().body(successLibraryIds);
     } else {
-      log.info("Failed transfer measureIds: [{}]", failedTransfers);
+      log.info("Failed transfer Ids: [{}]", failedTransfers);
       return ResponseEntity.status(HttpStatus.MULTI_STATUS).body(failedTransfers);
     }
   }
@@ -135,15 +135,15 @@ public class CqlLibraryAdminController {
 
   @GetMapping("/sharedWith")
   @PreAuthorize("#request.getHeader('api-key') == #apiKey")
-  public ResponseEntity<List<Map<String, Object>>> getMeasureSharedWith(
+  public ResponseEntity<List<Map<String, Object>>> getLibrarySharedWith(
       HttpServletRequest request,
       @Value("${admin-api-key}") String apiKey,
       @RequestHeader(name = "harpId") String harpId,
-      @RequestParam(name = "measureids") String measureids,
+      @RequestParam(name = "libraryids") String libraryids,
       Principal principal) {
     final String username = principal.getName().toLowerCase();
     List<Map<String, Object>> results = new ArrayList<>();
-    String[] ids = StringUtils.split(measureids, ",");
+    String[] ids = StringUtils.split(libraryids, ",");
     for (String id : ids) {
       CqlLibrary library = cqlLibraryService.findCqlLibraryById(id, username);
       if (library != null) {
