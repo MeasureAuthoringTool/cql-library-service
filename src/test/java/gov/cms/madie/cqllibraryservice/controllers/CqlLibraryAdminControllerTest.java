@@ -1,15 +1,22 @@
 package gov.cms.madie.cqllibraryservice.controllers;
 
+import static org.hamcrest.CoreMatchers.equalTo;
+import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.security.Principal;
 import java.util.Collections;
 import java.util.List;
+import java.util.Set;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -23,6 +30,9 @@ import org.springframework.mock.web.MockHttpServletRequest;
 import gov.cms.madie.cqllibraryservice.locks.CqlLibraryLock;
 import gov.cms.madie.cqllibraryservice.services.CqlLibraryLockService;
 import gov.cms.madie.cqllibraryservice.services.CqlLibraryService;
+import gov.cms.madie.models.access.AclOperation;
+import gov.cms.madie.models.access.AclSpecification;
+import gov.cms.madie.models.access.RoleEnum;
 
 @ExtendWith(MockitoExtension.class)
 public class CqlLibraryAdminControllerTest {
@@ -98,5 +108,47 @@ public class CqlLibraryAdminControllerTest {
 
     assertTrue(response.getStatusCode().equals(HttpStatusCode.valueOf(207)));
     assertEquals("testCqlLibraryId", response.getBody().get(0));
+  }
+
+  @Test
+  void testDeleteLibraryAlongWithVersions() {
+    MockHttpServletRequest request = new MockHttpServletRequest();
+    request.addHeader("api-key", "key");
+    String libraryName = "Helper";
+    doNothing()
+        .when(cqlLibraryService)
+        .deleteLibraryAlongWithVersions(anyString(), anyString(), anyString());
+    ResponseEntity<String> response =
+        controller.deleteLibraryAlongWithVersions(request, libraryName, "token", "harpId", "key");
+    assertThat(
+        response.getBody(),
+        is(equalTo("The library and all its associated versions have been removed successfully.")));
+  }
+
+  @Test
+  public void testUpdateAccessControl() {
+    MockHttpServletRequest request = new MockHttpServletRequest();
+    request.addHeader("api-key", "key");
+
+    AclSpecification aclSpecification = new AclSpecification();
+    aclSpecification.setUserId("user_1");
+    aclSpecification.setRoles(Set.of(RoleEnum.SHARED_WITH));
+
+    AclOperation aclOperation =
+        AclOperation.builder()
+            .acls(List.of(aclSpecification))
+            .action(AclOperation.AclAction.GRANT)
+            .build();
+
+    List<AclSpecification> aclSpecifications = List.of(aclSpecification);
+
+    when(cqlLibraryService.updateAccessControlList(anyString(), any(), anyString()))
+        .thenReturn(aclSpecifications);
+
+    ResponseEntity<List<AclSpecification>> output =
+        controller.updateAccessControl(request, "1", aclOperation, "key");
+
+    verify(cqlLibraryService, times(1)).updateAccessControlList(anyString(), any(), anyString());
+    assertThat(output.getBody(), equalTo(aclSpecifications));
   }
 }

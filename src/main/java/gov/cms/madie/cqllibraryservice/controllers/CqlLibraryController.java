@@ -1,10 +1,8 @@
 package gov.cms.madie.cqllibraryservice.controllers;
 
 import gov.cms.madie.cqllibraryservice.dto.*;
-import gov.cms.madie.cqllibraryservice.exceptions.HarpIdMismatchException;
 import gov.cms.madie.cqllibraryservice.exceptions.InvalidIdException;
 import gov.cms.madie.cqllibraryservice.services.*;
-import gov.cms.madie.models.access.AclOperation;
 import gov.cms.madie.models.access.AclSpecification;
 import gov.cms.madie.models.common.Action;
 import gov.cms.madie.models.common.ActionType;
@@ -21,12 +19,10 @@ import java.util.*;
 
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
-import jakarta.servlet.http.HttpServletRequest;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -34,7 +30,6 @@ import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
@@ -230,69 +225,11 @@ public class CqlLibraryController {
         .body(cqlLibraryService.findLibrariesByNameAndModel(libraryName, model));
   }
 
-  @PutMapping("/{id}/acls")
-  @PreAuthorize("#request.getHeader('api-key') == #apiKey")
-  public ResponseEntity<List<AclSpecification>> updateAccessControl(
-      HttpServletRequest request,
-      @PathVariable String id,
-      @RequestBody @Validated AclOperation aclOperation,
-      @Value("${admin-api-key}") String apiKey) {
-    List<AclSpecification> aclSpecifications =
-        cqlLibraryService.updateAccessControlList(id, aclOperation, "admin");
-    return ResponseEntity.ok().body(aclSpecifications);
-  }
-
-  @GetMapping("/sharedWith")
-  @PreAuthorize("#request.getHeader('api-key') == #apiKey")
-  public ResponseEntity<List<Map<String, Object>>> getMeasureSharedWith(
-      HttpServletRequest request,
-      @Value("${admin-api-key}") String apiKey,
-      @RequestHeader(name = "harpId") String harpId,
-      @RequestParam(name = "measureids") String measureids,
-      Principal principal) {
-    final String username = principal.getName().toLowerCase();
-    List<Map<String, Object>> results = new ArrayList<>();
-    String[] ids = StringUtils.split(measureids, ",");
-    for (String id : ids) {
-      CqlLibrary library = cqlLibraryService.findCqlLibraryById(id, username);
-      if (library != null) {
-        if (!library.getLibrarySet().getOwner().equalsIgnoreCase(harpId)) {
-          throw new HarpIdMismatchException(
-              harpId, library.getLibrarySet().getOwner(), library.getId());
-        }
-        Map<String, Object> result = new LinkedHashMap<>();
-
-        result.put("libraryName", library.getCqlLibraryName());
-        result.put("libraryId", library.getId());
-        result.put("libraryOwner", library.getLibrarySet().getOwner());
-        result.put("sharedWith", library.getLibrarySet().getAcls());
-        results.add(result);
-      } else {
-        throw new ResourceNotFoundException(id);
-      }
-    }
-    return ResponseEntity.ok(results);
-  }
-
   @DeleteMapping("/{id}")
   public ResponseEntity<CqlLibrary> hardDeleteLibrary(
       @PathVariable("id") String id, Principal principal) {
     final String username = principal.getName().toLowerCase();
     return ResponseEntity.ok(cqlLibraryService.deleteDraftLibrary(id, username));
-  }
-
-  @DeleteMapping("/{libraryName}/delete-all-versions")
-  @PreAuthorize("#request.getHeader('api-key') == #apiKey")
-  public ResponseEntity<String> deleteLibraryAlongWithVersions(
-      HttpServletRequest request,
-      @PathVariable String libraryName,
-      @RequestHeader("Authorization") String accessToken,
-      @RequestHeader(name = "harpId") String harpId,
-      @Value("${admin-api-key}") String apiKey) {
-    cqlLibraryService.deleteLibraryAlongWithVersions(
-        libraryName, accessToken, harpId.toLowerCase());
-    return ResponseEntity.ok()
-        .body("The library and all its associated versions have been removed successfully.");
   }
 
   @GetMapping("/shared")
