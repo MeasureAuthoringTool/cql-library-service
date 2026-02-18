@@ -9,7 +9,6 @@ import java.util.Map;
 
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -33,7 +32,6 @@ import gov.cms.madie.cqllibraryservice.services.CqlLibraryService;
 import gov.cms.madie.models.access.AclOperation;
 import gov.cms.madie.models.access.AclSpecification;
 import gov.cms.madie.models.library.CqlLibrary;
-import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -47,12 +45,9 @@ public class CqlLibraryAdminController {
   private final CqlLibraryService cqlLibraryService;
 
   @DeleteMapping("/locks")
-  @PreAuthorize("#request.getHeader('api-key') == #apiKey")
+  @PreAuthorize("hasRole('MADIE-ADMIN')")
   public ResponseEntity<List<String>> unlockAllByUser(
-      HttpServletRequest request,
-      @Value("${admin-api-key}") String apiKey,
-      @RequestHeader(name = "harpId") String harpId,
-      Principal principal) {
+      @RequestHeader(name = "harpId") String harpId, Principal principal) {
     log.info("Unlock all libraries for the user: " + harpId);
     List<String> messages = cqlLibraryLockService.unlockByUser(harpId.toLowerCase());
     return ResponseEntity.ok(messages);
@@ -74,10 +69,8 @@ public class CqlLibraryAdminController {
   @PutMapping(
       value = "/ownership",
       produces = {MediaType.APPLICATION_JSON_VALUE})
-  @PreAuthorize("#request.getHeader('api-key') == #apiKey")
+  @PreAuthorize("hasRole('MADIE-ADMIN')")
   public ResponseEntity<List<String>> changeOwnership(
-      HttpServletRequest request,
-      @Value("${admin-api-key}") String apiKey,
       @RequestBody List<String> cqlLibraryIds,
       @RequestParam(name = "harpId") String harpId,
       @RequestParam(defaultValue = "false") boolean retainShareAccess,
@@ -122,22 +115,17 @@ public class CqlLibraryAdminController {
   }
 
   @PutMapping("/{id}/acls")
-  @PreAuthorize("#request.getHeader('api-key') == #apiKey")
+  @PreAuthorize("hasRole('MADIE-ADMIN')")
   public ResponseEntity<List<AclSpecification>> updateAccessControl(
-      HttpServletRequest request,
-      @PathVariable String id,
-      @RequestBody @Validated AclOperation aclOperation,
-      @Value("${admin-api-key}") String apiKey) {
+      @PathVariable String id, @RequestBody @Validated AclOperation aclOperation) {
     List<AclSpecification> aclSpecifications =
         cqlLibraryService.updateAccessControlList(id, aclOperation, "admin");
     return ResponseEntity.ok().body(aclSpecifications);
   }
 
   @GetMapping("/sharedWith")
-  @PreAuthorize("#request.getHeader('api-key') == #apiKey")
+  @PreAuthorize("hasRole('MADIE-ADMIN')")
   public ResponseEntity<List<Map<String, Object>>> getLibrarySharedWith(
-      HttpServletRequest request,
-      @Value("${admin-api-key}") String apiKey,
       @RequestHeader(name = "harpId") String harpId,
       @RequestParam(name = "libraryids") String libraryids,
       Principal principal) {
@@ -166,13 +154,11 @@ public class CqlLibraryAdminController {
   }
 
   @DeleteMapping("/{libraryName}/delete-all-versions")
-  @PreAuthorize("#request.getHeader('api-key') == #apiKey")
+  @PreAuthorize("hasRole('MADIE-ADMIN')")
   public ResponseEntity<String> deleteLibraryAlongWithVersions(
-      HttpServletRequest request,
       @PathVariable String libraryName,
       @RequestHeader("Authorization") String accessToken,
-      @RequestHeader(name = "harpId") String harpId,
-      @Value("${admin-api-key}") String apiKey) {
+      @RequestHeader(name = "harpId") String harpId) {
     cqlLibraryService.deleteLibraryAlongWithVersions(
         libraryName, accessToken, harpId.toLowerCase());
     return ResponseEntity.ok()

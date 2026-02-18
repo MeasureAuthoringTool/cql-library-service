@@ -68,8 +68,6 @@ public class CqlLibraryControllerMvcTest {
 
   private static final String TEST_USER_ID = "test-okta-user-id-123";
   private static final String TEST_LIBRARYSET_ID = "test-okta-user-id-321";
-  private static final String TEST_API_KEY_HEADER = "api-key";
-  private static final String TEST_API_KEY_HEADER_VALUE = "0a51991c";
   private static final String MODEL = ModelType.QI_CORE.toString();
   public static final String ELM_SEVERITY = "Info";
 
@@ -79,6 +77,7 @@ public class CqlLibraryControllerMvcTest {
   @MockitoBean LibrarySetService librarySetService;
   @MockitoBean private CqlDifferentiatorService cqlDifferentiatorService;
   @MockitoBean ActionLogService actionLogService;
+  @MockitoBean private UserServiceClient userServiceClient;
 
   @Captor private ArgumentCaptor<CqlLibrary> cqlLibraryArgumentCaptor;
 
@@ -1596,7 +1595,6 @@ public class CqlLibraryControllerMvcTest {
                     .with(user(TEST_USER_ID))
                     .with(csrf())
                     .content("{\"libraryId1\": [\"userId1\"],\"libraryId2\": [\"userId1\"]}")
-                    .header(TEST_API_KEY_HEADER, TEST_API_KEY_HEADER_VALUE)
                     .contentType(MediaType.APPLICATION_JSON_VALUE))
             .andExpect(status().isOk())
             .andReturn();
@@ -1658,7 +1656,6 @@ public class CqlLibraryControllerMvcTest {
                     .with(user(TEST_USER_ID))
                     .with(csrf())
                     .content("{\"libraryId1\": [\"userId1\"],\"libraryId2\": [\"userId1\"]}")
-                    .header(TEST_API_KEY_HEADER, TEST_API_KEY_HEADER_VALUE)
                     .contentType(MediaType.APPLICATION_JSON_VALUE))
             .andExpect(status().isOk())
             .andReturn();

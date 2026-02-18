@@ -3,8 +3,11 @@ package gov.cms.madie.cqllibraryservice.services;
 import gov.cms.madie.cqllibraryservice.config.EnvironmentConfig;
 import gov.cms.madie.models.dto.DetailsRequestDto;
 import gov.cms.madie.models.dto.UserDetailsDto;
+import gov.cms.madie.models.dto.UserRolesDto;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
@@ -86,6 +89,42 @@ public class UserServiceClient {
     } catch (Exception e) {
       log.error(
           "Failed to fetch user details from user service for HARP ID [{}]: {}",
+          harpId,
+          e.getMessage(),
+          e);
+      return null;
+    }
+  }
+
+  /**
+   * Fetches UserRolesDto from the user service.
+   *
+   * @param harpId: HARP ID to fetch UserRolesDto for
+   * @return UserRolesDto which contains the HARP ID and associated roles, or null if service call
+   *     fails
+   */
+  public UserRolesDto getUserRoles(String harpId, String accessToken) {
+    log.debug("Requesting user roles for HARP ID: [{}]", harpId);
+    if (StringUtils.isBlank(harpId)) {
+      return null;
+    }
+
+    String url = environmentConfig.getUserServiceBaseUrl() + "/users/" + harpId + "/roles";
+    HttpHeaders headers = new HttpHeaders();
+    headers.setContentType(MediaType.APPLICATION_JSON);
+    headers.set(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken);
+    HttpEntity<Void> request = new HttpEntity<>(headers);
+
+    try {
+      log.debug("Calling user-service to request user roles for HARP ID: [{}]", harpId);
+      ResponseEntity<UserRolesDto> responseEntity =
+          userServiceRestTemplate.exchange(url, HttpMethod.GET, request, UserRolesDto.class);
+      UserRolesDto response = responseEntity.getBody();
+      log.debug("Successfully retrieved user roles for HARP ID: [{}]", harpId);
+      return response;
+    } catch (Exception e) {
+      log.error(
+          "Failed to fetch user roles from user service for HARP ID: [{}]",
           harpId,
           e.getMessage(),
           e);

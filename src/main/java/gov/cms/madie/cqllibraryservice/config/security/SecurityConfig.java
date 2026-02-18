@@ -12,19 +12,20 @@ import org.springframework.security.web.SecurityFilterChain;
 @EnableMethodSecurity
 public class SecurityConfig {
 
-  private static final String[] CSRF_WHITELIST = {"/cql-libraries/admin/ownership"};
-  private static final String[] AUTH_WHITELIST = {"/actuator/**", "/cql-libraries/admin/ownership"};
+  private static final String[] AUTH_WHITELIST = {"/actuator/**"};
 
   @Bean
-  protected SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+  protected SecurityFilterChain filterChain(HttpSecurity http, UserRoleConverter roleConverter)
+      throws Exception {
     http.cors()
         .and()
         .csrf()
-        .ignoringRequestMatchers(CSRF_WHITELIST)
         .and()
         .authorizeHttpRequests()
         .requestMatchers(AUTH_WHITELIST)
         .permitAll()
+        .requestMatchers("/cql-libraries/admin/**")
+        .hasRole("MADIE-ADMIN")
         .and()
         .authorizeHttpRequests()
         .anyRequest()
@@ -33,10 +34,10 @@ public class SecurityConfig {
         .sessionManagement()
         .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
         .and()
-        .oauth2ResourceServer()
-        .jwt()
-        .and()
-        .and()
+        .oauth2ResourceServer(
+            oAuth2ResourceServerConfigurer ->
+                oAuth2ResourceServerConfigurer.jwt(
+                    jwt -> jwt.jwtAuthenticationConverter(roleConverter)))
         .headers()
         .xssProtection()
         .and()

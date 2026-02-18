@@ -2,6 +2,8 @@ package gov.cms.madie.cqllibraryservice.services;
 
 import gov.cms.madie.cqllibraryservice.config.EnvironmentConfig;
 import gov.cms.madie.models.dto.UserDetailsDto;
+import gov.cms.madie.models.dto.UserRolesDto;
+
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -15,14 +17,23 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
+import static org.hamcrest.CoreMatchers.equalTo;
+import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.CoreMatchers.notNullValue;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -33,6 +44,9 @@ public class UserServiceClientTest {
   @InjectMocks private UserServiceClient userServiceClient;
 
   @Captor private ArgumentCaptor<HttpEntity<Void>> httpEntityCaptor;
+
+  private static final String HARP_ID = "12345";
+  private final String TOKEN = "token";
 
   @Test
   void getSingleUserDetailsReturnsUserDetails() {
@@ -174,5 +188,56 @@ public class UserServiceClientTest {
             eq(HttpMethod.POST),
             org.mockito.ArgumentMatchers.any(HttpEntity.class),
             org.mockito.ArgumentMatchers.any(ParameterizedTypeReference.class));
+  }
+
+  @Test
+  public void testGetUserRoles() {
+    UserRolesDto expectedUserRolesDto =
+        UserRolesDto.builder().harpId(HARP_ID).roles(List.of("MADiE-User")).build();
+
+    when(userServiceRestTemplate.exchange(
+            anyString(),
+            eq(HttpMethod.GET),
+            org.mockito.ArgumentMatchers.any(HttpEntity.class),
+            eq(UserRolesDto.class)))
+        .thenReturn(ResponseEntity.ok(expectedUserRolesDto));
+
+    UserRolesDto actualUserRolesDto = userServiceClient.getUserRoles(HARP_ID, TOKEN);
+
+    assertThat(actualUserRolesDto, is(notNullValue()));
+    assertThat(actualUserRolesDto.getHarpId(), is(equalTo(HARP_ID)));
+    assertEquals(expectedUserRolesDto, actualUserRolesDto);
+    verify(userServiceRestTemplate, times(1))
+        .exchange(
+            anyString(), eq(HttpMethod.GET), httpEntityCaptor.capture(), eq(UserRolesDto.class));
+    HttpHeaders headers = httpEntityCaptor.getValue().getHeaders();
+    assertThat(headers.getContentType(), is(MediaType.APPLICATION_JSON));
+  }
+
+  @Test
+  void testGetUserRolesWithException() {
+    when(userServiceRestTemplate.exchange(
+            anyString(),
+            eq(HttpMethod.GET),
+            org.mockito.ArgumentMatchers.any(HttpEntity.class),
+            eq(UserRolesDto.class)))
+        .thenThrow(new RestClientException("Connection error"));
+
+    UserRolesDto actualUserRolesDto = userServiceClient.getUserRoles(HARP_ID, TOKEN);
+
+    assertNull(actualUserRolesDto);
+    verify(userServiceRestTemplate, times(1))
+        .exchange(
+            anyString(), eq(HttpMethod.GET), httpEntityCaptor.capture(), eq(UserRolesDto.class));
+  }
+
+  @Test
+  void testGetUserRolesReturnsNullWhenHarpIdIsNull() {
+    UserRolesDto result = userServiceClient.getUserRoles(null, TOKEN);
+
+    assertNull(result);
+    verify(userServiceRestTemplate, never())
+        .exchange(
+            anyString(), any(HttpMethod.class), any(HttpEntity.class), eq(UserRolesDto.class));
   }
 }
