@@ -25,7 +25,6 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
-import org.springframework.mock.web.MockHttpServletRequest;
 
 import gov.cms.madie.cqllibraryservice.locks.CqlLibraryLock;
 import gov.cms.madie.cqllibraryservice.services.CqlLibraryLockService;
@@ -48,11 +47,7 @@ public class CqlLibraryAdminControllerTest {
     String msg2 = "Deleted library lock for Id: cqlLibrayId";
     when(cqlLibraryLockService.unlockByUser(anyString())).thenReturn(List.of(msg1, msg2));
 
-    MockHttpServletRequest request = new MockHttpServletRequest();
-    request.addHeader("api-key", "key");
-
-    ResponseEntity<List<String>> response =
-        controller.unlockAllByUser(request, "key", "test.user", principal);
+    ResponseEntity<List<String>> response = controller.unlockAllByUser("test.user", principal);
     assertNotNull(response);
     assertEquals(2, response.getBody().size());
     assertTrue(response.getBody().get(0).contains(msg1));
@@ -67,12 +62,8 @@ public class CqlLibraryAdminControllerTest {
             any(List.class), anyString(), any(Boolean.class), anyString()))
         .thenReturn(Collections.emptyList());
 
-    MockHttpServletRequest request = new MockHttpServletRequest();
-    request.addHeader("api-key", "key");
-
     ResponseEntity<List<String>> response =
-        controller.changeOwnership(
-            request, "key", List.of("testCqlLibraryId"), "newUser", true, principal);
+        controller.changeOwnership(List.of("testCqlLibraryId"), "newUser", true, principal);
 
     assertTrue(response.getBody().size() == 1);
     assertTrue(response.getStatusCode().equals(HttpStatusCode.valueOf(200)));
@@ -83,12 +74,8 @@ public class CqlLibraryAdminControllerTest {
   public void testChangeOwnerShipReturnsBadRequest() {
     when(principal.getName()).thenReturn("admin");
 
-    MockHttpServletRequest request = new MockHttpServletRequest();
-    request.addHeader("api-key", "key");
-
     ResponseEntity<List<String>> response =
-        controller.changeOwnership(
-            request, "key", Collections.emptyList(), "newUser", true, principal);
+        controller.changeOwnership(Collections.emptyList(), "newUser", true, principal);
 
     assertTrue(response.getStatusCode().equals(HttpStatusCode.valueOf(400)));
   }
@@ -99,12 +86,8 @@ public class CqlLibraryAdminControllerTest {
     when(cqlLibraryLockService.findByCqlLibraryId(anyString()))
         .thenReturn(CqlLibraryLock.builder().build());
 
-    MockHttpServletRequest request = new MockHttpServletRequest();
-    request.addHeader("api-key", "key");
-
     ResponseEntity<List<String>> response =
-        controller.changeOwnership(
-            request, "key", List.of("testCqlLibraryId"), "newUser", true, principal);
+        controller.changeOwnership(List.of("testCqlLibraryId"), "newUser", true, principal);
 
     assertTrue(response.getStatusCode().equals(HttpStatusCode.valueOf(207)));
     assertEquals("testCqlLibraryId", response.getBody().get(0));
@@ -112,14 +95,12 @@ public class CqlLibraryAdminControllerTest {
 
   @Test
   void testDeleteLibraryAlongWithVersions() {
-    MockHttpServletRequest request = new MockHttpServletRequest();
-    request.addHeader("api-key", "key");
     String libraryName = "Helper";
     doNothing()
         .when(cqlLibraryService)
         .deleteLibraryAlongWithVersions(anyString(), anyString(), anyString());
     ResponseEntity<String> response =
-        controller.deleteLibraryAlongWithVersions(request, libraryName, "token", "harpId", "key");
+        controller.deleteLibraryAlongWithVersions(libraryName, "token", "harpId");
     assertThat(
         response.getBody(),
         is(equalTo("The library and all its associated versions have been removed successfully.")));
@@ -127,9 +108,6 @@ public class CqlLibraryAdminControllerTest {
 
   @Test
   public void testUpdateAccessControl() {
-    MockHttpServletRequest request = new MockHttpServletRequest();
-    request.addHeader("api-key", "key");
-
     AclSpecification aclSpecification = new AclSpecification();
     aclSpecification.setUserId("user_1");
     aclSpecification.setRoles(Set.of(RoleEnum.SHARED_WITH));
@@ -146,7 +124,7 @@ public class CqlLibraryAdminControllerTest {
         .thenReturn(aclSpecifications);
 
     ResponseEntity<List<AclSpecification>> output =
-        controller.updateAccessControl(request, "1", aclOperation, "key");
+        controller.updateAccessControl("1", aclOperation);
 
     verify(cqlLibraryService, times(1)).updateAccessControlList(anyString(), any(), anyString());
     assertThat(output.getBody(), equalTo(aclSpecifications));

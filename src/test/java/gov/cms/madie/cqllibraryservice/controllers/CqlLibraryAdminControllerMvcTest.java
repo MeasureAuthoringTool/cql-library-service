@@ -6,8 +6,8 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.when;
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
+
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -35,6 +35,7 @@ import gov.cms.madie.cqllibraryservice.services.CqlDifferentiatorService;
 import gov.cms.madie.cqllibraryservice.services.CqlLibraryLockService;
 import gov.cms.madie.cqllibraryservice.services.CqlLibraryService;
 import gov.cms.madie.cqllibraryservice.services.LibrarySetService;
+import gov.cms.madie.cqllibraryservice.services.UserServiceClient;
 import gov.cms.madie.cqllibraryservice.services.VersionService;
 import gov.cms.madie.models.access.AclSpecification;
 import gov.cms.madie.models.access.RoleEnum;
@@ -54,6 +55,7 @@ public class CqlLibraryAdminControllerMvcTest {
   @MockitoBean private CqlDifferentiatorService cqlDifferentiatorService;
   @MockitoBean ActionLogService actionLogService;
   @MockitoBean CqlLibraryLockService cqlLibraryLockService;
+  @MockitoBean private UserServiceClient userServiceClient;
 
   @Captor private ArgumentCaptor<CqlLibrary> cqlLibraryArgumentCaptor;
 
@@ -64,8 +66,6 @@ public class CqlLibraryAdminControllerMvcTest {
   @Autowired private MockMvc mockMvc;
 
   private static final String TEST_USER_ID = "test-okta-user-id-123";
-  private static final String TEST_API_KEY_HEADER = "api-key";
-  private static final String TEST_API_KEY_HEADER_VALUE = "0a51991c";
   public static final String ELM_SEVERITY = "Info";
   public static final String TEST_OKTA = "test-okta";
 
@@ -85,8 +85,7 @@ public class CqlLibraryAdminControllerMvcTest {
         .perform(
             MockMvcRequestBuilders.get("/cql-libraries/admin/sharedWith?libraryids=12345")
                 .with(csrf())
-                .with(user(TEST_USER_ID))
-                .header(TEST_API_KEY_HEADER, TEST_API_KEY_HEADER_VALUE)
+                .with(user(TEST_USER_ID).roles("MADIE-ADMIN"))
                 .header("Authorization", TEST_OKTA)
                 .header("harpId", "owner1"))
         .andExpect(status().isOk())
@@ -111,8 +110,7 @@ public class CqlLibraryAdminControllerMvcTest {
             .perform(
                 MockMvcRequestBuilders.get("/cql-libraries/admin/sharedWith?libraryids=12345")
                     .with(csrf())
-                    .with(user(TEST_USER_ID))
-                    .header(TEST_API_KEY_HEADER, TEST_API_KEY_HEADER_VALUE)
+                    .with(user(TEST_USER_ID).roles("MADIE-ADMIN"))
                     .header("Authorization", TEST_OKTA)
                     .header("harpId", "owner2"))
             .andExpect(
@@ -136,8 +134,7 @@ public class CqlLibraryAdminControllerMvcTest {
         .perform(
             MockMvcRequestBuilders.get("/cql-libraries/admin/sharedWith?libraryids=12345")
                 .with(csrf())
-                .with(user(TEST_USER_ID))
-                .header(TEST_API_KEY_HEADER, TEST_API_KEY_HEADER_VALUE)
+                .with(user(TEST_USER_ID).roles("MADIE-ADMIN"))
                 .header("Authorization", TEST_OKTA)
                 .header("harpId", "owner1"))
         .andExpect(status().isOk())
@@ -154,8 +151,7 @@ public class CqlLibraryAdminControllerMvcTest {
             .perform(
                 MockMvcRequestBuilders.get("/cql-libraries/admin/sharedWith?libraryids=12345")
                     .with(csrf())
-                    .with(user(TEST_USER_ID))
-                    .header(TEST_API_KEY_HEADER, TEST_API_KEY_HEADER_VALUE)
+                    .with(user(TEST_USER_ID).roles("MADIE-ADMIN"))
                     .header("Authorization", TEST_OKTA)
                     .header("harpId", "owner1"))
             .andReturn();
@@ -182,8 +178,7 @@ public class CqlLibraryAdminControllerMvcTest {
         .perform(
             MockMvcRequestBuilders.get("/cql-libraries/admin/sharedWith?libraryids=12345,6789")
                 .with(csrf())
-                .with(user(TEST_USER_ID))
-                .header(TEST_API_KEY_HEADER, TEST_API_KEY_HEADER_VALUE)
+                .with(user(TEST_USER_ID).roles("MADIE-ADMIN"))
                 .header("Authorization", TEST_OKTA)
                 .header("harpId", "owner1"))
         .andExpect(status().isOk())
@@ -201,10 +196,9 @@ public class CqlLibraryAdminControllerMvcTest {
         mockMvc
             .perform(
                 delete("/cql-libraries/admin/Test/delete-all-versions")
-                    .with(user(TEST_USER_ID))
+                    .with(user(TEST_USER_ID).roles("MADIE-ADMIN"))
                     .with(csrf())
                     .header("Authorization", TEST_OKTA)
-                    .header("api-key", "0a51991c")
                     .header("harpId", "owner1"))
             .andReturn();
     assertEquals(result.getResponse().getStatus(), HttpStatus.OK.value());
@@ -222,11 +216,11 @@ public class CqlLibraryAdminControllerMvcTest {
         mockMvc
             .perform(
                 delete("/cql-libraries/admin/Test/delete-all-versions")
-                    .with(user(TEST_USER_ID))
+                    .with(user(TEST_USER_ID).roles("MADIE-USER"))
                     .with(csrf())
                     .header("Authorization", TEST_OKTA)
                     .header("harpId", "owner1"))
             .andReturn();
-    assertEquals(result.getResponse().getStatus(), HttpStatus.FORBIDDEN.value());
+    assertEquals(HttpStatus.FORBIDDEN.value(), result.getResponse().getStatus());
   }
 }
