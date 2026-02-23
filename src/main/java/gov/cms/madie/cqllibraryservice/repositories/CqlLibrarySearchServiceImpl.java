@@ -90,9 +90,6 @@ public class CqlLibrarySearchServiceImpl implements CqlLibrarySearchService {
       Pageable pageable,
       LibrarySearchCriteria librarySearchCriteria,
       OwnershipType ownershipType) {
-
-    AggregationOptions options = AggregationOptions.builder().allowDiskUse(true).build();
-
     LookupOperation lookupOperation = getLookupOperation();
     UnwindOperation unwindOperation = unwind("librarySet");
 
@@ -168,8 +165,7 @@ public class CqlLibrarySearchServiceImpl implements CqlLibrarySearchService {
     ops.addAll(lockStages);
     ops.add(facets);
 
-    Aggregation pipeline = newAggregation(ops).withOptions(options);
-
+    Aggregation pipeline = newAggregation(ops);
     List<FacetDTO> results =
         mongoTemplate.aggregate(pipeline, CqlLibrary.class, FacetDTO.class).getMappedResults();
     for (LibraryListDTO dto : results.get(0).getQueryResults()) {
