@@ -119,10 +119,10 @@ public class CqlLibraryService {
     Page<LibraryListDTO> librariesPage =
         cqlLibraryRepository.searchLibrariesByCriteria(
             username, pageReq, librarySearchCriteria, ownershipType);
-    if (appConfigService.isFlagEnabled(MadieFeatureFlag.DISPLAY_OWNER)) {
-      log.debug("Enriching {} libraries with user details", librariesPage.getContent().size());
-      enrichWithUserDetails(librariesPage.getContent());
-    }
+
+    log.debug("Enriching {} libraries with user details", librariesPage.getContent().size());
+    enrichWithUserDetails(librariesPage.getContent());
+
     return librariesPage;
   }
 
@@ -414,18 +414,16 @@ public class CqlLibraryService {
         cqlLibraryRepository.findLibrariesByLibrarySetId(
             librarySetId, sortByLatestVersion, librarySearchCriteria);
 
-    if (appConfigService.isFlagEnabled(MadieFeatureFlag.DISPLAY_OWNER)) {
-      log.debug("Enriching {} libraries with user details", librariesByLibrarySetId.size());
+    log.debug("Enriching {} libraries with user details", librariesByLibrarySetId.size());
 
-      if (CollectionUtils.isNotEmpty(librariesByLibrarySetId)
-          && librariesByLibrarySetId.get(0).getLibrarySet() != null) {
-        UserDetailsDto singleUserDetails =
-            userServiceClient.getSingleUserDetails(
-                librariesByLibrarySetId.get(0).getLibrarySet().getOwner());
-        if (singleUserDetails != null) {
-          librariesByLibrarySetId.forEach(
-              library -> library.setOwner(getFullName(singleUserDetails)));
-        }
+    if (CollectionUtils.isNotEmpty(librariesByLibrarySetId)
+        && librariesByLibrarySetId.get(0).getLibrarySet() != null) {
+      UserDetailsDto singleUserDetails =
+          userServiceClient.getSingleUserDetails(
+              librariesByLibrarySetId.get(0).getLibrarySet().getOwner());
+      if (singleUserDetails != null) {
+        librariesByLibrarySetId.forEach(
+            library -> library.setOwner(getFullName(singleUserDetails)));
       }
     }
 

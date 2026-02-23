@@ -2,8 +2,7 @@ package gov.cms.madie.cqllibraryservice.dto;
 
 /** Feature flags relevant to the cql-library-service */
 public enum MadieFeatureFlag {
-  LOCKING("Locking"),
-  DISPLAY_OWNER("DisplayOwner");
+  LOCKING("Locking");
 
   private final String flag;
 

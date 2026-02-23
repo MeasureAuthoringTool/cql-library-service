@@ -67,14 +67,14 @@ class CqlLibraryServiceTest {
     var librarySearchCriteria =
         LibrarySearchCriteria.builder().searchField("measureSearchCriteria").build();
     PageRequest initialPage = PageRequest.of(0, 10);
-    CqlLibrary lib1 = CqlLibrary.builder().build();
+    LibraryListDTO lib1 = LibraryListDTO.builder().build();
 
-    Page<CqlLibrary> activeLibraries = new PageImpl<>(List.of(lib1));
+    Page<LibraryListDTO> activeLibraries = new PageImpl<>(List.of(lib1));
     doReturn(activeLibraries)
         .when(cqlLibraryRepository)
         .searchLibrariesByCriteria(
             eq("test.user"), any(PageRequest.class), any(), eq(OwnershipType.OWNED));
-    Object libraries =
+    Page<LibraryListDTO> libraries =
         cqlLibraryService.getLibrariesByCriteria(
             librarySearchCriteria, OwnershipType.OWNED, initialPage, "test.user");
     assertNotNull(libraries);
@@ -1485,7 +1485,6 @@ class CqlLibraryServiceTest {
 
     when(cqlLibraryRepository.findLibrariesByLibrarySetId(eq(librarySetId), eq(true), eq(criteria)))
         .thenReturn(List.of(library));
-    when(appConfigService.isFlagEnabled(MadieFeatureFlag.DISPLAY_OWNER)).thenReturn(true);
     when(userServiceClient.getSingleUserDetails(eq(ownerId))).thenReturn(userDetails);
 
     List<LibraryListDTO> result =
@@ -1495,26 +1494,6 @@ class CqlLibraryServiceTest {
     assertEquals(1, result.size());
     assertEquals("John Doe", result.get(0).getOwner());
     verify(userServiceClient, times(1)).getSingleUserDetails(eq(ownerId));
-  }
-
-  @Test
-  public void getLibrariesByLibrarySetIdReturnsLibrariesWithoutOwnerDetailsWhenFlagDisabled() {
-    String librarySetId = "testSetId";
-    LibrarySearchCriteria criteria =
-        LibrarySearchCriteria.builder().searchField("testField").build();
-    LibraryListDTO library = LibraryListDTO.builder().id("L1").librarySetId(librarySetId).build();
-
-    when(cqlLibraryRepository.findLibrariesByLibrarySetId(eq(librarySetId), eq(true), eq(criteria)))
-        .thenReturn(List.of(library));
-    when(appConfigService.isFlagEnabled(MadieFeatureFlag.DISPLAY_OWNER)).thenReturn(false);
-
-    List<LibraryListDTO> result =
-        cqlLibraryService.getLibrariesByLibrarySetId(librarySetId, true, criteria);
-
-    assertNotNull(result);
-    assertEquals(1, result.size());
-    assertNull(result.get(0).getOwner());
-    verifyNoInteractions(userServiceClient);
   }
 
   @Test
@@ -1596,7 +1575,6 @@ class CqlLibraryServiceTest {
     when(cqlLibraryRepository.searchLibrariesByCriteria(
             username, pageable, criteria, ownershipType))
         .thenReturn(librariesPage);
-    when(appConfigService.isFlagEnabled(MadieFeatureFlag.DISPLAY_OWNER)).thenReturn(true);
     when(userServiceClient.getBulkUserDetails(anyList())).thenReturn(Collections.emptyMap());
 
     Page<LibraryListDTO> result =
@@ -1638,7 +1616,6 @@ class CqlLibraryServiceTest {
     when(cqlLibraryRepository.searchLibrariesByCriteria(
             username, pageable, criteria, ownershipType))
         .thenReturn(librariesPage);
-    when(appConfigService.isFlagEnabled(MadieFeatureFlag.DISPLAY_OWNER)).thenReturn(true);
     when(userServiceClient.getBulkUserDetails(anyList())).thenReturn(userDetailsMap);
 
     Page<LibraryListDTO> result =
