@@ -41,7 +41,6 @@ import java.time.ZoneId;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
 
-import gov.cms.madie.cqllibraryservice.dto.MadieFeatureFlag;
 import gov.cms.madie.cqllibraryservice.dto.LockInfo;
 import org.springframework.data.domain.Pageable;
 
@@ -378,7 +377,6 @@ class CqlLibraryServiceTest {
 
   @Test
   public void testDeleteDraftLibraryWithIdNotFound() {
-    when(appConfigService.isFlagEnabled(MadieFeatureFlag.LOCKING)).thenReturn(false);
     when(cqlLibraryRepository.findById(anyString())).thenReturn(Optional.empty());
 
     assertThrows(
@@ -388,7 +386,6 @@ class CqlLibraryServiceTest {
 
   @Test
   public void testDeleteDraftLibraryWithVersionedLibrary() {
-    when(appConfigService.isFlagEnabled(MadieFeatureFlag.LOCKING)).thenReturn(false);
     CqlLibrary library =
         CqlLibrary.builder()
             .draft(false)
@@ -408,7 +405,6 @@ class CqlLibraryServiceTest {
 
   @Test
   public void testDeleteDraftLibraryWithDraftLibraryNonOwner() {
-    when(appConfigService.isFlagEnabled(MadieFeatureFlag.LOCKING)).thenReturn(false);
     CqlLibrary library =
         CqlLibrary.builder()
             .draft(true)
@@ -427,7 +423,6 @@ class CqlLibraryServiceTest {
 
   @Test
   public void testDeleteDraftLibraryWithDraftLibrary() {
-    when(appConfigService.isFlagEnabled(MadieFeatureFlag.LOCKING)).thenReturn(false);
     CqlLibrary library =
         CqlLibrary.builder()
             .draft(true)
@@ -447,8 +442,7 @@ class CqlLibraryServiceTest {
   }
 
   @Test
-  public void testDeleteDraftLibraryLockingEnabledResourceLockedByOtherUser() {
-    when(appConfigService.isFlagEnabled(MadieFeatureFlag.LOCKING)).thenReturn(true);
+  public void testDeleteDraftLibraryLockedByOtherUser() {
     LockInfo lockInfo =
         LockInfo.builder().isLocked(true).lockedBy("other.user").lockedId("LibID").build();
     when(cqlLibraryLockService.lockCqlLibrary(eq("LibID"), eq("TEST_USER"))).thenReturn(lockInfo);
@@ -461,8 +455,7 @@ class CqlLibraryServiceTest {
   }
 
   @Test
-  public void testDeleteDraftLibraryLockingEnabledLockAcquiredBySameUser() {
-    when(appConfigService.isFlagEnabled(MadieFeatureFlag.LOCKING)).thenReturn(true);
+  public void testDeleteDraftLibraryLockAcquiredBySameUser() {
     LockInfo lockInfo =
         LockInfo.builder().isLocked(true).lockedBy("TEST_USER").lockedId("LibID").build();
     when(cqlLibraryLockService.lockCqlLibrary(eq("LibID"), eq("TEST_USER"))).thenReturn(lockInfo);
@@ -1173,14 +1166,13 @@ class CqlLibraryServiceTest {
   }
 
   @Test
-  void testFindCqlLibraryByIdWhenFeatureFlagIsOn() {
+  void testFindCqlLibraryByIdWithLock() {
     String id = "1";
     CqlLibrary lib =
         CqlLibrary.builder().id(id).cqlLibraryName("XyZ").librarySetId("1-2-3-4").build();
     when(cqlLibraryRepository.findById(anyString())).thenReturn(Optional.of(lib));
     when(librarySetService.findByLibrarySetId(anyString())).thenReturn(new LibrarySet());
 
-    when(appConfigService.isFlagEnabled(MadieFeatureFlag.LOCKING)).thenReturn(true);
     when(cqlLibraryLockService.findByCqlLibraryId(anyString()))
         .thenReturn(CqlLibraryLock.builder().lockedBy("another.user").build());
 
@@ -1198,7 +1190,6 @@ class CqlLibraryServiceTest {
     when(cqlLibraryRepository.findById(anyString())).thenReturn(Optional.of(lib));
     when(librarySetService.findByLibrarySetId(anyString())).thenReturn(new LibrarySet());
 
-    when(appConfigService.isFlagEnabled(MadieFeatureFlag.LOCKING)).thenReturn(true);
     when(cqlLibraryLockService.findByCqlLibraryId(anyString())).thenReturn(null);
 
     CqlLibrary cqlLib = cqlLibraryService.findCqlLibraryById(id, USERNAME);
@@ -1215,7 +1206,6 @@ class CqlLibraryServiceTest {
     when(cqlLibraryRepository.findById(anyString())).thenReturn(Optional.of(lib));
     when(librarySetService.findByLibrarySetId(anyString())).thenReturn(new LibrarySet());
 
-    when(appConfigService.isFlagEnabled(MadieFeatureFlag.LOCKING)).thenReturn(true);
     when(cqlLibraryLockService.findByCqlLibraryId(anyString()))
         .thenReturn(CqlLibraryLock.builder().lockedBy(USERNAME).build());
 
@@ -1339,7 +1329,7 @@ class CqlLibraryServiceTest {
   }
 
   @Test
-  public void testUpdateCqlLibrarySuccessfullyWithoutLockingFeature() {
+  public void testUpdateCqlLibrarySuccessfully() {
     final String cql =
         "library testCql version '2.1.000'\n"
             + "using QICore version '4.1.1'\n"
@@ -1363,7 +1353,6 @@ class CqlLibraryServiceTest {
     when(librarySetService.findByLibrarySetId(anyString()))
         .thenReturn(existingLibrary.getLibrarySet());
     when(cqlLibraryRepository.save(any(CqlLibrary.class))).thenReturn(updatingLibrary);
-    when(appConfigService.isFlagEnabled(MadieFeatureFlag.LOCKING)).thenReturn(false);
 
     CqlLibrary updatedLibrary = cqlLibraryService.updateCqlLibrary(updatingLibrary, USERNAME);
     assertThat(updatedLibrary, is(equalTo(updatingLibrary)));
@@ -1391,7 +1380,6 @@ class CqlLibraryServiceTest {
     when(cqlLibraryRepository.findById(anyString())).thenReturn(Optional.of(existingLibrary));
     when(librarySetService.findByLibrarySetId(anyString()))
         .thenReturn(existingLibrary.getLibrarySet());
-    when(appConfigService.isFlagEnabled(MadieFeatureFlag.LOCKING)).thenReturn(true);
     when(cqlLibraryLockService.lockCqlLibrary(anyString(), anyString()))
         .thenReturn(LockInfo.builder().isLocked(true).lockedBy("John").build());
 
@@ -1404,7 +1392,7 @@ class CqlLibraryServiceTest {
   }
 
   @Test
-  public void testUpdateUnclockedCqlLibrarySuccessfullyWithLockingFeature() {
+  public void testUpdateCqlLibrarySuccessfullyWhenLockedBySameUser() {
     final String cql =
         "library testCql version '2.1.000'\n"
             + "using QICore version '4.1.1'\n"
@@ -1428,7 +1416,6 @@ class CqlLibraryServiceTest {
     when(librarySetService.findByLibrarySetId(anyString()))
         .thenReturn(existingLibrary.getLibrarySet());
     when(cqlLibraryRepository.save(any(CqlLibrary.class))).thenReturn(updatingLibrary);
-    when(appConfigService.isFlagEnabled(MadieFeatureFlag.LOCKING)).thenReturn(true);
     when(cqlLibraryLockService.lockCqlLibrary(anyString(), anyString()))
         .thenReturn(
             LockInfo.builder()

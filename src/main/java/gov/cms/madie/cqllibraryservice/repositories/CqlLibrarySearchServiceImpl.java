@@ -55,11 +55,8 @@ public class CqlLibrarySearchServiceImpl implements CqlLibrarySearchService {
     return new Criteria();
   }
 
-  // Build lock-related aggregation stages only if LOCKING feature is enabled
+  // Build lock-related aggregation stages
   private List<AggregationOperation> buildLockLookupStages() {
-    if (!appConfigService.isFlagEnabled(MadieFeatureFlag.LOCKING)) {
-      return Collections.emptyList();
-    }
     List<AggregationOperation> stages = new ArrayList<>();
     LookupOperation lockLookupOperation =
         LookupOperation.newLookup()

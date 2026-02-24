@@ -218,7 +218,6 @@ public class CqlLibrarySearchServiceImplTest {
 
   @Test
   public void testFindOwnedLibrariesInSets() {
-    when(appConfigService.isFlagEnabled(MadieFeatureFlag.LOCKING)).thenReturn(false);
     // page size 3 from 0-2
     PageRequest pageRequest = PageRequest.of(0, 3);
 
@@ -278,7 +277,6 @@ public class CqlLibrarySearchServiceImplTest {
 
   @Test
   public void testLockInfoRemovedForCurrentUser() {
-    when(appConfigService.isFlagEnabled(MadieFeatureFlag.LOCKING)).thenReturn(true);
     PageRequest pageRequest = PageRequest.of(0, 1);
 
     LibrarySetMatchCountDTO match1 = new LibrarySetMatchCountDTO("setIdi", 2, "lib1");
@@ -322,7 +320,6 @@ public class CqlLibrarySearchServiceImplTest {
 
   @Test
   public void testLockInfoRetainedForDifferentUser() {
-    when(appConfigService.isFlagEnabled(MadieFeatureFlag.LOCKING)).thenReturn(true);
     PageRequest pageRequest = PageRequest.of(0, 1);
 
     LibraryListDTO lockedByOther =

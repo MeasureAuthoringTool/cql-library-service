@@ -2,7 +2,8 @@ package gov.cms.madie.cqllibraryservice.dto;
 
 /** Feature flags relevant to the cql-library-service */
 public enum MadieFeatureFlag {
-  LOCKING("Locking");
+  // No feature flags currently exist. Replace PLACEHOLDER with next real feature to add
+  PLACEHOLDER("Placeholder");
 
   private final String flag;
 
