@@ -1,7 +1,6 @@
 package gov.cms.madie.cqllibraryservice.repositories;
 
 import gov.cms.madie.cqllibraryservice.dto.*;
-import gov.cms.madie.cqllibraryservice.services.AppConfigService;
 import gov.cms.madie.models.access.RoleEnum;
 import gov.cms.madie.models.common.OwnershipType;
 import gov.cms.madie.models.library.CqlLibrary;
@@ -30,8 +29,6 @@ import org.springframework.data.mongodb.core.aggregation.ArrayOperators;
 @Repository
 public class CqlLibrarySearchServiceImpl implements CqlLibrarySearchService {
   private final MongoTemplate mongoTemplate;
-
-  private final AppConfigService appConfigService;
 
   private LookupOperation getLookupOperation() {
     return LookupOperation.newLookup()
@@ -75,10 +72,8 @@ public class CqlLibrarySearchServiceImpl implements CqlLibrarySearchService {
     return stages;
   }
 
-  public CqlLibrarySearchServiceImpl(
-      MongoTemplate mongoTemplate, AppConfigService appConfigService) {
+  public CqlLibrarySearchServiceImpl(MongoTemplate mongoTemplate) {
     this.mongoTemplate = mongoTemplate;
-    this.appConfigService = appConfigService;
   }
 
   @Override

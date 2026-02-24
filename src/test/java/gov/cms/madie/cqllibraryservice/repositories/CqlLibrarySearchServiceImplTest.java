@@ -1,7 +1,6 @@
 package gov.cms.madie.cqllibraryservice.repositories;
 
 import gov.cms.madie.cqllibraryservice.dto.*;
-import gov.cms.madie.cqllibraryservice.services.AppConfigService;
 import gov.cms.madie.models.library.CqlLibrary;
 import gov.cms.madie.models.common.OwnershipType;
 import org.bson.Document;
@@ -34,7 +33,6 @@ import gov.cms.madie.cqllibraryservice.locks.CqlLibraryLock;
 public class CqlLibrarySearchServiceImplTest {
 
   @Mock MongoTemplate mongoTemplate;
-  @Mock AppConfigService appConfigService;
   @InjectMocks CqlLibrarySearchServiceImpl cqlLibrarySearchServiceImpl;
 
   private LibraryListDTO library1;
