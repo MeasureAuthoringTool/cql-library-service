@@ -10,7 +10,6 @@ import static org.mockito.Mockito.*;
 
 import gov.cms.madie.cqllibraryservice.dto.LibraryListDTO;
 import gov.cms.madie.cqllibraryservice.dto.LockInfo;
-import gov.cms.madie.cqllibraryservice.dto.MadieFeatureFlag;
 import gov.cms.madie.cqllibraryservice.exceptions.*;
 import gov.cms.madie.models.access.AclSpecification;
 import gov.cms.madie.models.access.RoleEnum;
@@ -678,7 +677,6 @@ class VersionServiceTest {
   void testCreateVersionThrowsResourceLockedExceptionIfLibraryIsLocked() {
     when(cqlLibraryService.findCqlLibraryById(anyString(), anyString()))
         .thenReturn(existingCqlLibrary);
-    when(appConfigService.isFlagEnabled(MadieFeatureFlag.LOCKING)).thenReturn(true);
     LockInfo lock = LockInfo.builder().isLocked(true).lockedBy("anotherUser").build();
     when(cqlLibraryLockService.lockCqlLibrary(anyString(), anyString())).thenReturn(lock);
 
@@ -688,10 +686,9 @@ class VersionServiceTest {
   }
 
   @Test
-  void testCreateVersionSuccessWhenFeatureFlagIsOn() {
+  void testCreateVersionSuccessWithLocking() {
     when(cqlLibraryService.findCqlLibraryById(anyString(), anyString()))
         .thenReturn(existingCqlLibrary);
-    when(appConfigService.isFlagEnabled(MadieFeatureFlag.LOCKING)).thenReturn(true);
     when(cqlLibraryLockService.lockCqlLibrary(anyString(), anyString())).thenReturn(null);
     when(cqlLibraryRepository.findMaxVersionByLibrarySetId(anyString()))
         .thenReturn(Optional.of(Version.parse("1.0.0")));
@@ -729,7 +726,6 @@ class VersionServiceTest {
   void testCreateVersionSuccessWhenLockInfoIsNotLocked() {
     when(cqlLibraryService.findCqlLibraryById(anyString(), anyString()))
         .thenReturn(existingCqlLibrary);
-    when(appConfigService.isFlagEnabled(MadieFeatureFlag.LOCKING)).thenReturn(true);
     LockInfo lock = LockInfo.builder().isLocked(false).lockedBy("anotherUser").build();
     when(cqlLibraryLockService.lockCqlLibrary(anyString(), anyString())).thenReturn(lock);
 
@@ -769,7 +765,6 @@ class VersionServiceTest {
   void testCreateVersionSuccessWhenLockInfoIsLockedBySameUser() {
     when(cqlLibraryService.findCqlLibraryById(anyString(), anyString()))
         .thenReturn(existingCqlLibrary);
-    when(appConfigService.isFlagEnabled(MadieFeatureFlag.LOCKING)).thenReturn(true);
     LockInfo lock = LockInfo.builder().isLocked(true).lockedBy("testUser").build();
     when(cqlLibraryLockService.lockCqlLibrary(anyString(), anyString())).thenReturn(lock);
     when(cqlLibraryRepository.findMaxVersionByLibrarySetId(anyString()))

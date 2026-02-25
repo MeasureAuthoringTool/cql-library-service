@@ -79,9 +79,6 @@ public class CqlLibraryService {
   }
 
   private void enforceLocking(String libraryId, String username) {
-    if (!appConfigService.isFlagEnabled(MadieFeatureFlag.LOCKING)) {
-      return;
-    }
     LockInfo lockInfo = cqlLibraryLockService.lockCqlLibrary(libraryId, username);
     if (lockInfo != null && lockInfo.isLocked() && !lockInfo.getLockedBy().equals(username)) {
       throw new ResourceLockedException(
@@ -119,10 +116,10 @@ public class CqlLibraryService {
     Page<LibraryListDTO> librariesPage =
         cqlLibraryRepository.searchLibrariesByCriteria(
             username, pageReq, librarySearchCriteria, ownershipType);
-    if (appConfigService.isFlagEnabled(MadieFeatureFlag.DISPLAY_OWNER)) {
-      log.debug("Enriching {} libraries with user details", librariesPage.getContent().size());
-      enrichWithUserDetails(librariesPage.getContent());
-    }
+
+    log.debug("Enriching {} libraries with user details", librariesPage.getContent().size());
+    enrichWithUserDetails(librariesPage.getContent());
+
     return librariesPage;
   }
 
@@ -249,16 +246,15 @@ public class CqlLibraryService {
       LibrarySet librarySet = librarySetService.findByLibrarySetId(cqlLibrary.getLibrarySetId());
       cqlLibrary.setLibrarySet(librarySet);
 
-      if (appConfigService.isFlagEnabled(MadieFeatureFlag.LOCKING)) {
-        CqlLibraryLock lock = cqlLibraryLockService.findByCqlLibraryId(id);
-        cqlLibrary.setCqlLibraryLock(
-            lock != null && !username.equalsIgnoreCase(lock.getLockedBy())
-                ? CqlLibraryLockInfo.builder()
-                    .cqlLibraryId(lock.getCqlLibraryId())
-                    .lockedBy(lock.getLockedBy())
-                    .build()
-                : null);
-      }
+      CqlLibraryLock lock = cqlLibraryLockService.findByCqlLibraryId(id);
+      cqlLibrary.setCqlLibraryLock(
+          lock != null && !username.equalsIgnoreCase(lock.getLockedBy())
+              ? CqlLibraryLockInfo.builder()
+              .cqlLibraryId(lock.getCqlLibraryId())
+              .lockedBy(lock.getLockedBy())
+              .build()
+              : null);
+      
       return cqlLibrary;
     }
     log.error("CqlLibrary with library ID [{}] was not found", id);
@@ -414,18 +410,16 @@ public class CqlLibraryService {
         cqlLibraryRepository.findLibrariesByLibrarySetId(
             librarySetId, sortByLatestVersion, librarySearchCriteria);
 
-    if (appConfigService.isFlagEnabled(MadieFeatureFlag.DISPLAY_OWNER)) {
-      log.debug("Enriching {} libraries with user details", librariesByLibrarySetId.size());
+    log.debug("Enriching {} libraries with user details", librariesByLibrarySetId.size());
 
-      if (CollectionUtils.isNotEmpty(librariesByLibrarySetId)
-          && librariesByLibrarySetId.get(0).getLibrarySet() != null) {
-        UserDetailsDto singleUserDetails =
-            userServiceClient.getSingleUserDetails(
-                librariesByLibrarySetId.get(0).getLibrarySet().getOwner());
-        if (singleUserDetails != null) {
-          librariesByLibrarySetId.forEach(
-              library -> library.setOwner(getFullName(singleUserDetails)));
-        }
+    if (CollectionUtils.isNotEmpty(librariesByLibrarySetId)
+        && librariesByLibrarySetId.get(0).getLibrarySet() != null) {
+      UserDetailsDto singleUserDetails =
+          userServiceClient.getSingleUserDetails(
+              librariesByLibrarySetId.get(0).getLibrarySet().getOwner());
+      if (singleUserDetails != null) {
+        librariesByLibrarySetId.forEach(
+            library -> library.setOwner(getFullName(singleUserDetails)));
       }
     }
 

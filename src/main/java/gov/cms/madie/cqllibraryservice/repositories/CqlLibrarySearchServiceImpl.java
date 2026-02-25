@@ -1,7 +1,6 @@
 package gov.cms.madie.cqllibraryservice.repositories;
 
 import gov.cms.madie.cqllibraryservice.dto.*;
-import gov.cms.madie.cqllibraryservice.services.AppConfigService;
 import gov.cms.madie.models.access.RoleEnum;
 import gov.cms.madie.models.common.OwnershipType;
 import gov.cms.madie.models.library.CqlLibrary;
@@ -31,8 +30,6 @@ import org.springframework.data.mongodb.core.aggregation.ArrayOperators;
 public class CqlLibrarySearchServiceImpl implements CqlLibrarySearchService {
   private final MongoTemplate mongoTemplate;
 
-  private final AppConfigService appConfigService;
-
   private LookupOperation getLookupOperation() {
     return LookupOperation.newLookup()
         .from("librarySet")
@@ -55,11 +52,8 @@ public class CqlLibrarySearchServiceImpl implements CqlLibrarySearchService {
     return new Criteria();
   }
 
-  // Build lock-related aggregation stages only if LOCKING feature is enabled
+  // Build lock-related aggregation stages
   private List<AggregationOperation> buildLockLookupStages() {
-    if (!appConfigService.isFlagEnabled(MadieFeatureFlag.LOCKING)) {
-      return Collections.emptyList();
-    }
     List<AggregationOperation> stages = new ArrayList<>();
     LookupOperation lockLookupOperation =
         LookupOperation.newLookup()
@@ -78,10 +72,8 @@ public class CqlLibrarySearchServiceImpl implements CqlLibrarySearchService {
     return stages;
   }
 
-  public CqlLibrarySearchServiceImpl(
-      MongoTemplate mongoTemplate, AppConfigService appConfigService) {
+  public CqlLibrarySearchServiceImpl(MongoTemplate mongoTemplate) {
     this.mongoTemplate = mongoTemplate;
-    this.appConfigService = appConfigService;
   }
 
   @Override
