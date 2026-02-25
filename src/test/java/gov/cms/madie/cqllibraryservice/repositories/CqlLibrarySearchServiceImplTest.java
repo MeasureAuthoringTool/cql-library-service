@@ -1,7 +1,6 @@
 package gov.cms.madie.cqllibraryservice.repositories;
 
 import gov.cms.madie.cqllibraryservice.dto.*;
-import gov.cms.madie.cqllibraryservice.services.AppConfigService;
 import gov.cms.madie.models.library.CqlLibrary;
 import gov.cms.madie.models.common.OwnershipType;
 import org.bson.Document;
@@ -34,7 +33,6 @@ import gov.cms.madie.cqllibraryservice.locks.CqlLibraryLock;
 public class CqlLibrarySearchServiceImplTest {
 
   @Mock MongoTemplate mongoTemplate;
-  @Mock AppConfigService appConfigService;
   @InjectMocks CqlLibrarySearchServiceImpl cqlLibrarySearchServiceImpl;
 
   private LibraryListDTO library1;
@@ -218,7 +216,6 @@ public class CqlLibrarySearchServiceImplTest {
 
   @Test
   public void testFindOwnedLibrariesInSets() {
-    when(appConfigService.isFlagEnabled(MadieFeatureFlag.LOCKING)).thenReturn(false);
     // page size 3 from 0-2
     PageRequest pageRequest = PageRequest.of(0, 3);
 
@@ -278,7 +275,6 @@ public class CqlLibrarySearchServiceImplTest {
 
   @Test
   public void testLockInfoRemovedForCurrentUser() {
-    when(appConfigService.isFlagEnabled(MadieFeatureFlag.LOCKING)).thenReturn(true);
     PageRequest pageRequest = PageRequest.of(0, 1);
 
     LibrarySetMatchCountDTO match1 = new LibrarySetMatchCountDTO("setIdi", 2, "lib1");
@@ -322,7 +318,6 @@ public class CqlLibrarySearchServiceImplTest {
 
   @Test
   public void testLockInfoRetainedForDifferentUser() {
-    when(appConfigService.isFlagEnabled(MadieFeatureFlag.LOCKING)).thenReturn(true);
     PageRequest pageRequest = PageRequest.of(0, 1);
 
     LibraryListDTO lockedByOther =
