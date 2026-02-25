@@ -250,11 +250,11 @@ public class CqlLibraryService {
       cqlLibrary.setCqlLibraryLock(
           lock != null && !username.equalsIgnoreCase(lock.getLockedBy())
               ? CqlLibraryLockInfo.builder()
-              .cqlLibraryId(lock.getCqlLibraryId())
-              .lockedBy(lock.getLockedBy())
-              .build()
+                  .cqlLibraryId(lock.getCqlLibraryId())
+                  .lockedBy(lock.getLockedBy())
+                  .build()
               : null);
-      
+
       return cqlLibrary;
     }
     log.error("CqlLibrary with library ID [{}] was not found", id);
