@@ -21,6 +21,7 @@ import gov.cms.madie.models.access.RoleEnum;
 import gov.cms.madie.models.common.*;
 import gov.cms.madie.models.dto.LibraryUsage;
 import gov.cms.madie.models.dto.UserDetailsDto;
+import gov.cms.madie.models.dto.UserRolesDto;
 import gov.cms.madie.models.library.CqlLibrary;
 import gov.cms.madie.cqllibraryservice.repositories.CqlLibraryRepository;
 import gov.cms.madie.models.library.LibrarySet;
@@ -336,7 +337,7 @@ class CqlLibraryServiceTest {
         .changeOwnership(eq(libraryId), eq(user), eq(true), eq("owner"));
 
     List<String> failedLibraries =
-        cqlLibraryService.transferLibraries(List.of(libraryId), user, true, "owner");
+        cqlLibraryService.transferLibraries(List.of(libraryId), user, true, "owner", "accessToken");
 
     assertTrue(failedLibraries.isEmpty());
 
@@ -366,7 +367,7 @@ class CqlLibraryServiceTest {
         .changeOwnership(libraryId, user, true, user);
 
     List<String> failedLibraries =
-        cqlLibraryService.transferLibraries(List.of(libraryId), user, true, user);
+        cqlLibraryService.transferLibraries(List.of(libraryId), user, true, user, "accessToken");
 
     assertEquals(1, failedLibraries.size());
     assertTrue(failedLibraries.contains(libraryId));
@@ -1537,12 +1538,117 @@ class CqlLibraryServiceTest {
         .changeOwnership(eq(libraryId), eq(harpId), eq(true), eq("admin"));
 
     List<String> failedLibraries =
-        cqlLibraryService.transferLibraries(List.of(libraryId), harpId, true, "admin");
+        cqlLibraryService.transferLibraries(List.of(libraryId), harpId, true, "admin", null);
 
     assertTrue(failedLibraries.isEmpty());
 
     verify(cqlLibraryService).findCqlLibraryById(libraryId, harpId);
     verify(cqlLibraryService).changeOwnership(libraryId, harpId, true, "admin");
+  }
+
+  @Test
+  public void testTransferLibrariesByUserWithMadieAdminRole() {
+    String libraryId = "libraryId";
+    String harpId = "user123";
+    String conductedBy = "adminUser";
+
+    LibrarySet librarySet =
+        LibrarySet.builder().librarySetId("librarySetId").owner("someOtherOwner").build();
+
+    CqlLibrary library =
+        CqlLibrary.builder()
+            .id(libraryId)
+            .librarySetId("librarySetId")
+            .librarySet(librarySet)
+            .build();
+
+    UserRolesDto userRolesDto =
+        UserRolesDto.builder().harpId(conductedBy).roles(List.of("MADiE-Admin")).build();
+
+    when(cqlLibraryRepository.findById(anyString())).thenReturn(Optional.of(library));
+    when(librarySetService.findByLibrarySetId(anyString())).thenReturn(librarySet);
+    when(userServiceClient.getUserRoles(eq(conductedBy), eq("accessToken")))
+        .thenReturn(userRolesDto);
+
+    doNothing()
+        .when(cqlLibraryService)
+        .changeOwnership(eq(libraryId), eq(harpId), eq(true), eq(conductedBy));
+
+    List<String> failedLibraries =
+        cqlLibraryService.transferLibraries(
+            List.of(libraryId), harpId, true, conductedBy, "accessToken");
+
+    assertTrue(failedLibraries.isEmpty());
+
+    verify(cqlLibraryService).findCqlLibraryById(libraryId, harpId);
+    verify(cqlLibraryService).changeOwnership(libraryId, harpId, true, conductedBy);
+  }
+
+  @Test
+  public void testTransferLibrariesNonOwnerWithoutAdminRoleFails() {
+    String libraryId = "libraryId";
+    String harpId = "user123";
+    String conductedBy = "nonOwnerUser";
+
+    LibrarySet librarySet =
+        LibrarySet.builder().librarySetId("librarySetId").owner("actualOwner").build();
+
+    CqlLibrary library =
+        CqlLibrary.builder()
+            .id(libraryId)
+            .librarySetId("librarySetId")
+            .librarySet(librarySet)
+            .build();
+
+    UserRolesDto userRolesDto =
+        UserRolesDto.builder().harpId(conductedBy).roles(List.of("MADiE-User")).build();
+
+    when(cqlLibraryRepository.findById(anyString())).thenReturn(Optional.of(library));
+    when(librarySetService.findByLibrarySetId(anyString())).thenReturn(librarySet);
+    when(userServiceClient.getUserRoles(eq(conductedBy), eq("accessToken")))
+        .thenReturn(userRolesDto);
+
+    List<String> failedLibraries =
+        cqlLibraryService.transferLibraries(
+            List.of(libraryId), harpId, true, conductedBy, "accessToken");
+
+    assertEquals(1, failedLibraries.size());
+    assertTrue(failedLibraries.contains(libraryId));
+
+    verify(cqlLibraryService).findCqlLibraryById(libraryId, harpId);
+    verify(cqlLibraryService, never())
+        .changeOwnership(anyString(), anyString(), anyBoolean(), anyString());
+  }
+
+  @Test
+  public void testTransferLibrariesNonAdminWithNullAccessTokenFails() {
+    String libraryId = "libraryId";
+    String harpId = "user123";
+    String conductedBy = "nonOwnerUser";
+
+    LibrarySet librarySet =
+        LibrarySet.builder().librarySetId("librarySetId").owner("actualOwner").build();
+
+    CqlLibrary library =
+        CqlLibrary.builder()
+            .id(libraryId)
+            .librarySetId("librarySetId")
+            .librarySet(librarySet)
+            .build();
+
+    when(cqlLibraryRepository.findById(anyString())).thenReturn(Optional.of(library));
+    when(librarySetService.findByLibrarySetId(anyString())).thenReturn(librarySet);
+
+    List<String> failedLibraries =
+        cqlLibraryService.transferLibraries(List.of(libraryId), harpId, true, conductedBy, null);
+
+    assertEquals(1, failedLibraries.size());
+    assertTrue(failedLibraries.contains(libraryId));
+
+    verify(cqlLibraryService).findCqlLibraryById(libraryId, harpId);
+    verify(userServiceClient, never()).getUserRoles(anyString(), anyString());
+    verify(cqlLibraryService, never())
+        .changeOwnership(anyString(), anyString(), anyBoolean(), anyString());
   }
 
   @Test

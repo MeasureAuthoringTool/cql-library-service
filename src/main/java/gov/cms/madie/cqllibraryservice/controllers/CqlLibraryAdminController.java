@@ -100,7 +100,8 @@ public class CqlLibraryAdminController {
 
     if (CollectionUtils.isNotEmpty(validLibraryIds)) {
       failedTransfers.addAll(
-          cqlLibraryService.transferLibraries(validLibraryIds, harpId, retainShareAccess, "admin"));
+          cqlLibraryService.transferLibraries(
+              validLibraryIds, harpId, retainShareAccess, "admin", null));
     }
     List<String> successLibraryIds =
         cqlLibraryIds.stream().filter(libraryId -> !failedTransfers.contains(libraryId)).toList();

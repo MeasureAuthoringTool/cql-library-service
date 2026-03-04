@@ -12,6 +12,7 @@ import gov.cms.madie.models.access.RoleEnum;
 import gov.cms.madie.models.common.*;
 import gov.cms.madie.models.dto.LibraryUsage;
 import gov.cms.madie.models.dto.UserDetailsDto;
+import gov.cms.madie.models.dto.UserRolesDto;
 import gov.cms.madie.models.library.CqlLibrary;
 import gov.cms.madie.models.library.CqlLibraryLockInfo;
 import gov.cms.madie.cqllibraryservice.repositories.CqlLibraryRepository;
@@ -629,12 +630,28 @@ public class CqlLibraryService {
   }
 
   public List<String> transferLibraries(
-      List<String> libraryIds, String harpId, boolean retainShareAccess, String conductedBy) {
+      List<String> libraryIds,
+      String harpId,
+      boolean retainShareAccess,
+      String conductedBy,
+      String accessToken) {
     List<String> failedLibraries = new ArrayList<>();
+    boolean skipOwnershipCheck = false;
+    // This is to make sure AdminController still works as is. Our current manual transfer via helpdesk.
+    if ("admin".equalsIgnoreCase(conductedBy)) {
+      skipOwnershipCheck = true;
+    } else if (accessToken != null) {
+      UserRolesDto userRolesDto = userServiceClient.getUserRoles(conductedBy, accessToken);
+      if (userRolesDto != null
+          && userRolesDto.getRoles() != null
+          && userRolesDto.getRoles().contains("MADiE-Admin")) {
+        skipOwnershipCheck = true;
+      }
+    }
     for (String libraryId : libraryIds) {
       try {
         CqlLibrary cqlLibrary = findCqlLibraryById(libraryId, harpId);
-        if (!conductedBy.equalsIgnoreCase("admin")) {
+        if (!skipOwnershipCheck) {
           AuthUtils.checkOwnership(cqlLibrary, conductedBy);
         }
         changeOwnership(libraryId, harpId, retainShareAccess, conductedBy);

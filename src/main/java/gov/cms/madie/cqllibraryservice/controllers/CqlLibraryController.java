@@ -290,7 +290,8 @@ public class CqlLibraryController {
             cqlLibraryIds,
             harpId.toLowerCase(),
             retainShareAccess,
-            principal.getName().toLowerCase());
+            principal.getName().toLowerCase(),
+            accessToken);
     if (CollectionUtils.isEmpty(failedTransfers)) {
       return ResponseEntity.ok().build();
     } else {

@@ -59,7 +59,7 @@ public class CqlLibraryAdminControllerTest {
     when(principal.getName()).thenReturn("admin");
     when(cqlLibraryLockService.findByCqlLibraryId(anyString())).thenReturn(null);
     when(cqlLibraryService.transferLibraries(
-            any(List.class), anyString(), any(Boolean.class), anyString()))
+            any(List.class), anyString(), any(Boolean.class), anyString(), any()))
         .thenReturn(Collections.emptyList());
 
     ResponseEntity<List<String>> response =
