@@ -3,6 +3,7 @@ package gov.cms.madie.cqllibraryservice.controllers;
 import gov.cms.madie.cqllibraryservice.config.security.SecurityConfig;
 import gov.cms.madie.cqllibraryservice.dto.*;
 import gov.cms.madie.cqllibraryservice.exceptions.*;
+import gov.cms.madie.cqllibraryservice.locks.CqlLibraryLock;
 import gov.cms.madie.cqllibraryservice.services.*;
 import gov.cms.madie.models.common.ModelType;
 
@@ -78,6 +79,7 @@ public class CqlLibraryControllerMvcTest {
   @MockitoBean private CqlDifferentiatorService cqlDifferentiatorService;
   @MockitoBean ActionLogService actionLogService;
   @MockitoBean private UserServiceClient userServiceClient;
+  @MockitoBean private CqlLibraryLockService cqlLibraryLockService;
 
   @Captor private ArgumentCaptor<CqlLibrary> cqlLibraryArgumentCaptor;
 
@@ -1669,10 +1671,12 @@ public class CqlLibraryControllerMvcTest {
   public void testTransferLibraries() throws Exception {
     String libraryId = "f225481c-921e-4015-9e14-e5046bfac9ff";
 
+    when(cqlLibraryLockService.findByCqlLibraryId(libraryId)).thenReturn(null);
+
     doReturn(Collections.emptyList())
         .when(cqlLibraryService)
         .transferLibraries(
-            eq(List.of(libraryId)), eq("testUser"), eq(false), eq(TEST_USER_ID), anyString());
+            eq(List.of(libraryId)), eq("testuser"), eq(true), eq(TEST_USER_ID), eq("test-okta"));
 
     mockMvc
         .perform(
@@ -1688,6 +1692,7 @@ public class CqlLibraryControllerMvcTest {
         .andDo(print())
         .andExpect(status().isOk());
 
+    verify(cqlLibraryLockService, times(1)).findByCqlLibraryId(libraryId);
     verify(cqlLibraryService, times(1))
         .transferLibraries(
             eq(List.of(libraryId)), eq("testuser"), eq(true), eq(TEST_USER_ID), eq("test-okta"));
@@ -1697,10 +1702,16 @@ public class CqlLibraryControllerMvcTest {
   public void testTransferLibrariesPartialResults() throws Exception {
     String libraryId = "f225481c-921e-4015-9e14-e5046bfac9ff";
 
+    when(cqlLibraryLockService.findByCqlLibraryId(anyString())).thenReturn(null);
+
     doReturn(List.of("1"))
         .when(cqlLibraryService)
         .transferLibraries(
-            eq(List.of(libraryId, "1")), eq("testuser"), eq(false), eq(TEST_USER_ID), anyString());
+            eq(List.of(libraryId, "1")),
+            eq("testuser"),
+            eq(false),
+            eq(TEST_USER_ID),
+            eq("test-okta"));
 
     mockMvc
         .perform(
@@ -1746,6 +1757,32 @@ public class CqlLibraryControllerMvcTest {
     verify(cqlLibraryService, times(0))
         .transferLibraries(
             eq(List.of(libraryId)), eq("testUser"), eq(true), eq(TEST_USER_ID), anyString());
+  }
+
+  @Test
+  public void testTransferLibrariesLockedLibrary() throws Exception {
+    String libraryId = "f225481c-921e-4015-9e14-e5046bfac9ff";
+
+    when(cqlLibraryLockService.findByCqlLibraryId(libraryId))
+        .thenReturn(CqlLibraryLock.builder().cqlLibraryId(libraryId).lockedBy("someUser").build());
+
+    mockMvc
+        .perform(
+            put("/cql-libraries/transfer")
+                .with(user(TEST_USER_ID))
+                .with(csrf())
+                .header("harpId", "testUser")
+                .header("Authorization", "test-okta")
+                .queryParam("retainShareAccess", "true")
+                .content(new ObjectMapper().writeValueAsString(List.of(libraryId)))
+                .contentType(MediaType.APPLICATION_JSON)
+                .accept(MediaType.APPLICATION_JSON))
+        .andDo(print())
+        .andExpect(status().isMultiStatus());
+
+    verify(cqlLibraryLockService, times(1)).findByCqlLibraryId(libraryId);
+    verify(cqlLibraryService, never())
+        .transferLibraries(anyList(), anyString(), anyBoolean(), anyString(), anyString());
   }
 
   @Test

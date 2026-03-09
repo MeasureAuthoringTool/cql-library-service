@@ -14,7 +14,6 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.security.Principal;
-import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 
@@ -23,10 +22,8 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
 
-import gov.cms.madie.cqllibraryservice.locks.CqlLibraryLock;
 import gov.cms.madie.cqllibraryservice.services.CqlLibraryLockService;
 import gov.cms.madie.cqllibraryservice.services.CqlLibraryService;
 import gov.cms.madie.models.access.AclOperation;
@@ -52,45 +49,6 @@ public class CqlLibraryAdminControllerTest {
     assertEquals(2, response.getBody().size());
     assertTrue(response.getBody().get(0).contains(msg1));
     assertTrue(response.getBody().get(1).contains(msg2));
-  }
-
-  @Test
-  public void testChangeOwnerShipSuccess() {
-    when(principal.getName()).thenReturn("admin");
-    when(cqlLibraryLockService.findByCqlLibraryId(anyString())).thenReturn(null);
-    when(cqlLibraryService.transferLibraries(
-            any(List.class), anyString(), any(Boolean.class), anyString(), any()))
-        .thenReturn(Collections.emptyList());
-
-    ResponseEntity<List<String>> response =
-        controller.changeOwnership(List.of("testCqlLibraryId"), "newUser", true, principal);
-
-    assertTrue(response.getBody().size() == 1);
-    assertTrue(response.getStatusCode().equals(HttpStatusCode.valueOf(200)));
-    assertEquals("testCqlLibraryId", response.getBody().get(0));
-  }
-
-  @Test
-  public void testChangeOwnerShipReturnsBadRequest() {
-    when(principal.getName()).thenReturn("admin");
-
-    ResponseEntity<List<String>> response =
-        controller.changeOwnership(Collections.emptyList(), "newUser", true, principal);
-
-    assertTrue(response.getStatusCode().equals(HttpStatusCode.valueOf(400)));
-  }
-
-  @Test
-  public void testChangeOwnerShipReturnsMultiStatus() {
-    when(principal.getName()).thenReturn("admin");
-    when(cqlLibraryLockService.findByCqlLibraryId(anyString()))
-        .thenReturn(CqlLibraryLock.builder().build());
-
-    ResponseEntity<List<String>> response =
-        controller.changeOwnership(List.of("testCqlLibraryId"), "newUser", true, principal);
-
-    assertTrue(response.getStatusCode().equals(HttpStatusCode.valueOf(207)));
-    assertEquals("testCqlLibraryId", response.getBody().get(0));
   }
 
   @Test

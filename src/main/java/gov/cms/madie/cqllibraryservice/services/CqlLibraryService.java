@@ -637,8 +637,8 @@ public class CqlLibraryService {
       String accessToken) {
     List<String> failedLibraries = new ArrayList<>();
     boolean skipOwnershipCheck = false;
-    // This is to make sure AdminController still works as is. Our current manual transfer via helpdesk.
     if ("admin".equalsIgnoreCase(conductedBy)) {
+      // Backward compatibility: deprecated admin endpoint passes "admin" as conductedBy
       skipOwnershipCheck = true;
     } else if (accessToken != null) {
       UserRolesDto userRolesDto = userServiceClient.getUserRoles(conductedBy, accessToken);
