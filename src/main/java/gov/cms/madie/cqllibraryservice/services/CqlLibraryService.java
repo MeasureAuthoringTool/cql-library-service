@@ -636,22 +636,17 @@ public class CqlLibraryService {
       String conductedBy,
       String accessToken) {
     List<String> failedLibraries = new ArrayList<>();
-    boolean skipOwnershipCheck = false;
-    if ("admin".equalsIgnoreCase(conductedBy)) {
-      // Backward compatibility: deprecated admin endpoint passes "admin" as conductedBy
-      skipOwnershipCheck = true;
-    } else if (accessToken != null) {
-      UserRolesDto userRolesDto = userServiceClient.getUserRoles(conductedBy, accessToken);
-      if (userRolesDto != null
-          && userRolesDto.getRoles() != null
-          && userRolesDto.getRoles().contains("MADiE-Admin")) {
-        skipOwnershipCheck = true;
-      }
+    boolean isAdmin = false;
+    UserRolesDto userRolesDto = userServiceClient.getUserRoles(conductedBy, accessToken);
+    if (userRolesDto != null
+        && userRolesDto.getRoles() != null
+        && userRolesDto.getRoles().contains("MADiE-Admin")) {
+      isAdmin = true;
     }
     for (String libraryId : libraryIds) {
       try {
         CqlLibrary cqlLibrary = findCqlLibraryById(libraryId, harpId);
-        if (!skipOwnershipCheck) {
+        if (!isAdmin) {
           AuthUtils.checkOwnership(cqlLibrary, conductedBy);
         }
         changeOwnership(libraryId, harpId, retainShareAccess, conductedBy);
