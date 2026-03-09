@@ -2,6 +2,7 @@ package gov.cms.madie.cqllibraryservice.controllers;
 
 import gov.cms.madie.cqllibraryservice.dto.*;
 import gov.cms.madie.cqllibraryservice.exceptions.InvalidIdException;
+import gov.cms.madie.cqllibraryservice.locks.CqlLibraryLock;
 import gov.cms.madie.cqllibraryservice.services.*;
 import gov.cms.madie.models.access.AclSpecification;
 import gov.cms.madie.models.common.Action;
@@ -47,6 +48,7 @@ public class CqlLibraryController {
   private final CqlLibraryService cqlLibraryService;
   private final LibrarySetService librarySetService;
   private final CqlDifferentiatorService cqlDifferentiatorService;
+  private final CqlLibraryLockService cqlLibraryLockService;
 
   @PutMapping("/searches")
   public ResponseEntity<Page<LibraryListDTO>> fetchLibrariesByCriteria(
@@ -264,11 +266,12 @@ public class CqlLibraryController {
   /**
    * Handles transfer of multiple libraries to a new owner (identified by harpId).
    *
-   * <p>Validates the input list of library IDs. Delegates transfer logic to CqlLibraryService,
-   * which attempts to reassign each library. Returns:
+   * <p>Validates the input list of library IDs. Locks each library before transfer to avoid race
+   * conditions. Delegates transfer logic to CqlLibraryService, which attempts to reassign each
+   * library. Unlocks all locked libraries after the transfer. Returns:
    *
    * <ul>
-   *   <li>200 OK if all transfers succeed.
+   *   <li>200 OK if all transfers succeed and returns the success library IDs.
    *   <li>400 BAD REQUEST if the input list is empty.
    *   <li>207 MULTI_STATUS if some transfers fail, returning only the failed library IDs in the
    *       body.
@@ -281,19 +284,47 @@ public class CqlLibraryController {
       @RequestParam(defaultValue = "false") boolean retainShareAccess,
       Principal principal,
       @RequestHeader("Authorization") String accessToken) {
-    log.info("transferLibraries to [{}] ", harpId);
+    log.info(
+        "User [{}] - Starting task [transferLibraries] to [{}] for cqlLibraryIds: [{}]",
+        principal.getName(),
+        harpId,
+        cqlLibraryIds);
+
     if (CollectionUtils.isEmpty(cqlLibraryIds)) {
       return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Collections.emptyList());
     }
-    List<String> failedTransfers =
-        cqlLibraryService.transferLibraries(
-            cqlLibraryIds,
-            harpId.toLowerCase(),
-            retainShareAccess,
-            principal.getName().toLowerCase());
+
+    List<String> validLibraryIds = new ArrayList<>();
+    List<String> failedTransfers = new ArrayList<>();
+    // Check lock and filter out the locked ones
+    cqlLibraryIds.forEach(
+        cqlLibraryId -> {
+          CqlLibraryLock libraryLock = cqlLibraryLockService.findByCqlLibraryId(cqlLibraryId);
+          if (libraryLock == null) {
+            validLibraryIds.add(cqlLibraryId);
+          } else {
+            failedTransfers.add(cqlLibraryId);
+          }
+        });
+
+    if (CollectionUtils.isNotEmpty(validLibraryIds)) {
+      failedTransfers.addAll(
+          cqlLibraryService.transferLibraries(
+              validLibraryIds,
+              harpId.toLowerCase(),
+              retainShareAccess,
+              principal.getName().toLowerCase(),
+              accessToken));
+    }
+
+    List<String> successLibraryIds =
+        cqlLibraryIds.stream().filter(libraryId -> !failedTransfers.contains(libraryId)).toList();
+
     if (CollectionUtils.isEmpty(failedTransfers)) {
-      return ResponseEntity.ok().build();
+      log.info("Successful libraryIds: [{}]", successLibraryIds);
+      return ResponseEntity.ok().body(successLibraryIds);
     } else {
+      log.info("Failed transfer Ids: [{}]", failedTransfers);
       return ResponseEntity.status(HttpStatus.MULTI_STATUS).body(failedTransfers);
     }
   }
