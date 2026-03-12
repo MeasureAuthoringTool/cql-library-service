@@ -276,35 +276,6 @@ public class CqlLibraryService {
     return librarySet.getAcls();
   }
 
-  public void changeOwnership(
-      String id, String userid, boolean retainShareAccess, String conductedBy) {
-    CqlLibrary cqlLibrary =
-        cqlLibraryRepository
-            .findById(id)
-            .orElseThrow(
-                () -> {
-                  log.error(
-                      "Library with library id [{}] cannot change "
-                          + "ownership to user [{}]. Library may not exist.",
-                      id,
-                      userid);
-                  return new ResourceNotFoundException("CqlLibrary", "id", id);
-                });
-
-    try {
-      librarySetService.updateOwnership(
-          cqlLibrary.getLibrarySetId(), userid, retainShareAccess, conductedBy);
-    } catch (RuntimeException e) {
-      log.error(
-          "User [{}] failed to change ownership of library [{}] to user [{}]",
-          conductedBy,
-          id,
-          userid,
-          e);
-      throw e;
-    }
-  }
-
   public CqlLibrary deleteDraftLibrary(final String id, final String userId) {
     enforceLocking(id, userId);
     CqlLibrary cqlLibrary = findCqlLibraryById(id, userId);
@@ -649,7 +620,8 @@ public class CqlLibraryService {
         if (!isAdmin) {
           AuthUtils.checkOwnership(cqlLibrary, conductedBy);
         }
-        changeOwnership(libraryId, harpId, retainShareAccess, conductedBy);
+        librarySetService.updateOwnership(
+            cqlLibrary.getLibrarySetId(), harpId, retainShareAccess, conductedBy, isAdmin);
       } catch (RuntimeException e) {
         log.warn(
             "User [{}] failed to change ownership of library [{}] to user [{}]",

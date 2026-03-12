@@ -190,7 +190,11 @@ public class LibrarySetService {
   }
 
   public LibrarySet updateOwnership(
-      String librarySetId, String userId, boolean retainShareAccess, String conductedBy) {
+      String librarySetId,
+      String userId,
+      boolean retainShareAccess,
+      String conductedBy,
+      boolean isAdmin) {
     Optional<LibrarySet> optionalLibrarySet = librarySetRepository.findByLibrarySetId(librarySetId);
 
     if (optionalLibrarySet.isEmpty()) {
@@ -253,12 +257,13 @@ public class LibrarySetService {
         originalOwner,
         userId,
         conductedBy);
+    String adminSuffix = isAdmin ? " by MADiE Admin" : "";
     actionLogService.logAction(
         updatedLibrarySet.getLibrarySetId(),
         ActionType.OWNERSHIP_TRANSFER,
         conductedBy,
         "librarySetActionLog",
-        String.format("Transferred from %s to %s", originalOwner, userId));
+        String.format("Transferred from %s to %s%s", originalOwner, userId, adminSuffix));
 
     if (retainShareAccess) {
       actionLogService.logShareAccessControlAction(
@@ -266,7 +271,7 @@ public class LibrarySetService {
           ActionType.SHARED,
           conductedBy,
           originalOwner,
-          String.format("Shared with - %s", originalOwner));
+          String.format("Shared with - %s%s", originalOwner, adminSuffix));
 
       log.info(
           "Retained SHARED role for user [{}] on library set [{}] after ownership transfer",
@@ -278,9 +283,10 @@ public class LibrarySetService {
       actionLogService.logShareAccessControlAction(
           updatedLibrarySet.getLibrarySetId(),
           ActionType.UNSHARED,
-          "admin",
+          conductedBy,
           userId,
-          String.format("%s now has owner permissions instead of share permissions", userId));
+          String.format(
+              "%s now has owner permissions instead of share permissions%s", userId, adminSuffix));
 
       log.info(
           "Removed SHARED role for user [{}] on library set [{}] after ownership transfer",

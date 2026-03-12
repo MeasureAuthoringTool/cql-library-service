@@ -250,71 +250,6 @@ class CqlLibraryServiceTest {
   }
 
   @Test
-  public void testChangeOwnership() {
-    LibrarySet librarySet = LibrarySet.builder().librarySetId("123").owner("testUser").build();
-
-    CqlLibrary library =
-        CqlLibrary.builder().id("123").librarySetId("123").librarySet(librarySet).build();
-
-    Optional<CqlLibrary> persistedLibrary = Optional.of(library);
-
-    when(cqlLibraryRepository.findById(anyString())).thenReturn(persistedLibrary);
-    when(librarySetService.updateOwnership(anyString(), anyString(), anyBoolean(), anyString()))
-        .thenReturn(new LibrarySet());
-
-    cqlLibraryService.changeOwnership(library.getId(), "user123", false, "adminUser");
-
-    verify(cqlLibraryRepository, times(1)).findById(library.getId());
-    verify(librarySetService, times(1))
-        .updateOwnership(
-            eq(librarySet.getLibrarySetId()), eq("user123"), eq(false), eq("adminUser"));
-  }
-
-  @Test
-  void testChangeOwnershipLibraryDoesNotExist() {
-    when(cqlLibraryRepository.findById(anyString())).thenReturn(Optional.empty());
-
-    assertThrows(
-        ResourceNotFoundException.class,
-        () -> {
-          cqlLibraryService.changeOwnership("lib123", "newUser", true, "adminUser");
-        });
-  }
-
-  @Test
-  void testChangeOwnershipUpdateThrowsResourceNotFound() {
-    CqlLibrary library = CqlLibrary.builder().id("libraryId").librarySetId("librarySetId").build();
-
-    when(cqlLibraryRepository.findById(anyString())).thenReturn(Optional.of(library));
-    when(librarySetService.updateOwnership(anyString(), anyString(), anyBoolean(), anyString()))
-        .thenThrow(new ResourceNotFoundException("LibrarySet", "id", "librarySetId"));
-
-    assertThrows(
-        ResourceNotFoundException.class,
-        () -> cqlLibraryService.changeOwnership("libraryId", "newUser", true, "adminUser"));
-  }
-
-  @Test
-  void testChangeOwnershipUpdateThrowsRuntimeException() {
-    CqlLibrary library = CqlLibrary.builder().id("libraryId").librarySetId("librarySetId").build();
-
-    when(cqlLibraryRepository.findById(anyString())).thenReturn(Optional.of(library));
-    when(librarySetService.updateOwnership(anyString(), anyString(), anyBoolean(), anyString()))
-        .thenThrow(new RuntimeException("Error occurred during library ownership transfer"));
-
-    RuntimeException exception =
-        assertThrows(
-            RuntimeException.class,
-            () -> cqlLibraryService.changeOwnership("libraryId", "newUser", true, "adminUser"));
-
-    assertEquals("Error occurred during library ownership transfer", exception.getMessage());
-
-    verify(cqlLibraryRepository, times(1)).findById("libraryId");
-    verify(librarySetService, times(1))
-        .updateOwnership(eq("librarySetId"), eq("newUser"), eq(true), eq("adminUser"));
-  }
-
-  @Test
   public void testTransferLibraries() {
     String libraryId = "libraryId";
     String user = "user123";
@@ -335,10 +270,9 @@ class CqlLibraryServiceTest {
     when(cqlLibraryRepository.findById(libraryId)).thenReturn(Optional.of(library));
     when(librarySetService.findByLibrarySetId("librarySetId")).thenReturn(librarySet);
     when(userServiceClient.getUserRoles(eq("owner"), eq("accessToken"))).thenReturn(userRolesDto);
-
-    doNothing()
-        .when(cqlLibraryService)
-        .changeOwnership(eq(libraryId), eq(user), eq(true), eq("owner"));
+    when(librarySetService.updateOwnership(
+            anyString(), anyString(), anyBoolean(), anyString(), anyBoolean()))
+        .thenReturn(new LibrarySet());
 
     List<String> failedLibraries =
         cqlLibraryService.transferLibraries(List.of(libraryId), user, true, "owner", "accessToken");
@@ -347,7 +281,8 @@ class CqlLibraryServiceTest {
 
     verify(userServiceClient).getUserRoles("owner", "accessToken");
     verify(cqlLibraryService).findCqlLibraryById(libraryId, user);
-    verify(cqlLibraryService).changeOwnership(libraryId, user, true, "owner");
+    verify(librarySetService)
+        .updateOwnership(eq("librarySetId"), eq(user), eq(true), eq("owner"), eq(false));
   }
 
   @Test
@@ -370,10 +305,9 @@ class CqlLibraryServiceTest {
     when(cqlLibraryRepository.findById(libraryId)).thenReturn(Optional.of(library));
     when(librarySetService.findByLibrarySetId("librarySetId")).thenReturn(librarySet);
     when(userServiceClient.getUserRoles(eq(user), eq("accessToken"))).thenReturn(userRolesDto);
-
-    doThrow(new ResourceNotFoundException("CqlLibrary", "id", libraryId))
-        .when(cqlLibraryService)
-        .changeOwnership(libraryId, user, true, user);
+    when(librarySetService.updateOwnership(
+            anyString(), anyString(), anyBoolean(), anyString(), anyBoolean()))
+        .thenThrow(new ResourceNotFoundException("LibrarySet", "id", "librarySetId"));
 
     List<String> failedLibraries =
         cqlLibraryService.transferLibraries(List.of(libraryId), user, true, user, "accessToken");
@@ -383,7 +317,8 @@ class CqlLibraryServiceTest {
 
     verify(userServiceClient).getUserRoles(user, "accessToken");
     verify(cqlLibraryService).findCqlLibraryById(libraryId, user);
-    verify(cqlLibraryService).changeOwnership(libraryId, user, true, user);
+    verify(librarySetService)
+        .updateOwnership(eq("librarySetId"), eq(user), eq(true), eq(user), eq(false));
   }
 
   @Test
@@ -1544,10 +1479,9 @@ class CqlLibraryServiceTest {
     when(cqlLibraryRepository.findById(anyString())).thenReturn(Optional.of(library));
     when(librarySetService.findByLibrarySetId(anyString())).thenReturn(librarySet);
     when(userServiceClient.getUserRoles(eq(conductedBy), eq("accessToken"))).thenReturn(null);
-
-    doNothing()
-        .when(cqlLibraryService)
-        .changeOwnership(eq(libraryId), eq(harpId), eq(true), eq(conductedBy));
+    when(librarySetService.updateOwnership(
+            anyString(), anyString(), anyBoolean(), anyString(), anyBoolean()))
+        .thenReturn(new LibrarySet());
 
     List<String> failedLibraries =
         cqlLibraryService.transferLibraries(
@@ -1557,7 +1491,8 @@ class CqlLibraryServiceTest {
 
     verify(userServiceClient).getUserRoles(conductedBy, "accessToken");
     verify(cqlLibraryService).findCqlLibraryById(libraryId, harpId);
-    verify(cqlLibraryService).changeOwnership(libraryId, harpId, true, conductedBy);
+    verify(librarySetService)
+        .updateOwnership(eq("librarySetId"), eq(harpId), eq(true), eq(conductedBy), eq(false));
   }
 
   @Test
@@ -1589,8 +1524,8 @@ class CqlLibraryServiceTest {
 
     verify(userServiceClient).getUserRoles(conductedBy, "accessToken");
     verify(cqlLibraryService).findCqlLibraryById(libraryId, harpId);
-    verify(cqlLibraryService, never())
-        .changeOwnership(anyString(), anyString(), anyBoolean(), anyString());
+    verify(librarySetService, never())
+        .updateOwnership(anyString(), anyString(), anyBoolean(), anyString(), anyBoolean());
   }
 
   @Test
@@ -1616,10 +1551,9 @@ class CqlLibraryServiceTest {
     when(librarySetService.findByLibrarySetId(anyString())).thenReturn(librarySet);
     when(userServiceClient.getUserRoles(eq(conductedBy), eq("accessToken")))
         .thenReturn(userRolesDto);
-
-    doNothing()
-        .when(cqlLibraryService)
-        .changeOwnership(eq(libraryId), eq(harpId), eq(true), eq(conductedBy));
+    when(librarySetService.updateOwnership(
+            anyString(), anyString(), anyBoolean(), anyString(), anyBoolean()))
+        .thenReturn(new LibrarySet());
 
     List<String> failedLibraries =
         cqlLibraryService.transferLibraries(
@@ -1628,7 +1562,8 @@ class CqlLibraryServiceTest {
     assertTrue(failedLibraries.isEmpty());
 
     verify(cqlLibraryService).findCqlLibraryById(libraryId, harpId);
-    verify(cqlLibraryService).changeOwnership(libraryId, harpId, true, conductedBy);
+    verify(librarySetService)
+        .updateOwnership(eq("librarySetId"), eq(harpId), eq(true), eq(conductedBy), eq(true));
   }
 
   @Test
@@ -1663,8 +1598,8 @@ class CqlLibraryServiceTest {
     assertTrue(failedLibraries.contains(libraryId));
 
     verify(cqlLibraryService).findCqlLibraryById(libraryId, harpId);
-    verify(cqlLibraryService, never())
-        .changeOwnership(anyString(), anyString(), anyBoolean(), anyString());
+    verify(librarySetService, never())
+        .updateOwnership(anyString(), anyString(), anyBoolean(), anyString(), anyBoolean());
   }
 
   @Test
@@ -1699,8 +1634,8 @@ class CqlLibraryServiceTest {
 
     verify(userServiceClient).getUserRoles(conductedBy, "accessToken");
     verify(cqlLibraryService).findCqlLibraryById(libraryId, harpId);
-    verify(cqlLibraryService, never())
-        .changeOwnership(anyString(), anyString(), anyBoolean(), anyString());
+    verify(librarySetService, never())
+        .updateOwnership(anyString(), anyString(), anyBoolean(), anyString(), anyBoolean());
   }
 
   @Test
