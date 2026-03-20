@@ -1890,7 +1890,7 @@ class CqlLibraryServiceTest {
   }
 
   @Test
-  public void testVerifyLibrarySetAuthorization_AclMatchAllowedRole() {
+  public void testVerifyLibrarySetAuthorizationWhenAclMatchAllowedRole() {
     // Case: owner != username, ACL contains userId and allowed role, should NOT throw
     String username = "testUser";
     String owner = "otherUser";
@@ -1906,7 +1906,7 @@ class CqlLibraryServiceTest {
   }
 
   @Test
-  public void testVerifyLibrarySetAuthorization_AclNoMatchAllowedRole() {
+  public void testVerifyLibrarySetAuthorizationWhenAclNotMatchAllowedRole() {
     // Case: owner != username, ACL does NOT contain userId and allowed role, should throw
     String username = "testUser";
     String owner = "otherUser";
@@ -1991,6 +1991,9 @@ class CqlLibraryServiceTest {
 
     ReflectionTestUtils.invokeMethod(
         cqlLibraryService, "ensureUniqueName", updatingLibrary, persistedLibrary);
+    // Assert that the name remains unchanged
+    assertEquals("name1", updatingLibrary.getCqlLibraryName());
+    assertEquals("name1", persistedLibrary.getCqlLibraryName());
   }
 
   @Test
