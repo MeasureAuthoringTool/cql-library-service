@@ -49,7 +49,8 @@ public class CqlLibraryServiceAclTest {
         assertThrows(
             ResourceNotFoundException.class,
             () ->
-                cqlLibraryService.updateAccessControlList(library.getId(), aclOperation, "admin"));
+                cqlLibraryService.updateAccessControlList(
+                    library.getId(), aclOperation, "admin", true));
     assertEquals(ex.getMessage(), "Library does not exist: " + library.getId());
   }
 
@@ -71,10 +72,11 @@ public class CqlLibraryServiceAclTest {
             .build();
     Optional<CqlLibrary> persistedLibrary = Optional.of(library);
     when(cqlLibraryRepository.findById(anyString())).thenReturn(persistedLibrary);
-    when(librarySetService.updateLibrarySetAcls(any(), any(), any())).thenReturn(librarySet);
+    when(librarySetService.updateLibrarySetAcls(any(), any(), any(), any(Boolean.class)))
+        .thenReturn(librarySet);
 
     List<AclSpecification> aclSpecifications =
-        cqlLibraryService.updateAccessControlList(library.getId(), aclOperation, "admin");
+        cqlLibraryService.updateAccessControlList(library.getId(), aclOperation, "nonAdmin", false);
     assertThat(aclSpecifications.size(), is(equalTo(1)));
     assertThat(aclSpecifications.get(0).getUserId(), is(aclSpecification.getUserId()));
     assertThat(aclSpecifications.get(0).getRoles(), is(aclSpecification.getRoles()));

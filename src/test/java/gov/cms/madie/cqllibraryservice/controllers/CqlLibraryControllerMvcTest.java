@@ -1588,19 +1588,22 @@ public class CqlLibraryControllerMvcTest {
     updatedSharedLibraries.put("libraryId1", List.of(aclSpecification1));
     updatedSharedLibraries.put("libraryId2", List.of(aclSpecification1, aclSpecification2));
 
-    doReturn(updatedSharedLibraries).when(cqlLibraryService).shareLibraries(any(), anyString());
+    doReturn(updatedSharedLibraries)
+        .when(cqlLibraryService)
+        .shareLibraries(any(), anyString(), anyString());
 
     MvcResult result =
         mockMvc
             .perform(
                 put("/cql-libraries/share")
                     .with(user(TEST_USER_ID))
+                    .header("Authorization", "test-okta")
                     .with(csrf())
                     .content("{\"libraryId1\": [\"userId1\"],\"libraryId2\": [\"userId1\"]}")
                     .contentType(MediaType.APPLICATION_JSON_VALUE))
             .andExpect(status().isOk())
             .andReturn();
-    verify(cqlLibraryService, times(1)).shareLibraries(any(), anyString());
+    verify(cqlLibraryService, times(1)).shareLibraries(any(), anyString(), anyString());
     assertEquals(
         result.getResponse().getContentAsString(),
         "{\"libraryId1\":[{\"userId\":\"userId1\",\"roles\":[\"SHARED_WITH\"]}],\"libraryId2\":[{\"userId\":\"userId1\",\"roles\":[\"SHARED_WITH\"]},{\"userId\":\"userId2\",\"roles\":[\"SHARED_WITH\"]}]}");
@@ -1649,7 +1652,7 @@ public class CqlLibraryControllerMvcTest {
 
     doReturn(libraryIdToAclSpecification)
         .when(cqlLibraryService)
-        .unshareLibraries(any(), anyString());
+        .unshareLibraries(any(), anyString(), anyString());
 
     MvcResult result =
         mockMvc
@@ -1657,11 +1660,12 @@ public class CqlLibraryControllerMvcTest {
                 put("/cql-libraries/unshare")
                     .with(user(TEST_USER_ID))
                     .with(csrf())
+                    .header("Authorization", "test-okta")
                     .content("{\"libraryId1\": [\"userId1\"],\"libraryId2\": [\"userId1\"]}")
                     .contentType(MediaType.APPLICATION_JSON_VALUE))
             .andExpect(status().isOk())
             .andReturn();
-    verify(cqlLibraryService, times(1)).unshareLibraries(any(), anyString());
+    verify(cqlLibraryService, times(1)).unshareLibraries(any(), anyString(), anyString());
     assertEquals(
         result.getResponse().getContentAsString(),
         "{\"libraryId2\":[{\"userId\":\"userId2\",\"roles\":[\"SHARED_WITH\"]}]}");

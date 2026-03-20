@@ -250,17 +250,23 @@ public class CqlLibraryController {
 
   @PutMapping("/share")
   public ResponseEntity<Map<String, List<AclSpecification>>> shareLibraries(
-      @RequestBody Map<String, List<String>> libraryUserIdMap, Principal principal) {
+      @RequestBody Map<String, List<String>> libraryUserIdMap,
+      Principal principal,
+      @RequestHeader("Authorization") String accessToken) {
 
     return ResponseEntity.ok(
-        cqlLibraryService.shareLibraries(libraryUserIdMap, principal.getName().toLowerCase()));
+        cqlLibraryService.shareLibraries(
+            libraryUserIdMap, principal.getName().toLowerCase(), accessToken));
   }
 
   @PutMapping("/unshare")
   public ResponseEntity<Map<String, List<AclSpecification>>> unshareLibraries(
-      @RequestBody Map<String, List<String>> libraryUserIdMap, Principal principal) {
+      @RequestBody Map<String, List<String>> libraryUserIdMap,
+      Principal principal,
+      @RequestHeader("Authorization") String accessToken) {
     return ResponseEntity.ok(
-        cqlLibraryService.unshareLibraries(libraryUserIdMap, principal.getName().toLowerCase()));
+        cqlLibraryService.unshareLibraries(
+            libraryUserIdMap, principal.getName().toLowerCase(), accessToken));
   }
 
   /**
