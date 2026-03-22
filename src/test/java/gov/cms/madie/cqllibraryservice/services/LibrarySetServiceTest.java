@@ -21,6 +21,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.aggregation.Aggregation;
 import org.springframework.data.mongodb.core.aggregation.AggregationResults;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import java.util.*;
 
@@ -82,7 +83,9 @@ class LibrarySetServiceTest {
     Exception ex =
         assertThrows(
             ResourceNotFoundException.class,
-            () -> librarySetService.updateLibrarySetAcls(librarySetId, aclOperation, "username"));
+            () ->
+                librarySetService.updateLibrarySetAcls(
+                    librarySetId, aclOperation, "username", false));
     assertEquals(ex.getMessage(), "Could not find resource LibrarySet with id: " + librarySetId);
   }
 
@@ -98,7 +101,8 @@ class LibrarySetServiceTest {
     when(librarySetRepository.findByLibrarySetId(anyString())).thenReturn(Optional.of(librarySet));
     when(librarySetRepository.save(any(LibrarySet.class))).thenReturn(updatedLibrarySet);
 
-    LibrarySet librarySet = librarySetService.updateLibrarySetAcls("1", aclOperation, "username");
+    LibrarySet librarySet =
+        librarySetService.updateLibrarySetAcls("1", aclOperation, "username", false);
     assertThat(librarySet.getId(), is(equalTo(updatedLibrarySet.getId())));
     assertThat(librarySet.getOwner(), is(equalTo(updatedLibrarySet.getOwner())));
     assertThat(librarySet.getAcls().size(), is(equalTo(1)));
@@ -119,7 +123,8 @@ class LibrarySetServiceTest {
         .thenReturn(Optional.of(librarySetWithNoAcls));
     when(librarySetRepository.save(any(LibrarySet.class))).thenReturn(updatedLibrarySet);
 
-    LibrarySet librarySet = librarySetService.updateLibrarySetAcls("1", aclOperation, "username");
+    LibrarySet librarySet =
+        librarySetService.updateLibrarySetAcls("1", aclOperation, "username", false);
     assertThat(librarySet.getId(), is(equalTo(updatedLibrarySet.getId())));
     assertThat(librarySet.getOwner(), is(equalTo(updatedLibrarySet.getOwner())));
     assertThat(librarySet.getAcls().size(), is(equalTo(1)));
@@ -146,7 +151,8 @@ class LibrarySetServiceTest {
     when(actionLogService.logShareAccessControlAction(any(), any(), any(), any(), any()))
         .thenReturn(true);
 
-    LibrarySet librarySet = librarySetService.updateLibrarySetAcls("1", aclOperation, "username");
+    LibrarySet librarySet =
+        librarySetService.updateLibrarySetAcls("1", aclOperation, "username", false);
     assertThat(librarySet.getId(), is(equalTo(updatedLibrarySet.getId())));
     assertThat(librarySet.getOwner(), is(equalTo(updatedLibrarySet.getOwner())));
     assertThat(librarySet.getAcls().size(), is(equalTo(2)));
@@ -170,7 +176,8 @@ class LibrarySetServiceTest {
     when(librarySetRepository.findByLibrarySetId(anyString())).thenReturn(Optional.of(librarySet));
     when(librarySetRepository.save(any(LibrarySet.class))).thenReturn(updatedLibrarySet);
 
-    LibrarySet librarySet = librarySetService.updateLibrarySetAcls("1", aclOperation, "username");
+    LibrarySet librarySet =
+        librarySetService.updateLibrarySetAcls("1", aclOperation, "username", false);
     assertThat(librarySet.getId(), is(equalTo(updatedLibrarySet.getId())));
     assertThat(librarySet.getOwner(), is(equalTo(updatedLibrarySet.getOwner())));
     assertThat(librarySet.getAcls().size(), is(equalTo(1)));
@@ -188,7 +195,7 @@ class LibrarySetServiceTest {
     when(librarySetRepository.save(any(LibrarySet.class))).thenReturn(librarySet);
 
     LibrarySet updatedLibrarySet =
-        librarySetService.updateLibrarySetAcls("1", aclOperation, "username");
+        librarySetService.updateLibrarySetAcls("1", aclOperation, "username", true);
     assertThat(updatedLibrarySet.getId(), is(equalTo(librarySet.getId())));
     assertThat(updatedLibrarySet.getOwner(), is(equalTo(librarySet.getOwner())));
     assertThat(updatedLibrarySet.getAcls().size(), is(equalTo(0)));
@@ -564,5 +571,33 @@ class LibrarySetServiceTest {
             "adminUser",
             "newOwner",
             "newOwner now has owner permissions instead of share permissions by MADiE Admin");
+  }
+
+  @Test
+  public void testFindAclSpecificationByUserIdLibrarySetAclsEmpty() {
+    LibrarySet librarySet = LibrarySet.builder().librarySetId("1").owner("oldOwner").build();
+    // use reflection to access the private method findAclSpecificationByUserId
+    AclSpecification result =
+        ReflectionTestUtils.invokeMethod(
+            librarySetService, "findAclSpecificationByUserId", librarySet, "userId");
+    assertNull(result);
+  }
+
+  @Test
+  public void testGetRecentLibrariesByLibrarySetIdLibrariesNull() {
+    String librarySetId = "lib-set-1";
+
+    // Simulate AggregationResults with empty list instead of null
+    @SuppressWarnings("rawtypes")
+    AggregationResults mockAggregationResults =
+        new AggregationResults<>(Collections.emptyList(), new Document());
+
+    when(mongoTemplate.aggregate(any(Aggregation.class), (Class<?>) any(), any()))
+        .thenReturn(mockAggregationResults);
+
+    List<CqlLibrary> result =
+        librarySetService.getRecentLibrariesByLibrarySetId(List.of(librarySetId));
+
+    assertEquals(0, result.size()); // Should be empty
   }
 }

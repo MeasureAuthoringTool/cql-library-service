@@ -8,7 +8,6 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
-import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 import gov.cms.madie.cqllibraryservice.dto.LibrarySearchCriteria;
 import gov.cms.madie.cqllibraryservice.dto.LibrarySetDTO;
 import gov.cms.madie.cqllibraryservice.dto.LibraryListDTO;
@@ -44,6 +43,9 @@ import java.util.*;
 
 import gov.cms.madie.cqllibraryservice.dto.LockInfo;
 import org.springframework.data.domain.Pageable;
+import org.springframework.test.util.ReflectionTestUtils;
+
+import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 
 @ExtendWith(MockitoExtension.class)
 class CqlLibraryServiceTest {
@@ -61,6 +63,7 @@ class CqlLibraryServiceTest {
   @Mock private UserServiceClient userServiceClient;
 
   private final String USERNAME = "testUserName";
+  private final String ACCESSTOKEN = "accessToken";
 
   @Test
   public void testGetOwnedLibrariesByCriteria() {
@@ -269,17 +272,17 @@ class CqlLibraryServiceTest {
 
     when(cqlLibraryRepository.findById(libraryId)).thenReturn(Optional.of(library));
     when(librarySetService.findByLibrarySetId("librarySetId")).thenReturn(librarySet);
-    when(userServiceClient.getUserRoles(eq("owner"), eq("accessToken"))).thenReturn(userRolesDto);
+    when(userServiceClient.getUserRoles(eq("owner"), eq(ACCESSTOKEN))).thenReturn(userRolesDto);
     when(librarySetService.updateOwnership(
             anyString(), anyString(), anyBoolean(), anyString(), anyBoolean()))
         .thenReturn(new LibrarySet());
 
     List<String> failedLibraries =
-        cqlLibraryService.transferLibraries(List.of(libraryId), user, true, "owner", "accessToken");
+        cqlLibraryService.transferLibraries(List.of(libraryId), user, true, "owner", ACCESSTOKEN);
 
     assertTrue(failedLibraries.isEmpty());
 
-    verify(userServiceClient).getUserRoles("owner", "accessToken");
+    verify(userServiceClient).getUserRoles("owner", ACCESSTOKEN);
     verify(cqlLibraryService).findCqlLibraryById(libraryId, user);
     verify(librarySetService)
         .updateOwnership(eq("librarySetId"), eq(user), eq(true), eq("owner"), eq(false));
@@ -304,18 +307,18 @@ class CqlLibraryServiceTest {
 
     when(cqlLibraryRepository.findById(libraryId)).thenReturn(Optional.of(library));
     when(librarySetService.findByLibrarySetId("librarySetId")).thenReturn(librarySet);
-    when(userServiceClient.getUserRoles(eq(user), eq("accessToken"))).thenReturn(userRolesDto);
+    when(userServiceClient.getUserRoles(eq(user), eq(ACCESSTOKEN))).thenReturn(userRolesDto);
     when(librarySetService.updateOwnership(
             anyString(), anyString(), anyBoolean(), anyString(), anyBoolean()))
         .thenThrow(new ResourceNotFoundException("LibrarySet", "id", "librarySetId"));
 
     List<String> failedLibraries =
-        cqlLibraryService.transferLibraries(List.of(libraryId), user, true, user, "accessToken");
+        cqlLibraryService.transferLibraries(List.of(libraryId), user, true, user, ACCESSTOKEN);
 
     assertEquals(1, failedLibraries.size());
     assertTrue(failedLibraries.contains(libraryId));
 
-    verify(userServiceClient).getUserRoles(user, "accessToken");
+    verify(userServiceClient).getUserRoles(user, ACCESSTOKEN);
     verify(cqlLibraryService).findCqlLibraryById(libraryId, user);
     verify(librarySetService)
         .updateOwnership(eq("librarySetId"), eq(user), eq(true), eq(user), eq(false));
@@ -882,7 +885,7 @@ class CqlLibraryServiceTest {
 
     assertThrows(
         ResourceNotFoundException.class,
-        () -> cqlLibraryService.shareLibraries(libraries, "userName"));
+        () -> cqlLibraryService.shareLibraries(libraries, "userName", ACCESSTOKEN));
   }
 
   @Test
@@ -945,7 +948,8 @@ class CqlLibraryServiceTest {
     when(librarySetService.findByLibrarySetId("librarySetId1")).thenReturn(librarySet1);
     when(cqlLibraryRepository.findById("libraryId2")).thenReturn(Optional.ofNullable(library2));
 
-    when(librarySetService.updateLibrarySetAcls(any(), any(), any())).thenReturn(librarySet1);
+    when(librarySetService.updateLibrarySetAcls(any(), any(), any(), any(Boolean.class)))
+        .thenReturn(librarySet1);
 
     AclSpecification aclSpecification1 =
         AclSpecification.builder().userId("testUser").roles(Set.of(RoleEnum.SHARED_WITH)).build();
@@ -953,7 +957,7 @@ class CqlLibraryServiceTest {
         AclSpecification.builder().userId("userId2").roles(Set.of(RoleEnum.SHARED_WITH)).build();
 
     Map<String, List<AclSpecification>> updatedSharedLibraries =
-        cqlLibraryService.shareLibraries(libraries, "testUser");
+        cqlLibraryService.shareLibraries(libraries, "testUser", ACCESSTOKEN);
     assertThat(updatedSharedLibraries.size(), is(equalTo(2)));
 
     assertTrue(updatedSharedLibraries.containsKey(libraryId1));
@@ -1010,7 +1014,7 @@ class CqlLibraryServiceTest {
     CqlLibrary lib1 = CqlLibrary.builder().cqlLibraryName("Lib1").librarySetId("LibSetId1").build();
     assertThrows(
         ResourceNotFoundException.class,
-        () -> cqlLibraryService.verifyAuthorization("testUser", lib1, null));
+        () -> cqlLibraryService.verifyAuthorization("testUser", lib1, null, false));
   }
 
   @Test
@@ -1047,17 +1051,22 @@ class CqlLibraryServiceTest {
     when(cqlLibraryRepository.findById("libraryId1")).thenReturn(Optional.ofNullable(library1));
     when(librarySetService.findByLibrarySetId("librarySetId1")).thenReturn(librarySet1);
 
-    when(librarySetService.updateLibrarySetAcls(any(), any(), any())).thenReturn(librarySet1);
+    when(librarySetService.updateLibrarySetAcls(any(), any(), any(), any(Boolean.class)))
+        .thenReturn(librarySet1);
 
     AclSpecification aclSpecification1 =
         AclSpecification.builder().userId("testUser").roles(Set.of(RoleEnum.SHARED_WITH)).build();
 
+    when(userServiceClient.getUserRoles(anyString(), anyString()))
+        .thenReturn(
+            UserRolesDto.builder()
+                .harpId(USERNAME)
+                .roles(List.of("MADiE-Admin", "MADiE-User"))
+                .build());
+
     Map<String, List<AclSpecification>> updatedSharedLibraries =
-        cqlLibraryService.unshareLibraries(libraries, "testUser");
+        cqlLibraryService.unshareLibraries(libraries, "testUser", ACCESSTOKEN);
     assertThat(updatedSharedLibraries.size(), is(equalTo(1)));
-
-    assertTrue(updatedSharedLibraries.containsKey(libraryId1));
-
     assertThat(updatedSharedLibraries.get(libraryId1), is(equalTo(List.of(aclSpecification1))));
   }
 
@@ -1478,18 +1487,18 @@ class CqlLibraryServiceTest {
 
     when(cqlLibraryRepository.findById(anyString())).thenReturn(Optional.of(library));
     when(librarySetService.findByLibrarySetId(anyString())).thenReturn(librarySet);
-    when(userServiceClient.getUserRoles(eq(conductedBy), eq("accessToken"))).thenReturn(null);
+    when(userServiceClient.getUserRoles(eq(conductedBy), eq(ACCESSTOKEN))).thenReturn(null);
     when(librarySetService.updateOwnership(
             anyString(), anyString(), anyBoolean(), anyString(), anyBoolean()))
         .thenReturn(new LibrarySet());
 
     List<String> failedLibraries =
         cqlLibraryService.transferLibraries(
-            List.of(libraryId), harpId, true, conductedBy, "accessToken");
+            List.of(libraryId), harpId, true, conductedBy, ACCESSTOKEN);
 
     assertTrue(failedLibraries.isEmpty());
 
-    verify(userServiceClient).getUserRoles(conductedBy, "accessToken");
+    verify(userServiceClient).getUserRoles(conductedBy, ACCESSTOKEN);
     verify(cqlLibraryService).findCqlLibraryById(libraryId, harpId);
     verify(librarySetService)
         .updateOwnership(eq("librarySetId"), eq(harpId), eq(true), eq(conductedBy), eq(false));
@@ -1511,18 +1520,18 @@ class CqlLibraryServiceTest {
             .librarySet(librarySet)
             .build();
 
-    when(cqlLibraryRepository.findById(anyString())).thenReturn(Optional.of(library));
-    when(librarySetService.findByLibrarySetId(anyString())).thenReturn(librarySet);
-    when(userServiceClient.getUserRoles(eq(conductedBy), eq("accessToken"))).thenReturn(null);
+    when(cqlLibraryRepository.findById(libraryId)).thenReturn(Optional.of(library));
+    when(librarySetService.findByLibrarySetId("librarySetId")).thenReturn(librarySet);
+    when(userServiceClient.getUserRoles(eq(conductedBy), eq(ACCESSTOKEN))).thenReturn(null);
 
     List<String> failedLibraries =
         cqlLibraryService.transferLibraries(
-            List.of(libraryId), harpId, true, conductedBy, "accessToken");
+            List.of(libraryId), harpId, true, conductedBy, ACCESSTOKEN);
 
     assertEquals(1, failedLibraries.size());
     assertTrue(failedLibraries.contains(libraryId));
 
-    verify(userServiceClient).getUserRoles(conductedBy, "accessToken");
+    verify(userServiceClient).getUserRoles(conductedBy, ACCESSTOKEN);
     verify(cqlLibraryService).findCqlLibraryById(libraryId, harpId);
     verify(librarySetService, never())
         .updateOwnership(anyString(), anyString(), anyBoolean(), anyString(), anyBoolean());
@@ -1549,15 +1558,14 @@ class CqlLibraryServiceTest {
 
     when(cqlLibraryRepository.findById(anyString())).thenReturn(Optional.of(library));
     when(librarySetService.findByLibrarySetId(anyString())).thenReturn(librarySet);
-    when(userServiceClient.getUserRoles(eq(conductedBy), eq("accessToken")))
-        .thenReturn(userRolesDto);
+    when(userServiceClient.getUserRoles(eq(conductedBy), eq(ACCESSTOKEN))).thenReturn(userRolesDto);
     when(librarySetService.updateOwnership(
             anyString(), anyString(), anyBoolean(), anyString(), anyBoolean()))
         .thenReturn(new LibrarySet());
 
     List<String> failedLibraries =
         cqlLibraryService.transferLibraries(
-            List.of(libraryId), harpId, true, conductedBy, "accessToken");
+            List.of(libraryId), harpId, true, conductedBy, ACCESSTOKEN);
 
     assertTrue(failedLibraries.isEmpty());
 
@@ -1587,12 +1595,11 @@ class CqlLibraryServiceTest {
 
     when(cqlLibraryRepository.findById(anyString())).thenReturn(Optional.of(library));
     when(librarySetService.findByLibrarySetId(anyString())).thenReturn(librarySet);
-    when(userServiceClient.getUserRoles(eq(conductedBy), eq("accessToken")))
-        .thenReturn(userRolesDto);
+    when(userServiceClient.getUserRoles(eq(conductedBy), eq(ACCESSTOKEN))).thenReturn(userRolesDto);
 
     List<String> failedLibraries =
         cqlLibraryService.transferLibraries(
-            List.of(libraryId), harpId, true, conductedBy, "accessToken");
+            List.of(libraryId), harpId, true, conductedBy, ACCESSTOKEN);
 
     assertEquals(1, failedLibraries.size());
     assertTrue(failedLibraries.contains(libraryId));
@@ -1622,17 +1629,16 @@ class CqlLibraryServiceTest {
 
     when(cqlLibraryRepository.findById(anyString())).thenReturn(Optional.of(library));
     when(librarySetService.findByLibrarySetId(anyString())).thenReturn(librarySet);
-    when(userServiceClient.getUserRoles(eq(conductedBy), eq("accessToken")))
-        .thenReturn(userRolesDto);
+    when(userServiceClient.getUserRoles(eq(conductedBy), eq(ACCESSTOKEN))).thenReturn(userRolesDto);
 
     List<String> failedLibraries =
         cqlLibraryService.transferLibraries(
-            List.of(libraryId), harpId, true, conductedBy, "accessToken");
+            List.of(libraryId), harpId, true, conductedBy, ACCESSTOKEN);
 
     assertEquals(1, failedLibraries.size());
     assertTrue(failedLibraries.contains(libraryId));
 
-    verify(userServiceClient).getUserRoles(conductedBy, "accessToken");
+    verify(userServiceClient).getUserRoles(conductedBy, ACCESSTOKEN);
     verify(cqlLibraryService).findCqlLibraryById(libraryId, harpId);
     verify(librarySetService, never())
         .updateOwnership(anyString(), anyString(), anyBoolean(), anyString(), anyBoolean());
@@ -1709,5 +1715,352 @@ class CqlLibraryServiceTest {
 
     verify(userServiceClient, times(1))
         .getBulkUserDetails(List.of("owner1", "owner2", "owner3", "owner4", "owner5"));
+  }
+
+  @Test
+  public void testShareLibrariesByAdminUser() {
+    Map<String, List<String>> libraries = new HashMap<>();
+
+    AclSpecification aclSpec1 = new AclSpecification();
+    aclSpec1.setUserId("testUser");
+    aclSpec1.setRoles(
+        new HashSet<>() {
+          {
+            add(RoleEnum.SHARED_WITH);
+          }
+        });
+
+    LibrarySet librarySet1 =
+        LibrarySet.builder()
+            .librarySetId("librarySetId1")
+            .owner("testUser")
+            .acls(List.of(aclSpec1))
+            .build();
+
+    String libraryId1 = "libraryId1";
+
+    CqlLibrary library1 =
+        CqlLibrary.builder()
+            .id(libraryId1)
+            .librarySetId(librarySet1.getLibrarySetId())
+            .librarySet(librarySet1)
+            .build();
+
+    libraries.put(libraryId1, List.of("testUser", "userId2"));
+
+    when(cqlLibraryRepository.findById("libraryId1")).thenReturn(Optional.ofNullable(library1));
+    when(librarySetService.findByLibrarySetId("librarySetId1")).thenReturn(librarySet1);
+
+    when(librarySetService.updateLibrarySetAcls(any(), any(), any(), any(Boolean.class)))
+        .thenReturn(librarySet1);
+
+    AclSpecification aclSpecification1 =
+        AclSpecification.builder().userId("testUser").roles(Set.of(RoleEnum.SHARED_WITH)).build();
+
+    when(userServiceClient.getUserRoles(anyString(), anyString()))
+        .thenReturn(
+            UserRolesDto.builder()
+                .harpId(USERNAME)
+                .roles(List.of("MADiE-Admin", "MADiE-User"))
+                .build());
+
+    Map<String, List<AclSpecification>> updatedSharedLibraries =
+        cqlLibraryService.shareLibraries(libraries, "testUser", ACCESSTOKEN);
+    assertThat(updatedSharedLibraries.size(), is(equalTo(1)));
+    assertThat(updatedSharedLibraries.get(libraryId1), is(equalTo(List.of(aclSpecification1))));
+  }
+
+  @Test
+  public void testUnshareLibrariesByAdminUser() {
+    Map<String, List<String>> libraries = new HashMap<>();
+
+    AclSpecification aclSpec1 = new AclSpecification();
+    aclSpec1.setUserId("testUser");
+    aclSpec1.setRoles(
+        new HashSet<>() {
+          {
+            add(RoleEnum.SHARED_WITH);
+          }
+        });
+
+    LibrarySet librarySet1 =
+        LibrarySet.builder()
+            .librarySetId("librarySetId1")
+            .owner("testUser")
+            .acls(List.of(aclSpec1))
+            .build();
+
+    String libraryId1 = "libraryId1";
+
+    CqlLibrary library1 =
+        CqlLibrary.builder()
+            .id(libraryId1)
+            .librarySetId(librarySet1.getLibrarySetId())
+            .librarySet(librarySet1)
+            .build();
+
+    libraries.put(libraryId1, List.of("testUser", "userId2"));
+
+    when(cqlLibraryRepository.findById("libraryId1")).thenReturn(Optional.ofNullable(library1));
+    when(librarySetService.findByLibrarySetId("librarySetId1")).thenReturn(librarySet1);
+
+    when(librarySetService.updateLibrarySetAcls(any(), any(), any(), any(Boolean.class)))
+        .thenReturn(librarySet1);
+
+    AclSpecification aclSpecification1 =
+        AclSpecification.builder().userId("testUser").roles(Set.of(RoleEnum.SHARED_WITH)).build();
+
+    when(userServiceClient.getUserRoles(anyString(), anyString()))
+        .thenReturn(
+            UserRolesDto.builder()
+                .harpId(USERNAME)
+                .roles(List.of("MADiE-Admin", "MADiE-User"))
+                .build());
+
+    Map<String, List<AclSpecification>> updatedSharedLibraries =
+        cqlLibraryService.unshareLibraries(libraries, "testUser", ACCESSTOKEN);
+    assertThat(updatedSharedLibraries.size(), is(equalTo(1)));
+    assertThat(updatedSharedLibraries.get(libraryId1), is(equalTo(List.of(aclSpecification1))));
+  }
+
+  @Test
+  public void testUpdateCqlLibraryWhenUserNameIsNull() {
+    CqlLibrary library = CqlLibrary.builder().id("libraryId").build();
+
+    Exception exception =
+        assertThrows(
+            BadRequestObjectException.class,
+            () -> cqlLibraryService.updateCqlLibrary(library, null));
+
+    assertThat(exception.getMessage(), is(equalTo("Harp id cannot be null or empty.")));
+  }
+
+  @Test
+  public void testGetVersionedCqlLibraryElmJsonHasErrors() {
+    String cqlLibraryId = "libraryId";
+    String cqlLibraryName = "testLibrary";
+    String librarySetId = "librarySetId";
+    CqlLibrary library =
+        CqlLibrary.builder()
+            .id(cqlLibraryId)
+            .cqlLibraryName(cqlLibraryName)
+            .librarySetId(librarySetId)
+            .cql("library test version '1.0.0'")
+            .model("QI-Core v4.1.1")
+            .build();
+
+    // Mock repository to return a non-empty list
+    when(cqlLibraryRepository.findAllByCqlLibraryNameAndDraftAndVersionAndModel(
+            anyString(), anyBoolean(), any(), anyString()))
+        .thenReturn(List.of(library));
+    ElmJson elmJson = ElmJson.builder().json("{}").build();
+    when(elmTranslatorClient.getElmJson(anyString(), anyString(), anyString(), anyString()))
+        .thenReturn(elmJson);
+    when(elmTranslatorClient.hasErrors(any())).thenReturn(true);
+    assertThrows(
+        CqlElmTranslationErrorException.class,
+        () ->
+            cqlLibraryService.getVersionedCqlLibrary(
+                cqlLibraryName,
+                "1.0.000",
+                Optional.of("QI-Core v4.1.1"),
+                true,
+                "Info",
+                "test-okta"));
+  }
+
+  @Test
+  public void testGetSharedLibrariesLibrarySetAclsNull() {
+    String libraryId = "libraryId";
+    LibrarySet librarySet = LibrarySet.builder().librarySetId("librarySetId").build();
+    CqlLibrary library =
+        CqlLibrary.builder()
+            .id(libraryId)
+            .librarySetId("librarySetId")
+            .librarySet(librarySet)
+            .build();
+    when(cqlLibraryRepository.findById(libraryId)).thenReturn(Optional.of(library));
+    when(librarySetService.findByLibrarySetId("librarySetId")).thenReturn(librarySet);
+
+    Map<String, List<SharedUser>> result =
+        cqlLibraryService.getSharedLibraries(List.of(libraryId), "test-okta");
+    assertNotNull(result);
+    assertTrue(result.containsKey(libraryId));
+    assertTrue(result.get(libraryId).isEmpty());
+  }
+
+  @Test
+  public void testVerifyLibrarySetAuthorizationWhenAclMatchAllowedRole() {
+    // Case: owner != username, ACL contains userId and allowed role, should NOT throw
+    String username = "testUser";
+    String owner = "otherUser";
+    RoleEnum allowedRole = RoleEnum.SHARED_WITH;
+    AclSpecification acl =
+        AclSpecification.builder().userId(username).roles(Set.of(allowedRole)).build();
+    LibrarySet librarySet = LibrarySet.builder().owner(owner).acls(List.of(acl)).build();
+    // Should not throw
+    assertDoesNotThrow(
+        () ->
+            cqlLibraryService.verifyLibrarySetAuthorization(
+                username, owner, "targetId", List.of(allowedRole), librarySet));
+  }
+
+  @Test
+  public void testVerifyLibrarySetAuthorizationWhenAclNotMatchAllowedRole() {
+    // Case: owner != username, ACL does NOT contain userId and allowed role, should throw
+    String username = "testUser";
+    String owner = "otherUser";
+    RoleEnum allowedRole = RoleEnum.SHARED_WITH;
+    AclSpecification acl =
+        AclSpecification.builder()
+            .userId("anotherUser")
+            .roles(Set.of(RoleEnum.SHARED_WITH)) // Use SHARED_WITH instead of VIEWER
+            .build();
+    LibrarySet librarySet = LibrarySet.builder().owner(owner).acls(List.of(acl)).build();
+    assertThrows(
+        UnauthorizedException.class,
+        () ->
+            cqlLibraryService.verifyLibrarySetAuthorization(
+                username, owner, "targetId", List.of(allowedRole), librarySet));
+  }
+
+  @Test
+  public void testDeleteDraftLibraryLockInfoNotLocked() {
+    LockInfo lockInfo =
+        LockInfo.builder().isLocked(false).lockedBy("anyUser").lockedId("LibID").build();
+    when(cqlLibraryLockService.lockCqlLibrary(eq("LibID"), eq("TEST_USER"))).thenReturn(lockInfo);
+    CqlLibrary library =
+        CqlLibrary.builder()
+            .draft(true)
+            .id("LibID")
+            .librarySetId("LibSetID")
+            .version(Version.parse("1.0.0"))
+            .build();
+    when(cqlLibraryRepository.findById("LibID")).thenReturn(Optional.of(library));
+    when(librarySetService.findByLibrarySetId("LibSetID"))
+        .thenReturn(LibrarySet.builder().librarySetId("LibSetID").owner("TEST_USER").build());
+    doNothing().when(cqlLibraryRepository).delete(any(CqlLibrary.class));
+
+    CqlLibrary output = cqlLibraryService.deleteDraftLibrary("LibID", "TEST_USER");
+
+    assertThat(output, is(notNullValue()));
+    assertThat(output.getId(), is(equalTo("LibID")));
+    verify(cqlLibraryRepository, times(1)).delete(eq(library));
+  }
+
+  @Test
+  public void testRefreshIncludedLibrariesUpdatedAndPersistedLibraryCqlSame() {
+    CqlLibrary updatedLibrary =
+        CqlLibrary.builder()
+            .id("LibID")
+            .librarySetId("LibSetID")
+            .cqlLibraryName("name1")
+            .version(Version.parse("1.0.0"))
+            .cql("library test version '1.0.0'")
+            .build();
+    CqlLibrary persistedLibrary =
+        CqlLibrary.builder()
+            .id("LibID")
+            .librarySetId("LibSetID")
+            .cqlLibraryName("name2")
+            .version(Version.parse("1.0.0"))
+            .cql("library test version '1.0.0'")
+            .build();
+
+    ReflectionTestUtils.invokeMethod(
+        cqlLibraryService, "refreshIncludedLibraries", updatedLibrary, persistedLibrary);
+    assertNull(updatedLibrary.getIncludedLibraries());
+  }
+
+  @Test
+  public void testEnsureUniqueNameCqlLibraryNameNotChanged() {
+    CqlLibrary updatingLibrary =
+        CqlLibrary.builder()
+            .id("LibID")
+            .librarySetId("LibSetID")
+            .cqlLibraryName("name1")
+            .version(Version.parse("1.0.0"))
+            .build();
+    CqlLibrary persistedLibrary =
+        CqlLibrary.builder()
+            .id("LibID")
+            .librarySetId("LibSetID")
+            .cqlLibraryName("name1")
+            .version(Version.parse("1.0.0"))
+            .build();
+
+    ReflectionTestUtils.invokeMethod(
+        cqlLibraryService, "ensureUniqueName", updatingLibrary, persistedLibrary);
+    // Assert that the name remains unchanged
+    assertEquals("name1", updatingLibrary.getCqlLibraryName());
+    assertEquals("name1", persistedLibrary.getCqlLibraryName());
+  }
+
+  @Test
+  public void testEnrichWithUserDetailsLibrariesNull() {
+    // use reflection to access the private method enrichWithUserDetails
+    ReflectionTestUtils.invokeMethod(
+        cqlLibraryService, "enrichWithUserDetails", Collections.emptyList());
+    // assert userServiceClient not called
+    verify(userServiceClient, times(0)).getBulkUserDetails(anyList());
+  }
+
+  @Test
+  public void testGetFullNameUserDetailsFirstNameNull() {
+    UserDetailsDto userDetails = UserDetailsDto.builder().firstName(null).lastName("Doe").build();
+    // use reflection to access the private method getFullName
+    String fullName =
+        ReflectionTestUtils.invokeMethod(cqlLibraryService, "getFullName", userDetails);
+    assertThat(fullName, is(equalTo("Doe")));
+  }
+
+  @Test
+  public void testGetFullNameUserDetailsLastNameNull() {
+    UserDetailsDto userDetails = UserDetailsDto.builder().firstName("John").lastName(null).build();
+    String fullName =
+        ReflectionTestUtils.invokeMethod(cqlLibraryService, "getFullName", userDetails);
+    assertThat(fullName, is(equalTo("John")));
+  }
+
+  @Test
+  public void testGetFullNameUserDetailsFirstNameAndLastNameNull() {
+    UserDetailsDto userDetails = UserDetailsDto.builder().firstName(null).lastName(null).build();
+    // use reflection to access the private method getFullName
+    String fullName =
+        ReflectionTestUtils.invokeMethod(cqlLibraryService, "getFullName", userDetails);
+    assertThat(fullName, is(equalTo("")));
+  }
+
+  @Test
+  public void testCheckDuplicateCqlLibraryNameLibraryNameNull() {
+    assertDoesNotThrow(() -> cqlLibraryService.checkDuplicateCqlLibraryName(null));
+  }
+
+  @Test
+  public void testGetVersionedCqlLibraryFetchElmFalse() {
+    String cqlLibraryName = "testLibrary";
+    String version = "1.0.000";
+    String model = "QI-Core v4.1.1";
+    CqlLibrary library =
+        CqlLibrary.builder()
+            .id("libraryId")
+            .cqlLibraryName(cqlLibraryName)
+            .version(Version.parse(version))
+            .model(model)
+            .build();
+    when(cqlLibraryRepository.findAllByCqlLibraryNameAndDraftAndVersionAndModel(
+            anyString(), anyBoolean(), any(), anyString()))
+        .thenReturn(List.of(library));
+
+    CqlLibrary result =
+        cqlLibraryService.getVersionedCqlLibrary(
+            cqlLibraryName, version, Optional.of(model), false, "Info", "test-okta");
+
+    assertNotNull(result);
+    assertEquals(cqlLibraryName, result.getCqlLibraryName());
+    assertEquals(Version.parse(version), result.getVersion());
+    assertEquals(model, result.getModel());
+    verify(elmTranslatorClient, times(0))
+        .getElmJson(anyString(), anyString(), anyString(), anyString());
   }
 }

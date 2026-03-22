@@ -263,7 +263,7 @@ public class CqlLibraryService {
   }
 
   public List<AclSpecification> updateAccessControlList(
-      String cqlLibraryId, AclOperation aclOperation, String performedBy) {
+      String cqlLibraryId, AclOperation aclOperation, String performedBy, boolean isAdminRole) {
     Optional<CqlLibrary> persistedLibrary = cqlLibraryRepository.findById(cqlLibraryId);
     if (persistedLibrary.isEmpty()) {
       throw new ResourceNotFoundException("Library does not exist: " + cqlLibraryId);
@@ -272,7 +272,7 @@ public class CqlLibraryService {
     CqlLibrary library = persistedLibrary.get();
     LibrarySet librarySet =
         librarySetService.updateLibrarySetAcls(
-            library.getLibrarySetId(), aclOperation, performedBy);
+            library.getLibrarySetId(), aclOperation, performedBy, isAdminRole);
     return librarySet.getAcls();
   }
 
@@ -411,9 +411,6 @@ public class CqlLibraryService {
     for (String libraryId : libraryIds) {
       CqlLibrary library = findCqlLibraryById(libraryId, username);
 
-      if (library == null) {
-        throw new ResourceNotFoundException("Library does not exist: " + libraryId);
-      }
       if (library.getLibrarySet() == null) {
         throw new ResourceNotFoundException(
             "Library set does not exist for library with ID : " + libraryId);
@@ -463,7 +460,7 @@ public class CqlLibraryService {
   }
 
   public Map<String, List<AclSpecification>> shareLibraries(
-      Map<String, List<String>> libraryUserIdMap, String performedBy) {
+      Map<String, List<String>> libraryUserIdMap, String performedBy, String accessToken) {
     Map<String, List<AclSpecification>> libraryIdToAclSpecification = new HashMap<>();
 
     log.info(
@@ -471,13 +468,15 @@ public class CqlLibraryService {
         performedBy,
         libraryUserIdMap);
 
-    verifyShareAuthorization(libraryUserIdMap, performedBy, true);
+    boolean isAdminRole = hasAdminRole(performedBy, accessToken);
+    verifyShareAuthorization(libraryUserIdMap, performedBy, true, isAdminRole);
 
     libraryUserIdMap.forEach(
         (LibraryId, userIds) -> {
           AclOperation aclOperation = buildAclOperation(userIds, "Grant");
           libraryIdToAclSpecification.put(
-              LibraryId, updateAccessControlList(LibraryId, aclOperation, performedBy));
+              LibraryId,
+              updateAccessControlList(LibraryId, aclOperation, performedBy, isAdminRole));
         });
 
     log.info(
@@ -491,7 +490,7 @@ public class CqlLibraryService {
   }
 
   public Map<String, List<AclSpecification>> unshareLibraries(
-      Map<String, List<String>> libraryUserIdMap, String username) {
+      Map<String, List<String>> libraryUserIdMap, String username, String accessToken) {
     log.info(
         "User [{}] has called unshareLibraries with libraryUserIdMap [{}]",
         username,
@@ -499,13 +498,14 @@ public class CqlLibraryService {
 
     Map<String, List<AclSpecification>> libraryIdToAclSpecification = new HashMap<>();
 
-    verifyShareAuthorization(libraryUserIdMap, username, false);
+    boolean isAdminRole = hasAdminRole(username, accessToken);
+    verifyShareAuthorization(libraryUserIdMap, username, false, isAdminRole);
 
     libraryUserIdMap.forEach(
         (libraryId, userIds) -> {
           AclOperation aclOperation = buildAclOperation(userIds, "Revoke");
           libraryIdToAclSpecification.put(
-              libraryId, updateAccessControlList(libraryId, aclOperation, username));
+              libraryId, updateAccessControlList(libraryId, aclOperation, username, isAdminRole));
         });
 
     log.info(
@@ -519,7 +519,10 @@ public class CqlLibraryService {
   }
 
   private void verifyShareAuthorization(
-      Map<String, List<String>> libraryUserIdMap, String username, boolean ownerOnly) {
+      Map<String, List<String>> libraryUserIdMap,
+      String username,
+      boolean ownerOnly,
+      boolean isAdminRole) {
     log.info(
         "User [{}] has called verifyShareAuthorization to determine whether operation with [{}]"
             + " is allowed to be performed",
@@ -531,17 +534,11 @@ public class CqlLibraryService {
         .forEach(
             libraryId -> {
               CqlLibrary library = findCqlLibraryById(libraryId, username);
-              if (library == null) {
-                log.error(
-                    "User [{}] called verifyShareAuthorization with libraryUserIdMap [{}] but "
-                        + "failed because the library with library ID [{}] does not exist.",
-                    username,
-                    libraryUserIdMap,
-                    libraryId);
-                throw new ResourceNotFoundException("Library does not exist: " + libraryId);
-              }
               verifyAuthorization(
-                  username, library, ownerOnly ? List.of() : List.of(RoleEnum.SHARED_WITH));
+                  username,
+                  library,
+                  ownerOnly ? List.of() : List.of(RoleEnum.SHARED_WITH),
+                  isAdminRole);
             });
     log.info(
         "User [{}] successfully called verifyShareAuthorization and determined that operation "
@@ -570,7 +567,8 @@ public class CqlLibraryService {
         .toList();
   }
 
-  public void verifyAuthorization(String username, CqlLibrary library, List<RoleEnum> roles) {
+  public void verifyAuthorization(
+      String username, CqlLibrary library, List<RoleEnum> roles, boolean isAdminRole) {
     LibrarySet librarySet =
         library.getLibrarySet() == null
             ? librarySetService.findByLibrarySetId(library.getLibrarySetId())
@@ -578,6 +576,10 @@ public class CqlLibraryService {
     if (librarySet == null) {
       throw new ResourceNotFoundException(
           "No library set exists for library with ID : " + library.getId());
+    }
+    // allow admin user and no further verification
+    if (isAdminRole) {
+      return;
     }
     verifyLibrarySetAuthorization(username, "CqlLibrary", library.getId(), roles, librarySet);
   }
@@ -607,13 +609,7 @@ public class CqlLibraryService {
       String conductedBy,
       String accessToken) {
     List<String> failedLibraries = new ArrayList<>();
-    boolean isAdmin = false;
-    UserRolesDto userRolesDto = userServiceClient.getUserRoles(conductedBy, accessToken);
-    if (userRolesDto != null
-        && userRolesDto.getRoles() != null
-        && userRolesDto.getRoles().contains("MADiE-Admin")) {
-      isAdmin = true;
-    }
+    boolean isAdmin = hasAdminRole(conductedBy, accessToken);
     for (String libraryId : libraryIds) {
       try {
         CqlLibrary cqlLibrary = findCqlLibraryById(libraryId, harpId);
@@ -651,5 +647,17 @@ public class CqlLibraryService {
         userName,
         cqlLibraryId);
     return cqlLibraryHistory;
+  }
+
+  private boolean hasAdminRole(String conductedBy, String accessToken) {
+    boolean isAdmin = false;
+    UserRolesDto userRolesDto = userServiceClient.getUserRoles(conductedBy, accessToken);
+    if (userRolesDto != null
+        && userRolesDto.getRoles() != null
+        && userRolesDto.getRoles().contains("MADiE-Admin")) {
+      log.info("User [{}] has MADiE-Admin role", conductedBy);
+      isAdmin = true;
+    }
+    return isAdmin;
   }
 }

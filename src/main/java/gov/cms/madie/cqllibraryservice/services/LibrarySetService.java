@@ -50,7 +50,7 @@ public class LibrarySetService {
   }
 
   public LibrarySet updateLibrarySetAcls(
-      String librarySetId, AclOperation aclOperation, String performedBy) {
+      String librarySetId, AclOperation aclOperation, String performedBy, boolean isAdminRole) {
     Optional<LibrarySet> optionalLibrarySet = librarySetRepository.findByLibrarySetId(librarySetId);
     if (optionalLibrarySet.isPresent()) {
       Map<String, ActionType> actionLogDetails = new HashMap<>();
@@ -136,6 +136,7 @@ public class LibrarySetService {
       changeLibrarySetAlcsToLowerCase(librarySet);
       LibrarySet updatedLibrarySet = librarySetRepository.save(librarySet);
       log.info("ACL updated for Library set [{}]", updatedLibrarySet.getId());
+      String byAdmin = isAdminRole ? " by MADiE Admin" : "";
       actionLogDetails.forEach(
           (userId, actionType) -> {
             actionLogService.logShareAccessControlAction(
@@ -144,7 +145,9 @@ public class LibrarySetService {
                 performedBy,
                 userId,
                 String.format(
-                    actionType == ActionType.UNSHARED ? "Unshared with - %s" : "Shared with - %s",
+                    actionType == ActionType.UNSHARED
+                        ? "Unshared with - %s" + byAdmin
+                        : "Shared with - %s" + byAdmin,
                     userId));
           });
       return updatedLibrarySet;
@@ -323,7 +326,7 @@ public class LibrarySetService {
     List<CqlLibrary> mostRecentLibraries = new ArrayList<>();
     for (String librarySetId : librarySetIds) {
       List<LibraryListDTO> libraries = getLibrariesByLibrarySetId(librarySetId);
-      if (libraries != null && !libraries.isEmpty()) {
+      if (CollectionUtils.isNotEmpty(libraries)) {
         LibraryListDTO library = libraries.get(libraries.size() - 1);
         CqlLibrary recentLibrary = cqlLibraryRepository.findById(library.getId()).orElse(null);
         mostRecentLibraries.add(recentLibrary);

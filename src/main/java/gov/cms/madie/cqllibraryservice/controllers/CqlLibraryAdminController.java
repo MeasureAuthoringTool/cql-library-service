@@ -53,7 +53,7 @@ public class CqlLibraryAdminController {
   public ResponseEntity<List<AclSpecification>> updateAccessControl(
       @PathVariable String id, @RequestBody @Validated AclOperation aclOperation) {
     List<AclSpecification> aclSpecifications =
-        cqlLibraryService.updateAccessControlList(id, aclOperation, "admin");
+        cqlLibraryService.updateAccessControlList(id, aclOperation, "admin", true);
     return ResponseEntity.ok().body(aclSpecifications);
   }
 
