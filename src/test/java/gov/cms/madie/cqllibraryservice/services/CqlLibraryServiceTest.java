@@ -947,7 +947,9 @@ class CqlLibraryServiceTest {
     when(cqlLibraryRepository.findById("libraryId1")).thenReturn(Optional.ofNullable(library1));
     when(librarySetService.findByLibrarySetId("librarySetId1")).thenReturn(librarySet1);
     when(cqlLibraryRepository.findById("libraryId2")).thenReturn(Optional.ofNullable(library2));
-
+    // validate user roles
+    when(userServiceClient.getUserDetails(anyString(), anyString()))
+        .thenReturn(UserDetailsDto.builder().active(true).build());
     when(librarySetService.updateLibrarySetAcls(any(), any(), any(), any(Boolean.class)))
         .thenReturn(librarySet1);
 
@@ -1757,12 +1759,8 @@ class CqlLibraryServiceTest {
     AclSpecification aclSpecification1 =
         AclSpecification.builder().userId("testUser").roles(Set.of(RoleEnum.SHARED_WITH)).build();
 
-    when(userServiceClient.getUserRoles(anyString(), anyString()))
-        .thenReturn(
-            UserRolesDto.builder()
-                .harpId(USERNAME)
-                .roles(List.of("MADiE-Admin", "MADiE-User"))
-                .build());
+    when(userServiceClient.getUserDetails(anyString(), anyString()))
+        .thenReturn(UserDetailsDto.builder().harpId(USERNAME).active(true).build());
 
     Map<String, List<AclSpecification>> updatedSharedLibraries =
         cqlLibraryService.shareLibraries(libraries, "testUser", ACCESSTOKEN);
@@ -2062,5 +2060,37 @@ class CqlLibraryServiceTest {
     assertEquals(model, result.getModel());
     verify(elmTranslatorClient, times(0))
         .getElmJson(anyString(), anyString(), anyString(), anyString());
+  }
+
+  @Test
+  public void testValidateHarpIdsWhenUserRolesDtoNull() {
+    when(userServiceClient.getUserDetails(anyString(), anyString())).thenReturn(null);
+
+    Exception exception =
+        assertThrows(
+            InvalidIdException.class,
+            () -> cqlLibraryService.validateHarpIds("user1", "test-okta"));
+
+    assertEquals(
+        "The provided HARP ID is not associated with an active MADiE user.",
+        exception.getMessage());
+    verify(userServiceClient, times(1)).getUserDetails(anyString(), anyString());
+  }
+
+  @Test
+  public void testValidateHarpIdsWhenUserDetailsDtoIsNotActive() {
+    UserDetailsDto userDetailsDto =
+        UserDetailsDto.builder().harpId("testUser").active(false).build();
+    when(userServiceClient.getUserDetails(anyString(), anyString())).thenReturn(userDetailsDto);
+
+    Exception exception =
+        assertThrows(
+            InvalidIdException.class,
+            () -> cqlLibraryService.validateHarpIds("user1", "test-okta"));
+
+    assertEquals(
+        "The provided HARP ID is not associated with an active MADiE user.",
+        exception.getMessage());
+    verify(userServiceClient, times(1)).getUserDetails(anyString(), anyString());
   }
 }

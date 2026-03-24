@@ -131,4 +131,40 @@ public class UserServiceClient {
       return null;
     }
   }
+
+  /**
+   * Fetches UserDetailsDto from the user service.
+   *
+   * @param harpId: HARP ID to fetch UserRolesDto for
+   * @return UserRolesDto which contains the HARP ID and associated roles, or null if service call
+   *     fails
+   */
+  public UserDetailsDto getUserDetails(String harpId, String accessToken) {
+    log.debug("Requesting user details for HARP ID: [{}]", harpId);
+    if (StringUtils.isBlank(harpId)) {
+      return null;
+    }
+
+    String url = environmentConfig.getUserServiceBaseUrl() + "/users/" + harpId + "/details";
+    HttpHeaders headers = new HttpHeaders();
+    headers.setContentType(MediaType.APPLICATION_JSON);
+    headers.set(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken);
+    HttpEntity<Void> request = new HttpEntity<>(headers);
+
+    try {
+      log.debug("Calling user-service to request user details for HARP ID: [{}]", harpId);
+      ResponseEntity<UserDetailsDto> responseEntity =
+          userServiceRestTemplate.exchange(url, HttpMethod.GET, request, UserDetailsDto.class);
+      UserDetailsDto response = responseEntity.getBody();
+      log.debug("Successfully retrieved user details for HARP ID: [{}]", harpId);
+      return response;
+    } catch (Exception e) {
+      log.error(
+          "Failed to fetch user details from user service for HARP ID: [{}]",
+          harpId,
+          e.getMessage(),
+          e);
+      return null;
+    }
+  }
 }
