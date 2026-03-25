@@ -477,8 +477,7 @@ public class CqlLibraryService {
     boolean isAdminRole = hasAdminRole(performedBy, accessToken);
     verifyShareAuthorization(libraryUserIdMap, performedBy, true, isAdminRole);
 
-    return validateHarpIdAndUpdateAccessControll(
-        libraryUserIdMap, "Grant", performedBy, isAdminRole, accessToken);
+    return updateAccessControll(libraryUserIdMap, "Grant", performedBy, isAdminRole, accessToken);
   }
 
   public Map<String, List<AclSpecification>> unshareLibraries(
@@ -491,8 +490,7 @@ public class CqlLibraryService {
     boolean isAdminRole = hasAdminRole(username, accessToken);
     verifyShareAuthorization(libraryUserIdMap, username, false, isAdminRole);
 
-    return validateHarpIdAndUpdateAccessControll(
-        libraryUserIdMap, "Revoke", username, isAdminRole, accessToken);
+    return updateAccessControll(libraryUserIdMap, "Revoke", username, isAdminRole, accessToken);
   }
 
   private void verifyShareAuthorization(
@@ -638,7 +636,7 @@ public class CqlLibraryService {
     return isAdmin;
   }
 
-  private Map<String, List<AclSpecification>> validateHarpIdAndUpdateAccessControll(
+  private Map<String, List<AclSpecification>> updateAccessControll(
       Map<String, List<String>> libraryUserIdMap,
       String type,
       String performedBy,
