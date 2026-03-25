@@ -274,7 +274,7 @@ public class CqlLibraryService {
     }
 
     if (AclOperation.AclAction.GRANT.equals(aclOperation.getAction())) {
-      aclOperation.getAcls().forEach(acl -> validateHarpIds(acl.getUserId(), accessToken));
+      aclOperation.getAcls().forEach(acl -> validateHarpId(acl.getUserId(), accessToken));
     }
 
     CqlLibrary library = persistedLibrary.get();
@@ -664,7 +664,7 @@ public class CqlLibraryService {
     return libraryIdToAclSpecification;
   }
 
-  protected void validateHarpIds(String userId, String accessToken) {
+  protected void validateHarpId(String userId, String accessToken) {
     UserDetailsDto userDetailsDto = userServiceClient.getUserDetails(userId, accessToken);
     if (userDetailsDto == null || !userDetailsDto.isActive()) {
       throw new InvalidIdException(

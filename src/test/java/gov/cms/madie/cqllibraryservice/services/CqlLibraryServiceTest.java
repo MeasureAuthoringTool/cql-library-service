@@ -2068,8 +2068,7 @@ class CqlLibraryServiceTest {
 
     Exception exception =
         assertThrows(
-            InvalidIdException.class,
-            () -> cqlLibraryService.validateHarpIds("user1", "test-okta"));
+            InvalidIdException.class, () -> cqlLibraryService.validateHarpId("user1", "test-okta"));
 
     assertEquals(
         "The provided HARP ID is not associated with an active MADiE user.",
@@ -2085,8 +2084,7 @@ class CqlLibraryServiceTest {
 
     Exception exception =
         assertThrows(
-            InvalidIdException.class,
-            () -> cqlLibraryService.validateHarpIds("user1", "test-okta"));
+            InvalidIdException.class, () -> cqlLibraryService.validateHarpId("user1", "test-okta"));
 
     assertEquals(
         "The provided HARP ID is not associated with an active MADiE user.",
