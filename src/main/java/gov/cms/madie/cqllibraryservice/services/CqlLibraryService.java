@@ -583,6 +583,13 @@ public class CqlLibraryService {
       boolean retainShareAccess,
       String conductedBy,
       String accessToken) {
+    UserDetailsDto userDetailsDto = userServiceClient.getUserDetails(harpId, accessToken);
+
+    if (userDetailsDto == null || !userDetailsDto.isActive()) {
+      throw new InvalidIdException(
+          "The provided HARP ID is not associated with an active MADiE user.");
+    }
+
     List<String> failedLibraries = new ArrayList<>();
     boolean isAdmin = hasAdminRole(conductedBy, accessToken);
     for (String libraryId : libraryIds) {
