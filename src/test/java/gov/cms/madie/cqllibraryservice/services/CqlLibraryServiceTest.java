@@ -17,6 +17,7 @@ import gov.cms.madie.cqllibraryservice.locks.CqlLibraryLock;
 import gov.cms.madie.cqllibraryservice.repositories.LibrarySetRepository;
 import gov.cms.madie.models.access.AclSpecification;
 import gov.cms.madie.models.access.RoleEnum;
+import gov.cms.madie.models.access.UserStatus;
 import gov.cms.madie.models.common.*;
 import gov.cms.madie.models.dto.LibraryUsage;
 import gov.cms.madie.models.dto.UserDetailsDto;
@@ -949,7 +950,7 @@ class CqlLibraryServiceTest {
     when(cqlLibraryRepository.findById("libraryId2")).thenReturn(Optional.ofNullable(library2));
     // validate user roles
     when(userServiceClient.getUserDetails(anyString(), anyString()))
-        .thenReturn(UserDetailsDto.builder().active(true).build());
+        .thenReturn(UserDetailsDto.builder().userStatus(UserStatus.ACTIVE).build());
     when(librarySetService.updateLibrarySetAcls(any(), any(), any(), any(Boolean.class)))
         .thenReturn(librarySet1);
 
@@ -1760,7 +1761,8 @@ class CqlLibraryServiceTest {
         AclSpecification.builder().userId("testUser").roles(Set.of(RoleEnum.SHARED_WITH)).build();
 
     when(userServiceClient.getUserDetails(anyString(), anyString()))
-        .thenReturn(UserDetailsDto.builder().harpId(USERNAME).active(true).build());
+        .thenReturn(
+            UserDetailsDto.builder().harpId(USERNAME).userStatus(UserStatus.ACTIVE).build());
 
     Map<String, List<AclSpecification>> updatedSharedLibraries =
         cqlLibraryService.shareLibraries(libraries, "testUser", ACCESSTOKEN);
@@ -2079,7 +2081,7 @@ class CqlLibraryServiceTest {
   @Test
   public void testValidateHarpIdsWhenUserDetailsDtoIsNotActive() {
     UserDetailsDto userDetailsDto =
-        UserDetailsDto.builder().harpId("testUser").active(false).build();
+        UserDetailsDto.builder().harpId("testUser").userStatus(UserStatus.DEACTIVATED).build();
     when(userServiceClient.getUserDetails(anyString(), anyString())).thenReturn(userDetailsDto);
 
     Exception exception =

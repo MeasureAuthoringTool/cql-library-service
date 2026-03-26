@@ -9,6 +9,7 @@ import gov.cms.madie.cqllibraryservice.utils.AuthUtils;
 import gov.cms.madie.models.access.AclOperation;
 import gov.cms.madie.models.access.AclSpecification;
 import gov.cms.madie.models.access.RoleEnum;
+import gov.cms.madie.models.access.UserStatus;
 import gov.cms.madie.models.common.*;
 import gov.cms.madie.models.dto.LibraryUsage;
 import gov.cms.madie.models.dto.UserDetailsDto;
@@ -664,7 +665,12 @@ public class CqlLibraryService {
 
   protected void validateHarpId(String userId, String accessToken) {
     UserDetailsDto userDetailsDto = userServiceClient.getUserDetails(userId, accessToken);
-    if (userDetailsDto == null || !userDetailsDto.isActive()) {
+    System.out.println(
+        "userDetailsDto status = "
+            + userDetailsDto.getUserStatus()
+            + " !UserStatus.ACTIVE.equals(userDetailsDto.getUserStatus()) ? "
+            + !UserStatus.ACTIVE.equals(userDetailsDto.getUserStatus()));
+    if (userDetailsDto == null || !UserStatus.ACTIVE.equals(userDetailsDto.getUserStatus())) {
       throw new InvalidIdException(
           "The provided HARP ID is not associated with an active MADiE user.");
     }
