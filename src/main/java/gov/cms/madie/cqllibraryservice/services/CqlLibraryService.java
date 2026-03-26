@@ -672,7 +672,7 @@ public class CqlLibraryService {
 
   protected void validateHarpId(String userId, String accessToken) {
     UserDetailsDto userDetailsDto = userServiceClient.getUserDetails(userId, accessToken);
-    if (userDetailsDto == null || userDetailsDto.getUserStatus() != UserStatus.ACTIVE) {
+    if (userDetailsDto == null || !UserStatus.ACTIVE.equals(userDetailsDto.getUserStatus())) {
       throw new InvalidIdException(
           "The provided HARP ID is not associated with an active MADiE user.");
     }
