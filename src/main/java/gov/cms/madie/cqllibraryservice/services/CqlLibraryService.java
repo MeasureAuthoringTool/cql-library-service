@@ -9,6 +9,7 @@ import gov.cms.madie.cqllibraryservice.utils.AuthUtils;
 import gov.cms.madie.models.access.AclOperation;
 import gov.cms.madie.models.access.AclSpecification;
 import gov.cms.madie.models.access.RoleEnum;
+import gov.cms.madie.models.access.UserStatus;
 import gov.cms.madie.models.common.*;
 import gov.cms.madie.models.dto.LibraryUsage;
 import gov.cms.madie.models.dto.UserDetailsDto;
@@ -583,6 +584,13 @@ public class CqlLibraryService {
       boolean retainShareAccess,
       String conductedBy,
       String accessToken) {
+    UserDetailsDto userDetailsDto = userServiceClient.getUserDetails(harpId, accessToken);
+
+    if (userDetailsDto == null || userDetailsDto.getUserStatus() != UserStatus.ACTIVE) {
+      throw new InvalidIdException(
+          "The provided HARP ID is not associated with an active MADiE user.");
+    }
+
     List<String> failedLibraries = new ArrayList<>();
     boolean isAdmin = hasAdminRole(conductedBy, accessToken);
     for (String libraryId : libraryIds) {
@@ -664,7 +672,7 @@ public class CqlLibraryService {
 
   protected void validateHarpId(String userId, String accessToken) {
     UserDetailsDto userDetailsDto = userServiceClient.getUserDetails(userId, accessToken);
-    if (userDetailsDto == null || !userDetailsDto.isActive()) {
+    if (userDetailsDto == null || userDetailsDto.getUserStatus() != UserStatus.ACTIVE) {
       throw new InvalidIdException(
           "The provided HARP ID is not associated with an active MADiE user.");
     }

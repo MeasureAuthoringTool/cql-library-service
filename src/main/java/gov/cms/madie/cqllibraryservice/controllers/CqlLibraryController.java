@@ -306,7 +306,8 @@ public class CqlLibraryController {
     cqlLibraryIds.forEach(
         cqlLibraryId -> {
           CqlLibraryLock libraryLock = cqlLibraryLockService.findByCqlLibraryId(cqlLibraryId);
-          if (libraryLock == null) {
+          if (libraryLock == null
+              || libraryLock.getLockedBy().equalsIgnoreCase(principal.getName())) {
             validLibraryIds.add(cqlLibraryId);
           } else {
             failedTransfers.add(cqlLibraryId);

@@ -5,6 +5,7 @@ import gov.cms.madie.cqllibraryservice.repositories.CqlLibraryRepository;
 import gov.cms.madie.models.access.AclOperation;
 import gov.cms.madie.models.access.AclSpecification;
 import gov.cms.madie.models.access.RoleEnum;
+import gov.cms.madie.models.access.UserStatus;
 import gov.cms.madie.models.dto.UserDetailsDto;
 import gov.cms.madie.models.library.CqlLibrary;
 import gov.cms.madie.models.library.LibrarySet;
@@ -75,7 +76,7 @@ public class CqlLibraryServiceAclTest {
     Optional<CqlLibrary> persistedLibrary = Optional.of(library);
     when(cqlLibraryRepository.findById(anyString())).thenReturn(persistedLibrary);
     when(userServiceClient.getUserDetails(anyString(), anyString()))
-        .thenReturn(UserDetailsDto.builder().active(true).build());
+        .thenReturn(UserDetailsDto.builder().userStatus(UserStatus.ACTIVE).build());
     when(librarySetService.updateLibrarySetAcls(any(), any(), any(), any(Boolean.class)))
         .thenReturn(librarySet);
 
