@@ -20,4 +20,6 @@ public interface CqlLibrarySearchService {
       String librarySetId,
       boolean sortByLatestVersion,
       LibrarySearchCriteria librarySearchCriteria);
+
+  List<LibraryListDTO> findLibrariesForAccessReport(List<String> libraryIds);
 }

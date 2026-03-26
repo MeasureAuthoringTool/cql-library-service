@@ -2,6 +2,7 @@ package gov.cms.madie.cqllibraryservice.controllers;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.hamcrest.Matchers.equalTo;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doNothing;
@@ -9,19 +10,26 @@ import static org.mockito.Mockito.when;
 
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.util.List;
 import java.util.Set;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import gov.cms.madie.cqllibraryservice.services.AdminService;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.context.annotation.Import;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
@@ -56,6 +64,7 @@ public class CqlLibraryAdminControllerMvcTest {
   @MockitoBean ActionLogService actionLogService;
   @MockitoBean CqlLibraryLockService cqlLibraryLockService;
   @MockitoBean private UserServiceClient userServiceClient;
+  @MockitoBean AdminService adminService;
 
   @Captor private ArgumentCaptor<CqlLibrary> cqlLibraryArgumentCaptor;
 
@@ -222,5 +231,96 @@ public class CqlLibraryAdminControllerMvcTest {
                     .header("harpId", "owner1"))
             .andReturn();
     assertEquals(HttpStatus.FORBIDDEN.value(), result.getResponse().getStatus());
+  }
+
+  @Test
+  void exportSharedWithReturnsExcelFile() throws Exception {
+    byte[] excelContent = "mock excel content".getBytes();
+    when(adminService.exportSharedWithLibraries(any(), anyString(), anyString()))
+        .thenReturn(excelContent);
+
+    mockMvc
+        .perform(
+            put("/cql-libraries/admin/shared-access-report")
+                .with(csrf())
+                .with(user(TEST_USER_ID).roles("MADIE-ADMIN"))
+                .header("Authorization", TEST_OKTA)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(new ObjectMapper().writeValueAsString(List.of("lib1", "lib2"))))
+        .andExpect(status().isOk())
+        .andExpect(
+            header()
+                .string(
+                    HttpHeaders.CONTENT_DISPOSITION,
+                    "attachment; filename=\"LibrarySharingExport.xlsx\""))
+        .andExpect(
+            header()
+                .string(
+                    HttpHeaders.CONTENT_TYPE,
+                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
+        .andExpect(content().bytes(excelContent));
+  }
+
+  @Test
+  void exportSharedWithReturnsExcelFileForSingleLibrary() throws Exception {
+    byte[] excelContent = "mock excel content".getBytes();
+    when(adminService.exportSharedWithLibraries(eq(List.of("singleLib")), anyString(), anyString()))
+        .thenReturn(excelContent);
+
+    mockMvc
+        .perform(
+            put("/cql-libraries/admin/shared-access-report")
+                .with(csrf())
+                .with(user(TEST_USER_ID).roles("MADIE-ADMIN"))
+                .header("Authorization", TEST_OKTA)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(new ObjectMapper().writeValueAsString(List.of("singleLib"))))
+        .andExpect(status().isOk())
+        .andExpect(content().bytes(excelContent));
+  }
+
+  @Test
+  void exportSharedWithForbiddenForNonAdminUser() throws Exception {
+    mockMvc
+        .perform(
+            put("/cql-libraries/admin/shared-access-report")
+                .with(csrf())
+                .with(user(TEST_USER_ID).roles("MADIE-USER"))
+                .header("Authorization", TEST_OKTA)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(new ObjectMapper().writeValueAsString(List.of("lib1"))))
+        .andExpect(status().isForbidden());
+  }
+
+  @Test
+  void exportSharedWithBadRequestForEmptyLibraryList() throws Exception {
+    when(adminService.exportSharedWithLibraries(any(), anyString(), anyString()))
+        .thenThrow(
+            new IllegalArgumentException(
+                "Please provide at least one library id to export the shared access report."));
+
+    MvcResult result =
+        mockMvc
+            .perform(
+                put("/cql-libraries/admin/shared-access-report")
+                    .with(csrf())
+                    .with(user(TEST_USER_ID).roles("MADIE-ADMIN"))
+                    .header("Authorization", TEST_OKTA)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(new ObjectMapper().writeValueAsString(List.of())))
+            .andReturn();
+
+    assertEquals(HttpStatus.BAD_REQUEST.value(), result.getResponse().getStatus());
+  }
+
+  @Test
+  void exportSharedWithUnauthorizedWithoutAuthentication() throws Exception {
+    mockMvc
+        .perform(
+            put("/cql-libraries/admin/shared-access-report")
+                .with(csrf())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(new ObjectMapper().writeValueAsString(List.of("lib1"))))
+        .andExpect(status().isUnauthorized());
   }
 }
