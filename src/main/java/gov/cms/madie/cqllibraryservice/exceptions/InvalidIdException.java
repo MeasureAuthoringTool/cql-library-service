@@ -10,4 +10,8 @@ public class InvalidIdException extends RuntimeException {
   public InvalidIdException(final String type, final String operation, String message) {
     super(String.format(MESSAGE, type, operation, type, message).trim());
   }
+
+  public InvalidIdException(final String message) {
+    super(message);
+  }
 }

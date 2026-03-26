@@ -54,9 +54,11 @@ public class CqlLibraryAdminController {
   @PutMapping("/{id}/acls")
   @PreAuthorize("hasRole('MADIE-ADMIN')")
   public ResponseEntity<List<AclSpecification>> updateAccessControl(
-      @PathVariable String id, @RequestBody @Validated AclOperation aclOperation) {
+      @PathVariable String id,
+      @RequestBody @Validated AclOperation aclOperation,
+      @RequestHeader("Authorization") String accessToken) {
     List<AclSpecification> aclSpecifications =
-        cqlLibraryService.updateAccessControlList(id, aclOperation, "admin", true);
+        cqlLibraryService.updateAccessControlList(id, aclOperation, "admin", true, accessToken);
     return ResponseEntity.ok().body(aclSpecifications);
   }
 

@@ -1,6 +1,7 @@
 package gov.cms.madie.cqllibraryservice.services;
 
 import gov.cms.madie.cqllibraryservice.config.EnvironmentConfig;
+import gov.cms.madie.models.access.UserStatus;
 import gov.cms.madie.models.dto.UserDetailsDto;
 import gov.cms.madie.models.dto.UserRolesDto;
 
@@ -239,5 +240,56 @@ public class UserServiceClientTest {
     verify(userServiceRestTemplate, never())
         .exchange(
             anyString(), any(HttpMethod.class), any(HttpEntity.class), eq(UserRolesDto.class));
+  }
+
+  @Test
+  public void testGetUserDetails() {
+    UserDetailsDto expectedUserDetailsDto =
+        UserDetailsDto.builder().harpId(HARP_ID).userStatus(UserStatus.ACTIVE).build();
+
+    when(userServiceRestTemplate.exchange(
+            anyString(),
+            eq(HttpMethod.GET),
+            org.mockito.ArgumentMatchers.any(HttpEntity.class),
+            eq(UserDetailsDto.class)))
+        .thenReturn(ResponseEntity.ok(expectedUserDetailsDto));
+
+    UserDetailsDto actualUserDetailsDto = userServiceClient.getUserDetails(HARP_ID, TOKEN);
+
+    assertThat(actualUserDetailsDto, is(notNullValue()));
+    assertThat(actualUserDetailsDto.getHarpId(), is(equalTo(HARP_ID)));
+    assertEquals(expectedUserDetailsDto, actualUserDetailsDto);
+    verify(userServiceRestTemplate, times(1))
+        .exchange(
+            anyString(), eq(HttpMethod.GET), httpEntityCaptor.capture(), eq(UserDetailsDto.class));
+    HttpHeaders headers = httpEntityCaptor.getValue().getHeaders();
+    assertThat(headers.getContentType(), is(MediaType.APPLICATION_JSON));
+  }
+
+  @Test
+  void testGetUserDetailsWithException() {
+    when(userServiceRestTemplate.exchange(
+            anyString(),
+            eq(HttpMethod.GET),
+            org.mockito.ArgumentMatchers.any(HttpEntity.class),
+            eq(UserDetailsDto.class)))
+        .thenThrow(new RestClientException("Connection error"));
+
+    UserDetailsDto actualUserDetailsDto = userServiceClient.getUserDetails(HARP_ID, TOKEN);
+
+    assertNull(actualUserDetailsDto);
+    verify(userServiceRestTemplate, times(1))
+        .exchange(
+            anyString(), eq(HttpMethod.GET), httpEntityCaptor.capture(), eq(UserDetailsDto.class));
+  }
+
+  @Test
+  void testGetUserDetailsReturnsNullWhenHarpIdIsNull() {
+    UserDetailsDto result = userServiceClient.getUserDetails(null, TOKEN);
+
+    assertNull(result);
+    verify(userServiceRestTemplate, never())
+        .exchange(
+            anyString(), any(HttpMethod.class), any(HttpEntity.class), eq(UserDetailsDto.class));
   }
 }

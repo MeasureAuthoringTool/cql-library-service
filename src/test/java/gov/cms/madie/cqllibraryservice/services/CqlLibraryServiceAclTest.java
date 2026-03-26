@@ -5,6 +5,8 @@ import gov.cms.madie.cqllibraryservice.repositories.CqlLibraryRepository;
 import gov.cms.madie.models.access.AclOperation;
 import gov.cms.madie.models.access.AclSpecification;
 import gov.cms.madie.models.access.RoleEnum;
+import gov.cms.madie.models.access.UserStatus;
+import gov.cms.madie.models.dto.UserDetailsDto;
 import gov.cms.madie.models.library.CqlLibrary;
 import gov.cms.madie.models.library.LibrarySet;
 import org.junit.jupiter.api.Test;
@@ -29,6 +31,7 @@ import static org.mockito.Mockito.when;
 public class CqlLibraryServiceAclTest {
   @Mock private CqlLibraryRepository cqlLibraryRepository;
   @Mock private LibrarySetService librarySetService;
+  @Mock private UserServiceClient userServiceClient;
   @InjectMocks private CqlLibraryService cqlLibraryService;
 
   @Test
@@ -50,7 +53,7 @@ public class CqlLibraryServiceAclTest {
             ResourceNotFoundException.class,
             () ->
                 cqlLibraryService.updateAccessControlList(
-                    library.getId(), aclOperation, "admin", true));
+                    library.getId(), aclOperation, "admin", true, "token"));
     assertEquals(ex.getMessage(), "Library does not exist: " + library.getId());
   }
 
@@ -72,11 +75,14 @@ public class CqlLibraryServiceAclTest {
             .build();
     Optional<CqlLibrary> persistedLibrary = Optional.of(library);
     when(cqlLibraryRepository.findById(anyString())).thenReturn(persistedLibrary);
+    when(userServiceClient.getUserDetails(anyString(), anyString()))
+        .thenReturn(UserDetailsDto.builder().userStatus(UserStatus.ACTIVE).build());
     when(librarySetService.updateLibrarySetAcls(any(), any(), any(), any(Boolean.class)))
         .thenReturn(librarySet);
 
     List<AclSpecification> aclSpecifications =
-        cqlLibraryService.updateAccessControlList(library.getId(), aclOperation, "nonAdmin", false);
+        cqlLibraryService.updateAccessControlList(
+            library.getId(), aclOperation, "nonAdmin", false, "token");
     assertThat(aclSpecifications.size(), is(equalTo(1)));
     assertThat(aclSpecifications.get(0).getUserId(), is(aclSpecification.getUserId()));
     assertThat(aclSpecifications.get(0).getRoles(), is(aclSpecification.getRoles()));

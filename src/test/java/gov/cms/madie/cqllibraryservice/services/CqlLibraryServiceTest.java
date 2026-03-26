@@ -17,6 +17,7 @@ import gov.cms.madie.cqllibraryservice.locks.CqlLibraryLock;
 import gov.cms.madie.cqllibraryservice.repositories.LibrarySetRepository;
 import gov.cms.madie.models.access.AclSpecification;
 import gov.cms.madie.models.access.RoleEnum;
+import gov.cms.madie.models.access.UserStatus;
 import gov.cms.madie.models.common.*;
 import gov.cms.madie.models.dto.LibraryUsage;
 import gov.cms.madie.models.dto.UserDetailsDto;
@@ -272,6 +273,8 @@ class CqlLibraryServiceTest {
 
     when(cqlLibraryRepository.findById(libraryId)).thenReturn(Optional.of(library));
     when(librarySetService.findByLibrarySetId("librarySetId")).thenReturn(librarySet);
+    when(userServiceClient.getUserDetails(eq(user), eq(ACCESSTOKEN)))
+        .thenReturn(UserDetailsDto.builder().harpId(user).userStatus(UserStatus.ACTIVE).build());
     when(userServiceClient.getUserRoles(eq("owner"), eq(ACCESSTOKEN))).thenReturn(userRolesDto);
     when(librarySetService.updateOwnership(
             anyString(), anyString(), anyBoolean(), anyString(), anyBoolean()))
@@ -307,6 +310,8 @@ class CqlLibraryServiceTest {
 
     when(cqlLibraryRepository.findById(libraryId)).thenReturn(Optional.of(library));
     when(librarySetService.findByLibrarySetId("librarySetId")).thenReturn(librarySet);
+    when(userServiceClient.getUserDetails(eq(user), eq(ACCESSTOKEN)))
+        .thenReturn(UserDetailsDto.builder().harpId(user).userStatus(UserStatus.ACTIVE).build());
     when(userServiceClient.getUserRoles(eq(user), eq(ACCESSTOKEN))).thenReturn(userRolesDto);
     when(librarySetService.updateOwnership(
             anyString(), anyString(), anyBoolean(), anyString(), anyBoolean()))
@@ -947,7 +952,9 @@ class CqlLibraryServiceTest {
     when(cqlLibraryRepository.findById("libraryId1")).thenReturn(Optional.ofNullable(library1));
     when(librarySetService.findByLibrarySetId("librarySetId1")).thenReturn(librarySet1);
     when(cqlLibraryRepository.findById("libraryId2")).thenReturn(Optional.ofNullable(library2));
-
+    // validate user roles
+    when(userServiceClient.getUserDetails(anyString(), anyString()))
+        .thenReturn(UserDetailsDto.builder().userStatus(UserStatus.ACTIVE).build());
     when(librarySetService.updateLibrarySetAcls(any(), any(), any(), any(Boolean.class)))
         .thenReturn(librarySet1);
 
@@ -1470,6 +1477,46 @@ class CqlLibraryServiceTest {
   }
 
   @Test
+  public void testTransferLibrariesThrowsWhenTargetHarpIdNotFound() {
+    String libraryId = "libraryId";
+    String harpId = "unknownUser";
+    String conductedBy = "owner";
+
+    when(userServiceClient.getUserDetails(eq(harpId), eq(ACCESSTOKEN))).thenReturn(null);
+
+    assertThrows(
+        InvalidIdException.class,
+        () ->
+            cqlLibraryService.transferLibraries(
+                List.of(libraryId), harpId, true, conductedBy, ACCESSTOKEN));
+
+    verify(userServiceClient).getUserDetails(harpId, ACCESSTOKEN);
+    verify(librarySetService, never())
+        .updateOwnership(anyString(), anyString(), anyBoolean(), anyString(), anyBoolean());
+  }
+
+  @Test
+  public void testTransferLibrariesThrowsWhenTargetUserIsNotActive() {
+    String libraryId = "libraryId";
+    String harpId = "inactiveUser";
+    String conductedBy = "owner";
+
+    when(userServiceClient.getUserDetails(eq(harpId), eq(ACCESSTOKEN)))
+        .thenReturn(
+            UserDetailsDto.builder().harpId(harpId).userStatus(UserStatus.DEACTIVATED).build());
+
+    assertThrows(
+        InvalidIdException.class,
+        () ->
+            cqlLibraryService.transferLibraries(
+                List.of(libraryId), harpId, true, conductedBy, ACCESSTOKEN));
+
+    verify(userServiceClient).getUserDetails(harpId, ACCESSTOKEN);
+    verify(librarySetService, never())
+        .updateOwnership(anyString(), anyString(), anyBoolean(), anyString(), anyBoolean());
+  }
+
+  @Test
   public void testTransferLibrariesWhenGetUserRolesReturnsNull() {
     String libraryId = "libraryId";
     String harpId = "user123";
@@ -1485,6 +1532,8 @@ class CqlLibraryServiceTest {
             .librarySet(librarySet)
             .build();
 
+    when(userServiceClient.getUserDetails(eq(harpId), eq(ACCESSTOKEN)))
+        .thenReturn(UserDetailsDto.builder().harpId(harpId).userStatus(UserStatus.ACTIVE).build());
     when(cqlLibraryRepository.findById(anyString())).thenReturn(Optional.of(library));
     when(librarySetService.findByLibrarySetId(anyString())).thenReturn(librarySet);
     when(userServiceClient.getUserRoles(eq(conductedBy), eq(ACCESSTOKEN))).thenReturn(null);
@@ -1520,6 +1569,8 @@ class CqlLibraryServiceTest {
             .librarySet(librarySet)
             .build();
 
+    when(userServiceClient.getUserDetails(eq(harpId), eq(ACCESSTOKEN)))
+        .thenReturn(UserDetailsDto.builder().harpId(harpId).userStatus(UserStatus.ACTIVE).build());
     when(cqlLibraryRepository.findById(libraryId)).thenReturn(Optional.of(library));
     when(librarySetService.findByLibrarySetId("librarySetId")).thenReturn(librarySet);
     when(userServiceClient.getUserRoles(eq(conductedBy), eq(ACCESSTOKEN))).thenReturn(null);
@@ -1556,6 +1607,8 @@ class CqlLibraryServiceTest {
     UserRolesDto userRolesDto =
         UserRolesDto.builder().harpId(conductedBy).roles(List.of("MADiE-Admin")).build();
 
+    when(userServiceClient.getUserDetails(eq(harpId), eq(ACCESSTOKEN)))
+        .thenReturn(UserDetailsDto.builder().harpId(harpId).userStatus(UserStatus.ACTIVE).build());
     when(cqlLibraryRepository.findById(anyString())).thenReturn(Optional.of(library));
     when(librarySetService.findByLibrarySetId(anyString())).thenReturn(librarySet);
     when(userServiceClient.getUserRoles(eq(conductedBy), eq(ACCESSTOKEN))).thenReturn(userRolesDto);
@@ -1593,6 +1646,8 @@ class CqlLibraryServiceTest {
     UserRolesDto userRolesDto =
         UserRolesDto.builder().harpId(conductedBy).roles(List.of("MADiE-User")).build();
 
+    when(userServiceClient.getUserDetails(eq(harpId), eq(ACCESSTOKEN)))
+        .thenReturn(UserDetailsDto.builder().harpId(harpId).userStatus(UserStatus.ACTIVE).build());
     when(cqlLibraryRepository.findById(anyString())).thenReturn(Optional.of(library));
     when(librarySetService.findByLibrarySetId(anyString())).thenReturn(librarySet);
     when(userServiceClient.getUserRoles(eq(conductedBy), eq(ACCESSTOKEN))).thenReturn(userRolesDto);
@@ -1627,6 +1682,8 @@ class CqlLibraryServiceTest {
 
     UserRolesDto userRolesDto = UserRolesDto.builder().harpId(conductedBy).roles(null).build();
 
+    when(userServiceClient.getUserDetails(eq(harpId), eq(ACCESSTOKEN)))
+        .thenReturn(UserDetailsDto.builder().harpId(harpId).userStatus(UserStatus.ACTIVE).build());
     when(cqlLibraryRepository.findById(anyString())).thenReturn(Optional.of(library));
     when(librarySetService.findByLibrarySetId(anyString())).thenReturn(librarySet);
     when(userServiceClient.getUserRoles(eq(conductedBy), eq(ACCESSTOKEN))).thenReturn(userRolesDto);
@@ -1757,12 +1814,9 @@ class CqlLibraryServiceTest {
     AclSpecification aclSpecification1 =
         AclSpecification.builder().userId("testUser").roles(Set.of(RoleEnum.SHARED_WITH)).build();
 
-    when(userServiceClient.getUserRoles(anyString(), anyString()))
+    when(userServiceClient.getUserDetails(anyString(), anyString()))
         .thenReturn(
-            UserRolesDto.builder()
-                .harpId(USERNAME)
-                .roles(List.of("MADiE-Admin", "MADiE-User"))
-                .build());
+            UserDetailsDto.builder().harpId(USERNAME).userStatus(UserStatus.ACTIVE).build());
 
     Map<String, List<AclSpecification>> updatedSharedLibraries =
         cqlLibraryService.shareLibraries(libraries, "testUser", ACCESSTOKEN);
@@ -2062,5 +2116,35 @@ class CqlLibraryServiceTest {
     assertEquals(model, result.getModel());
     verify(elmTranslatorClient, times(0))
         .getElmJson(anyString(), anyString(), anyString(), anyString());
+  }
+
+  @Test
+  public void testValidateHarpIdsWhenUserRolesDtoNull() {
+    when(userServiceClient.getUserDetails(anyString(), anyString())).thenReturn(null);
+
+    Exception exception =
+        assertThrows(
+            InvalidIdException.class, () -> cqlLibraryService.validateHarpId("user1", "test-okta"));
+
+    assertEquals(
+        "The provided HARP ID is not associated with an active MADiE user.",
+        exception.getMessage());
+    verify(userServiceClient, times(1)).getUserDetails(anyString(), anyString());
+  }
+
+  @Test
+  public void testValidateHarpIdsWhenUserDetailsDtoIsNotActive() {
+    UserDetailsDto userDetailsDto =
+        UserDetailsDto.builder().harpId("testUser").userStatus(UserStatus.DEACTIVATED).build();
+    when(userServiceClient.getUserDetails(anyString(), anyString())).thenReturn(userDetailsDto);
+
+    Exception exception =
+        assertThrows(
+            InvalidIdException.class, () -> cqlLibraryService.validateHarpId("user1", "test-okta"));
+
+    assertEquals(
+        "The provided HARP ID is not associated with an active MADiE user.",
+        exception.getMessage());
+    verify(userServiceClient, times(1)).getUserDetails(anyString(), anyString());
   }
 }

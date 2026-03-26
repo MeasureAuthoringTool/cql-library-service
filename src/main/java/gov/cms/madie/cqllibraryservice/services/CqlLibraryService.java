@@ -9,6 +9,7 @@ import gov.cms.madie.cqllibraryservice.utils.AuthUtils;
 import gov.cms.madie.models.access.AclOperation;
 import gov.cms.madie.models.access.AclSpecification;
 import gov.cms.madie.models.access.RoleEnum;
+import gov.cms.madie.models.access.UserStatus;
 import gov.cms.madie.models.common.*;
 import gov.cms.madie.models.dto.LibraryUsage;
 import gov.cms.madie.models.dto.UserDetailsDto;
@@ -263,10 +264,18 @@ public class CqlLibraryService {
   }
 
   public List<AclSpecification> updateAccessControlList(
-      String cqlLibraryId, AclOperation aclOperation, String performedBy, boolean isAdminRole) {
+      String cqlLibraryId,
+      AclOperation aclOperation,
+      String performedBy,
+      boolean isAdminRole,
+      String accessToken) {
     Optional<CqlLibrary> persistedLibrary = cqlLibraryRepository.findById(cqlLibraryId);
     if (persistedLibrary.isEmpty()) {
       throw new ResourceNotFoundException("Library does not exist: " + cqlLibraryId);
+    }
+
+    if (AclOperation.AclAction.GRANT.equals(aclOperation.getAction())) {
+      aclOperation.getAcls().forEach(acl -> validateHarpId(acl.getUserId(), accessToken));
     }
 
     CqlLibrary library = persistedLibrary.get();
@@ -461,8 +470,6 @@ public class CqlLibraryService {
 
   public Map<String, List<AclSpecification>> shareLibraries(
       Map<String, List<String>> libraryUserIdMap, String performedBy, String accessToken) {
-    Map<String, List<AclSpecification>> libraryIdToAclSpecification = new HashMap<>();
-
     log.info(
         "User [{}] has called shareLibraries with libraryUserIdMap [{}]",
         performedBy,
@@ -471,22 +478,7 @@ public class CqlLibraryService {
     boolean isAdminRole = hasAdminRole(performedBy, accessToken);
     verifyShareAuthorization(libraryUserIdMap, performedBy, true, isAdminRole);
 
-    libraryUserIdMap.forEach(
-        (LibraryId, userIds) -> {
-          AclOperation aclOperation = buildAclOperation(userIds, "Grant");
-          libraryIdToAclSpecification.put(
-              LibraryId,
-              updateAccessControlList(LibraryId, aclOperation, performedBy, isAdminRole));
-        });
-
-    log.info(
-        "User [{}] successfully called shared library(s) with libraryUserIdMap [{}]. The "
-            + "AclSpecification is now [{}]",
-        performedBy,
-        libraryUserIdMap,
-        libraryIdToAclSpecification);
-
-    return libraryIdToAclSpecification;
+    return updateAccessControll(libraryUserIdMap, "Grant", performedBy, isAdminRole, accessToken);
   }
 
   public Map<String, List<AclSpecification>> unshareLibraries(
@@ -496,26 +488,10 @@ public class CqlLibraryService {
         username,
         libraryUserIdMap);
 
-    Map<String, List<AclSpecification>> libraryIdToAclSpecification = new HashMap<>();
-
     boolean isAdminRole = hasAdminRole(username, accessToken);
     verifyShareAuthorization(libraryUserIdMap, username, false, isAdminRole);
 
-    libraryUserIdMap.forEach(
-        (libraryId, userIds) -> {
-          AclOperation aclOperation = buildAclOperation(userIds, "Revoke");
-          libraryIdToAclSpecification.put(
-              libraryId, updateAccessControlList(libraryId, aclOperation, username, isAdminRole));
-        });
-
-    log.info(
-        "User [{}] successfully called unshareLibraries with libraryUserIdMap [{}]. The "
-            + "AclSpecification is now [{}]",
-        username,
-        libraryUserIdMap,
-        libraryIdToAclSpecification);
-
-    return libraryIdToAclSpecification;
+    return updateAccessControll(libraryUserIdMap, "Revoke", username, isAdminRole, accessToken);
   }
 
   private void verifyShareAuthorization(
@@ -608,6 +584,13 @@ public class CqlLibraryService {
       boolean retainShareAccess,
       String conductedBy,
       String accessToken) {
+    UserDetailsDto userDetailsDto = userServiceClient.getUserDetails(harpId, accessToken);
+
+    if (userDetailsDto == null || userDetailsDto.getUserStatus() != UserStatus.ACTIVE) {
+      throw new InvalidIdException(
+          "The provided HARP ID is not associated with an active MADiE user.");
+    }
+
     List<String> failedLibraries = new ArrayList<>();
     boolean isAdmin = hasAdminRole(conductedBy, accessToken);
     for (String libraryId : libraryIds) {
@@ -659,5 +642,39 @@ public class CqlLibraryService {
       isAdmin = true;
     }
     return isAdmin;
+  }
+
+  private Map<String, List<AclSpecification>> updateAccessControll(
+      Map<String, List<String>> libraryUserIdMap,
+      String type,
+      String performedBy,
+      boolean isAdminRole,
+      String accessToken) {
+    Map<String, List<AclSpecification>> libraryIdToAclSpecification = new HashMap<>();
+    libraryUserIdMap.forEach(
+        (libraryId, userIds) -> {
+          AclOperation aclOperation = buildAclOperation(userIds, type);
+          libraryIdToAclSpecification.put(
+              libraryId,
+              updateAccessControlList(
+                  libraryId, aclOperation, performedBy, isAdminRole, accessToken));
+        });
+
+    log.info(
+        "User [{}] successfully called [{}] with libraryUserIdMap [{}]. The "
+            + "AclSpecification is now [{}]",
+        performedBy,
+        "Grant".equalsIgnoreCase(type) ? "shared library(s)" : "unshareLibraries",
+        libraryUserIdMap,
+        libraryIdToAclSpecification);
+    return libraryIdToAclSpecification;
+  }
+
+  protected void validateHarpId(String userId, String accessToken) {
+    UserDetailsDto userDetailsDto = userServiceClient.getUserDetails(userId, accessToken);
+    if (userDetailsDto == null || !UserStatus.ACTIVE.equals(userDetailsDto.getUserStatus())) {
+      throw new InvalidIdException(
+          "The provided HARP ID is not associated with an active MADiE user.");
+    }
   }
 }

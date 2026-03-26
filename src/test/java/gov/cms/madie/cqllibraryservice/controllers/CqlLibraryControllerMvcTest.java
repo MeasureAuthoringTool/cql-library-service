@@ -1790,6 +1790,39 @@ public class CqlLibraryControllerMvcTest {
   }
 
   @Test
+  public void testTransferLibrariesLockedByCurrentUserAllowsTransfer() throws Exception {
+    String libraryId = "f225481c-921e-4015-9e14-e5046bfac9ff";
+
+    when(cqlLibraryLockService.findByCqlLibraryId(libraryId))
+        .thenReturn(
+            CqlLibraryLock.builder().cqlLibraryId(libraryId).lockedBy(TEST_USER_ID).build());
+
+    doReturn(Collections.emptyList())
+        .when(cqlLibraryService)
+        .transferLibraries(
+            eq(List.of(libraryId)), eq("testuser"), eq(true), eq(TEST_USER_ID), eq("test-okta"));
+
+    mockMvc
+        .perform(
+            put("/cql-libraries/transfer")
+                .with(user(TEST_USER_ID))
+                .with(csrf())
+                .header("harpId", "testUser")
+                .header("Authorization", "test-okta")
+                .queryParam("retainShareAccess", "true")
+                .content(new ObjectMapper().writeValueAsString(List.of(libraryId)))
+                .contentType(MediaType.APPLICATION_JSON)
+                .accept(MediaType.APPLICATION_JSON))
+        .andDo(print())
+        .andExpect(status().isOk());
+
+    verify(cqlLibraryLockService, times(1)).findByCqlLibraryId(libraryId);
+    verify(cqlLibraryService, times(1))
+        .transferLibraries(
+            eq(List.of(libraryId)), eq("testuser"), eq(true), eq(TEST_USER_ID), eq("test-okta"));
+  }
+
+  @Test
   public void testGetLibraryCqlReturns200() throws Exception {
     when(cqlLibraryService.getVersionedCqlLibrary(
             eq("TestFHIRHelpers"),
