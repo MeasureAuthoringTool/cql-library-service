@@ -1,6 +1,7 @@
 package gov.cms.madie.cqllibraryservice.services;
 
 import gov.cms.madie.cqllibraryservice.config.EnvironmentConfig;
+import gov.cms.madie.models.access.UserStatus;
 import gov.cms.madie.models.dto.UserDetailsDto;
 import gov.cms.madie.models.dto.UserRolesDto;
 
@@ -244,7 +245,7 @@ public class UserServiceClientTest {
   @Test
   public void testGetUserDetails() {
     UserDetailsDto expectedUserDetailsDto =
-        UserDetailsDto.builder().harpId(HARP_ID).active(true).build();
+        UserDetailsDto.builder().harpId(HARP_ID).userStatus(UserStatus.ACTIVE).build();
 
     when(userServiceRestTemplate.exchange(
             anyString(),
