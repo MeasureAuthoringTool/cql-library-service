@@ -79,14 +79,14 @@ public class CqlLibraryAdminControllerTest {
     List<AclSpecification> aclSpecifications = List.of(aclSpecification);
 
     when(cqlLibraryService.updateAccessControlList(
-            anyString(), any(), anyString(), any(Boolean.class)))
+            anyString(), any(), anyString(), any(Boolean.class), anyString()))
         .thenReturn(aclSpecifications);
 
     ResponseEntity<List<AclSpecification>> output =
-        controller.updateAccessControl("1", aclOperation);
+        controller.updateAccessControl("1", aclOperation, "token");
 
     verify(cqlLibraryService, times(1))
-        .updateAccessControlList(anyString(), any(), anyString(), any(Boolean.class));
+        .updateAccessControlList(anyString(), any(), anyString(), any(Boolean.class), anyString());
     assertThat(output.getBody(), equalTo(aclSpecifications));
   }
 }
