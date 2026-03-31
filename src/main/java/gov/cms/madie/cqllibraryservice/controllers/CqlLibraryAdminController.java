@@ -6,7 +6,9 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+import gov.cms.madie.cqllibraryservice.services.AdminService;
 import org.apache.commons.lang3.StringUtils;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
@@ -38,6 +40,7 @@ public class CqlLibraryAdminController {
 
   private final CqlLibraryLockService cqlLibraryLockService;
   private final CqlLibraryService cqlLibraryService;
+  private final AdminService adminService;
 
   @DeleteMapping("/locks")
   @PreAuthorize("hasRole('MADIE-ADMIN')")
@@ -99,5 +102,23 @@ public class CqlLibraryAdminController {
         libraryName, accessToken, harpId.toLowerCase());
     return ResponseEntity.ok()
         .body("The library and all its associated versions have been removed successfully.");
+  }
+
+  @PutMapping("/shared-access-report")
+  @PreAuthorize("hasRole('MADIE-ADMIN')")
+  public ResponseEntity<byte[]> exportSharedWith(
+      Principal principal,
+      @RequestBody List<String> libraryids,
+      @RequestHeader("Authorization") String accessToken) {
+    final String username = principal.getName().toLowerCase();
+    log.info("User [{}] is attempting to export Library Access Report", username);
+
+    return ResponseEntity.ok()
+        .header(
+            HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"LibrarySharingExport.xlsx\"")
+        .header(
+            HttpHeaders.CONTENT_TYPE,
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+        .body(adminService.exportSharedWithLibraries(libraryids, username, accessToken));
   }
 }

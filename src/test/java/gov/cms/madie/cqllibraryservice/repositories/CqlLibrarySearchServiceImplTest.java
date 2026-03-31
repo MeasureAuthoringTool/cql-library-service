@@ -2,6 +2,7 @@ package gov.cms.madie.cqllibraryservice.repositories;
 
 import gov.cms.madie.cqllibraryservice.dto.*;
 import gov.cms.madie.models.library.CqlLibrary;
+import gov.cms.madie.models.library.LibrarySet;
 import gov.cms.madie.models.common.OwnershipType;
 import org.bson.Document;
 
@@ -457,6 +458,98 @@ public class CqlLibrarySearchServiceImplTest {
             librarySetId, sortByLatestVersion, searchCriteria);
 
     assertNotNull(results);
+    verify(mongoTemplate)
+        .aggregate(any(Aggregation.class), eq(CqlLibrary.class), eq(LibraryListDTO.class));
+  }
+
+  @Test
+  void testFindLibrariesForAccessReportEmptyList() {
+    List<LibraryListDTO> results =
+        cqlLibrarySearchServiceImpl.findLibrariesForAccessReport(Collections.emptyList());
+
+    assertNotNull(results);
+    assertTrue(results.isEmpty());
+    verifyNoInteractions(mongoTemplate);
+  }
+
+  @Test
+  void testFindLibrariesForAccessReportNullList() {
+    List<LibraryListDTO> results = cqlLibrarySearchServiceImpl.findLibrariesForAccessReport(null);
+
+    assertNotNull(results);
+    assertTrue(results.isEmpty());
+    verifyNoInteractions(mongoTemplate);
+  }
+
+  @Test
+  void testFindLibrariesForAccessReport() {
+    List<String> libraryIds = List.of("lib1", "lib2");
+
+    gov.cms.madie.models.access.AclSpecification acl1 =
+        new gov.cms.madie.models.access.AclSpecification();
+    acl1.setUserId("sharedUser1");
+
+    gov.cms.madie.models.access.AclSpecification acl2 =
+        new gov.cms.madie.models.access.AclSpecification();
+    acl2.setUserId("sharedUser2");
+
+    LibrarySet librarySet1 =
+        LibrarySet.builder()
+            .librarySetId("libSet1")
+            .owner("owner1")
+            .acls(List.of(acl1, acl2))
+            .build();
+
+    LibrarySet librarySet2 =
+        LibrarySet.builder().librarySetId("libSet2").owner("owner2").acls(null).build();
+
+    LibraryListDTO dto1 =
+        LibraryListDTO.builder()
+            .id("lib1")
+            .cqlLibraryName("Test Library 1")
+            .model("QI-Core v4.1.1")
+            .librarySetId("libSet1")
+            .librarySet(librarySet1)
+            .build();
+
+    LibraryListDTO dto2 =
+        LibraryListDTO.builder()
+            .id("lib2")
+            .cqlLibraryName("Test Library 2")
+            .model("FHIR")
+            .librarySetId("libSet2")
+            .librarySet(librarySet2)
+            .build();
+
+    List<LibraryListDTO> mockResults = List.of(dto1, dto2);
+
+    AggregationResults<LibraryListDTO> mockAggregationResults =
+        new AggregationResults<>(mockResults, new Document());
+
+    when(mongoTemplate.aggregate(
+            any(Aggregation.class), eq(CqlLibrary.class), eq(LibraryListDTO.class)))
+        .thenReturn(mockAggregationResults);
+
+    List<LibraryListDTO> results =
+        cqlLibrarySearchServiceImpl.findLibrariesForAccessReport(libraryIds);
+
+    assertNotNull(results);
+    assertEquals(2, results.size());
+
+    // Verify first result
+    assertEquals("lib1", results.get(0).getId());
+    assertEquals("Test Library 1", results.get(0).getCqlLibraryName());
+    assertEquals("QI-Core v4.1.1", results.get(0).getModel());
+    assertEquals("owner1", results.get(0).getLibrarySet().getOwner());
+    assertEquals(2, results.get(0).getLibrarySet().getAcls().size());
+
+    // Verify second result with no ACLs
+    assertEquals("lib2", results.get(1).getId());
+    assertEquals("Test Library 2", results.get(1).getCqlLibraryName());
+    assertEquals("FHIR", results.get(1).getModel());
+    assertEquals("owner2", results.get(1).getLibrarySet().getOwner());
+    assertNull(results.get(1).getLibrarySet().getAcls());
+
     verify(mongoTemplate)
         .aggregate(any(Aggregation.class), eq(CqlLibrary.class), eq(LibraryListDTO.class));
   }

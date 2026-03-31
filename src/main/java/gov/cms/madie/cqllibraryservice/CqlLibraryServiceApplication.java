@@ -35,7 +35,7 @@ public class CqlLibraryServiceApplication {
             .addMapping("/**")
             .allowedMethods("PUT", "POST", "GET", "DELETE")
             .allowedOrigins(
-                "http://localhost:9000",
+                "http://localhost:9001",
                 "https://dev-madie.hcqis.org",
                 "https://test-madie.hcqis.org",
                 "https://impl-madie.hcqis.org",

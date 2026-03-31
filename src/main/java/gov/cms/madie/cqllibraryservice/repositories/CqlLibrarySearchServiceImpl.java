@@ -211,4 +211,22 @@ public class CqlLibrarySearchServiceImpl implements CqlLibrarySearchService {
     var result = mongoTemplate.aggregate(aggregation, CqlLibrary.class, LibraryListDTO.class);
     return result.getMappedResults();
   }
+
+  @Override
+  public List<LibraryListDTO> findLibrariesForAccessReport(List<String> libraryIds) {
+    if (libraryIds == null || libraryIds.isEmpty()) {
+      return Collections.emptyList();
+    }
+
+    MatchOperation matchByIds = match(Criteria.where("_id").in(libraryIds));
+    LookupOperation lookupOperation = getLookupOperation();
+    UnwindOperation unwindOperation = unwind("librarySet", true);
+
+    Aggregation aggregation =
+        newAggregation(matchByIds, lookupOperation, unwindOperation, project(LibraryListDTO.class));
+
+    return mongoTemplate
+        .aggregate(aggregation, CqlLibrary.class, LibraryListDTO.class)
+        .getMappedResults();
+  }
 }

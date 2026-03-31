@@ -109,7 +109,7 @@ public class ErrorHandlingControllerAdvice {
     return getErrorAttributes(request, HttpStatus.BAD_REQUEST);
   }
 
-  @ExceptionHandler(BadRequestObjectException.class)
+  @ExceptionHandler({BadRequestObjectException.class, IllegalArgumentException.class})
   @ResponseStatus(HttpStatus.BAD_REQUEST)
   @ResponseBody
   Map<String, Object> onBadRequestObjectException(WebRequest request) {
