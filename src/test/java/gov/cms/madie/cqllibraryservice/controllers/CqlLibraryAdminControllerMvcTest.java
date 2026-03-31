@@ -239,26 +239,29 @@ public class CqlLibraryAdminControllerMvcTest {
     when(adminService.exportSharedWithLibraries(any(), anyString(), anyString()))
         .thenReturn(excelContent);
 
-    mockMvc
-        .perform(
-            put("/cql-libraries/admin/shared-access-report")
-                .with(csrf())
-                .with(user(TEST_USER_ID).roles("MADIE-ADMIN"))
-                .header("Authorization", TEST_OKTA)
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(new ObjectMapper().writeValueAsString(List.of("lib1", "lib2"))))
-        .andExpect(status().isOk())
-        .andExpect(
-            header()
-                .string(
-                    HttpHeaders.CONTENT_DISPOSITION,
-                    "attachment; filename=\"LibrarySharingExport.xlsx\""))
-        .andExpect(
-            header()
-                .string(
-                    HttpHeaders.CONTENT_TYPE,
-                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
-        .andExpect(content().bytes(excelContent));
+    MvcResult result =
+        mockMvc
+            .perform(
+                put("/cql-libraries/admin/shared-access-report")
+                    .with(csrf())
+                    .with(user(TEST_USER_ID).roles("MADIE-ADMIN"))
+                    .header("Authorization", TEST_OKTA)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(new ObjectMapper().writeValueAsString(List.of("lib1", "lib2"))))
+            .andExpect(status().isOk())
+            .andExpect(
+                header()
+                    .string(
+                        HttpHeaders.CONTENT_DISPOSITION,
+                        "attachment; filename=\"LibrarySharingExport.xlsx\""))
+            .andExpect(
+                header()
+                    .string(
+                        HttpHeaders.CONTENT_TYPE,
+                        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
+            .andExpect(content().bytes(excelContent))
+            .andReturn();
+    assertEquals(HttpStatus.OK.value(), result.getResponse().getStatus());
   }
 
   @Test
@@ -267,29 +270,35 @@ public class CqlLibraryAdminControllerMvcTest {
     when(adminService.exportSharedWithLibraries(eq(List.of("singleLib")), anyString(), anyString()))
         .thenReturn(excelContent);
 
-    mockMvc
-        .perform(
-            put("/cql-libraries/admin/shared-access-report")
-                .with(csrf())
-                .with(user(TEST_USER_ID).roles("MADIE-ADMIN"))
-                .header("Authorization", TEST_OKTA)
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(new ObjectMapper().writeValueAsString(List.of("singleLib"))))
-        .andExpect(status().isOk())
-        .andExpect(content().bytes(excelContent));
+    MvcResult result =
+        mockMvc
+            .perform(
+                put("/cql-libraries/admin/shared-access-report")
+                    .with(csrf())
+                    .with(user(TEST_USER_ID).roles("MADIE-ADMIN"))
+                    .header("Authorization", TEST_OKTA)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(new ObjectMapper().writeValueAsString(List.of("singleLib"))))
+            .andExpect(status().isOk())
+            .andExpect(content().bytes(excelContent))
+            .andReturn();
+    assertEquals(HttpStatus.OK.value(), result.getResponse().getStatus());
   }
 
   @Test
   void exportSharedWithForbiddenForNonAdminUser() throws Exception {
-    mockMvc
-        .perform(
-            put("/cql-libraries/admin/shared-access-report")
-                .with(csrf())
-                .with(user(TEST_USER_ID).roles("MADIE-USER"))
-                .header("Authorization", TEST_OKTA)
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(new ObjectMapper().writeValueAsString(List.of("lib1"))))
-        .andExpect(status().isForbidden());
+    MvcResult result =
+        mockMvc
+            .perform(
+                put("/cql-libraries/admin/shared-access-report")
+                    .with(csrf())
+                    .with(user(TEST_USER_ID).roles("MADIE-USER"))
+                    .header("Authorization", TEST_OKTA)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(new ObjectMapper().writeValueAsString(List.of("lib1"))))
+            .andExpect(status().isForbidden())
+            .andReturn();
+    assertEquals(HttpStatus.FORBIDDEN.value(), result.getResponse().getStatus());
   }
 
   @Test
@@ -315,12 +324,15 @@ public class CqlLibraryAdminControllerMvcTest {
 
   @Test
   void exportSharedWithUnauthorizedWithoutAuthentication() throws Exception {
-    mockMvc
-        .perform(
-            put("/cql-libraries/admin/shared-access-report")
-                .with(csrf())
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(new ObjectMapper().writeValueAsString(List.of("lib1"))))
-        .andExpect(status().isUnauthorized());
+    MvcResult result =
+        mockMvc
+            .perform(
+                put("/cql-libraries/admin/shared-access-report")
+                    .with(csrf())
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(new ObjectMapper().writeValueAsString(List.of("lib1"))))
+            .andExpect(status().isUnauthorized())
+            .andReturn();
+    assertEquals(HttpStatus.UNAUTHORIZED.value(), result.getResponse().getStatus());
   }
 }
