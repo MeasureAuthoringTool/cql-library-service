@@ -111,7 +111,7 @@ public class CqlLibraryAdminController {
       @RequestBody List<String> libraryids,
       @RequestHeader("Authorization") String accessToken) {
     final String username = principal.getName().toLowerCase();
-    log.info("Exporting shared with libraries for user: {}", username);
+    log.info("User [{}] is attempting to export Library Access Report", username);
 
     return ResponseEntity.ok()
         .header(
