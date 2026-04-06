@@ -22,4 +22,7 @@ public class EnvironmentConfig {
 
   @Value("${madie.user-service.base-url}")
   private String userServiceBaseUrl;
+
+  @Value("${madie.notification-service.base-url}")
+  private String notificationServiceBaseUrl;
 }

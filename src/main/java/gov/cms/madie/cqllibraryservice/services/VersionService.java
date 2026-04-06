@@ -2,18 +2,23 @@ package gov.cms.madie.cqllibraryservice.services;
 
 import gov.cms.madie.cqllibraryservice.dto.LibraryListDTO;
 import gov.cms.madie.cqllibraryservice.dto.LockInfo;
+import gov.cms.madie.cqllibraryservice.dto.NotificationDto;
 import gov.cms.madie.cqllibraryservice.exceptions.*;
 import gov.cms.madie.cqllibraryservice.utils.AuthUtils;
 import gov.cms.madie.models.common.ActionType;
 import gov.cms.madie.models.common.ModelType;
 import gov.cms.madie.models.library.CqlLibrary;
+import gov.cms.madie.models.library.LibrarySet;
 import gov.cms.madie.models.measure.ElmJson;
 import gov.cms.madie.models.common.Version;
 import gov.cms.madie.cqllibraryservice.repositories.CqlLibraryRepository;
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -32,6 +37,7 @@ public class VersionService {
   private final ElmTranslatorClient elmTranslatorClient;
   private final AppConfigService appConfigService;
   private final CqlLibraryLockService cqlLibraryLockService;
+  private final NotificationServiceClient notificationServiceClient;
 
   public CqlLibrary createVersion(String id, boolean isMajor, String username, String accessToken) {
     CqlLibrary cqlLibrary = cqlLibraryService.findCqlLibraryById(id, username);
@@ -98,7 +104,64 @@ public class VersionService {
     cqlLibraryLockService.unlockCqlLibrary(id, username);
     log.info("user: [{}] had unlocked Library: [{}]", username, id);
 
+    // Build and send notifications to owner and shared users (excluding the action user)
+    try {
+      List<NotificationDto> notifications = buildVersionNotifications(savedCqlLibrary, username);
+      if (!notifications.isEmpty()) {
+        notificationServiceClient.sendNotifications(notifications);
+      }
+    } catch (Exception e) {
+      log.error(
+          "Failed to send version notifications for library [{}]", savedCqlLibrary.getId(), e);
+    }
+
     return savedCqlLibrary;
+  }
+
+  private List<NotificationDto> buildVersionNotifications(
+      CqlLibrary cqlLibrary, String actionUser) {
+    List<NotificationDto> notifications = new ArrayList<>();
+    LibrarySet librarySet = cqlLibrary.getLibrarySet();
+    if (librarySet == null) {
+      return notifications;
+    }
+
+    String message =
+        String.format(
+            "%s created version %s of CQL library \"%s\".",
+            actionUser, cqlLibrary.getVersion(), cqlLibrary.getCqlLibraryName());
+    String additionalLink = "/cql-libraries/" + cqlLibrary.getId() + "/edit/details";
+
+    // Collect all users who should be notified (owner + shared users), excluding the action user
+    Set<String> usersToNotify = new HashSet<>();
+
+    // Add owner
+    if (librarySet.getOwner() != null) {
+      usersToNotify.add(librarySet.getOwner().toLowerCase());
+    }
+
+    // Add all shared users from ACLs
+    if (librarySet.getAcls() != null) {
+      for (var acl : librarySet.getAcls()) {
+        if (acl.getUserId() != null) {
+          usersToNotify.add(acl.getUserId().toLowerCase());
+        }
+      }
+    }
+
+    // Exclude the user who performed the action
+    usersToNotify.remove(actionUser.toLowerCase());
+
+    for (String userId : usersToNotify) {
+      notifications.add(
+          NotificationDto.builder()
+              .userId(userId)
+              .message(message)
+              .additionalLink(additionalLink)
+              .build());
+    }
+
+    return notifications;
   }
 
   private String libraryContentTemplate(String cqlLibraryName, Version version) {
