@@ -12,7 +12,7 @@ import org.springframework.security.web.SecurityFilterChain;
 @EnableMethodSecurity
 public class SecurityConfig {
 
-  private static final String[] AUTH_WHITELIST = {"/actuator/**"};
+  private static final String[] AUTH_WHITELIST = {"/actuator/**", "/cql-libraries/*"};
 
   @Bean
   protected SecurityFilterChain filterChain(HttpSecurity http, UserRoleConverter roleConverter)
@@ -24,10 +24,10 @@ public class SecurityConfig {
         .authorizeHttpRequests()
         .requestMatchers(AUTH_WHITELIST)
         .permitAll()
+        .requestMatchers("/cql-libraries/cql")
+        .permitAll()
         .requestMatchers("/cql-libraries/admin/**")
         .hasRole("MADIE-ADMIN")
-        .and()
-        .authorizeHttpRequests()
         .anyRequest()
         .authenticated()
         .and()
