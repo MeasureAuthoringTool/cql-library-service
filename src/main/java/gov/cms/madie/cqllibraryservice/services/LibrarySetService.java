@@ -354,7 +354,10 @@ public class LibrarySetService {
 
   private String formatUserDisplay(Map<String, UserDetailsDto> userDetailsMap, String harpId) {
     UserDetailsDto userDetailsDto = userDetailsMap.get(harpId);
-    if (userDetailsDto == null) return harpId;
+
+    if (userDetailsDto == null) {
+      return harpId;
+    }
 
     String displayName =
         Stream.of(userDetailsDto.getFirstName(), userDetailsDto.getLastName())
