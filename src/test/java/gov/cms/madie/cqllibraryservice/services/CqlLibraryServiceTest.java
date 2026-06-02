@@ -761,6 +761,13 @@ class CqlLibraryServiceTest {
     when(cqlLibraryRepository.findById("libraryId1")).thenReturn(Optional.ofNullable(library1));
     when(librarySetService.findByLibrarySetId("librarySetId1")).thenReturn(librarySet1);
     when(cqlLibraryRepository.findById("libraryId2")).thenReturn(Optional.ofNullable(library2));
+    when(userServiceClient.getBulkUserDetails(anyList()))
+        .thenReturn(
+            Map.of(
+                aclSpec.getUserId(),
+                UserDetailsDto.builder().firstName("John").lastName("Doe").build()));
+    when(librarySetService.formatDisplayName(any(), eq(aclSpec.getUserId())))
+        .thenReturn("John Doe (" + aclSpec.getUserId() + ")");
 
     Map<String, List<SharedUser>> sharedLibraries =
         cqlLibraryService.getSharedLibraries(libraryIds, USERNAME);
@@ -772,6 +779,9 @@ class CqlLibraryServiceTest {
     assertThat(
         sharedLibraries.get(libraryId1).get(0).getUserId(),
         is(equalTo(library1.getLibrarySet().getAcls().get(0).getUserId())));
+    assertThat(
+        sharedLibraries.get(libraryId1).get(0).getDisplayName(),
+        is(equalTo("John Doe (" + aclSpec.getUserId() + ")")));
 
     assertTrue(sharedLibraries.containsKey(libraryId2));
     assertThat(sharedLibraries.get(libraryId2).size(), is(equalTo(1)));
@@ -855,6 +865,17 @@ class CqlLibraryServiceTest {
     when(cqlLibraryRepository.findById("libraryId2")).thenReturn(Optional.ofNullable(library2));
     when(actionLogService.findLibrarySetActionLogByTargetId(anyString()))
         .thenReturn(librarySetActionLog);
+    when(userServiceClient.getBulkUserDetails(anyList()))
+        .thenReturn(
+            Map.of(
+                aclSpec1.getUserId(),
+                UserDetailsDto.builder().firstName("John").lastName("Doe").build(),
+                aclSpec2.getUserId(),
+                UserDetailsDto.builder().firstName("Jane").lastName("Doe").build()));
+    when(librarySetService.formatDisplayName(any(), eq(aclSpec1.getUserId())))
+        .thenReturn("John Doe (" + aclSpec1.getUserId() + ")");
+    when(librarySetService.formatDisplayName(any(), eq(aclSpec2.getUserId())))
+        .thenReturn("Jane Doe (" + aclSpec2.getUserId() + ")");
 
     Map<String, List<SharedUser>> sharedLibraries =
         cqlLibraryService.getSharedLibraries(libraryIds, USERNAME);
@@ -867,13 +888,22 @@ class CqlLibraryServiceTest {
         sharedLibraries.get(libraryId1).get(0).getUserId(),
         is(equalTo(library1.getLibrarySet().getAcls().get(0).getUserId())));
     assertThat(sharedLibraries.get(libraryId1).get(0).getPerformedAt(), is(equalTo(null)));
+    assertThat(
+        sharedLibraries.get(libraryId1).get(0).getDisplayName(),
+        is(equalTo("Jane Doe (" + aclSpec2.getUserId() + ")")));
     assertThat(sharedLibraries.get(libraryId1).get(1).getUserId(), is(equalTo("userId1")));
+    assertThat(
+        sharedLibraries.get(libraryId1).get(1).getDisplayName(),
+        is(equalTo("John Doe (" + aclSpec1.getUserId() + ")")));
 
     assertTrue(sharedLibraries.containsKey(libraryId2));
     assertThat(sharedLibraries.get(libraryId1).size(), is(equalTo(2)));
     assertThat(
         sharedLibraries.get(libraryId2).get(0).getUserId(),
         is(equalTo(library2.getLibrarySet().getAcls().get(0).getUserId())));
+    assertThat(
+        sharedLibraries.get(libraryId2).get(0).getDisplayName(),
+        is(equalTo("Jane Doe (" + aclSpec2.getUserId() + ")")));
   }
 
   @Test
