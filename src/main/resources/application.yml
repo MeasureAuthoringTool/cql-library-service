@@ -21,7 +21,7 @@ madie:
   user-service:
     base-url: ${USER_SERVICE_URL:http://localhost:8088/api}
   service-config:
-    json-url: ${SERVICE_CONFIG_JSON_URL:http://localhost:9001/env-config/serviceConfig.json}
+    json-url: ${SERVICE_CONFIG_JSON_URL:http://localhost:9000/env-config/serviceConfig.json}
   excel-export-service:
     base-url: ${EXCEL_EXPORT_SERVICE:http://localhost:3000/api}
     libraries:
