@@ -8,6 +8,7 @@ import gov.cms.madie.models.access.AclOperation;
 import gov.cms.madie.models.access.AclSpecification;
 import gov.cms.madie.models.access.RoleEnum;
 import gov.cms.madie.models.common.ActionType;
+import gov.cms.madie.models.dto.UserDetailsDto;
 import gov.cms.madie.models.library.CqlLibrary;
 import gov.cms.madie.models.library.LibrarySet;
 import lombok.RequiredArgsConstructor;
@@ -19,6 +20,8 @@ import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static org.springframework.data.mongodb.core.aggregation.Aggregation.*;
 import static org.springframework.data.mongodb.core.aggregation.Aggregation.newAggregation;
@@ -31,6 +34,7 @@ public class LibrarySetService {
   private final CqlLibraryRepository cqlLibraryRepository;
   private final ActionLogService actionLogService;
   private final MongoTemplate mongoTemplate;
+  private final UserServiceClient userServiceClient;
 
   public void createLibrarySet(
       final String harpId, final String libraryId, final String savedLibrarySetId) {
@@ -137,6 +141,10 @@ public class LibrarySetService {
       LibrarySet updatedLibrarySet = librarySetRepository.save(librarySet);
       log.info("ACL updated for Library set [{}]", updatedLibrarySet.getId());
       String byAdmin = isAdminRole ? " by MADiE Admin" : "";
+
+      Map<String, UserDetailsDto> userDetailsMap =
+          userServiceClient.getBulkUserDetails(new ArrayList<>(actionLogDetails.keySet()));
+
       actionLogDetails.forEach(
           (userId, actionType) -> {
             actionLogService.logShareAccessControlAction(
@@ -148,7 +156,7 @@ public class LibrarySetService {
                     actionType == ActionType.UNSHARED
                         ? "Unshared with - %s" + byAdmin
                         : "Shared with - %s" + byAdmin,
-                    userId));
+                    formatUserDisplay(userDetailsMap, userId)));
           });
       return updatedLibrarySet;
     } else {
@@ -261,12 +269,20 @@ public class LibrarySetService {
         userId,
         conductedBy);
     String adminSuffix = isAdmin ? " by MADiE Admin" : "";
+
+    Map<String, UserDetailsDto> userDetailsMap =
+        userServiceClient.getBulkUserDetails(List.of(originalOwner, userId));
+
     actionLogService.logAction(
         updatedLibrarySet.getLibrarySetId(),
         ActionType.OWNERSHIP_TRANSFER,
         conductedBy,
         "librarySetActionLog",
-        String.format("Transferred from %s to %s%s", originalOwner, userId, adminSuffix));
+        String.format(
+            "Transferred from %s to %s%s",
+            formatUserDisplay(userDetailsMap, originalOwner),
+            formatUserDisplay(userDetailsMap, userId),
+            adminSuffix));
 
     if (retainShareAccess) {
       actionLogService.logShareAccessControlAction(
@@ -274,7 +290,8 @@ public class LibrarySetService {
           ActionType.SHARED,
           conductedBy,
           originalOwner,
-          String.format("Shared with - %s%s", originalOwner, adminSuffix));
+          String.format(
+              "Shared with - %s%s", formatUserDisplay(userDetailsMap, originalOwner), adminSuffix));
 
       log.info(
           "Retained SHARED role for user [{}] on library set [{}] after ownership transfer",
@@ -333,6 +350,21 @@ public class LibrarySetService {
       }
     }
     return mostRecentLibraries;
+  }
+
+  private String formatUserDisplay(Map<String, UserDetailsDto> userDetailsMap, String harpId) {
+    UserDetailsDto userDetailsDto = userDetailsMap.get(harpId);
+
+    if (userDetailsDto == null) {
+      return harpId;
+    }
+
+    String displayName =
+        Stream.of(userDetailsDto.getFirstName(), userDetailsDto.getLastName())
+            .filter(s -> s != null && !s.isBlank())
+            .collect(Collectors.joining(" "));
+
+    return displayName.isEmpty() ? harpId : displayName + " (" + harpId + ")";
   }
 
   private void changeLibrarySetAlcsToLowerCase(LibrarySet librarySet) {
