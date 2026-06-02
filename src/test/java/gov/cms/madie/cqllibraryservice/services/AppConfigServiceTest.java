@@ -30,16 +30,16 @@ class AppConfigServiceTest {
 
   @Test
   public void isFlagEnabled() {
-    final Map<String, Boolean> flagMap = Map.of(MadieFeatureFlag.PLACEHOLDER.toString(), false);
+    final Map<String, Boolean> flagMap = Map.of(MadieFeatureFlag.US_QUALITY_CORE.toString(), false);
     ReflectionTestUtils.setField(appConfigService, "featureFlags", flagMap);
-    assertThat(appConfigService.isFlagEnabled(MadieFeatureFlag.PLACEHOLDER), is(false));
+    assertThat(appConfigService.isFlagEnabled(MadieFeatureFlag.US_QUALITY_CORE), is(false));
   }
 
   @Test
   public void isFlagEnabledMissingFlag() {
     final Map<String, Boolean> flagMap = Map.of("NOT_REAL", true);
     ReflectionTestUtils.setField(appConfigService, "featureFlags", flagMap);
-    assertThat(appConfigService.isFlagEnabled(MadieFeatureFlag.PLACEHOLDER), is(false));
+    assertThat(appConfigService.isFlagEnabled(MadieFeatureFlag.US_QUALITY_CORE), is(false));
   }
 
   @Test
@@ -47,10 +47,10 @@ class AppConfigServiceTest {
     when(appConfigServiceConfig.getServiceConfigJsonUrl())
         .thenReturn("test.aws/serviceConfig.json");
 
-    final Map<String, Boolean> flagMap = Map.of(MadieFeatureFlag.PLACEHOLDER.toString(), true);
+    final Map<String, Boolean> flagMap = Map.of(MadieFeatureFlag.US_QUALITY_CORE.toString(), true);
     when(appConfigRestTemplate.getForObject(anyString(), any(Class.class)))
         .thenReturn(ServiceConfig.builder().features(flagMap).build());
     appConfigService.refreshAppConfig();
-    assertThat(appConfigService.isFlagEnabled(MadieFeatureFlag.PLACEHOLDER), is(true));
+    assertThat(appConfigService.isFlagEnabled(MadieFeatureFlag.US_QUALITY_CORE), is(true));
   }
 }
