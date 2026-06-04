@@ -381,15 +381,17 @@ public class CqlLibraryAdminControllerMvcTest {
     when(cqlLibraryService.deleteCqlLibraryById(anyString(), anyString(), anyString()))
         .thenReturn(library);
 
-    mockMvc
-        .perform(
-            delete("/cql-libraries/admin/libId123")
-                .with(user(TEST_USER_ID).roles("MADIE-ADMIN"))
-                .with(csrf())
-                .header("harpId", "owner1"))
-        .andExpect(status().isOk())
-        .andExpect(jsonPath("$.id", equalTo("libId123")))
-        .andExpect(jsonPath("$.cqlLibraryName", equalTo("TestLib")));
+    MvcResult result =
+        mockMvc
+            .perform(
+                delete("/cql-libraries/admin/libId123")
+                    .with(user(TEST_USER_ID).roles("MADIE-ADMIN"))
+                    .with(csrf())
+                    .header("harpId", "owner1"))
+            .andExpect(jsonPath("$.id", equalTo("libId123")))
+            .andExpect(jsonPath("$.cqlLibraryName", equalTo("TestLib")))
+            .andReturn();
+    assertEquals(HttpStatus.OK.value(), result.getResponse().getStatus());
   }
 
   @Test
