@@ -553,6 +553,66 @@ class CqlLibraryServiceTest {
   }
 
   @Test
+  void testDeleteCqlLibraryByIdNotFound() {
+    when(cqlLibraryRepository.findById(anyString())).thenReturn(Optional.empty());
+
+    assertThrows(
+        ResourceNotFoundException.class,
+        () -> cqlLibraryService.deleteCqlLibraryById("missingId", "owner1", "admin"));
+  }
+
+  @Test
+  void testDeleteCqlLibraryByIdLibrarySetNotFound() {
+    CqlLibrary library = CqlLibrary.builder().id("libId").librarySetId("libSetId").build();
+
+    when(cqlLibraryRepository.findById("libId")).thenReturn(Optional.of(library));
+    when(librarySetService.findByLibrarySetId("libSetId")).thenReturn(null);
+
+    assertThrows(
+        ResourceNotFoundException.class,
+        () -> cqlLibraryService.deleteCqlLibraryById("libId", "owner1", "admin"));
+    verify(cqlLibraryRepository, times(0)).delete(any(CqlLibrary.class));
+  }
+
+  @Test
+  void testDeleteCqlLibraryByIdHarpIdMismatch() {
+    CqlLibrary library = CqlLibrary.builder().id("libId").librarySetId("libSetId").build();
+    LibrarySet librarySet = LibrarySet.builder().librarySetId("libSetId").owner("owner2").build();
+
+    when(cqlLibraryRepository.findById("libId")).thenReturn(Optional.of(library));
+    when(librarySetService.findByLibrarySetId("libSetId")).thenReturn(librarySet);
+
+    Exception ex =
+        assertThrows(
+            HarpIdMismatchException.class,
+            () -> cqlLibraryService.deleteCqlLibraryById("libId", "owner1", "admin"));
+    assertThat(
+        ex.getMessage(),
+        is(
+            equalTo(
+                "Response could not be completed because the HARP id of owner1 passed in does not"
+                    + " match the owner of the library with the library id of libId. The owner of"
+                    + " the library is owner2")));
+    verify(cqlLibraryRepository, times(0)).delete(any(CqlLibrary.class));
+  }
+
+  @Test
+  void testDeleteCqlLibraryByIdSuccess() {
+    CqlLibrary library = CqlLibrary.builder().id("libId").librarySetId("libSetId").build();
+    LibrarySet librarySet = LibrarySet.builder().librarySetId("libSetId").owner("owner1").build();
+
+    when(cqlLibraryRepository.findById("libId")).thenReturn(Optional.of(library));
+    when(librarySetService.findByLibrarySetId("libSetId")).thenReturn(librarySet);
+    doNothing().when(cqlLibraryRepository).delete(any(CqlLibrary.class));
+
+    CqlLibrary result = cqlLibraryService.deleteCqlLibraryById("libId", "owner1", "admin");
+
+    assertThat(result, is(equalTo(library)));
+    verify(cqlLibraryRepository, times(1)).delete(library);
+    verify(actionLogService, times(1)).logAction("libId", ActionType.DELETED, "admin", "actionLog");
+  }
+
+  @Test
   void testFindLibrariesByNameAndModel() {
     String libraryName = "test";
     String model = "QICore 4.1.1";

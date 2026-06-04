@@ -352,6 +352,28 @@ public class CqlLibraryService {
     cqlLibraryRepository.deleteAll(libraries);
   }
 
+  public CqlLibrary deleteCqlLibraryById(String id, String harpId, String username) {
+    CqlLibrary library =
+        cqlLibraryRepository
+            .findById(id)
+            .orElseThrow(() -> new ResourceNotFoundException("CqlLibrary", "id", id));
+
+    LibrarySet librarySet = librarySetService.findByLibrarySetId(library.getLibrarySetId());
+
+    if (librarySet == null) {
+      throw new ResourceNotFoundException("LibrarySet", "librarySetId", library.getLibrarySetId());
+    }
+
+    if (!librarySet.getOwner().equalsIgnoreCase(harpId)) {
+      throw new HarpIdMismatchException(harpId, librarySet.getOwner(), library.getId());
+    }
+
+    cqlLibraryRepository.delete(library);
+    actionLogService.logAction(id, ActionType.DELETED, username, "actionLog");
+
+    return library;
+  }
+
   public List<LibraryListDTO> findLibrariesByNameAndModel(String libraryName, String model) {
     if (StringUtils.isBlank(libraryName) || StringUtils.isBlank(model)) {
       throw new BadRequestObjectException("Please provide library name and model.");
