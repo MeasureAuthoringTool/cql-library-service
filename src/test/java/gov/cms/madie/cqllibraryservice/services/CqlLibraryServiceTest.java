@@ -1501,7 +1501,7 @@ class CqlLibraryServiceTest {
 
     assertNotNull(result);
     assertEquals(1, result.size());
-    assertEquals("John Doe", result.get(0).getOwner());
+    assertEquals("John Doe", result.get(0).getOwnerDisplayName());
     verify(userServiceClient, times(1)).getSingleUserDetails(eq(ownerId));
   }
 
@@ -1783,8 +1783,8 @@ class CqlLibraryServiceTest {
     Page<LibraryListDTO> result =
         cqlLibraryService.getLibrariesByCriteria(criteria, ownershipType, pageable, username);
 
-    assertEquals("-", result.getContent().get(0).getOwner());
-    assertEquals("-", result.getContent().get(1).getOwner());
+    assertEquals("-", result.getContent().get(0).getOwnerDisplayName());
+    assertEquals("-", result.getContent().get(1).getOwnerDisplayName());
     verify(userServiceClient, times(1)).getBulkUserDetails(List.of("owner1", "owner2"));
   }
 
@@ -1824,11 +1824,11 @@ class CqlLibraryServiceTest {
     Page<LibraryListDTO> result =
         cqlLibraryService.getLibrariesByCriteria(criteria, ownershipType, pageable, username);
 
-    assertEquals("John Doe", result.getContent().get(0).getOwner());
-    assertEquals("owner2", result.getContent().get(1).getOwner());
-    assertEquals("owner3", result.getContent().get(2).getOwner());
-    assertEquals("Doe", result.getContent().get(3).getOwner());
-    assertEquals("Jane", result.getContent().get(4).getOwner());
+    assertEquals("John Doe", result.getContent().get(0).getOwnerDisplayName());
+    assertEquals("owner2", result.getContent().get(1).getOwnerDisplayName());
+    assertEquals("owner3", result.getContent().get(2).getOwnerDisplayName());
+    assertEquals("Doe", result.getContent().get(3).getOwnerDisplayName());
+    assertEquals("Jane", result.getContent().get(4).getOwnerDisplayName());
 
     verify(userServiceClient, times(1))
         .getBulkUserDetails(List.of("owner1", "owner2", "owner3", "owner4", "owner5"));
