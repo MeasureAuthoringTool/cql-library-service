@@ -168,12 +168,12 @@ public class CqlLibraryService {
               } else if (StringUtils.isNotBlank(lastName)) {
                 displayName = lastName;
               }
-              library.setOwner(
+              library.setOwnerDisplayName(
                   StringUtils.isNotBlank(displayName)
                       ? displayName
                       : StringUtils.isNotBlank(ownerId) ? ownerId : "-");
             } else {
-              library.setOwner("-");
+              library.setOwnerDisplayName("-");
             }
           }
         });
@@ -400,7 +400,7 @@ public class CqlLibraryService {
               librariesByLibrarySetId.get(0).getLibrarySet().getOwner());
       if (singleUserDetails != null) {
         librariesByLibrarySetId.forEach(
-            library -> library.setOwner(getFullName(singleUserDetails)));
+            library -> library.setOwnerDisplayName(getFullName(singleUserDetails)));
       }
     }
 
