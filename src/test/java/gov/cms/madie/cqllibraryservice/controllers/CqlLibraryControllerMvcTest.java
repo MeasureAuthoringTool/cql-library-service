@@ -1614,9 +1614,17 @@ public class CqlLibraryControllerMvcTest {
 
     List<String> libraryIds = List.of(libraryId1, libraryId2);
     SharedUser sharedUser1 =
-        SharedUser.builder().userId("userId1").performedAt(fixedClock.instant()).build();
+        SharedUser.builder()
+            .userId("userId1")
+            .displayName("John Doe (userId1)")
+            .performedAt(fixedClock.instant())
+            .build();
     SharedUser sharedUser2 =
-        SharedUser.builder().userId("userId2").performedAt(fixedClock.instant()).build();
+        SharedUser.builder()
+            .userId("userId2")
+            .displayName("Jane Doe (userId2)")
+            .performedAt(fixedClock.instant())
+            .build();
 
     Map<String, List<SharedUser>> sharedLibraries = new HashMap<>();
     sharedLibraries.put(libraryId1, List.of(sharedUser1));
@@ -1636,7 +1644,7 @@ public class CqlLibraryControllerMvcTest {
         .andExpect(
             content()
                 .string(
-                    "{\"libraryId1\":[{\"userId\":\"userId1\",\"performedAt\":\"2025-03-17T10:00:00Z\"}],\"libraryId2\":[{\"userId\":\"userId1\",\"performedAt\":\"2025-03-17T10:00:00Z\"},{\"userId\":\"userId2\",\"performedAt\":\"2025-03-17T10:00:00Z\"}]}"));
+                    "{\"libraryId1\":[{\"userId\":\"userId1\",\"displayName\":\"John Doe (userId1)\",\"performedAt\":\"2025-03-17T10:00:00Z\"}],\"libraryId2\":[{\"userId\":\"userId1\",\"displayName\":\"John Doe (userId1)\",\"performedAt\":\"2025-03-17T10:00:00Z\"},{\"userId\":\"userId2\",\"displayName\":\"Jane Doe (userId2)\",\"performedAt\":\"2025-03-17T10:00:00Z\"}]}"));
 
     verify(cqlLibraryService, times(1)).getSharedLibraries(eq(libraryIds), anyString());
   }

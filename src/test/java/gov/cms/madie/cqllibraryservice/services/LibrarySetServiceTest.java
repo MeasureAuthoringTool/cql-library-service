@@ -758,4 +758,46 @@ class LibrarySetServiceTest {
 
     assertEquals(0, result.size()); // Should be empty
   }
+
+  @Test
+  void testFormatUserDisplayWithBothNames() {
+    Map<String, UserDetailsDto> userDetailsMap =
+        Map.of("harpId1", UserDetailsDto.builder().firstName("John").lastName("Doe").build());
+    assertThat(
+        librarySetService.formatDisplayName(userDetailsMap, "harpId1"),
+        is(equalTo("John Doe (harpId1)")));
+  }
+
+  @Test
+  void testFormatUserDisplayWithFirstNameOnly() {
+    Map<String, UserDetailsDto> userDetailsMap =
+        Map.of("harpId1", UserDetailsDto.builder().firstName("John").build());
+    assertThat(
+        librarySetService.formatDisplayName(userDetailsMap, "harpId1"),
+        is(equalTo("John (harpId1)")));
+  }
+
+  @Test
+  void testFormatUserDisplayWithLastNameOnly() {
+    Map<String, UserDetailsDto> userDetailsMap =
+        Map.of("harpId1", UserDetailsDto.builder().lastName("Doe").build());
+    assertThat(
+        librarySetService.formatDisplayName(userDetailsMap, "harpId1"),
+        is(equalTo("Doe (harpId1)")));
+  }
+
+  @Test
+  void testFormatUserDisplayWithBlankNames() {
+    Map<String, UserDetailsDto> userDetailsMap =
+        Map.of("harpId1", UserDetailsDto.builder().firstName("").lastName("").build());
+    assertThat(
+        librarySetService.formatDisplayName(userDetailsMap, "harpId1"), is(equalTo("harpId1")));
+  }
+
+  @Test
+  void testFormatUserDisplayWhenUserNotFound() {
+    Map<String, UserDetailsDto> userDetailsMap = Map.of();
+    assertThat(
+        librarySetService.formatDisplayName(userDetailsMap, "harpId1"), is(equalTo("harpId1")));
+  }
 }
