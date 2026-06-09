@@ -7,6 +7,7 @@ import java.util.Objects;
 
 import jakarta.validation.ConstraintViolationException;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.web.error.ErrorAttributeOptions;
 import org.springframework.boot.web.servlet.error.ErrorAttributes;
@@ -19,6 +20,7 @@ import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.context.request.WebRequest;
 
+@Slf4j
 @RequiredArgsConstructor
 @ControllerAdvice
 public class ErrorHandlingControllerAdvice {
@@ -81,6 +83,7 @@ public class ErrorHandlingControllerAdvice {
   @ResponseBody
   Map<String, Object> onResourceNotFoundException(
       ResourceNotFoundException ex, WebRequest request) {
+    log.error(ex.getMessage());
     return getErrorAttributes(request, HttpStatus.NOT_FOUND);
   }
 
@@ -91,7 +94,8 @@ public class ErrorHandlingControllerAdvice {
   })
   @ResponseStatus(HttpStatus.CONFLICT)
   @ResponseBody
-  Map<String, Object> onGeneralConflictException(WebRequest request) {
+  Map<String, Object> onGeneralConflictException(Exception ex, WebRequest request) {
+    log.error(ex.getMessage());
     return getErrorAttributes(request, HttpStatus.CONFLICT);
   }
 

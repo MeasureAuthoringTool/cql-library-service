@@ -323,6 +323,78 @@ public class CqlLibraryAdminControllerMvcTest {
   }
 
   @Test
+  void testDeleteCqlLibraryByIdForbiddenForNonAdmin() throws Exception {
+    MvcResult result =
+        mockMvc
+            .perform(
+                delete("/cql-libraries/admin/libId123")
+                    .with(user(TEST_USER_ID).roles("MADIE-USER"))
+                    .with(csrf())
+                    .header("harpId", "owner1"))
+            .andReturn();
+    assertEquals(HttpStatus.FORBIDDEN.value(), result.getResponse().getStatus());
+  }
+
+  @Test
+  void testDeleteCqlLibraryByIdNotFound() throws Exception {
+    when(cqlLibraryService.deleteCqlLibraryById(anyString(), anyString(), anyString()))
+        .thenThrow(
+            new gov.cms.madie.cqllibraryservice.exceptions.ResourceNotFoundException(
+                "CqlLibrary", "id", "libId123"));
+
+    MvcResult result =
+        mockMvc
+            .perform(
+                delete("/cql-libraries/admin/libId123")
+                    .with(user(TEST_USER_ID).roles("MADIE-ADMIN"))
+                    .with(csrf())
+                    .header("harpId", "owner1"))
+            .andReturn();
+    assertEquals(HttpStatus.NOT_FOUND.value(), result.getResponse().getStatus());
+  }
+
+  @Test
+  void testDeleteCqlLibraryByIdHarpIdMismatch() throws Exception {
+    when(cqlLibraryService.deleteCqlLibraryById(anyString(), anyString(), anyString()))
+        .thenThrow(
+            new gov.cms.madie.cqllibraryservice.exceptions.HarpIdMismatchException(
+                "owner2", "owner1", "libId123"));
+
+    MvcResult result =
+        mockMvc
+            .perform(
+                delete("/cql-libraries/admin/libId123")
+                    .with(user(TEST_USER_ID).roles("MADIE-ADMIN"))
+                    .with(csrf())
+                    .header("harpId", "owner2"))
+            .andExpect(
+                jsonPath("$.message")
+                    .value(
+                        "Response could not be completed because the HARP id of owner2 passed in does not match the owner of the library with the library id of libId123. The owner of the library is owner1"))
+            .andReturn();
+    assertEquals(HttpStatus.CONFLICT.value(), result.getResponse().getStatus());
+  }
+
+  @Test
+  void testDeleteCqlLibraryByIdSuccess() throws Exception {
+    CqlLibrary library = CqlLibrary.builder().id("libId123").cqlLibraryName("TestLib").build();
+    when(cqlLibraryService.deleteCqlLibraryById(anyString(), anyString(), anyString()))
+        .thenReturn(library);
+
+    MvcResult result =
+        mockMvc
+            .perform(
+                delete("/cql-libraries/admin/libId123")
+                    .with(user(TEST_USER_ID).roles("MADIE-ADMIN"))
+                    .with(csrf())
+                    .header("harpId", "owner1"))
+            .andExpect(jsonPath("$.id", equalTo("libId123")))
+            .andExpect(jsonPath("$.cqlLibraryName", equalTo("TestLib")))
+            .andReturn();
+    assertEquals(HttpStatus.OK.value(), result.getResponse().getStatus());
+  }
+
+  @Test
   void exportSharedWithUnauthorizedWithoutAuthentication() throws Exception {
     MvcResult result =
         mockMvc
