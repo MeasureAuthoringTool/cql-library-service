@@ -352,6 +352,15 @@ public class CqlLibraryService {
     cqlLibraryRepository.deleteAll(libraries);
   }
 
+  /**
+   * Deletes a single CQL library version permanently by its document ID
+   *
+   * @param id - MongoDB document ID of the library to delete
+   * @param harpId - HARP ID of the library owner, validated against the actual owner to prevent
+   *     unintended deletions
+   * @param username - username of the admin performing the deletion, used for audit logging
+   * @return the deleted CqlLibrary
+   */
   public CqlLibrary deleteCqlLibraryById(String id, String harpId, String username) {
     CqlLibrary library =
         cqlLibraryRepository
