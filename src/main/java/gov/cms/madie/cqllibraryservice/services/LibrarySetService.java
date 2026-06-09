@@ -156,7 +156,7 @@ public class LibrarySetService {
                     actionType == ActionType.UNSHARED
                         ? "Unshared with - %s" + byAdmin
                         : "Shared with - %s" + byAdmin,
-                    formatUserDisplay(userDetailsMap, userId)));
+                    formatDisplayName(userDetailsMap, userId)));
           });
       return updatedLibrarySet;
     } else {
@@ -280,8 +280,8 @@ public class LibrarySetService {
         "librarySetActionLog",
         String.format(
             "Transferred from %s to %s%s",
-            formatUserDisplay(userDetailsMap, originalOwner),
-            formatUserDisplay(userDetailsMap, userId),
+            formatDisplayName(userDetailsMap, originalOwner),
+            formatDisplayName(userDetailsMap, userId),
             adminSuffix));
 
     if (retainShareAccess) {
@@ -291,7 +291,7 @@ public class LibrarySetService {
           conductedBy,
           originalOwner,
           String.format(
-              "Shared with - %s%s", formatUserDisplay(userDetailsMap, originalOwner), adminSuffix));
+              "Shared with - %s%s", formatDisplayName(userDetailsMap, originalOwner), adminSuffix));
 
       log.info(
           "Retained SHARED role for user [{}] on library set [{}] after ownership transfer",
@@ -352,19 +352,19 @@ public class LibrarySetService {
     return mostRecentLibraries;
   }
 
-  private String formatUserDisplay(Map<String, UserDetailsDto> userDetailsMap, String harpId) {
+  String formatDisplayName(Map<String, UserDetailsDto> userDetailsMap, String harpId) {
     UserDetailsDto userDetailsDto = userDetailsMap.get(harpId);
 
     if (userDetailsDto == null) {
       return harpId;
     }
 
-    String displayName =
+    String name =
         Stream.of(userDetailsDto.getFirstName(), userDetailsDto.getLastName())
             .filter(s -> s != null && !s.isBlank())
             .collect(Collectors.joining(" "));
 
-    return displayName.isEmpty() ? harpId : displayName + " (" + harpId + ")";
+    return name.isEmpty() ? harpId : name + " (" + harpId + ")";
   }
 
   private void changeLibrarySetAlcsToLowerCase(LibrarySet librarySet) {

@@ -487,6 +487,22 @@ public class CqlLibraryService {
         }
       }
     }
+    List<String> userIds =
+        sharedLibraries.values().stream()
+            .flatMap(List::stream)
+            .map(SharedUser::getUserId)
+            .distinct()
+            .toList();
+
+    Map<String, UserDetailsDto> userDetailsMap = userServiceClient.getBulkUserDetails(userIds);
+
+    sharedLibraries.values().stream()
+        .flatMap(List::stream)
+        .forEach(
+            sharedUser ->
+                sharedUser.setDisplayName(
+                    librarySetService.formatDisplayName(userDetailsMap, sharedUser.getUserId())));
+
     return sharedLibraries;
   }
 
