@@ -83,7 +83,7 @@ public class ErrorHandlingControllerAdvice {
   @ResponseBody
   Map<String, Object> onResourceNotFoundException(
       ResourceNotFoundException ex, WebRequest request) {
-    log.warn(ex.getMessage());
+    log.error(ex.getMessage());
     return getErrorAttributes(request, HttpStatus.NOT_FOUND);
   }
 
@@ -95,7 +95,7 @@ public class ErrorHandlingControllerAdvice {
   @ResponseStatus(HttpStatus.CONFLICT)
   @ResponseBody
   Map<String, Object> onGeneralConflictException(Exception ex, WebRequest request) {
-    log.warn(ex.getMessage());
+    log.error(ex.getMessage());
     return getErrorAttributes(request, HttpStatus.CONFLICT);
   }
 
