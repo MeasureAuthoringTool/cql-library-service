@@ -155,28 +155,41 @@ public class CqlLibraryService {
           if (library.getLibrarySet() != null && library.getLibrarySet().getOwner() != null) {
             String ownerId = library.getLibrarySet().getOwner();
             UserDetailsDto userDetails = userDetailsMap.get(ownerId);
-
-            if (userDetails != null) {
-              String firstName = userDetails.getFirstName();
-              String lastName = userDetails.getLastName();
-
-              String displayName = "";
-              if (StringUtils.isNotBlank(firstName) && StringUtils.isNotBlank(lastName)) {
-                displayName = firstName + " " + lastName;
-              } else if (StringUtils.isNotBlank(firstName)) {
-                displayName = firstName;
-              } else if (StringUtils.isNotBlank(lastName)) {
-                displayName = lastName;
-              }
-              library.setOwnerDisplayName(
-                  StringUtils.isNotBlank(displayName)
-                      ? displayName
-                      : StringUtils.isNotBlank(ownerId) ? ownerId : "-");
-            } else {
-              library.setOwnerDisplayName("-");
-            }
+            library.setOwnerDisplayName(resolveOwnerDisplayName(userDetails, ownerId));
           }
         });
+  }
+
+  /**
+   * Resolves an owner's display name with a consistent fallback chain: full/partial name when the
+   * user is found and named, otherwise the owner's HARP id, otherwise "-". A null {@code
+   * userDetails} means the user-service lookup failed (service error / not found), which falls
+   * through to "-".
+   *
+   * @param userDetails user details from the user service, or null if the lookup failed
+   * @param ownerId the owner's HARP id
+   * @return the resolved display name
+   */
+  private String resolveOwnerDisplayName(UserDetailsDto userDetails, String ownerId) {
+    if (userDetails == null) {
+      return "-";
+    }
+    String firstName = userDetails.getFirstName();
+    String lastName = userDetails.getLastName();
+
+    String displayName = "";
+
+    if (StringUtils.isNotBlank(firstName) && StringUtils.isNotBlank(lastName)) {
+      displayName = firstName + " " + lastName;
+    } else if (StringUtils.isNotBlank(firstName)) {
+      displayName = firstName;
+    } else if (StringUtils.isNotBlank(lastName)) {
+      displayName = lastName;
+    }
+
+    return StringUtils.isNotBlank(displayName)
+        ? displayName
+        : StringUtils.isNotBlank(ownerId) ? ownerId : "-";
   }
 
   private String getFullName(UserDetailsDto userDetails) {
@@ -237,6 +250,12 @@ public class CqlLibraryService {
       }
       LibrarySet librarySet = librarySetService.findByLibrarySetId(cqlLibrary.getLibrarySetId());
       cqlLibrary.setLibrarySet(librarySet);
+
+      if (librarySet != null && StringUtils.isNotBlank(librarySet.getOwner())) {
+        UserDetailsDto details = userServiceClient.getSingleUserDetails(librarySet.getOwner());
+        cqlLibrary.setOwnerDisplayName(resolveOwnerDisplayName(details, librarySet.getOwner()));
+      }
+
       return cqlLibrary;
     }
   }
@@ -387,8 +406,11 @@ public class CqlLibraryService {
     if (StringUtils.isBlank(libraryName) || StringUtils.isBlank(model)) {
       throw new BadRequestObjectException("Please provide library name and model.");
     }
-    return cqlLibraryRepository.findLibrariesByNameAndModelOrderByNameAscAndVersionDsc(
-        libraryName, model);
+    List<LibraryListDTO> libraries =
+        cqlLibraryRepository.findLibrariesByNameAndModelOrderByNameAscAndVersionDsc(
+            libraryName, model);
+    enrichWithUserDetails(libraries);
+    return libraries;
   }
 
   /**
