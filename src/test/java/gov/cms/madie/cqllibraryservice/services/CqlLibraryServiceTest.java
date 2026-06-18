@@ -189,6 +189,61 @@ class CqlLibraryServiceTest {
     assertEquals(cqlLibrary.getModel(), versionedCqlLibrary.getModel());
   }
 
+  private CqlLibrary mockSingleVersionedLibraryForOwnerEnrichment(String owner) {
+    CqlLibrary cqlLibrary =
+        CqlLibrary.builder()
+            .cqlLibraryName("TestFHIRHelpers")
+            .librarySetId("libSetId")
+            .version(Version.builder().major(1).minor(0).revisionNumber(0).build())
+            .model("QI-Core v4.1.1")
+            .draft(false)
+            .cql("this is totally valid CQL here")
+            .build();
+    when(cqlLibraryRepository.findAllByCqlLibraryNameAndDraftAndVersion(any(), anyBoolean(), any()))
+        .thenReturn(List.of(cqlLibrary));
+    when(librarySetService.findByLibrarySetId("libSetId"))
+        .thenReturn(LibrarySet.builder().librarySetId("libSetId").owner(owner).build());
+    return cqlLibrary;
+  }
+
+  @Test
+  public void testGetVersionedCqlLibrarySetsOwnerDisplayNameToFullName() {
+    mockSingleVersionedLibraryForOwnerEnrichment("owner1");
+    when(userServiceClient.getSingleUserDetails("owner1"))
+        .thenReturn(UserDetailsDto.builder().firstName("John").lastName("Doe").build());
+
+    CqlLibrary result =
+        cqlLibraryService.getVersionedCqlLibrary(
+            "TestFHIRHelpers", "1.0.000", Optional.empty(), false, "Info", "test-okta");
+
+    assertEquals("John Doe", result.getOwnerDisplayName());
+  }
+
+  @Test
+  public void testGetVersionedCqlLibraryFallsBackToHarpIdWhenUserHasNoName() {
+    mockSingleVersionedLibraryForOwnerEnrichment("owner1");
+    when(userServiceClient.getSingleUserDetails("owner1"))
+        .thenReturn(UserDetailsDto.builder().firstName("").lastName("").build());
+
+    CqlLibrary result =
+        cqlLibraryService.getVersionedCqlLibrary(
+            "TestFHIRHelpers", "1.0.000", Optional.empty(), false, "Info", "test-okta");
+
+    assertEquals("owner1", result.getOwnerDisplayName());
+  }
+
+  @Test
+  public void testGetVersionedCqlLibraryFallsBackToDashWhenUserLookupFails() {
+    mockSingleVersionedLibraryForOwnerEnrichment("owner1");
+    when(userServiceClient.getSingleUserDetails("owner1")).thenReturn(null);
+
+    CqlLibrary result =
+        cqlLibraryService.getVersionedCqlLibrary(
+            "TestFHIRHelpers", "1.0.000", Optional.empty(), false, "Info", "test-okta");
+
+    assertEquals("-", result.getOwnerDisplayName());
+  }
+
   @Test
   public void testGetVersionedCqlShouldThrowExceptionWhenNoLibrariesAreFound() {
     List<CqlLibrary> cqlLibraries = new ArrayList<>();
@@ -619,14 +674,54 @@ class CqlLibraryServiceTest {
     LibraryListDTO l1 =
         LibraryListDTO.builder()
             .cqlLibraryName("L1")
+            .version(Version.parse("0.2.000"))
+            .model("QICore 4.1.1")
+            .librarySet(LibrarySet.builder().owner("owner1").build())
+            .build();
+    LibraryListDTO l2 =
+        LibraryListDTO.builder()
+            .cqlLibraryName("L1")
             .version(Version.parse("0.1.000"))
             .model("QICore 4.1.1")
+            .librarySet(LibrarySet.builder().owner("owner2").build())
+            .build();
+    when(cqlLibraryRepository.findLibrariesByNameAndModelOrderByNameAscAndVersionDsc(
+            anyString(), anyString()))
+        .thenReturn(List.of(l1, l2));
+    Map<String, UserDetailsDto> userDetailsMap =
+        Map.of(
+            "owner1",
+            UserDetailsDto.builder().firstName("John").lastName("Doe").build(),
+            "owner2",
+            UserDetailsDto.builder().firstName("Jane").lastName("Smith").build());
+    when(userServiceClient.getBulkUserDetails(anyList())).thenReturn(userDetailsMap);
+
+    List<LibraryListDTO> result = cqlLibraryService.findLibrariesByNameAndModel(libraryName, model);
+
+    assertThat(result.size(), equalTo(2));
+    assertThat(result.get(0).getOwnerDisplayName(), equalTo("John Doe"));
+    assertThat(result.get(1).getOwnerDisplayName(), equalTo("Jane Smith"));
+    verify(userServiceClient, times(1)).getBulkUserDetails(List.of("owner1", "owner2"));
+  }
+
+  @Test
+  void testFindLibrariesByNameAndModelFallsBackToOwnerIdWhenUserMissing() {
+    LibraryListDTO l1 =
+        LibraryListDTO.builder()
+            .cqlLibraryName("L1")
+            .version(Version.parse("0.1.000"))
+            .model("QICore 4.1.1")
+            .librarySet(LibrarySet.builder().owner("owner1").build())
             .build();
     when(cqlLibraryRepository.findLibrariesByNameAndModelOrderByNameAscAndVersionDsc(
             anyString(), anyString()))
         .thenReturn(List.of(l1));
-    List<LibraryListDTO> result = cqlLibraryService.findLibrariesByNameAndModel(libraryName, model);
+    when(userServiceClient.getBulkUserDetails(anyList())).thenReturn(Collections.emptyMap());
+
+    List<LibraryListDTO> result = cqlLibraryService.findLibrariesByNameAndModel("test", "QICore");
+
     assertThat(result.size(), equalTo(1));
+    assertThat(result.get(0).getOwnerDisplayName(), equalTo("-"));
   }
 
   @Test
