@@ -4,7 +4,7 @@
   <parent>
     <groupId>org.springframework.boot</groupId>
     <artifactId>spring-boot-starter-parent</artifactId>
-    <version>4.0.6</version>
+    <version>4.0.7</version>
     <relativePath></relativePath>
     <!-- lookup parent from repository -->
   </parent>
@@ -23,7 +23,6 @@
     <mvnreports.version>3.2.2</mvnreports.version>
     <mvnsite.version>3.9.1</mvnsite.version>
     <org.fhir.ucum.version>1.0.9</org.fhir.ucum.version>
-    <springboot.version>2.5.7</springboot.version>
     <springfox.version>3.0.0</springfox.version>
   </properties>
 
