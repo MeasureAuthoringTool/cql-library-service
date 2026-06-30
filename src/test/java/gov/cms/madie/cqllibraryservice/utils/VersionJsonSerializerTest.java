@@ -4,6 +4,7 @@ import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.nullValue;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.skyscreamer.jsonassert.JSONAssert.assertEquals;
 
 import org.json.JSONException;
@@ -77,22 +78,13 @@ class VersionJsonSerializerTest {
   @Test
   public void testDeSerializerHandlesNull() {
     String json = "null";
-    Version output = null;
-    try {
-      objectMapper.readValue(json, Version.class);
-    } catch (JacksonException ex) {
-    }
+    Version output = objectMapper.readValue(json, Version.class);
     assertThat(output, is(nullValue()));
   }
 
   @Test
-  public void testDeSerializerHandlesException() {
+  public void testDeSerializerThrowsOnInvalidVersionString() {
     String json = "\"ab.bc.ddd\"";
-    Version output = null;
-    try {
-      objectMapper.readValue(json, Version.class);
-    } catch (JacksonException ex) {
-    }
-    assertThat(output, is(nullValue()));
+    assertThrows(JacksonException.class, () -> objectMapper.readValue(json, Version.class));
   }
 }
