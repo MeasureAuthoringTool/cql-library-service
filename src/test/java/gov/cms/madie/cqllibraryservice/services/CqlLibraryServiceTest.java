@@ -189,6 +189,61 @@ class CqlLibraryServiceTest {
     assertEquals(cqlLibrary.getModel(), versionedCqlLibrary.getModel());
   }
 
+  private CqlLibrary mockSingleVersionedLibraryForOwnerEnrichment(String owner) {
+    CqlLibrary cqlLibrary =
+        CqlLibrary.builder()
+            .cqlLibraryName("TestFHIRHelpers")
+            .librarySetId("libSetId")
+            .version(Version.builder().major(1).minor(0).revisionNumber(0).build())
+            .model("QI-Core v4.1.1")
+            .draft(false)
+            .cql("this is totally valid CQL here")
+            .build();
+    when(cqlLibraryRepository.findAllByCqlLibraryNameAndDraftAndVersion(any(), anyBoolean(), any()))
+        .thenReturn(List.of(cqlLibrary));
+    when(librarySetService.findByLibrarySetId("libSetId"))
+        .thenReturn(LibrarySet.builder().librarySetId("libSetId").owner(owner).build());
+    return cqlLibrary;
+  }
+
+  @Test
+  public void testGetVersionedCqlLibrarySetsOwnerDisplayNameToFullName() {
+    mockSingleVersionedLibraryForOwnerEnrichment("owner1");
+    when(userServiceClient.getSingleUserDetails("owner1"))
+        .thenReturn(UserDetailsDto.builder().firstName("John").lastName("Doe").build());
+
+    CqlLibrary result =
+        cqlLibraryService.getVersionedCqlLibrary(
+            "TestFHIRHelpers", "1.0.000", Optional.empty(), false, "Info", "test-okta");
+
+    assertEquals("John Doe", result.getOwnerDisplayName());
+  }
+
+  @Test
+  public void testGetVersionedCqlLibraryFallsBackToHarpIdWhenUserHasNoName() {
+    mockSingleVersionedLibraryForOwnerEnrichment("owner1");
+    when(userServiceClient.getSingleUserDetails("owner1"))
+        .thenReturn(UserDetailsDto.builder().firstName("").lastName("").build());
+
+    CqlLibrary result =
+        cqlLibraryService.getVersionedCqlLibrary(
+            "TestFHIRHelpers", "1.0.000", Optional.empty(), false, "Info", "test-okta");
+
+    assertEquals("owner1", result.getOwnerDisplayName());
+  }
+
+  @Test
+  public void testGetVersionedCqlLibraryFallsBackToDashWhenUserLookupFails() {
+    mockSingleVersionedLibraryForOwnerEnrichment("owner1");
+    when(userServiceClient.getSingleUserDetails("owner1")).thenReturn(null);
+
+    CqlLibrary result =
+        cqlLibraryService.getVersionedCqlLibrary(
+            "TestFHIRHelpers", "1.0.000", Optional.empty(), false, "Info", "test-okta");
+
+    assertEquals("-", result.getOwnerDisplayName());
+  }
+
   @Test
   public void testGetVersionedCqlShouldThrowExceptionWhenNoLibrariesAreFound() {
     List<CqlLibrary> cqlLibraries = new ArrayList<>();
@@ -553,20 +608,120 @@ class CqlLibraryServiceTest {
   }
 
   @Test
+  void testDeleteCqlLibraryByIdNotFound() {
+    when(cqlLibraryRepository.findById(anyString())).thenReturn(Optional.empty());
+
+    assertThrows(
+        ResourceNotFoundException.class,
+        () -> cqlLibraryService.deleteCqlLibraryById("missingId", "owner1", "admin"));
+  }
+
+  @Test
+  void testDeleteCqlLibraryByIdLibrarySetNotFound() {
+    CqlLibrary library = CqlLibrary.builder().id("libId").librarySetId("libSetId").build();
+
+    when(cqlLibraryRepository.findById("libId")).thenReturn(Optional.of(library));
+    when(librarySetService.findByLibrarySetId("libSetId")).thenReturn(null);
+
+    assertThrows(
+        ResourceNotFoundException.class,
+        () -> cqlLibraryService.deleteCqlLibraryById("libId", "owner1", "admin"));
+    verify(cqlLibraryRepository, times(0)).delete(any(CqlLibrary.class));
+  }
+
+  @Test
+  void testDeleteCqlLibraryByIdHarpIdMismatch() {
+    CqlLibrary library = CqlLibrary.builder().id("libId").librarySetId("libSetId").build();
+    LibrarySet librarySet = LibrarySet.builder().librarySetId("libSetId").owner("owner2").build();
+
+    when(cqlLibraryRepository.findById("libId")).thenReturn(Optional.of(library));
+    when(librarySetService.findByLibrarySetId("libSetId")).thenReturn(librarySet);
+
+    Exception ex =
+        assertThrows(
+            HarpIdMismatchException.class,
+            () -> cqlLibraryService.deleteCqlLibraryById("libId", "owner1", "admin"));
+    assertThat(
+        ex.getMessage(),
+        is(
+            equalTo(
+                "Response could not be completed because the HARP id of owner1 passed in does not"
+                    + " match the owner of the library with the library id of libId. The owner of"
+                    + " the library is owner2")));
+    verify(cqlLibraryRepository, times(0)).delete(any(CqlLibrary.class));
+  }
+
+  @Test
+  void testDeleteCqlLibraryByIdSuccess() {
+    CqlLibrary library = CqlLibrary.builder().id("libId").librarySetId("libSetId").build();
+    LibrarySet librarySet = LibrarySet.builder().librarySetId("libSetId").owner("owner1").build();
+
+    when(cqlLibraryRepository.findById("libId")).thenReturn(Optional.of(library));
+    when(librarySetService.findByLibrarySetId("libSetId")).thenReturn(librarySet);
+    doNothing().when(cqlLibraryRepository).delete(any(CqlLibrary.class));
+
+    CqlLibrary result = cqlLibraryService.deleteCqlLibraryById("libId", "owner1", "admin");
+
+    assertThat(result, is(equalTo(library)));
+    verify(cqlLibraryRepository, times(1)).delete(library);
+    verify(actionLogService, times(1)).logAction("libId", ActionType.DELETED, "admin", "actionLog");
+  }
+
+  @Test
   void testFindLibrariesByNameAndModel() {
     String libraryName = "test";
     String model = "QICore 4.1.1";
     LibraryListDTO l1 =
         LibraryListDTO.builder()
             .cqlLibraryName("L1")
+            .version(Version.parse("0.2.000"))
+            .model("QICore 4.1.1")
+            .librarySet(LibrarySet.builder().owner("owner1").build())
+            .build();
+    LibraryListDTO l2 =
+        LibraryListDTO.builder()
+            .cqlLibraryName("L1")
             .version(Version.parse("0.1.000"))
             .model("QICore 4.1.1")
+            .librarySet(LibrarySet.builder().owner("owner2").build())
+            .build();
+    when(cqlLibraryRepository.findLibrariesByNameAndModelOrderByNameAscAndVersionDsc(
+            anyString(), anyString()))
+        .thenReturn(List.of(l1, l2));
+    Map<String, UserDetailsDto> userDetailsMap =
+        Map.of(
+            "owner1",
+            UserDetailsDto.builder().firstName("John").lastName("Doe").build(),
+            "owner2",
+            UserDetailsDto.builder().firstName("Jane").lastName("Smith").build());
+    when(userServiceClient.getBulkUserDetails(anyList())).thenReturn(userDetailsMap);
+
+    List<LibraryListDTO> result = cqlLibraryService.findLibrariesByNameAndModel(libraryName, model);
+
+    assertThat(result.size(), equalTo(2));
+    assertThat(result.get(0).getOwnerDisplayName(), equalTo("John Doe"));
+    assertThat(result.get(1).getOwnerDisplayName(), equalTo("Jane Smith"));
+    verify(userServiceClient, times(1)).getBulkUserDetails(List.of("owner1", "owner2"));
+  }
+
+  @Test
+  void testFindLibrariesByNameAndModelFallsBackToOwnerIdWhenUserMissing() {
+    LibraryListDTO l1 =
+        LibraryListDTO.builder()
+            .cqlLibraryName("L1")
+            .version(Version.parse("0.1.000"))
+            .model("QICore 4.1.1")
+            .librarySet(LibrarySet.builder().owner("owner1").build())
             .build();
     when(cqlLibraryRepository.findLibrariesByNameAndModelOrderByNameAscAndVersionDsc(
             anyString(), anyString()))
         .thenReturn(List.of(l1));
-    List<LibraryListDTO> result = cqlLibraryService.findLibrariesByNameAndModel(libraryName, model);
+    when(userServiceClient.getBulkUserDetails(anyList())).thenReturn(Collections.emptyMap());
+
+    List<LibraryListDTO> result = cqlLibraryService.findLibrariesByNameAndModel("test", "QICore");
+
     assertThat(result.size(), equalTo(1));
+    assertThat(result.get(0).getOwnerDisplayName(), equalTo("-"));
   }
 
   @Test
@@ -761,6 +916,13 @@ class CqlLibraryServiceTest {
     when(cqlLibraryRepository.findById("libraryId1")).thenReturn(Optional.ofNullable(library1));
     when(librarySetService.findByLibrarySetId("librarySetId1")).thenReturn(librarySet1);
     when(cqlLibraryRepository.findById("libraryId2")).thenReturn(Optional.ofNullable(library2));
+    when(userServiceClient.getBulkUserDetails(anyList()))
+        .thenReturn(
+            Map.of(
+                aclSpec.getUserId(),
+                UserDetailsDto.builder().firstName("John").lastName("Doe").build()));
+    when(librarySetService.formatDisplayName(any(), eq(aclSpec.getUserId())))
+        .thenReturn("John Doe (" + aclSpec.getUserId() + ")");
 
     Map<String, List<SharedUser>> sharedLibraries =
         cqlLibraryService.getSharedLibraries(libraryIds, USERNAME);
@@ -772,6 +934,9 @@ class CqlLibraryServiceTest {
     assertThat(
         sharedLibraries.get(libraryId1).get(0).getUserId(),
         is(equalTo(library1.getLibrarySet().getAcls().get(0).getUserId())));
+    assertThat(
+        sharedLibraries.get(libraryId1).get(0).getDisplayName(),
+        is(equalTo("John Doe (" + aclSpec.getUserId() + ")")));
 
     assertTrue(sharedLibraries.containsKey(libraryId2));
     assertThat(sharedLibraries.get(libraryId2).size(), is(equalTo(1)));
@@ -855,6 +1020,17 @@ class CqlLibraryServiceTest {
     when(cqlLibraryRepository.findById("libraryId2")).thenReturn(Optional.ofNullable(library2));
     when(actionLogService.findLibrarySetActionLogByTargetId(anyString()))
         .thenReturn(librarySetActionLog);
+    when(userServiceClient.getBulkUserDetails(anyList()))
+        .thenReturn(
+            Map.of(
+                aclSpec1.getUserId(),
+                UserDetailsDto.builder().firstName("John").lastName("Doe").build(),
+                aclSpec2.getUserId(),
+                UserDetailsDto.builder().firstName("Jane").lastName("Doe").build()));
+    when(librarySetService.formatDisplayName(any(), eq(aclSpec1.getUserId())))
+        .thenReturn("John Doe (" + aclSpec1.getUserId() + ")");
+    when(librarySetService.formatDisplayName(any(), eq(aclSpec2.getUserId())))
+        .thenReturn("Jane Doe (" + aclSpec2.getUserId() + ")");
 
     Map<String, List<SharedUser>> sharedLibraries =
         cqlLibraryService.getSharedLibraries(libraryIds, USERNAME);
@@ -867,13 +1043,22 @@ class CqlLibraryServiceTest {
         sharedLibraries.get(libraryId1).get(0).getUserId(),
         is(equalTo(library1.getLibrarySet().getAcls().get(0).getUserId())));
     assertThat(sharedLibraries.get(libraryId1).get(0).getPerformedAt(), is(equalTo(null)));
+    assertThat(
+        sharedLibraries.get(libraryId1).get(0).getDisplayName(),
+        is(equalTo("Jane Doe (" + aclSpec2.getUserId() + ")")));
     assertThat(sharedLibraries.get(libraryId1).get(1).getUserId(), is(equalTo("userId1")));
+    assertThat(
+        sharedLibraries.get(libraryId1).get(1).getDisplayName(),
+        is(equalTo("John Doe (" + aclSpec1.getUserId() + ")")));
 
     assertTrue(sharedLibraries.containsKey(libraryId2));
     assertThat(sharedLibraries.get(libraryId1).size(), is(equalTo(2)));
     assertThat(
         sharedLibraries.get(libraryId2).get(0).getUserId(),
         is(equalTo(library2.getLibrarySet().getAcls().get(0).getUserId())));
+    assertThat(
+        sharedLibraries.get(libraryId2).get(0).getDisplayName(),
+        is(equalTo("Jane Doe (" + aclSpec2.getUserId() + ")")));
   }
 
   @Test
@@ -1441,7 +1626,7 @@ class CqlLibraryServiceTest {
 
     assertNotNull(result);
     assertEquals(1, result.size());
-    assertEquals("John Doe", result.get(0).getOwner());
+    assertEquals("John Doe", result.get(0).getOwnerDisplayName());
     verify(userServiceClient, times(1)).getSingleUserDetails(eq(ownerId));
   }
 
@@ -1723,8 +1908,8 @@ class CqlLibraryServiceTest {
     Page<LibraryListDTO> result =
         cqlLibraryService.getLibrariesByCriteria(criteria, ownershipType, pageable, username);
 
-    assertEquals("-", result.getContent().get(0).getOwner());
-    assertEquals("-", result.getContent().get(1).getOwner());
+    assertEquals("-", result.getContent().get(0).getOwnerDisplayName());
+    assertEquals("-", result.getContent().get(1).getOwnerDisplayName());
     verify(userServiceClient, times(1)).getBulkUserDetails(List.of("owner1", "owner2"));
   }
 
@@ -1764,11 +1949,11 @@ class CqlLibraryServiceTest {
     Page<LibraryListDTO> result =
         cqlLibraryService.getLibrariesByCriteria(criteria, ownershipType, pageable, username);
 
-    assertEquals("John Doe", result.getContent().get(0).getOwner());
-    assertEquals("owner2", result.getContent().get(1).getOwner());
-    assertEquals("owner3", result.getContent().get(2).getOwner());
-    assertEquals("Doe", result.getContent().get(3).getOwner());
-    assertEquals("Jane", result.getContent().get(4).getOwner());
+    assertEquals("John Doe", result.getContent().get(0).getOwnerDisplayName());
+    assertEquals("owner2", result.getContent().get(1).getOwnerDisplayName());
+    assertEquals("owner3", result.getContent().get(2).getOwnerDisplayName());
+    assertEquals("Doe", result.getContent().get(3).getOwnerDisplayName());
+    assertEquals("Jane", result.getContent().get(4).getOwnerDisplayName());
 
     verify(userServiceClient, times(1))
         .getBulkUserDetails(List.of("owner1", "owner2", "owner3", "owner4", "owner5"));

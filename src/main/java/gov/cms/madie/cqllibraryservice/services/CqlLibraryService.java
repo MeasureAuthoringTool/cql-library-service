@@ -155,28 +155,41 @@ public class CqlLibraryService {
           if (library.getLibrarySet() != null && library.getLibrarySet().getOwner() != null) {
             String ownerId = library.getLibrarySet().getOwner();
             UserDetailsDto userDetails = userDetailsMap.get(ownerId);
-
-            if (userDetails != null) {
-              String firstName = userDetails.getFirstName();
-              String lastName = userDetails.getLastName();
-
-              String displayName = "";
-              if (StringUtils.isNotBlank(firstName) && StringUtils.isNotBlank(lastName)) {
-                displayName = firstName + " " + lastName;
-              } else if (StringUtils.isNotBlank(firstName)) {
-                displayName = firstName;
-              } else if (StringUtils.isNotBlank(lastName)) {
-                displayName = lastName;
-              }
-              library.setOwner(
-                  StringUtils.isNotBlank(displayName)
-                      ? displayName
-                      : StringUtils.isNotBlank(ownerId) ? ownerId : "-");
-            } else {
-              library.setOwner("-");
-            }
+            library.setOwnerDisplayName(resolveOwnerDisplayName(userDetails, ownerId));
           }
         });
+  }
+
+  /**
+   * Resolves an owner's display name with a consistent fallback chain: full/partial name when the
+   * user is found and named, otherwise the owner's HARP id, otherwise "-". A null {@code
+   * userDetails} means the user-service lookup failed (service error / not found), which falls
+   * through to "-".
+   *
+   * @param userDetails user details from the user service, or null if the lookup failed
+   * @param ownerId the owner's HARP id
+   * @return the resolved display name
+   */
+  private String resolveOwnerDisplayName(UserDetailsDto userDetails, String ownerId) {
+    if (userDetails == null) {
+      return "-";
+    }
+    String firstName = userDetails.getFirstName();
+    String lastName = userDetails.getLastName();
+
+    String displayName = "";
+
+    if (StringUtils.isNotBlank(firstName) && StringUtils.isNotBlank(lastName)) {
+      displayName = firstName + " " + lastName;
+    } else if (StringUtils.isNotBlank(firstName)) {
+      displayName = firstName;
+    } else if (StringUtils.isNotBlank(lastName)) {
+      displayName = lastName;
+    }
+
+    return StringUtils.isNotBlank(displayName)
+        ? displayName
+        : StringUtils.isNotBlank(ownerId) ? ownerId : "-";
   }
 
   private String getFullName(UserDetailsDto userDetails) {
@@ -237,6 +250,12 @@ public class CqlLibraryService {
       }
       LibrarySet librarySet = librarySetService.findByLibrarySetId(cqlLibrary.getLibrarySetId());
       cqlLibrary.setLibrarySet(librarySet);
+
+      if (librarySet != null && StringUtils.isNotBlank(librarySet.getOwner())) {
+        UserDetailsDto details = userServiceClient.getSingleUserDetails(librarySet.getOwner());
+        cqlLibrary.setOwnerDisplayName(resolveOwnerDisplayName(details, librarySet.getOwner()));
+      }
+
       return cqlLibrary;
     }
   }
@@ -352,12 +371,46 @@ public class CqlLibraryService {
     cqlLibraryRepository.deleteAll(libraries);
   }
 
+  /**
+   * Deletes a single CQL library version permanently by its document ID
+   *
+   * @param id - MongoDB document ID of the library to delete
+   * @param harpId - HARP ID of the library owner, validated against the actual owner to prevent
+   *     unintended deletions
+   * @param username - username of the admin performing the deletion, used for audit logging
+   * @return the deleted CqlLibrary
+   */
+  public CqlLibrary deleteCqlLibraryById(String id, String harpId, String username) {
+    CqlLibrary library =
+        cqlLibraryRepository
+            .findById(id)
+            .orElseThrow(() -> new ResourceNotFoundException("CqlLibrary", "id", id));
+
+    LibrarySet librarySet = librarySetService.findByLibrarySetId(library.getLibrarySetId());
+
+    if (librarySet == null) {
+      throw new ResourceNotFoundException("LibrarySet", "librarySetId", library.getLibrarySetId());
+    }
+
+    if (!librarySet.getOwner().equalsIgnoreCase(harpId)) {
+      throw new HarpIdMismatchException(harpId, librarySet.getOwner(), library.getId());
+    }
+
+    cqlLibraryRepository.delete(library);
+    actionLogService.logAction(id, ActionType.DELETED, username, "actionLog");
+
+    return library;
+  }
+
   public List<LibraryListDTO> findLibrariesByNameAndModel(String libraryName, String model) {
     if (StringUtils.isBlank(libraryName) || StringUtils.isBlank(model)) {
       throw new BadRequestObjectException("Please provide library name and model.");
     }
-    return cqlLibraryRepository.findLibrariesByNameAndModelOrderByNameAscAndVersionDsc(
-        libraryName, model);
+    List<LibraryListDTO> libraries =
+        cqlLibraryRepository.findLibrariesByNameAndModelOrderByNameAscAndVersionDsc(
+            libraryName, model);
+    enrichWithUserDetails(libraries);
+    return libraries;
   }
 
   /**
@@ -400,7 +453,7 @@ public class CqlLibraryService {
               librariesByLibrarySetId.get(0).getLibrarySet().getOwner());
       if (singleUserDetails != null) {
         librariesByLibrarySetId.forEach(
-            library -> library.setOwner(getFullName(singleUserDetails)));
+            library -> library.setOwnerDisplayName(getFullName(singleUserDetails)));
       }
     }
 
@@ -465,6 +518,22 @@ public class CqlLibraryService {
         }
       }
     }
+    List<String> userIds =
+        sharedLibraries.values().stream()
+            .flatMap(List::stream)
+            .map(SharedUser::getUserId)
+            .distinct()
+            .toList();
+
+    Map<String, UserDetailsDto> userDetailsMap = userServiceClient.getBulkUserDetails(userIds);
+
+    sharedLibraries.values().stream()
+        .flatMap(List::stream)
+        .forEach(
+            sharedUser ->
+                sharedUser.setDisplayName(
+                    librarySetService.formatDisplayName(userDetailsMap, sharedUser.getUserId())));
+
     return sharedLibraries;
   }
 

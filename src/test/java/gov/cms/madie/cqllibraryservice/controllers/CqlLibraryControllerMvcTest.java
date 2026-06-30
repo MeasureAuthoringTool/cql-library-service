@@ -49,6 +49,7 @@ import gov.cms.madie.models.library.LibrarySet;
 
 import org.bson.types.ObjectId;
 import org.hamcrest.CustomMatcher;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
@@ -76,6 +77,7 @@ public class CqlLibraryControllerMvcTest {
   @MockitoBean VersionService versionService;
   @MockitoBean CqlLibraryService cqlLibraryService;
   @MockitoBean LibrarySetService librarySetService;
+  @MockitoBean AppConfigService appConfigService;
   @MockitoBean private CqlDifferentiatorService cqlDifferentiatorService;
   @MockitoBean ActionLogService actionLogService;
   @MockitoBean private UserServiceClient userServiceClient;
@@ -94,6 +96,11 @@ public class CqlLibraryControllerMvcTest {
     mapper.registerModule(new JavaTimeModule());
     mapper.configure(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS, false);
     return mapper.writeValueAsString(obj);
+  }
+
+  @BeforeEach
+  void setUp() {
+    when(appConfigService.isFlagEnabled(MadieFeatureFlag.US_QUALITY_CORE)).thenReturn(true);
   }
 
   @Test
@@ -453,6 +460,66 @@ public class CqlLibraryControllerMvcTest {
             anyString());
     assertThat(targetIdArgumentCaptor.getValue(), is(notNullValue()));
     assertThat(actionTypeArgumentCaptor.getValue(), is(equalTo(ActionType.CREATED)));
+  }
+
+  @Test
+  public void testCreateCqlLibraryReturnsBadRequestForUsQualityCoreWhenFlagDisabled()
+      throws Exception {
+    CqlLibrary library =
+        CqlLibrary.builder()
+            .cqlLibraryName("UsQualityCoreLibrary")
+            .model(ModelType.US_QUALITY_CORE_0_5_0.toString())
+            .librarySetId(TEST_LIBRARYSET_ID)
+            .build();
+
+    when(appConfigService.isFlagEnabled(MadieFeatureFlag.US_QUALITY_CORE)).thenReturn(false);
+
+    mockMvc
+        .perform(
+            post("/cql-libraries")
+                .with(user(TEST_USER_ID))
+                .with(csrf())
+                .content(toJsonString(library))
+                .contentType(MediaType.APPLICATION_JSON_VALUE))
+        .andExpect(status().isBadRequest())
+        .andExpect(
+            jsonPath("$.message")
+                .value("The model US Quality Core v0.5.0 is not currently supported in MADiE."));
+
+    verify(cqlLibraryRepository, never()).save(any(CqlLibrary.class));
+  }
+
+  @Test
+  public void testCreateCqlLibraryReturnsCreatedForUsQualityCoreWhenFlagEnabled() throws Exception {
+    CqlLibrary library =
+        CqlLibrary.builder()
+            .cqlLibraryName("UsQualityCoreLibrary")
+            .model(ModelType.US_QUALITY_CORE_0_5_0.toString())
+            .librarySetId(TEST_LIBRARYSET_ID)
+            .build();
+
+    doNothing().when(cqlLibraryService).checkDuplicateCqlLibraryName(anyString());
+    doNothing().when(librarySetService).createLibrarySet(anyString(), anyString(), anyString());
+    String objectId = ObjectId.get().toHexString();
+    when(cqlLibraryRepository.save(any(CqlLibrary.class)))
+        .then(
+            (args) -> {
+              CqlLibrary lib = args.getArgument(0);
+              lib.setId(objectId);
+              return lib;
+            });
+
+    mockMvc
+        .perform(
+            post("/cql-libraries")
+                .with(user(TEST_USER_ID))
+                .with(csrf())
+                .content(toJsonString(library))
+                .contentType(MediaType.APPLICATION_JSON_VALUE))
+        .andExpect(status().isCreated())
+        .andExpect(jsonPath("$.id").isNotEmpty())
+        .andExpect(jsonPath("$.model").value(ModelType.US_QUALITY_CORE_0_5_0.toString()))
+        .andExpect(jsonPath("$.createdBy").value(TEST_USER_ID));
   }
 
   @Test
@@ -1547,9 +1614,17 @@ public class CqlLibraryControllerMvcTest {
 
     List<String> libraryIds = List.of(libraryId1, libraryId2);
     SharedUser sharedUser1 =
-        SharedUser.builder().userId("userId1").performedAt(fixedClock.instant()).build();
+        SharedUser.builder()
+            .userId("userId1")
+            .displayName("John Doe (userId1)")
+            .performedAt(fixedClock.instant())
+            .build();
     SharedUser sharedUser2 =
-        SharedUser.builder().userId("userId2").performedAt(fixedClock.instant()).build();
+        SharedUser.builder()
+            .userId("userId2")
+            .displayName("Jane Doe (userId2)")
+            .performedAt(fixedClock.instant())
+            .build();
 
     Map<String, List<SharedUser>> sharedLibraries = new HashMap<>();
     sharedLibraries.put(libraryId1, List.of(sharedUser1));
@@ -1569,7 +1644,7 @@ public class CqlLibraryControllerMvcTest {
         .andExpect(
             content()
                 .string(
-                    "{\"libraryId1\":[{\"userId\":\"userId1\",\"performedAt\":\"2025-03-17T10:00:00Z\"}],\"libraryId2\":[{\"userId\":\"userId1\",\"performedAt\":\"2025-03-17T10:00:00Z\"},{\"userId\":\"userId2\",\"performedAt\":\"2025-03-17T10:00:00Z\"}]}"));
+                    "{\"libraryId1\":[{\"userId\":\"userId1\",\"displayName\":\"John Doe (userId1)\",\"performedAt\":\"2025-03-17T10:00:00Z\"}],\"libraryId2\":[{\"userId\":\"userId1\",\"displayName\":\"John Doe (userId1)\",\"performedAt\":\"2025-03-17T10:00:00Z\"},{\"userId\":\"userId2\",\"displayName\":\"Jane Doe (userId2)\",\"performedAt\":\"2025-03-17T10:00:00Z\"}]}"));
 
     verify(cqlLibraryService, times(1)).getSharedLibraries(eq(libraryIds), anyString());
   }

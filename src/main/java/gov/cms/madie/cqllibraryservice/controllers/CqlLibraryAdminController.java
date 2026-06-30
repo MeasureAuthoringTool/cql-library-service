@@ -92,6 +92,17 @@ public class CqlLibraryAdminController {
     return ResponseEntity.ok(results);
   }
 
+  @DeleteMapping("/{id}")
+  @PreAuthorize("hasRole('MADIE-ADMIN')")
+  public ResponseEntity<CqlLibrary> deleteCqlLibraryById(
+      Principal principal, @PathVariable String id, @RequestHeader(name = "harpId") String harpId) {
+    CqlLibrary deleted =
+        cqlLibraryService.deleteCqlLibraryById(
+            id, harpId.toLowerCase(), principal.getName().toLowerCase());
+
+    return ResponseEntity.ok(deleted);
+  }
+
   @DeleteMapping("/{libraryName}/delete-all-versions")
   @PreAuthorize("hasRole('MADIE-ADMIN')")
   public ResponseEntity<String> deleteLibraryAlongWithVersions(

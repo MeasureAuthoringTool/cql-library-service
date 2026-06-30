@@ -1,12 +1,14 @@
 package gov.cms.madie.cqllibraryservice.controllers;
 
 import gov.cms.madie.cqllibraryservice.dto.*;
+import gov.cms.madie.cqllibraryservice.exceptions.BadRequestObjectException;
 import gov.cms.madie.cqllibraryservice.exceptions.InvalidIdException;
 import gov.cms.madie.cqllibraryservice.locks.CqlLibraryLock;
 import gov.cms.madie.cqllibraryservice.services.*;
 import gov.cms.madie.models.access.AclSpecification;
 import gov.cms.madie.models.common.Action;
 import gov.cms.madie.models.common.ActionType;
+import gov.cms.madie.models.common.ModelType;
 import gov.cms.madie.models.common.OwnershipType;
 import gov.cms.madie.models.dto.LibraryUsage;
 import gov.cms.madie.models.library.CqlLibrary;
@@ -49,6 +51,7 @@ public class CqlLibraryController {
   private final LibrarySetService librarySetService;
   private final CqlDifferentiatorService cqlDifferentiatorService;
   private final CqlLibraryLockService cqlLibraryLockService;
+  private final AppConfigService appConfigService;
 
   @PutMapping("/searches")
   public ResponseEntity<Page<LibraryListDTO>> fetchLibrariesByCriteria(
@@ -136,6 +139,17 @@ public class CqlLibraryController {
       Principal principal) {
     final String username = principal.getName().toLowerCase();
     log.info("User [{}] is attempting to create a new cql library", username);
+
+    if (ModelType.US_QUALITY_CORE_0_5_0.getValue().equals(cqlLibrary.getModel())
+        && !appConfigService.isFlagEnabled(MadieFeatureFlag.US_QUALITY_CORE)) {
+      log.info(
+          "User [{}] attempted to create a cql library with model [{}] while the usQualityCore "
+              + "feature flag is disabled",
+          username,
+          cqlLibrary.getModel());
+      throw new BadRequestObjectException(
+          "The model " + cqlLibrary.getModel() + " is not currently supported in MADiE.");
+    }
 
     cqlLibraryService.checkDuplicateCqlLibraryName(cqlLibrary.getCqlLibraryName());
 
