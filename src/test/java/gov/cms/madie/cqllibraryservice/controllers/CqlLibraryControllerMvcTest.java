@@ -26,10 +26,9 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.SerializationFeature;
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.cfg.DateTimeFeature;
+import tools.jackson.databind.json.JsonMapper;
 import gov.cms.madie.models.access.AclSpecification;
 import gov.cms.madie.models.access.RoleEnum;
 import gov.cms.madie.models.common.ActionType;
@@ -51,10 +50,14 @@ import org.bson.types.ObjectId;
 import org.hamcrest.CustomMatcher;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.skyscreamer.jsonassert.JSONAssert;
+import org.skyscreamer.jsonassert.JSONCompareMode;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -66,6 +69,7 @@ import org.springframework.test.web.servlet.MvcResult;
 @ActiveProfiles("test")
 @WebMvcTest({CqlLibraryController.class})
 @Import(SecurityConfig.class)
+@ExtendWith(MockitoExtension.class)
 public class CqlLibraryControllerMvcTest {
 
   private static final String TEST_USER_ID = "test-okta-user-id-123";
@@ -91,10 +95,9 @@ public class CqlLibraryControllerMvcTest {
 
   @Autowired private MockMvc mockMvc;
 
-  public String toJsonString(Object obj) throws JsonProcessingException {
-    ObjectMapper mapper = new ObjectMapper();
-    mapper.registerModule(new JavaTimeModule());
-    mapper.configure(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS, false);
+  public String toJsonString(Object obj) {
+    ObjectMapper mapper =
+        JsonMapper.builder().disable(DateTimeFeature.WRITE_DATES_AS_TIMESTAMPS).build();
     return mapper.writeValueAsString(obj);
   }
 
@@ -1498,9 +1501,10 @@ public class CqlLibraryControllerMvcTest {
                 get("/cql-libraries/usage?libraryName=Test").with(user(TEST_USER_ID)).with(csrf()))
             .andReturn();
     assertEquals(result.getResponse().getStatus(), HttpStatus.OK.value());
-    assertEquals(
+    JSONAssert.assertEquals(
+        "[{\"name\":\"Helper\",\"version\":null,\"owner\":\"john\"}]",
         result.getResponse().getContentAsString(),
-        "[{\"name\":\"Helper\",\"version\":null,\"owner\":\"john\"}]");
+        JSONCompareMode.STRICT);
   }
 
   @Test
@@ -1679,9 +1683,10 @@ public class CqlLibraryControllerMvcTest {
             .andExpect(status().isOk())
             .andReturn();
     verify(cqlLibraryService, times(1)).shareLibraries(any(), anyString(), anyString());
-    assertEquals(
+    JSONAssert.assertEquals(
+        "{\"libraryId1\":[{\"userId\":\"userId1\",\"roles\":[\"SHARED_WITH\"]}],\"libraryId2\":[{\"userId\":\"userId1\",\"roles\":[\"SHARED_WITH\"]},{\"userId\":\"userId2\",\"roles\":[\"SHARED_WITH\"]}]}",
         result.getResponse().getContentAsString(),
-        "{\"libraryId1\":[{\"userId\":\"userId1\",\"roles\":[\"SHARED_WITH\"]}],\"libraryId2\":[{\"userId\":\"userId1\",\"roles\":[\"SHARED_WITH\"]},{\"userId\":\"userId2\",\"roles\":[\"SHARED_WITH\"]}]}");
+        JSONCompareMode.STRICT);
   }
 
   @Test
@@ -1741,9 +1746,10 @@ public class CqlLibraryControllerMvcTest {
             .andExpect(status().isOk())
             .andReturn();
     verify(cqlLibraryService, times(1)).unshareLibraries(any(), anyString(), anyString());
-    assertEquals(
+    JSONAssert.assertEquals(
+        "{\"libraryId2\":[{\"userId\":\"userId2\",\"roles\":[\"SHARED_WITH\"]}]}",
         result.getResponse().getContentAsString(),
-        "{\"libraryId2\":[{\"userId\":\"userId2\",\"roles\":[\"SHARED_WITH\"]}]}");
+        JSONCompareMode.STRICT);
   }
 
   @Test

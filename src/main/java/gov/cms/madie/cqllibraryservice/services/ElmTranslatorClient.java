@@ -1,7 +1,8 @@
 package gov.cms.madie.cqllibraryservice.services;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.json.JsonMapper;
 import gov.cms.madie.cqllibraryservice.config.EnvironmentConfig;
 import gov.cms.madie.cqllibraryservice.exceptions.CqlElmTranslationServiceException;
 import gov.cms.madie.models.common.ModelType;
@@ -63,7 +64,7 @@ public class ElmTranslatorClient {
       return true;
     }
     try {
-      ObjectMapper mapper = new ObjectMapper();
+      ObjectMapper mapper = JsonMapper.builder().build();
       JsonNode jsonNode = mapper.readTree(elmJson.getJson());
       boolean hasError = false;
       if (jsonNode.has("errorExceptions") && jsonNode.get("errorExceptions").isArray()) {
@@ -72,7 +73,7 @@ public class ElmTranslatorClient {
           // TODO CqlCompilerException is the sole reason for this project to rely on cql-to-elm
           // dependency.. we could expose this value from madie-models instead
           if (CqlCompilerException.ErrorSeverity.Error.name()
-              .equals(errorException.path("errorSeverity").asText())) {
+              .equals(errorException.path("errorSeverity").asString(""))) {
             hasError = true;
             break;
           }

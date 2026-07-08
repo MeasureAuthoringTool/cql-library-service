@@ -4,15 +4,17 @@ import gov.cms.madie.cqllibraryservice.utils.ApiKeyFilter;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
-
+import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
 
 import java.util.List;
 
 @Configuration
+@EnableWebSecurity
 @EnableMethodSecurity
 public class SecurityConfig {
 
@@ -31,23 +33,19 @@ public class SecurityConfig {
   @Bean
   protected SecurityFilterChain filterChain(HttpSecurity http, UserRoleConverter roleConverter)
       throws Exception {
-    http.cors()
-        .and()
-        .csrf()
-        .and()
-        .authorizeHttpRequests()
-        .requestMatchers(AUTH_WHITELIST)
-        .permitAll()
-        .requestMatchers("/cql-libraries/admin/**")
-        .hasRole("MADIE-ADMIN")
-        .and()
-        .authorizeHttpRequests()
-        .anyRequest()
-        .authenticated()
-        .and()
-        .sessionManagement()
-        .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
-        .and()
+    http.cors(Customizer.withDefaults())
+        .csrf(Customizer.withDefaults())
+        .authorizeHttpRequests(
+            authorize ->
+                authorize
+                    .requestMatchers(AUTH_WHITELIST)
+                    .permitAll()
+                    .requestMatchers("/cql-libraries/admin/**")
+                    .hasRole("MADIE-ADMIN")
+                    .anyRequest()
+                    .authenticated())
+        .sessionManagement(
+            session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
         .oauth2ResourceServer(
             oAuth2ResourceServerConfigurer ->
                 oAuth2ResourceServerConfigurer.jwt(
@@ -57,10 +55,11 @@ public class SecurityConfig {
             new ApiKeyFilter(apiKeyHeader, apiKeyValue, List.of("/cql-libraries/cql")),
             org.springframework.security.oauth2.server.resource.web.authentication
                 .BearerTokenAuthenticationFilter.class)
-        .headers()
-        .xssProtection()
-        .and()
-        .contentSecurityPolicy("script-src 'self'");
+        .headers(
+            headers ->
+                headers
+                    .xssProtection(Customizer.withDefaults())
+                    .contentSecurityPolicy(csp -> csp.policyDirectives("script-src 'self'")));
     return http.build();
   }
 }
