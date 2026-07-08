@@ -31,25 +31,25 @@ public class ApiKeyFilter extends OncePerRequestFilter {
     String path = request.getServletPath();
 
     // Match current request against your list of allowed paths
-    return pathsToFilter.stream()
-        .noneMatch(pattern -> pathMatcher.match(pattern, path));
+    return pathsToFilter.stream().noneMatch(pattern -> pathMatcher.match(pattern, path));
   }
 
   @Override
-  protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
+  protected void doFilterInternal(
+      HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
       throws ServletException, IOException {
 
     // Okta wins: skip if already authenticated
-    if (SecurityContextHolder.getContext().getAuthentication() != null &&
-        SecurityContextHolder.getContext().getAuthentication().isAuthenticated()) {
+    if (SecurityContextHolder.getContext().getAuthentication() != null
+        && SecurityContextHolder.getContext().getAuthentication().isAuthenticated()) {
       filterChain.doFilter(request, response);
       return;
     }
 
     String requestKey = request.getHeader(apiKeyHeader);
     if (apiKeyValue.equals(requestKey)) {
-      UsernamePasswordAuthenticationToken auth = new UsernamePasswordAuthenticationToken(
-          "ApiKeyUser", null, Collections.emptyList());
+      UsernamePasswordAuthenticationToken auth =
+          new UsernamePasswordAuthenticationToken("ApiKeyUser", null, Collections.emptyList());
       SecurityContextHolder.getContext().setAuthentication(auth);
     }
 
