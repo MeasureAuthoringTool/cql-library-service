@@ -26,6 +26,9 @@ madie:
     base-url: ${EXCEL_EXPORT_SERVICE:http://localhost:3000/api}
     libraries:
       access-report-api-path: /excel/library-shared-access-report
+  security:
+    system-api-key: ${MADIE_SYSTEM_KEY:a1b2-c3d4-e5f6}
+    api-key-header: ${MADIE_API_KEY_HEADER:X-MADiE-API-KEY}
 
 management:
   endpoints:
