@@ -369,13 +369,6 @@ public class LibrarySetService {
     return name.isEmpty() ? harpId : name + " (" + harpId + ")";
   }
 
-  /**
-   * Replaces the performedBy HARP ID on each Action with a display name in the format "&lt;first
-   * last&gt; (&lt;harpId&gt;)", fetched in bulk from user-service. Falls back to the raw HARP ID
-   * when user details are unavailable.
-   *
-   * @param actions the list of history actions to enrich in place
-   */
   public void populatePerformedByDisplayNames(List<Action> actions) {
     if (CollectionUtils.isEmpty(actions)) {
       return;
