@@ -6,6 +6,7 @@ import gov.cms.madie.cqllibraryservice.repositories.LibrarySetRepository;
 import gov.cms.madie.models.access.AclOperation;
 import gov.cms.madie.models.access.AclSpecification;
 import gov.cms.madie.models.access.RoleEnum;
+import gov.cms.madie.models.common.Action;
 import gov.cms.madie.models.common.ActionType;
 import gov.cms.madie.models.dto.UserDetailsDto;
 import gov.cms.madie.models.library.CqlLibrary;
@@ -31,7 +32,9 @@ import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -799,5 +802,50 @@ class LibrarySetServiceTest {
     Map<String, UserDetailsDto> userDetailsMap = Map.of();
     assertThat(
         librarySetService.formatDisplayName(userDetailsMap, "harpId1"), is(equalTo("harpId1")));
+  }
+
+  @Test
+  void populatePerformedByDisplayNamesReplacesHarpIdsWithDisplayNames() {
+    List<Action> actions =
+        new ArrayList<>(
+            List.of(
+                Action.builder().actionType(ActionType.CREATED).performedBy("harpId1").build(),
+                Action.builder().actionType(ActionType.UPDATED).performedBy("harpId2").build()));
+
+    when(userServiceClient.getBulkUserDetails(List.of("harpId1", "harpId2")))
+        .thenReturn(
+            Map.of(
+                "harpId1", UserDetailsDto.builder().firstName("John").lastName("Doe").build(),
+                "harpId2", UserDetailsDto.builder().firstName("Jane").lastName("Doe").build()));
+
+    librarySetService.populatePerformedByDisplayNames(actions);
+
+    assertThat(actions.get(0).getPerformedBy(), is(equalTo("John Doe (harpId1)")));
+    assertThat(actions.get(1).getPerformedBy(), is(equalTo("Jane Doe (harpId2)")));
+    verify(userServiceClient, times(1)).getBulkUserDetails(List.of("harpId1", "harpId2"));
+  }
+
+  @Test
+  void populatePerformedByDisplayNamesFallsBackToHarpIdWhenUserNotFound() {
+    List<Action> actions =
+        new ArrayList<>(
+            List.of(
+                Action.builder().actionType(ActionType.CREATED).performedBy("harpId1").build()));
+
+    when(userServiceClient.getBulkUserDetails(List.of("harpId1"))).thenReturn(Map.of());
+
+    librarySetService.populatePerformedByDisplayNames(actions);
+
+    assertThat(actions.get(0).getPerformedBy(), is(equalTo("harpId1")));
+  }
+
+  @Test
+  void populatePerformedByDisplayNamesSkipsUserServiceForEmptyHistory() {
+    List<Action> actions = new ArrayList<>();
+
+    librarySetService.populatePerformedByDisplayNames(actions);
+
+    assertThat(actions.isEmpty(), is(true));
+    verify(userServiceClient, never()).getBulkUserDetails(anyList());
   }
 }
