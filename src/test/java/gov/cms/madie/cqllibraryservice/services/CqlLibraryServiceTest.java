@@ -1298,9 +1298,10 @@ class CqlLibraryServiceTest {
 
     CqlLibrary library = CqlLibrary.builder().id(cqlLibraryId).librarySetId(librarySetId).build();
     List<Action> actions =
-        List.of(
-            Action.builder().actionType(ActionType.CREATED).build(),
-            Action.builder().actionType(ActionType.UPDATED).build());
+        new ArrayList<>(
+            List.of(
+                Action.builder().actionType(ActionType.CREATED).performedBy("testuser").build(),
+                Action.builder().actionType(ActionType.UPDATED).performedBy("testuser").build()));
 
     when(cqlLibraryRepository.findById(cqlLibraryId)).thenReturn(Optional.of(library));
     when(actionLogService.findCqlLibraryHistory(cqlLibraryId, librarySetId)).thenReturn(actions);
@@ -1310,6 +1311,18 @@ class CqlLibraryServiceTest {
     assertThat(result.size(), is(equalTo(2)));
     assertThat(result.get(0).getActionType(), is(equalTo(ActionType.CREATED)));
     assertThat(result.get(1).getActionType(), is(equalTo(ActionType.UPDATED)));
+    verify(librarySetService, times(1)).populatePerformedByDisplayNames(actions);
+  }
+
+  @Test
+  void returnsEmptyCqlLibraryHistoryWithoutFetchingUserDetails() {
+    CqlLibrary library = CqlLibrary.builder().id("existingId").librarySetId("librarySetId").build();
+    when(cqlLibraryRepository.findById("existingId")).thenReturn(Optional.of(library));
+    when(actionLogService.findCqlLibraryHistory("existingId", "librarySetId"))
+        .thenReturn(new ArrayList<>());
+    List<Action> result = cqlLibraryService.getCqlLibraryHistory("existingId", "testUser");
+    assertThat(result.isEmpty(), is(true));
+    verify(userServiceClient, never()).getBulkUserDetails(anyList());
   }
 
   @Test
