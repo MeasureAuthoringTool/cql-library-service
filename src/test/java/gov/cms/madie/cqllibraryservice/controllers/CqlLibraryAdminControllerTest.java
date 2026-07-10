@@ -24,8 +24,11 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.ResponseEntity;
 
+import gov.cms.madie.cqllibraryservice.dto.IgPackageInstallRequest;
+import gov.cms.madie.cqllibraryservice.services.AdminService;
 import gov.cms.madie.cqllibraryservice.services.CqlLibraryLockService;
 import gov.cms.madie.cqllibraryservice.services.CqlLibraryService;
+import gov.cms.madie.cqllibraryservice.services.IgPackageService;
 import gov.cms.madie.models.access.AclOperation;
 import gov.cms.madie.models.access.AclSpecification;
 import gov.cms.madie.models.access.RoleEnum;
@@ -36,6 +39,8 @@ public class CqlLibraryAdminControllerTest {
   @InjectMocks private CqlLibraryAdminController controller;
   @Mock private CqlLibraryLockService cqlLibraryLockService;
   @Mock private CqlLibraryService cqlLibraryService;
+  @Mock private AdminService adminService;
+  @Mock private IgPackageService igPackageService;
   @Mock Principal principal;
 
   @Test
@@ -88,5 +93,30 @@ public class CqlLibraryAdminControllerTest {
     verify(cqlLibraryService, times(1))
         .updateAccessControlList(anyString(), any(), anyString(), any(Boolean.class), anyString());
     assertThat(output.getBody(), equalTo(aclSpecifications));
+  }
+
+  @Test
+  void testInstallIgPackage() {
+    when(principal.getName()).thenReturn("admin.user");
+    IgPackageInstallRequest request =
+        IgPackageInstallRequest.builder()
+            .packageId("hl7.fhir.us.qicore")
+            .packageVersion("7.0.2")
+            .build();
+    doNothing()
+        .when(igPackageService)
+        .installIgPackage(any(IgPackageInstallRequest.class), anyString());
+
+    ResponseEntity<String> response = controller.installIgPackage(principal, request);
+
+    assertNotNull(response);
+    assertEquals(200, response.getStatusCode().value());
+    assertThat(
+        response.getBody(),
+        is(
+            equalTo(
+                "IG package installation initiated for package [hl7.fhir.us.qicore] version [7.0.2].")));
+    verify(igPackageService, times(1))
+        .installIgPackage(any(IgPackageInstallRequest.class), anyString());
   }
 }

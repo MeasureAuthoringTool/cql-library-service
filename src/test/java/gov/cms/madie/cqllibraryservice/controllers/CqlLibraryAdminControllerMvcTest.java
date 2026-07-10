@@ -19,8 +19,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import java.util.List;
 import java.util.Set;
 
+import gov.cms.madie.cqllibraryservice.services.*;
 import tools.jackson.databind.ObjectMapper;
-import gov.cms.madie.cqllibraryservice.services.AdminService;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
@@ -38,13 +38,6 @@ import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 
 import gov.cms.madie.cqllibraryservice.config.security.SecurityConfig;
 import gov.cms.madie.cqllibraryservice.repositories.CqlLibraryRepository;
-import gov.cms.madie.cqllibraryservice.services.ActionLogService;
-import gov.cms.madie.cqllibraryservice.services.CqlDifferentiatorService;
-import gov.cms.madie.cqllibraryservice.services.CqlLibraryLockService;
-import gov.cms.madie.cqllibraryservice.services.CqlLibraryService;
-import gov.cms.madie.cqllibraryservice.services.LibrarySetService;
-import gov.cms.madie.cqllibraryservice.services.UserServiceClient;
-import gov.cms.madie.cqllibraryservice.services.VersionService;
 import gov.cms.madie.models.access.AclSpecification;
 import gov.cms.madie.models.access.RoleEnum;
 import gov.cms.madie.models.common.ActionType;
@@ -65,6 +58,7 @@ public class CqlLibraryAdminControllerMvcTest {
   @MockitoBean CqlLibraryLockService cqlLibraryLockService;
   @MockitoBean private UserServiceClient userServiceClient;
   @MockitoBean AdminService adminService;
+  @MockitoBean IgPackageService igPackageService;
 
   @Captor private ArgumentCaptor<CqlLibrary> cqlLibraryArgumentCaptor;
 
@@ -403,6 +397,121 @@ public class CqlLibraryAdminControllerMvcTest {
                     .with(csrf())
                     .contentType(MediaType.APPLICATION_JSON)
                     .content(new ObjectMapper().writeValueAsString(List.of("lib1"))))
+            .andExpect(status().isUnauthorized())
+            .andReturn();
+    assertEquals(HttpStatus.UNAUTHORIZED.value(), result.getResponse().getStatus());
+  }
+
+  @Test
+  void testInstallIgPackageSuccess() throws Exception {
+    doNothing().when(igPackageService).installIgPackage(any(), anyString());
+
+    String requestBody = "{\"packageId\":\"hl7.fhir.us.qicore\",\"packageVersion\":\"7.0.2\"}";
+
+    MvcResult result =
+        mockMvc
+            .perform(
+                MockMvcRequestBuilders.post("/cql-libraries/admin/ig-packages/install")
+                    .with(csrf())
+                    .with(user(TEST_USER_ID).roles("MADIE-ADMIN"))
+                    .header("Authorization", TEST_OKTA)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(requestBody))
+            .andExpect(status().isOk())
+            .andExpect(
+                content()
+                    .string(
+                        "IG package installation initiated for package [hl7.fhir.us.qicore] version [7.0.2]."))
+            .andReturn();
+    assertEquals(HttpStatus.OK.value(), result.getResponse().getStatus());
+  }
+
+  @Test
+  void testInstallIgPackageForbiddenForNonAdmin() throws Exception {
+    String requestBody = "{\"packageId\":\"hl7.fhir.us.qicore\",\"packageVersion\":\"7.0.2\"}";
+
+    MvcResult result =
+        mockMvc
+            .perform(
+                MockMvcRequestBuilders.post("/cql-libraries/admin/ig-packages/install")
+                    .with(csrf())
+                    .with(user(TEST_USER_ID).roles("MADIE-USER"))
+                    .header("Authorization", TEST_OKTA)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(requestBody))
+            .andExpect(status().isForbidden())
+            .andReturn();
+    assertEquals(HttpStatus.FORBIDDEN.value(), result.getResponse().getStatus());
+  }
+
+  @Test
+  void testInstallIgPackageBadRequestWhenPackageIdMissing() throws Exception {
+    String requestBody = "{\"packageVersion\":\"7.0.2\"}";
+
+    MvcResult result =
+        mockMvc
+            .perform(
+                MockMvcRequestBuilders.post("/cql-libraries/admin/ig-packages/install")
+                    .with(csrf())
+                    .with(user(TEST_USER_ID).roles("MADIE-ADMIN"))
+                    .header("Authorization", TEST_OKTA)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(requestBody))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.validationErrors.packageId").value("Package ID is required."))
+            .andReturn();
+    assertEquals(HttpStatus.BAD_REQUEST.value(), result.getResponse().getStatus());
+  }
+
+  @Test
+  void testInstallIgPackageBadRequestWhenPackageVersionMissing() throws Exception {
+    String requestBody = "{\"packageId\":\"hl7.fhir.us.qicore\"}";
+
+    MvcResult result =
+        mockMvc
+            .perform(
+                MockMvcRequestBuilders.post("/cql-libraries/admin/ig-packages/install")
+                    .with(csrf())
+                    .with(user(TEST_USER_ID).roles("MADIE-ADMIN"))
+                    .header("Authorization", TEST_OKTA)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(requestBody))
+            .andExpect(status().isBadRequest())
+            .andExpect(
+                jsonPath("$.validationErrors.packageVersion").value("Package Version is required."))
+            .andReturn();
+    assertEquals(HttpStatus.BAD_REQUEST.value(), result.getResponse().getStatus());
+  }
+
+  @Test
+  void testInstallIgPackageBadRequestWhenBodyEmpty() throws Exception {
+    String requestBody = "{}";
+
+    MvcResult result =
+        mockMvc
+            .perform(
+                MockMvcRequestBuilders.post("/cql-libraries/admin/ig-packages/install")
+                    .with(csrf())
+                    .with(user(TEST_USER_ID).roles("MADIE-ADMIN"))
+                    .header("Authorization", TEST_OKTA)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(requestBody))
+            .andExpect(status().isBadRequest())
+            .andReturn();
+    assertEquals(HttpStatus.BAD_REQUEST.value(), result.getResponse().getStatus());
+  }
+
+  @Test
+  void testInstallIgPackageUnauthorizedWithoutAuthentication() throws Exception {
+    String requestBody = "{\"packageId\":\"hl7.fhir.us.qicore\",\"packageVersion\":\"7.0.2\"}";
+
+    MvcResult result =
+        mockMvc
+            .perform(
+                MockMvcRequestBuilders.post("/cql-libraries/admin/ig-packages/install")
+                    .with(csrf())
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(requestBody))
             .andExpect(status().isUnauthorized())
             .andReturn();
     assertEquals(HttpStatus.UNAUTHORIZED.value(), result.getResponse().getStatus());

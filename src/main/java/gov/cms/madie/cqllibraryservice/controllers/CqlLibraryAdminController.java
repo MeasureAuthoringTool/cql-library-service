@@ -6,7 +6,9 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+import gov.cms.madie.cqllibraryservice.dto.IgPackageInstallRequest;
 import gov.cms.madie.cqllibraryservice.services.AdminService;
+import gov.cms.madie.cqllibraryservice.services.IgPackageService;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
@@ -21,6 +23,7 @@ import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.PostMapping;
 
 import gov.cms.madie.cqllibraryservice.exceptions.HarpIdMismatchException;
 import gov.cms.madie.cqllibraryservice.exceptions.ResourceNotFoundException;
@@ -41,6 +44,7 @@ public class CqlLibraryAdminController {
   private final CqlLibraryLockService cqlLibraryLockService;
   private final CqlLibraryService cqlLibraryService;
   private final AdminService adminService;
+  private final IgPackageService igPackageService;
 
   @DeleteMapping("/locks")
   @PreAuthorize("hasRole('MADIE-ADMIN')")
@@ -131,5 +135,22 @@ public class CqlLibraryAdminController {
             HttpHeaders.CONTENT_TYPE,
             "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
         .body(adminService.exportSharedWithLibraries(libraryids, username, accessToken));
+  }
+
+  @PostMapping("/ig-packages/install")
+  @PreAuthorize("hasRole('MADIE-ADMIN')")
+  public ResponseEntity<String> installIgPackage(
+      Principal principal, @RequestBody @Validated IgPackageInstallRequest request) {
+    final String username = principal.getName().toLowerCase();
+    log.info(
+        "Admin user [{}] is initiating IG package installation for package [{}] version [{}]",
+        username,
+        request.getPackageId(),
+        request.getPackageVersion());
+    igPackageService.installIgPackage(request, username);
+    return ResponseEntity.ok(
+        String.format(
+            "IG package installation initiated for package [%s] version [%s].",
+            request.getPackageId(), request.getPackageVersion()));
   }
 }
