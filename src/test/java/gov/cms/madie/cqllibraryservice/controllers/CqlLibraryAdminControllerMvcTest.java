@@ -404,7 +404,7 @@ public class CqlLibraryAdminControllerMvcTest {
 
   @Test
   void testInstallIgPackageSuccess() throws Exception {
-    doNothing().when(igPackageService).installIgPackage(any(), anyString());
+    doNothing().when(igPackageService).installIgPackage(anyString(), anyString(), anyString());
 
     String requestBody = "{\"packageId\":\"hl7.fhir.us.qicore\",\"packageVersion\":\"7.0.2\"}";
 

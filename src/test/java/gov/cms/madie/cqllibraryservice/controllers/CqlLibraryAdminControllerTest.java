@@ -103,9 +103,7 @@ public class CqlLibraryAdminControllerTest {
             .packageId("hl7.fhir.us.qicore")
             .packageVersion("7.0.2")
             .build();
-    doNothing()
-        .when(igPackageService)
-        .installIgPackage(any(IgPackageInstallRequest.class), anyString());
+    doNothing().when(igPackageService).installIgPackage(anyString(), anyString(), anyString());
 
     ResponseEntity<String> response = controller.installIgPackage(principal, request);
 
@@ -116,7 +114,6 @@ public class CqlLibraryAdminControllerTest {
         is(
             equalTo(
                 "IG package installation initiated for package [hl7.fhir.us.qicore] version [7.0.2].")));
-    verify(igPackageService, times(1))
-        .installIgPackage(any(IgPackageInstallRequest.class), anyString());
+    verify(igPackageService, times(1)).installIgPackage(anyString(), anyString(), anyString());
   }
 }

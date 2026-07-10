@@ -1,6 +1,5 @@
 package gov.cms.madie.cqllibraryservice.services;
 
-import gov.cms.madie.cqllibraryservice.dto.IgPackageInstallRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -13,15 +12,16 @@ public class IgPackageService {
   /**
    * Initiates the IG package processing workflow.
    *
-   * @param request the IG package installation request containing packageId and packageVersion
+   * @param packageId the identifier of the IG package to install
+   * @param packageVersion the version of the IG package to install
    * @param username the admin user initiating the installation
    */
-  public void installIgPackage(IgPackageInstallRequest request, String username) {
+  public void installIgPackage(String packageId, String packageVersion, String username) {
     log.info(
         "User [{}] initiated IG package installation for packageId [{}], version [{}]",
         username,
-        request.getPackageId(),
-        request.getPackageVersion());
+        packageId,
+        packageVersion);
     // Package processing workflow will be implemented in a future story.
   }
 }

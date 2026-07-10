@@ -24,6 +24,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.util.HtmlUtils;
 
 import gov.cms.madie.cqllibraryservice.exceptions.HarpIdMismatchException;
 import gov.cms.madie.cqllibraryservice.exceptions.ResourceNotFoundException;
@@ -147,10 +148,12 @@ public class CqlLibraryAdminController {
         username,
         request.getPackageId(),
         request.getPackageVersion());
-    igPackageService.installIgPackage(request, username);
+    String sanitizedPackageId = HtmlUtils.htmlEscape(request.getPackageId());
+    String sanitizedPackageVersion = HtmlUtils.htmlEscape(request.getPackageVersion());
+    igPackageService.installIgPackage(sanitizedPackageId, sanitizedPackageVersion, username);
     return ResponseEntity.ok(
         String.format(
             "IG package installation initiated for package [%s] version [%s].",
-            request.getPackageId(), request.getPackageVersion()));
+            sanitizedPackageId, sanitizedPackageVersion));
   }
 }

@@ -1,6 +1,5 @@
 package gov.cms.madie.cqllibraryservice.services;
 
-import gov.cms.madie.cqllibraryservice.dto.IgPackageInstallRequest;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -15,12 +14,7 @@ class IgPackageServiceTest {
 
   @Test
   void testInstallIgPackage() {
-    IgPackageInstallRequest request =
-        IgPackageInstallRequest.builder()
-            .packageId("hl7.fhir.us.qicore")
-            .packageVersion("7.0.2")
-            .build();
-
-    assertDoesNotThrow(() -> igPackageService.installIgPackage(request, "admin.user"));
+    assertDoesNotThrow(
+        () -> igPackageService.installIgPackage("hl7.fhir.us.qicore", "7.0.2", "admin.user"));
   }
 }
