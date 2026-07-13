@@ -1,7 +1,6 @@
 package gov.cms.madie.cqllibraryservice.services;
 
-import static org.hamcrest.CoreMatchers.equalTo;
-import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.CoreMatchers.*;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -396,6 +395,45 @@ class VersionServiceTest {
     // version and groupId should not change
     assertThat(savedValue.getVersion(), is(equalTo(existingCqlLibrary.getVersion())));
     assertThat(savedValue.getLibrarySetId(), is(equalTo(existingCqlLibrary.getLibrarySetId())));
+  }
+
+  @Test
+  void testCreateDraftSuccessWhenModelUpdatesToUsCore() {
+    CqlLibrary existingCqlLibrary1 =
+        existingCqlLibrary.toBuilder()
+            .cql(
+                "library testCql version '1.0.000'\nusing QICore version '4.1.1'\nusing FHIR version '4.0.1'")
+            .draft(false)
+            .build();
+    CqlLibrary clonedCqlLibrary = existingCqlLibrary1.toBuilder().build();
+
+    when(cqlLibraryService.findCqlLibraryById(anyString(), anyString()))
+        .thenReturn(existingCqlLibrary1);
+    when(cqlLibraryRepository.save(any(CqlLibrary.class))).thenReturn(clonedCqlLibrary);
+    doNothing().when(cqlLibraryService).checkDuplicateCqlLibraryName(anyString());
+    when(cqlLibraryRepository.existsByLibrarySetIdAndDraft(anyString(), anyBoolean()))
+        .thenReturn(false);
+
+    LibraryListDTO libraryDto =
+        LibraryListDTO.builder().id("testCqlLibraryId").model(ModelType.QI_CORE.getValue()).build();
+    when(cqlLibraryService.getLibrariesByLibrarySetId(anyString(), anyBoolean(), any()))
+        .thenReturn((List.of(libraryDto)));
+
+    versionService.createDraft(
+        "testCqlLibraryId",
+        "testNewCqlLibraryName",
+        ModelType.US_QUALITY_CORE_0_5_0.getValue(),
+        "testUser");
+    verify(cqlLibraryRepository, times(1)).save(cqlLibraryArgumentCaptor.capture());
+    CqlLibrary savedValue = cqlLibraryArgumentCaptor.getValue();
+
+    assertThat(savedValue.getCqlLibraryName(), is(equalTo("testNewCqlLibraryName")));
+    assertTrue(savedValue.isDraft());
+    // version and groupId should not change
+    assertThat(savedValue.getVersion(), is(equalTo(existingCqlLibrary.getVersion())));
+    assertThat(savedValue.getLibrarySetId(), is(equalTo(existingCqlLibrary.getLibrarySetId())));
+    assertThat(savedValue.getModel(), is(equalTo(ModelType.US_QUALITY_CORE_0_5_0.getValue())));
+    assertThat(savedValue.getCql(), containsStringIgnoringCase("using USCore version '0.5.0'"));
   }
 
   @Test
