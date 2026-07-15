@@ -694,6 +694,7 @@ public class CqlLibraryService {
     List<Action> cqlLibraryHistory =
         actionLogService.findCqlLibraryHistory(
             cqlLibraryId, persistedCqlLibrary.get().getLibrarySetId());
+    librarySetService.populatePerformedByDisplayNames(cqlLibraryHistory);
     log.info(
         "User [{}] successfully retrieved the history of the cql library with ID [{}]",
         userName,
