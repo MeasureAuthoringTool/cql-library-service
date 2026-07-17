@@ -50,7 +50,7 @@ class VirusScanClientTest {
     when(virusScanConfig.isScanDisabled()).thenReturn(false);
     when(virusScanConfig.getBaseUrl()).thenReturn("http://virus-scan-service");
     when(virusScanConfig.getScanFileUri()).thenReturn("/api/v1/scan");
-    when(virusScanConfig.getApiKey()).thenReturn("test-api-key");
+    when(virusScanConfig.getApiKey()).thenReturn("test");
     when(virusScanRestTemplate.exchange(any(), eq(VirusScanResponseDto.class)))
         .thenReturn(ResponseEntity.ok(expectedResponse));
 
@@ -67,7 +67,7 @@ class VirusScanClientTest {
     when(virusScanConfig.isScanDisabled()).thenReturn(false);
     when(virusScanConfig.getBaseUrl()).thenReturn("http://virus-scan-service");
     when(virusScanConfig.getScanFileUri()).thenReturn("/api/v1/scan");
-    when(virusScanConfig.getApiKey()).thenReturn("test-api-key");
+    when(virusScanConfig.getApiKey()).thenReturn("test");
     when(virusScanRestTemplate.exchange(any(), eq(VirusScanResponseDto.class)))
         .thenReturn(ResponseEntity.ok(null));
 
