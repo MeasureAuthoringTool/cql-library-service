@@ -22,6 +22,8 @@ import java.util.Set;
 @Component
 public class PackageCacheManagerAdapter {
 
+  private final FilesystemPackageCacheManager cacheManager;
+
   /**
    * Callback invoked immediately after each package (root or dependency) has been downloaded to the
    * local filesystem. Return false to skip persisting/processing that package's dependencies.
@@ -30,8 +32,6 @@ public class PackageCacheManagerAdapter {
   public interface PackageDownloadedCallback {
     boolean onDownloaded(String packageId, String version, String packagePath) throws Exception;
   }
-
-  private final FilesystemPackageCacheManager cacheManager;
 
   public PackageCacheManagerAdapter(@Value("${fhir.package.cache-path}") String cachePath)
       throws IOException {

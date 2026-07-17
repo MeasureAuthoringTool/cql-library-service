@@ -50,12 +50,12 @@ class PackageCacheManagerAdapterTest {
   // Helpers
   // ---------------------------------------------------------------------------
 
-  private NpmPackage stubPackage(String packageId, String version, String path) throws Exception {
-    return stubPackage(packageId, version, path, Map.of());
+  private void stubPackage(String packageId, String version, String path) throws Exception {
+    stubPackage(packageId, version, path, Map.of());
   }
 
-  private NpmPackage stubPackage(
-      String packageId, String version, String path, Map<String, String> deps) throws Exception {
+  private void stubPackage(String packageId, String version, String path, Map<String, String> deps)
+      throws Exception {
     NpmPackage pkg = mock(NpmPackage.class);
     when(pkg.getPath()).thenReturn(path);
 
@@ -69,7 +69,6 @@ class PackageCacheManagerAdapterTest {
     }
 
     when(cacheManager.loadPackage(packageId, version)).thenReturn(pkg);
-    return pkg;
   }
 
   // ---------------------------------------------------------------------------
