@@ -6,4 +6,3 @@ public class VirusScanServiceException extends RuntimeException {
     super(message, cause);
   }
 }
-

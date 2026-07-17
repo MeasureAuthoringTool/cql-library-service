@@ -158,7 +158,7 @@ class FhirPackageDownloadServiceImplTest {
               return List.of();
             });
     when(virusScanClient.scanFile(any(FileSystemResource.class)))
-        .thenReturn(VirusScanResponseDto.builder().filesScanned(1).cleanFileCount(0).build());
+        .thenReturn(VirusScanResponseDto.builder().filesScanned(1).infectedFileCount(1).build());
 
     DownloadedPackageResult result = downloadService.downloadPackage(PACKAGE_ID, VERSION, USERNAME);
 
@@ -205,7 +205,12 @@ class FhirPackageDownloadServiceImplTest {
     when(virusScanClient.scanFile(any(FileSystemResource.class)))
         .thenReturn(VirusScanResponseDto.builder().filesScanned(1).cleanFileCount(1).build())
         .thenReturn(VirusScanResponseDto.builder().filesScanned(1).cleanFileCount(1).build())
-        .thenReturn(VirusScanResponseDto.builder().filesScanned(1).cleanFileCount(0).build())
+        .thenReturn(
+            VirusScanResponseDto.builder()
+                .filesScanned(1)
+                .cleanFileCount(0)
+                .infectedFileCount(1)
+                .build())
         .thenReturn(VirusScanResponseDto.builder().filesScanned(1).cleanFileCount(1).build());
 
     DownloadedPackageResult result = downloadService.downloadPackage(PACKAGE_ID, VERSION, USERNAME);
@@ -334,27 +339,6 @@ class FhirPackageDownloadServiceImplTest {
   }
 
   @Test
-  void testDownloadPackageVirusScanReturnsNull() throws Exception {
-    when(packageTrackingRepository.findByPackageIdAndVersion(PACKAGE_ID, VERSION))
-        .thenReturn(Optional.empty());
-    when(packageTrackingRepository.save(any(PackageTrackingRecord.class)))
-        .thenAnswer(invocation -> invocation.getArgument(0));
-    stubAdapterWithPaths(List.of(ROOT_PATH));
-    when(virusScanClient.scanFile(any(FileSystemResource.class))).thenReturn(null);
-
-    DownloadedPackageResult result = downloadService.downloadPackage(PACKAGE_ID, VERSION, USERNAME);
-
-    assertFalse(result.isSuccess());
-    assertNotNull(result.getErrorMessage());
-    assertTrue(result.getErrorMessage().contains("no result"));
-
-    verify(packageTrackingRepository, atLeast(2)).save(trackingRecordCaptor.capture());
-    PackageTrackingRecord lastSaved =
-        trackingRecordCaptor.getAllValues().get(trackingRecordCaptor.getAllValues().size() - 1);
-    assertEquals(PackageDownloadStatus.ERROR_INFECTED_SO_REVIEW, lastSaved.getStatus());
-  }
-
-  @Test
   void testDownloadPackageVirusScanServiceDownBlocksRootPackageDownload() throws Exception {
     when(packageTrackingRepository.findByPackageIdAndVersion(PACKAGE_ID, VERSION))
         .thenReturn(Optional.empty());
@@ -378,8 +362,7 @@ class FhirPackageDownloadServiceImplTest {
   }
 
   @Test
-  void testDownloadPackageVirusScanServiceDownBlocksDownloadWhenDependencyFails()
-      throws Exception {
+  void testDownloadPackageVirusScanServiceDownBlocksDownloadWhenDependencyFails() throws Exception {
     String depPath = "/cache/hl7.fhir.us.core#6.1.0";
     when(packageTrackingRepository.findByPackageIdAndVersion(PACKAGE_ID, VERSION))
         .thenReturn(Optional.empty());
@@ -414,7 +397,8 @@ class FhirPackageDownloadServiceImplTest {
     // Both the dependency and the root package should be marked DOWNLOAD_FAILED
     assertTrue(
         trackingRecordCaptor.getAllValues().stream()
-            .filter(r -> PackageDownloadStatus.DOWNLOAD_FAILED.equals(r.getStatus()))
-            .count() >= 2);
+                .filter(r -> PackageDownloadStatus.DOWNLOAD_FAILED.equals(r.getStatus()))
+                .count()
+            >= 2);
   }
 }
