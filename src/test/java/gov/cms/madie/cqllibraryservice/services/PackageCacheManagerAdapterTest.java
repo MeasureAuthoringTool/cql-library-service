@@ -1,6 +1,5 @@
 package gov.cms.madie.cqllibraryservice.services;
 
-import gov.cms.madie.cqllibraryservice.services.PackageCacheManagerAdapter.PackageDownloadedCallback;
 import org.hl7.fhir.utilities.json.model.JsonObject;
 import org.hl7.fhir.utilities.npm.FilesystemPackageCacheManager;
 import org.hl7.fhir.utilities.npm.NpmPackage;

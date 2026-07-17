@@ -4,7 +4,6 @@ import gov.cms.madie.cqllibraryservice.dto.DownloadedPackageResult;
 import gov.cms.madie.cqllibraryservice.models.PackageDownloadStatus;
 import gov.cms.madie.cqllibraryservice.models.PackageTrackingRecord;
 import gov.cms.madie.cqllibraryservice.repositories.PackageTrackingRepository;
-import gov.cms.madie.cqllibraryservice.services.PackageCacheManagerAdapter.PackageDownloadedCallback;
 import gov.cms.madie.models.scanner.VirusScanResponseDto;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
