@@ -1,6 +1,7 @@
 package gov.cms.madie.cqllibraryservice.services;
 
 import gov.cms.madie.cqllibraryservice.dto.DownloadedPackageResult;
+import gov.cms.madie.cqllibraryservice.exceptions.VirusScanServiceException;
 import gov.cms.madie.cqllibraryservice.models.PackageDownloadStatus;
 import gov.cms.madie.cqllibraryservice.models.PackageTrackingRecord;
 import gov.cms.madie.cqllibraryservice.repositories.PackageTrackingRepository;
@@ -10,6 +11,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.stereotype.Service;
 import org.springframework.util.FileSystemUtils;
+import org.springframework.web.client.RestClientException;
 
 import java.io.File;
 import java.time.Instant;
@@ -85,6 +87,16 @@ public class FhirPackageDownloadServiceImpl implements FhirPackageDownloadServic
           .errorMessage(null)
           .build();
 
+    } catch (VirusScanServiceException ex) {
+      log.error("Stopping downloading package {}#{}", packageId, version);
+      markAsFailed(trackingRecord, ex.getMessage());
+      return DownloadedPackageResult.builder()
+          .packageId(packageId)
+          .version(version)
+          .success(false)
+          .packageLocation(null)
+          .errorMessage(ex.getMessage())
+          .build();
     } catch (Exception ex) {
       log.error("Failed to download FHIR package {}#{}", packageId, version, ex);
       markAsFailed(trackingRecord, ex.getMessage());
@@ -112,16 +124,23 @@ public class FhirPackageDownloadServiceImpl implements FhirPackageDownloadServic
     }
 
     log.info("Scanning FHIR package {}#{} for viruses at {}", packageId, version, packagePath);
-    VirusScanResponseDto scanResult = virusScanClient.scanFile(new FileSystemResource(packagePath));
-
-    if (scanResult == null) {
-      deletePackage(packagePath);
-      String message = "Virus scan returned no result for package " + packageId + "#" + version;
-      markAsInfected(trackingRecord, message);
-      return false;
+    VirusScanResponseDto scanResult;
+    try {
+      scanResult = virusScanClient.scanFile(new FileSystemResource(packagePath));
+    } catch (RestClientException ex) {
+      String message =
+          "Virus scan service is unavailable for package "
+              + packageId
+              + "#"
+              + version
+              + " - download blocked: "
+              + ex.getMessage();
+      log.error(message, ex);
+      markAsFailed(trackingRecord, message);
+      throw new VirusScanServiceException(message, ex);
     }
 
-    int infectedCount = scanResult.getFilesScanned() - scanResult.getCleanFileCount();
+    int infectedCount = scanResult.getInfectedFileCount();
     if (infectedCount > 0) {
       deletePackage(packagePath);
       String message =

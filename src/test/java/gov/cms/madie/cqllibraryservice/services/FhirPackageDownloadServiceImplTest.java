@@ -13,6 +13,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.core.io.FileSystemResource;
+import org.springframework.web.client.ResourceAccessException;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -351,5 +352,69 @@ class FhirPackageDownloadServiceImplTest {
     PackageTrackingRecord lastSaved =
         trackingRecordCaptor.getAllValues().get(trackingRecordCaptor.getAllValues().size() - 1);
     assertEquals(PackageDownloadStatus.ERROR_INFECTED_SO_REVIEW, lastSaved.getStatus());
+  }
+
+  @Test
+  void testDownloadPackageVirusScanServiceDownBlocksRootPackageDownload() throws Exception {
+    when(packageTrackingRepository.findByPackageIdAndVersion(PACKAGE_ID, VERSION))
+        .thenReturn(Optional.empty());
+    when(packageTrackingRepository.save(any(PackageTrackingRecord.class)))
+        .thenAnswer(invocation -> invocation.getArgument(0));
+    stubAdapterWithPaths(List.of(ROOT_PATH));
+    when(virusScanClient.scanFile(any(FileSystemResource.class)))
+        .thenThrow(new ResourceAccessException("Connection refused: virus scan service is down"));
+
+    DownloadedPackageResult result = downloadService.downloadPackage(PACKAGE_ID, VERSION, USERNAME);
+
+    assertFalse(result.isSuccess());
+    assertNull(result.getPackageLocation());
+    assertNotNull(result.getErrorMessage());
+    assertTrue(result.getErrorMessage().contains("unavailable"));
+
+    verify(packageTrackingRepository, atLeast(2)).save(trackingRecordCaptor.capture());
+    PackageTrackingRecord lastSaved =
+        trackingRecordCaptor.getAllValues().get(trackingRecordCaptor.getAllValues().size() - 1);
+    assertEquals(PackageDownloadStatus.DOWNLOAD_FAILED, lastSaved.getStatus());
+  }
+
+  @Test
+  void testDownloadPackageVirusScanServiceDownBlocksDownloadWhenDependencyFails()
+      throws Exception {
+    String depPath = "/cache/hl7.fhir.us.core#6.1.0";
+    when(packageTrackingRepository.findByPackageIdAndVersion(PACKAGE_ID, VERSION))
+        .thenReturn(Optional.empty());
+    when(packageTrackingRepository.save(any(PackageTrackingRecord.class)))
+        .thenAnswer(invocation -> invocation.getArgument(0));
+    when(packageCacheManagerAdapter.loadPackageWithDependencies(
+            eq(PACKAGE_ID), eq(VERSION), any(PackageDownloadedCallback.class)))
+        .thenAnswer(
+            invocation -> {
+              PackageDownloadedCallback cb = invocation.getArgument(2);
+              List<String> keptPaths = new java.util.ArrayList<>();
+              // Root package scans cleanly
+              if (cb.onDownloaded(PACKAGE_ID, VERSION, ROOT_PATH)) {
+                keptPaths.add(ROOT_PATH);
+              }
+              // Dependency scan throws — VirusScanServiceException propagates out
+              cb.onDownloaded(DEP_1, "6.1.0", depPath);
+              return keptPaths;
+            });
+    when(virusScanClient.scanFile(any(FileSystemResource.class)))
+        .thenReturn(VirusScanResponseDto.builder().filesScanned(1).cleanFileCount(1).build())
+        .thenThrow(new ResourceAccessException("Connection refused: virus scan service is down"));
+
+    DownloadedPackageResult result = downloadService.downloadPackage(PACKAGE_ID, VERSION, USERNAME);
+
+    assertFalse(result.isSuccess());
+    assertNull(result.getPackageLocation());
+    assertNotNull(result.getErrorMessage());
+    assertTrue(result.getErrorMessage().contains("unavailable"));
+
+    verify(packageTrackingRepository, atLeast(2)).save(trackingRecordCaptor.capture());
+    // Both the dependency and the root package should be marked DOWNLOAD_FAILED
+    assertTrue(
+        trackingRecordCaptor.getAllValues().stream()
+            .filter(r -> PackageDownloadStatus.DOWNLOAD_FAILED.equals(r.getStatus()))
+            .count() >= 2);
   }
 }
