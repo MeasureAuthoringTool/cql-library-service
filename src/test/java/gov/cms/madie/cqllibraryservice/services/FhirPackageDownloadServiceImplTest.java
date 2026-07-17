@@ -241,7 +241,7 @@ class FhirPackageDownloadServiceImplTest {
     verify(packageTrackingRepository, atLeast(2)).save(trackingRecordCaptor.capture());
     PackageTrackingRecord lastSaved =
         trackingRecordCaptor.getAllValues().get(trackingRecordCaptor.getAllValues().size() - 1);
-    assertEquals(PackageDownloadStatus.ERROR, lastSaved.getStatus());
+    assertEquals(PackageDownloadStatus.DOWNLOAD_FAILED, lastSaved.getStatus());
   }
 
   @Test
@@ -264,7 +264,7 @@ class FhirPackageDownloadServiceImplTest {
     verify(packageTrackingRepository, atLeast(2)).save(trackingRecordCaptor.capture());
     PackageTrackingRecord lastSaved =
         trackingRecordCaptor.getAllValues().get(trackingRecordCaptor.getAllValues().size() - 1);
-    assertEquals(PackageDownloadStatus.ERROR, lastSaved.getStatus());
+    assertEquals(PackageDownloadStatus.DOWNLOAD_FAILED, lastSaved.getStatus());
   }
 
   @Test
@@ -285,7 +285,7 @@ class FhirPackageDownloadServiceImplTest {
     verify(packageTrackingRepository, atLeast(2)).save(trackingRecordCaptor.capture());
     PackageTrackingRecord lastSaved =
         trackingRecordCaptor.getAllValues().get(trackingRecordCaptor.getAllValues().size() - 1);
-    assertEquals(PackageDownloadStatus.ERROR, lastSaved.getStatus());
+    assertEquals(PackageDownloadStatus.DOWNLOAD_FAILED, lastSaved.getStatus());
   }
 
   @Test
@@ -312,7 +312,7 @@ class FhirPackageDownloadServiceImplTest {
             .id("existing-id")
             .packageId(PACKAGE_ID)
             .version(VERSION)
-            .status(PackageDownloadStatus.ERROR)
+            .status(PackageDownloadStatus.DOWNLOAD_FAILED)
             .errorMessage("Previous failure")
             .build();
     when(packageTrackingRepository.findByPackageIdAndVersion(PACKAGE_ID, VERSION))

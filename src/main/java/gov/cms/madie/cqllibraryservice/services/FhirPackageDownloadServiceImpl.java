@@ -209,7 +209,7 @@ public class FhirPackageDownloadServiceImpl implements FhirPackageDownloadServic
   }
 
   private void markAsFailed(PackageTrackingRecord record, String errorMessage) {
-    record.setStatus(PackageDownloadStatus.ERROR);
+    record.setStatus(PackageDownloadStatus.DOWNLOAD_FAILED);
     record.setErrorMessage(errorMessage);
     packageTrackingRepository.save(record);
   }
