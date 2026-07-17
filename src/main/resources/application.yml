@@ -28,6 +28,12 @@ madie:
     base-url: ${EXCEL_EXPORT_SERVICE:http://localhost:3000/api}
     libraries:
       access-report-api-path: /excel/library-shared-access-report
+  virus-scan:
+    disable-scan: ${DISABLE_VIRUS_SCAN:true}
+    service:
+      base-url: ${VIRUS_SCAN_SERVICE_URL:http://localhost:5000}
+      scan-file-uri: /scan-file
+      api-key: ${VIRUS_SCAN_SERVICE_APIKEY:1234567}
 
 management:
   endpoints:
@@ -44,3 +50,7 @@ okta:
 mongock:
   migration-scan-package:
     - gov.cms.madie.cqllibraryservice.config
+
+fhir:
+  package:
+    cache-path: ${FHIR_PACKAGE_CACHE_PATH:your/local/path/to/cache}

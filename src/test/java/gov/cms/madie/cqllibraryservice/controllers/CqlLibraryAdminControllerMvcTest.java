@@ -37,6 +37,7 @@ import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 
 import gov.cms.madie.cqllibraryservice.config.security.SecurityConfig;
+import gov.cms.madie.cqllibraryservice.dto.DownloadedPackageResult;
 import gov.cms.madie.cqllibraryservice.repositories.CqlLibraryRepository;
 import gov.cms.madie.models.access.AclSpecification;
 import gov.cms.madie.models.access.RoleEnum;
@@ -404,24 +405,31 @@ public class CqlLibraryAdminControllerMvcTest {
 
   @Test
   void testInstallIgPackageSuccess() throws Exception {
-    doNothing().when(igPackageService).installIgPackage(anyString(), anyString(), anyString());
+    DownloadedPackageResult downloadResult =
+        DownloadedPackageResult.builder()
+            .packageId("hl7.fhir.us.qicore")
+            .version("7.0.2")
+            .success(true)
+            .packageLocation("/cache/hl7.fhir.us.qicore#7.0.2")
+            .build();
+    when(igPackageService.installIgPackage(anyString(), anyString(), anyString()))
+        .thenReturn(downloadResult);
 
     String requestBody = "{\"packageId\":\"hl7.fhir.us.qicore\",\"packageVersion\":\"7.0.2\"}";
 
     MvcResult result =
         mockMvc
             .perform(
-                MockMvcRequestBuilders.post("/cql-libraries/admin/ig-packages/install")
+                MockMvcRequestBuilders.post("/cql-libraries/admin/ig-packages")
                     .with(csrf())
                     .with(user(TEST_USER_ID).roles("MADIE-ADMIN"))
                     .header("Authorization", TEST_OKTA)
                     .contentType(MediaType.APPLICATION_JSON)
                     .content(requestBody))
             .andExpect(status().isOk())
-            .andExpect(
-                content()
-                    .string(
-                        "IG package installation initiated for package [hl7.fhir.us.qicore] version [7.0.2]."))
+            .andExpect(jsonPath("$.success").value(true))
+            .andExpect(jsonPath("$.packageId").value("hl7.fhir.us.qicore"))
+            .andExpect(jsonPath("$.version").value("7.0.2"))
             .andReturn();
     assertEquals(HttpStatus.OK.value(), result.getResponse().getStatus());
   }
@@ -433,7 +441,7 @@ public class CqlLibraryAdminControllerMvcTest {
     MvcResult result =
         mockMvc
             .perform(
-                MockMvcRequestBuilders.post("/cql-libraries/admin/ig-packages/install")
+                MockMvcRequestBuilders.post("/cql-libraries/admin/ig-packages")
                     .with(csrf())
                     .with(user(TEST_USER_ID).roles("MADIE-USER"))
                     .header("Authorization", TEST_OKTA)
@@ -451,7 +459,7 @@ public class CqlLibraryAdminControllerMvcTest {
     MvcResult result =
         mockMvc
             .perform(
-                MockMvcRequestBuilders.post("/cql-libraries/admin/ig-packages/install")
+                MockMvcRequestBuilders.post("/cql-libraries/admin/ig-packages")
                     .with(csrf())
                     .with(user(TEST_USER_ID).roles("MADIE-ADMIN"))
                     .header("Authorization", TEST_OKTA)
@@ -470,7 +478,7 @@ public class CqlLibraryAdminControllerMvcTest {
     MvcResult result =
         mockMvc
             .perform(
-                MockMvcRequestBuilders.post("/cql-libraries/admin/ig-packages/install")
+                MockMvcRequestBuilders.post("/cql-libraries/admin/ig-packages")
                     .with(csrf())
                     .with(user(TEST_USER_ID).roles("MADIE-ADMIN"))
                     .header("Authorization", TEST_OKTA)
@@ -490,7 +498,7 @@ public class CqlLibraryAdminControllerMvcTest {
     MvcResult result =
         mockMvc
             .perform(
-                MockMvcRequestBuilders.post("/cql-libraries/admin/ig-packages/install")
+                MockMvcRequestBuilders.post("/cql-libraries/admin/ig-packages")
                     .with(csrf())
                     .with(user(TEST_USER_ID).roles("MADIE-ADMIN"))
                     .header("Authorization", TEST_OKTA)
@@ -508,7 +516,7 @@ public class CqlLibraryAdminControllerMvcTest {
     MvcResult result =
         mockMvc
             .perform(
-                MockMvcRequestBuilders.post("/cql-libraries/admin/ig-packages/install")
+                MockMvcRequestBuilders.post("/cql-libraries/admin/ig-packages")
                     .with(csrf())
                     .contentType(MediaType.APPLICATION_JSON)
                     .content(requestBody))

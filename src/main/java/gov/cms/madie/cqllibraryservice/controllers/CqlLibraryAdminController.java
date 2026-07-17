@@ -6,6 +6,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+import gov.cms.madie.cqllibraryservice.dto.DownloadedPackageResult;
 import gov.cms.madie.cqllibraryservice.dto.IgPackageInstallRequest;
 import gov.cms.madie.cqllibraryservice.services.AdminService;
 import gov.cms.madie.cqllibraryservice.services.IgPackageService;
@@ -138,9 +139,9 @@ public class CqlLibraryAdminController {
         .body(adminService.exportSharedWithLibraries(libraryids, username, accessToken));
   }
 
-  @PostMapping("/ig-packages/install")
+  @PostMapping("/ig-packages")
   @PreAuthorize("hasRole('MADIE-ADMIN')")
-  public ResponseEntity<String> installIgPackage(
+  public ResponseEntity<DownloadedPackageResult> installIgPackage(
       Principal principal, @RequestBody @Validated IgPackageInstallRequest request) {
     final String username = principal.getName().toLowerCase();
     log.info(
@@ -150,10 +151,12 @@ public class CqlLibraryAdminController {
         request.getPackageVersion());
     String sanitizedPackageId = HtmlUtils.htmlEscape(request.getPackageId());
     String sanitizedPackageVersion = HtmlUtils.htmlEscape(request.getPackageVersion());
-    igPackageService.installIgPackage(sanitizedPackageId, sanitizedPackageVersion, username);
-    return ResponseEntity.ok(
-        String.format(
-            "IG package installation initiated for package [%s] version [%s].",
-            sanitizedPackageId, sanitizedPackageVersion));
+    DownloadedPackageResult result =
+        igPackageService.installIgPackage(sanitizedPackageId, sanitizedPackageVersion, username);
+    if (result.isSuccess()) {
+      return ResponseEntity.ok(result);
+    } else {
+      return ResponseEntity.internalServerError().body(result);
+    }
   }
 }
