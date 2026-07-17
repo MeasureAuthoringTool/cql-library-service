@@ -7,6 +7,7 @@ import gov.cms.madie.cqllibraryservice.repositories.LibrarySetRepository;
 import gov.cms.madie.models.access.AclOperation;
 import gov.cms.madie.models.access.AclSpecification;
 import gov.cms.madie.models.access.RoleEnum;
+import gov.cms.madie.models.common.Action;
 import gov.cms.madie.models.common.ActionType;
 import gov.cms.madie.models.dto.UserDetailsDto;
 import gov.cms.madie.models.library.CqlLibrary;
@@ -14,6 +15,7 @@ import gov.cms.madie.models.library.LibrarySet;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections4.CollectionUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.aggregation.*;
 import org.springframework.data.mongodb.core.query.Criteria;
@@ -365,6 +367,27 @@ public class LibrarySetService {
             .collect(Collectors.joining(" "));
 
     return name.isEmpty() ? harpId : name + " (" + harpId + ")";
+  }
+
+  public void populatePerformedByDisplayNames(List<Action> actions) {
+    if (CollectionUtils.isEmpty(actions)) {
+      return;
+    }
+    List<String> harpIds =
+        actions.stream()
+            .map(Action::getPerformedBy)
+            .filter(StringUtils::isNotBlank)
+            .distinct()
+            .toList();
+    if (harpIds.isEmpty()) {
+      return;
+    }
+    Map<String, UserDetailsDto> userDetailsMap = userServiceClient.getBulkUserDetails(harpIds);
+    actions.stream()
+        .filter(action -> StringUtils.isNotBlank(action.getPerformedBy()))
+        .forEach(
+            action ->
+                action.setPerformedBy(formatDisplayName(userDetailsMap, action.getPerformedBy())));
   }
 
   private void changeLibrarySetAlcsToLowerCase(LibrarySet librarySet) {
