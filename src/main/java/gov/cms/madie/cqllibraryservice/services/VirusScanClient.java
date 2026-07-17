@@ -37,7 +37,7 @@ public class VirusScanClient {
     final URI uri = URI.create(virusScanUrl);
     ResponseEntity<VirusScanResponseDto> response =
         virusScanRestTemplate.exchange(
-            new RequestEntity(body, headers, HttpMethod.POST, uri), VirusScanResponseDto.class);
+            new RequestEntity<>(body, headers, HttpMethod.POST, uri), VirusScanResponseDto.class);
     return response.getBody();
   }
 }

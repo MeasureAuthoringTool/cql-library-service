@@ -125,4 +125,36 @@ public class CqlLibraryAdminControllerTest {
     assertThat(response.getBody().getVersion(), is(equalTo("7.0.2")));
     verify(igPackageService, times(1)).installIgPackage(anyString(), anyString(), anyString());
   }
+
+  @Test
+  void testInstallIgPackageReturnsInternalServerErrorWhenInstallationFails() {
+    when(principal.getName()).thenReturn("admin.user");
+    IgPackageInstallRequest request =
+        IgPackageInstallRequest.builder()
+            .packageId("hl7.fhir.us.qicore")
+            .packageVersion("7.0.2")
+            .build();
+    DownloadedPackageResult failedResult =
+        DownloadedPackageResult.builder()
+            .packageId("hl7.fhir.us.qicore")
+            .version("7.0.2")
+            .success(false)
+            .errorMessage("Failed to download package from registry")
+            .build();
+    when(igPackageService.installIgPackage(anyString(), anyString(), anyString()))
+        .thenReturn(failedResult);
+
+    ResponseEntity<DownloadedPackageResult> response =
+        controller.installIgPackage(principal, request);
+
+    assertNotNull(response);
+    assertEquals(500, response.getStatusCode().value());
+    assertThat(response.getBody(), is(notNullValue()));
+    assertThat(response.getBody().isSuccess(), is(false));
+    assertThat(response.getBody().getPackageId(), is(equalTo("hl7.fhir.us.qicore")));
+    assertThat(
+        response.getBody().getErrorMessage(),
+        is(equalTo("Failed to download package from registry")));
+    verify(igPackageService, times(1)).installIgPackage(anyString(), anyString(), anyString());
+  }
 }

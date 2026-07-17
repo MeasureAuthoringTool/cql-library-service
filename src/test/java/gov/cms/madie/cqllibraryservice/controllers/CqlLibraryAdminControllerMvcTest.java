@@ -524,4 +524,35 @@ public class CqlLibraryAdminControllerMvcTest {
             .andReturn();
     assertEquals(HttpStatus.UNAUTHORIZED.value(), result.getResponse().getStatus());
   }
+
+  @Test
+  void testInstallIgPackageReturnsInternalServerErrorWhenInstallationFails() throws Exception {
+    DownloadedPackageResult failedResult =
+        DownloadedPackageResult.builder()
+            .packageId("hl7.fhir.us.qicore")
+            .version("7.0.2")
+            .success(false)
+            .errorMessage("Failed to download package from registry")
+            .build();
+    when(igPackageService.installIgPackage(anyString(), anyString(), anyString()))
+        .thenReturn(failedResult);
+
+    String requestBody = "{\"packageId\":\"hl7.fhir.us.qicore\",\"packageVersion\":\"7.0.2\"}";
+
+    MvcResult result =
+        mockMvc
+            .perform(
+                MockMvcRequestBuilders.post("/cql-libraries/admin/ig-packages")
+                    .with(csrf())
+                    .with(user(TEST_USER_ID).roles("MADIE-ADMIN"))
+                    .header("Authorization", TEST_OKTA)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(requestBody))
+            .andExpect(status().isInternalServerError())
+            .andExpect(jsonPath("$.success").value(false))
+            .andExpect(jsonPath("$.packageId").value("hl7.fhir.us.qicore"))
+            .andExpect(jsonPath("$.errorMessage").value("Failed to download package from registry"))
+            .andReturn();
+    assertEquals(HttpStatus.INTERNAL_SERVER_ERROR.value(), result.getResponse().getStatus());
+  }
 }
