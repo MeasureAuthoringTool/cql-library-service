@@ -5,15 +5,12 @@ import gov.cms.madie.cqllibraryservice.dto.*;
 import gov.cms.madie.cqllibraryservice.exceptions.*;
 import gov.cms.madie.cqllibraryservice.locks.CqlLibraryLock;
 import gov.cms.madie.cqllibraryservice.repositories.LibrarySetRepository;
-import gov.cms.madie.cqllibraryservice.utils.AuthUtils;
 import gov.cms.madie.models.access.AclOperation;
 import gov.cms.madie.models.access.AclSpecification;
 import gov.cms.madie.models.access.RoleEnum;
-import gov.cms.madie.models.access.UserStatus;
 import gov.cms.madie.models.common.*;
 import gov.cms.madie.models.dto.LibraryUsage;
 import gov.cms.madie.models.dto.UserDetailsDto;
-import gov.cms.madie.models.dto.UserRolesDto;
 import gov.cms.madie.models.library.CqlLibrary;
 import gov.cms.madie.models.library.CqlLibraryLockInfo;
 import gov.cms.madie.cqllibraryservice.repositories.CqlLibraryRepository;
@@ -47,6 +44,7 @@ public class CqlLibraryService {
   private final AppConfigService appConfigService;
   private final CqlLibraryLockService cqlLibraryLockService;
   private final UserServiceClient userServiceClient;
+  private final CqlLibraryAccessControlService cqlLibraryAccessControlService;
 
   public CqlLibrary updateCqlLibrary(CqlLibrary cqlLibrary, String username) {
     if (cqlLibrary == null || StringUtils.isBlank(cqlLibrary.getId())) {
@@ -57,7 +55,7 @@ public class CqlLibraryService {
     }
 
     CqlLibrary persistedLibrary = findCqlLibraryById(cqlLibrary.getId(), username);
-    AuthUtils.checkAccessPermissions(persistedLibrary, username);
+    cqlLibraryAccessControlService.checkAccessPermissions(persistedLibrary, username);
 
     enforceDraftState(persistedLibrary);
     enforceLocking(cqlLibrary.getId(), username);
@@ -69,7 +67,11 @@ public class CqlLibraryService {
     cqlLibrary.setLastModifiedBy(username);
 
     CqlLibrary savedLibrary = cqlLibraryRepository.save(cqlLibrary);
-    actionLogService.logAction(savedLibrary.getId(), ActionType.UPDATED, username, "actionLog");
+    ActionType actionType =
+        isReviewStatusChanged(cqlLibrary, persistedLibrary)
+            ? getReviewActionType(cqlLibrary)
+            : ActionType.UPDATED;
+    actionLogService.logAction(savedLibrary.getId(), actionType, username, "actionLog");
 
     return savedLibrary;
   }
@@ -107,6 +109,26 @@ public class CqlLibraryService {
     updatedLibrary.setVersion(persistedLibrary.getVersion());
     updatedLibrary.setCreatedAt(persistedLibrary.getCreatedAt());
     updatedLibrary.setCreatedBy(persistedLibrary.getCreatedBy());
+  }
+
+  private boolean isReviewStatusChanged(CqlLibrary updatedLibrary, CqlLibrary persistedLibrary) {
+    if (updatedLibrary.getReview() == null || updatedLibrary.getReview().getStatus() == null) {
+      return false;
+    }
+
+    if (persistedLibrary.getReview() == null || persistedLibrary.getReview().getStatus() == null) {
+      return true;
+    }
+
+    return !Objects.equals(
+        updatedLibrary.getReview().getStatus(), persistedLibrary.getReview().getStatus());
+  }
+
+  private ActionType getReviewActionType(CqlLibrary updatedLibrary) {
+    return updatedLibrary.getReview().getStatus()
+            == gov.cms.madie.models.common.ReviewStatus.READY_FOR_REVIEW
+        ? ActionType.READY_FOR_REVIEW
+        : ActionType.NOT_READY_FOR_REVIEW;
   }
 
   public Page<LibraryListDTO> getLibrariesByCriteria(
@@ -294,7 +316,10 @@ public class CqlLibraryService {
     }
 
     if (AclOperation.AclAction.GRANT.equals(aclOperation.getAction())) {
-      aclOperation.getAcls().forEach(acl -> validateHarpId(acl.getUserId(), accessToken));
+      aclOperation
+          .getAcls()
+          .forEach(
+              acl -> cqlLibraryAccessControlService.validateHarpId(acl.getUserId(), accessToken));
     }
 
     CqlLibrary library = persistedLibrary.get();
@@ -544,7 +569,7 @@ public class CqlLibraryService {
         performedBy,
         libraryUserIdMap);
 
-    boolean isAdminRole = hasAdminRole(performedBy, accessToken);
+    boolean isAdminRole = cqlLibraryAccessControlService.hasAdminRole(performedBy, accessToken);
     verifyShareAuthorization(libraryUserIdMap, performedBy, true, isAdminRole);
 
     return updateAccessControll(libraryUserIdMap, "Grant", performedBy, isAdminRole, accessToken);
@@ -557,7 +582,7 @@ public class CqlLibraryService {
         username,
         libraryUserIdMap);
 
-    boolean isAdminRole = hasAdminRole(username, accessToken);
+    boolean isAdminRole = cqlLibraryAccessControlService.hasAdminRole(username, accessToken);
     verifyShareAuthorization(libraryUserIdMap, username, false, isAdminRole);
 
     return updateAccessControll(libraryUserIdMap, "Revoke", username, isAdminRole, accessToken);
@@ -579,7 +604,7 @@ public class CqlLibraryService {
         .forEach(
             libraryId -> {
               CqlLibrary library = findCqlLibraryById(libraryId, username);
-              verifyAuthorization(
+              cqlLibraryAccessControlService.verifyAuthorization(
                   username,
                   library,
                   ownerOnly ? List.of() : List.of(RoleEnum.SHARED_WITH),
@@ -612,61 +637,21 @@ public class CqlLibraryService {
         .toList();
   }
 
-  public void verifyAuthorization(
-      String username, CqlLibrary library, List<RoleEnum> roles, boolean isAdminRole) {
-    LibrarySet librarySet =
-        library.getLibrarySet() == null
-            ? librarySetService.findByLibrarySetId(library.getLibrarySetId())
-            : library.getLibrarySet();
-    if (librarySet == null) {
-      throw new ResourceNotFoundException(
-          "No library set exists for library with ID : " + library.getId());
-    }
-    // allow admin user and no further verification
-    if (isAdminRole) {
-      return;
-    }
-    verifyLibrarySetAuthorization(username, "CqlLibrary", library.getId(), roles, librarySet);
-  }
-
-  public void verifyLibrarySetAuthorization(
-      String username,
-      String target,
-      String targetId,
-      List<RoleEnum> roles,
-      LibrarySet librarySet) {
-    List<RoleEnum> allowedRoles = roles == null ? List.of() : roles;
-    if (!librarySet.getOwner().equalsIgnoreCase(username)
-        && (org.springframework.util.CollectionUtils.isEmpty(librarySet.getAcls())
-            || librarySet.getAcls().stream()
-                .noneMatch(
-                    acl ->
-                        acl.getUserId().equalsIgnoreCase(username)
-                            && acl.getRoles().stream().anyMatch(allowedRoles::contains)))) {
-      throw new UnauthorizedException(target, targetId, username);
-    }
-  }
-
   public List<String> transferLibraries(
       List<String> libraryIds,
       String harpId,
       boolean retainShareAccess,
       String conductedBy,
       String accessToken) {
-    UserDetailsDto userDetailsDto = userServiceClient.getUserDetails(harpId, accessToken);
-
-    if (userDetailsDto == null || userDetailsDto.getUserStatus() != UserStatus.ACTIVE) {
-      throw new InvalidIdException(
-          "The provided HARP ID is not associated with an active MADiE user.");
-    }
+    cqlLibraryAccessControlService.validateHarpId(harpId, accessToken);
 
     List<String> failedLibraries = new ArrayList<>();
-    boolean isAdmin = hasAdminRole(conductedBy, accessToken);
+    boolean isAdmin = cqlLibraryAccessControlService.hasAdminRole(conductedBy, accessToken);
     for (String libraryId : libraryIds) {
       try {
         CqlLibrary cqlLibrary = findCqlLibraryById(libraryId, harpId);
         if (!isAdmin) {
-          AuthUtils.checkOwnership(cqlLibrary, conductedBy);
+          cqlLibraryAccessControlService.checkOwnership(cqlLibrary, conductedBy);
         }
         librarySetService.updateOwnership(
             cqlLibrary.getLibrarySetId(), harpId, retainShareAccess, conductedBy, isAdmin);
@@ -702,18 +687,6 @@ public class CqlLibraryService {
     return cqlLibraryHistory;
   }
 
-  private boolean hasAdminRole(String conductedBy, String accessToken) {
-    boolean isAdmin = false;
-    UserRolesDto userRolesDto = userServiceClient.getUserRoles(conductedBy, accessToken);
-    if (userRolesDto != null
-        && userRolesDto.getRoles() != null
-        && userRolesDto.getRoles().contains("MADiE-Admin")) {
-      log.info("User [{}] has MADiE-Admin role", conductedBy);
-      isAdmin = true;
-    }
-    return isAdmin;
-  }
-
   private Map<String, List<AclSpecification>> updateAccessControll(
       Map<String, List<String>> libraryUserIdMap,
       String type,
@@ -738,13 +711,5 @@ public class CqlLibraryService {
         libraryUserIdMap,
         libraryIdToAclSpecification);
     return libraryIdToAclSpecification;
-  }
-
-  protected void validateHarpId(String userId, String accessToken) {
-    UserDetailsDto userDetailsDto = userServiceClient.getUserDetails(userId, accessToken);
-    if (userDetailsDto == null || !UserStatus.ACTIVE.equals(userDetailsDto.getUserStatus())) {
-      throw new InvalidIdException(
-          "The provided HARP ID is not associated with an active MADiE user.");
-    }
   }
 }
