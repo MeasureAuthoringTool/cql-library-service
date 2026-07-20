@@ -37,7 +37,7 @@ class VersionJsonSerializerTest {
     String output = objectMapper.writeValueAsString(library);
     log.info("output: {}", output);
     assertEquals(
-        "{\"active\":true,\"cql\":null,\"cqlErrors\":false,\"cqlLibraryLock\":null,\"cqlLibraryName\":null,\"createdAt\":null,\"createdBy\":null,\"description\":null,\"draft\":false,\"elmJson\":null,\"elmXml\":null,\"experimental\":false,\"id\":null,\"includedLibraries\":null,\"lastModifiedAt\":null,\"lastModifiedBy\":null,\"librarySet\":null,\"librarySetId\":\"testid\",\"model\":null,\"ownerDisplayName\":null,\"publisher\":null,\"review\":null,\"version\":\"1.2.000\"}",
+        "{\"active\":true,\"cql\":null,\"cqlErrors\":false,\"cqlLibraryLock\":null,\"cqlLibraryName\":null,\"createdAt\":null,\"createdBy\":null,\"description\":null,\"draft\":false,\"elmJson\":null,\"elmXml\":null,\"experimental\":false,\"id\":null,\"includedLibraries\":null,\"lastModifiedAt\":null,\"lastModifiedBy\":null,\"librarySet\":null,\"librarySetId\":\"testid\",\"model\":null,\"ownerDisplayName\":null,\"publisher\":null,\"version\":\"1.2.000\"}",
         output,
         JSONCompareMode.STRICT);
   }

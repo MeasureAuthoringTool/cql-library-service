@@ -20,8 +20,6 @@ import gov.cms.madie.models.access.RoleEnum;
 import gov.cms.madie.models.common.*;
 import gov.cms.madie.models.dto.LibraryUsage;
 import gov.cms.madie.models.dto.UserDetailsDto;
-import gov.cms.madie.models.common.Review;
-import gov.cms.madie.models.common.ReviewStatus;
 import gov.cms.madie.models.library.CqlLibrary;
 import gov.cms.madie.cqllibraryservice.repositories.CqlLibraryRepository;
 import gov.cms.madie.models.library.LibrarySet;
@@ -1471,79 +1469,6 @@ class CqlLibraryServiceTest {
     assertThat(updatedLibrary.getIncludedLibraries().size(), is(equalTo(1)));
     verify(actionLogService, times(1))
         .logAction(anyString(), any(ActionType.class), anyString(), anyString());
-    verify(actionLogService, times(1))
-        .logAction(eq("L1"), eq(ActionType.UPDATED), eq(USERNAME), eq("actionLog"));
-  }
-
-  @Test
-  public void testUpdateCqlLibraryLogsReadyForReviewWhenStatusChanged() {
-    final CqlLibrary existingLibrary =
-        getTestCqlLibrary("L1", "Library1", ModelType.QI_CORE.getValue(), USERNAME);
-    existingLibrary.setReview(Review.builder().status(ReviewStatus.NOT_READY_FOR_REVIEW).build());
-
-    final CqlLibrary updatingLibrary =
-        existingLibrary.toBuilder()
-            .id("L1")
-            .review(Review.builder().status(ReviewStatus.READY_FOR_REVIEW).comment("ready").build())
-            .build();
-
-    when(cqlLibraryRepository.findById(anyString())).thenReturn(Optional.of(existingLibrary));
-    when(librarySetService.findByLibrarySetId(anyString()))
-        .thenReturn(existingLibrary.getLibrarySet());
-    when(cqlLibraryRepository.save(any(CqlLibrary.class))).thenReturn(updatingLibrary);
-
-    cqlLibraryService.updateCqlLibrary(updatingLibrary, USERNAME);
-
-    verify(actionLogService, times(1))
-        .logAction(eq("L1"), eq(ActionType.READY_FOR_REVIEW), eq(USERNAME), eq("actionLog"));
-    verify(actionLogService, never())
-        .logAction(eq("L1"), eq(ActionType.UPDATED), eq(USERNAME), eq("actionLog"));
-  }
-
-  @Test
-  public void testUpdateCqlLibraryLogsNotReadyForReviewWhenStatusChanged() {
-    final CqlLibrary existingLibrary =
-        getTestCqlLibrary("L1", "Library1", ModelType.QI_CORE.getValue(), USERNAME);
-    existingLibrary.setReview(Review.builder().status(ReviewStatus.READY_FOR_REVIEW).build());
-
-    final CqlLibrary updatingLibrary =
-        existingLibrary.toBuilder()
-            .id("L1")
-            .review(
-                Review.builder()
-                    .status(ReviewStatus.NOT_READY_FOR_REVIEW)
-                    .comment("needs work")
-                    .build())
-            .build();
-
-    when(cqlLibraryRepository.findById(anyString())).thenReturn(Optional.of(existingLibrary));
-    when(librarySetService.findByLibrarySetId(anyString()))
-        .thenReturn(existingLibrary.getLibrarySet());
-    when(cqlLibraryRepository.save(any(CqlLibrary.class))).thenReturn(updatingLibrary);
-
-    cqlLibraryService.updateCqlLibrary(updatingLibrary, USERNAME);
-
-    verify(actionLogService, times(1))
-        .logAction(eq("L1"), eq(ActionType.NOT_READY_FOR_REVIEW), eq(USERNAME), eq("actionLog"));
-    verify(actionLogService, never())
-        .logAction(eq("L1"), eq(ActionType.UPDATED), eq(USERNAME), eq("actionLog"));
-  }
-
-  @Test
-  public void testUpdateCqlLibraryLogsUpdatedWhenReviewMissing() {
-    final CqlLibrary existingLibrary =
-        getTestCqlLibrary("L1", "Library1", ModelType.QI_CORE.getValue(), USERNAME);
-    existingLibrary.setReview(Review.builder().status(ReviewStatus.READY_FOR_REVIEW).build());
-
-    final CqlLibrary updatingLibrary = existingLibrary.toBuilder().id("L1").review(null).build();
-
-    when(cqlLibraryRepository.findById(anyString())).thenReturn(Optional.of(existingLibrary));
-    when(librarySetService.findByLibrarySetId(anyString()))
-        .thenReturn(existingLibrary.getLibrarySet());
-    when(cqlLibraryRepository.save(any(CqlLibrary.class))).thenReturn(updatingLibrary);
-
-    cqlLibraryService.updateCqlLibrary(updatingLibrary, USERNAME);
-
     verify(actionLogService, times(1))
         .logAction(eq("L1"), eq(ActionType.UPDATED), eq(USERNAME), eq("actionLog"));
   }

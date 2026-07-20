@@ -67,11 +67,7 @@ public class CqlLibraryService {
     cqlLibrary.setLastModifiedBy(username);
 
     CqlLibrary savedLibrary = cqlLibraryRepository.save(cqlLibrary);
-    ActionType actionType =
-        isReviewStatusChanged(cqlLibrary, persistedLibrary)
-            ? getReviewActionType(cqlLibrary)
-            : ActionType.UPDATED;
-    actionLogService.logAction(savedLibrary.getId(), actionType, username, "actionLog");
+    actionLogService.logAction(savedLibrary.getId(), ActionType.UPDATED, username, "actionLog");
 
     return savedLibrary;
   }
@@ -109,26 +105,6 @@ public class CqlLibraryService {
     updatedLibrary.setVersion(persistedLibrary.getVersion());
     updatedLibrary.setCreatedAt(persistedLibrary.getCreatedAt());
     updatedLibrary.setCreatedBy(persistedLibrary.getCreatedBy());
-  }
-
-  private boolean isReviewStatusChanged(CqlLibrary updatedLibrary, CqlLibrary persistedLibrary) {
-    if (updatedLibrary.getReview() == null || updatedLibrary.getReview().getStatus() == null) {
-      return false;
-    }
-
-    if (persistedLibrary.getReview() == null || persistedLibrary.getReview().getStatus() == null) {
-      return true;
-    }
-
-    return !Objects.equals(
-        updatedLibrary.getReview().getStatus(), persistedLibrary.getReview().getStatus());
-  }
-
-  private ActionType getReviewActionType(CqlLibrary updatedLibrary) {
-    return updatedLibrary.getReview().getStatus()
-            == gov.cms.madie.models.common.ReviewStatus.READY_FOR_REVIEW
-        ? ActionType.READY_FOR_REVIEW
-        : ActionType.NOT_READY_FOR_REVIEW;
   }
 
   public Page<LibraryListDTO> getLibrariesByCriteria(
