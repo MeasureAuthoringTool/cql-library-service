@@ -2,7 +2,7 @@ package gov.cms.madie.cqllibraryservice.services;
 
 import gov.cms.madie.cqllibraryservice.dto.DownloadedPackageResult;
 import gov.cms.madie.cqllibraryservice.exceptions.VirusScanServiceException;
-import gov.cms.madie.cqllibraryservice.models.PackageDownloadStatus;
+import gov.cms.madie.cqllibraryservice.models.PackageStatus;
 import gov.cms.madie.cqllibraryservice.models.PackageTrackingRecord;
 import gov.cms.madie.cqllibraryservice.repositories.PackageTrackingRepository;
 import gov.cms.madie.models.scanner.VirusScanResponseDto;
@@ -241,7 +241,7 @@ public class FhirPackageDownloadServiceImpl implements FhirPackageDownloadServic
         .map(
             existing -> {
               existing.setInitiatedBy(username);
-              existing.setStatus(PackageDownloadStatus.DOWNLOADING);
+              existing.setStatus(PackageStatus.DOWNLOADING);
               existing.setErrorMessage(null);
               existing.setLastAttemptedAt(Instant.now());
               return packageTrackingRepository.save(existing);
@@ -252,14 +252,14 @@ public class FhirPackageDownloadServiceImpl implements FhirPackageDownloadServic
                     PackageTrackingRecord.builder()
                         .packageId(packageId)
                         .version(version)
-                        .status(PackageDownloadStatus.DOWNLOADING)
+                        .status(PackageStatus.DOWNLOADING)
                         .initiatedBy(username)
                         .lastAttemptedAt(Instant.now())
                         .build()));
   }
 
   private void markAsDownloaded(PackageTrackingRecord record, List<String> childIgs) {
-    record.setStatus(PackageDownloadStatus.DOWNLOADED);
+    record.setStatus(PackageStatus.DOWNLOADED);
     if (childIgs != null) {
       record.setChildIgs(childIgs);
     }
@@ -269,7 +269,7 @@ public class FhirPackageDownloadServiceImpl implements FhirPackageDownloadServic
   }
 
   private void markAsInfected(PackageTrackingRecord record, String errorMessage) {
-    record.setStatus(PackageDownloadStatus.ERROR_INFECTED_SO_REVIEW);
+    record.setStatus(PackageStatus.ERROR_INFECTED_SO_REVIEW);
     record.setErrorMessage(errorMessage);
     packageTrackingRepository.save(record);
   }
@@ -279,7 +279,7 @@ public class FhirPackageDownloadServiceImpl implements FhirPackageDownloadServic
   }
 
   private void markAsFailed(PackageTrackingRecord record, String errorMessage) {
-    record.setStatus(PackageDownloadStatus.DOWNLOAD_FAILED);
+    record.setStatus(PackageStatus.DOWNLOAD_FAILED);
     record.setErrorMessage(errorMessage);
     packageTrackingRepository.save(record);
   }

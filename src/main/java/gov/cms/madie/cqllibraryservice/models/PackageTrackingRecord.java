@@ -26,7 +26,7 @@ public class PackageTrackingRecord {
   private String packageId;
   private String version;
   private List<String> childIgs;
-  private PackageDownloadStatus status;
+  private PackageStatus status;
   private String errorMessage;
   private Instant lastAttemptedAt;
   private Instant downloadedAt;

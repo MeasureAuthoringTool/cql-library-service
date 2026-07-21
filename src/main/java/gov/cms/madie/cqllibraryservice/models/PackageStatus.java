@@ -1,6 +1,6 @@
 package gov.cms.madie.cqllibraryservice.models;
 
-public enum PackageDownloadStatus {
+public enum PackageStatus {
   DOWNLOADING,
   DOWNLOADED,
   DOWNLOAD_FAILED,
