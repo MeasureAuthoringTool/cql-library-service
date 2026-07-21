@@ -8,6 +8,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -40,9 +41,7 @@ class PackageCacheManagerAdapterTest {
   @BeforeEach
   void setUp() throws Exception {
     adapter = new PackageCacheManagerAdapter("") {};
-    var field = PackageCacheManagerAdapter.class.getDeclaredField("cacheManager");
-    field.setAccessible(true);
-    field.set(adapter, cacheManager);
+    ReflectionTestUtils.setField(adapter, "cacheManager", cacheManager);
   }
 
   // ---------------------------------------------------------------------------
