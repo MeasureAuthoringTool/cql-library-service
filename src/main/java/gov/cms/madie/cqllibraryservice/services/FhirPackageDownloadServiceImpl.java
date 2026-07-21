@@ -147,15 +147,14 @@ public class FhirPackageDownloadServiceImpl implements FhirPackageDownloadServic
       throw new VirusScanServiceException(message, ex);
     }
 
-    log.info(
-        "sending {} file(s) for virus scan of {}#{}", filesToScan.size(), packageId, version);
+    log.info("sending {} file(s) for virus scan of {}#{}", filesToScan.size(), packageId, version);
 
     VirusScanResponseDto scanResult;
     try {
       scanResult = virusScanClient.scanFiles(filesToScan);
     } catch (RestClientException ex) {
       String message =
-          "Virus scan service is error for package "
+          "Virus scan service error for package "
               + packageId
               + "#"
               + version

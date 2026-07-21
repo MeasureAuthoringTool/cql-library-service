@@ -336,7 +336,7 @@ class FhirPackageDownloadServiceImplTest {
     assertFalse(result.isSuccess());
     assertNull(result.getPackageLocation());
     assertNotNull(result.getErrorMessage());
-    assertTrue(result.getErrorMessage().contains("unavailable"));
+    assertTrue(result.getErrorMessage().contains("Virus scan service error"));
     assertFalse(
         Files.exists(pkgDir),
         "Residual package directory should have been deleted on scan failure");
@@ -379,7 +379,7 @@ class FhirPackageDownloadServiceImplTest {
     assertFalse(result.isSuccess());
     assertNull(result.getPackageLocation());
     assertNotNull(result.getErrorMessage());
-    assertTrue(result.getErrorMessage().contains("unavailable"));
+    assertTrue(result.getErrorMessage().contains("Virus scan service error"));
     assertFalse(
         Files.exists(depDir),
         "Residual dependency directory should have been deleted on scan failure");
