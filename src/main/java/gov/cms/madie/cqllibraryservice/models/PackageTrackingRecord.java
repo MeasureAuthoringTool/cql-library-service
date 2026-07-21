@@ -16,7 +16,7 @@ import lombok.NoArgsConstructor;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Document(collection = "packageTrackingRecords")
+@Document
 @CompoundIndex(
     name = "packageId_version_idx",
     def = "{'packageId': 1, 'version': 1}",
