@@ -21,9 +21,9 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 
-import gov.cms.madie.cqllibraryservice.dto.DownloadedPackageResult;
 import gov.cms.madie.cqllibraryservice.dto.IgPackageInstallRequest;
 import gov.cms.madie.cqllibraryservice.services.AdminService;
 import gov.cms.madie.cqllibraryservice.services.CqlLibraryLockService;
@@ -32,7 +32,6 @@ import gov.cms.madie.cqllibraryservice.services.IgPackageService;
 import gov.cms.madie.models.access.AclOperation;
 import gov.cms.madie.models.access.AclSpecification;
 import gov.cms.madie.models.access.RoleEnum;
-import static org.hamcrest.CoreMatchers.notNullValue;
 
 @ExtendWith(MockitoExtension.class)
 public class CqlLibraryAdminControllerTest {
@@ -104,57 +103,15 @@ public class CqlLibraryAdminControllerTest {
             .packageId("hl7.fhir.us.qicore")
             .packageVersion("7.0.2")
             .build();
-    DownloadedPackageResult downloadResult =
-        DownloadedPackageResult.builder()
-            .packageId("hl7.fhir.us.qicore")
-            .version("7.0.2")
-            .success(true)
-            .packageLocation("/cache/hl7.fhir.us.qicore#7.0.2")
-            .build();
-    when(igPackageService.installIgPackage(anyString(), anyString(), anyString()))
-        .thenReturn(downloadResult);
+    doNothing().when(igPackageService).installIgPackage(anyString(), anyString(), anyString());
 
-    ResponseEntity<DownloadedPackageResult> response =
-        controller.installIgPackage(principal, request);
+    ResponseEntity<String> response = controller.installIgPackage(principal, request);
 
     assertNotNull(response);
-    assertEquals(200, response.getStatusCode().value());
-    assertThat(response.getBody(), is(notNullValue()));
-    assertThat(response.getBody().isSuccess(), is(true));
-    assertThat(response.getBody().getPackageId(), is(equalTo("hl7.fhir.us.qicore")));
-    assertThat(response.getBody().getVersion(), is(equalTo("7.0.2")));
-    verify(igPackageService, times(1)).installIgPackage(anyString(), anyString(), anyString());
-  }
-
-  @Test
-  void testInstallIgPackageReturnsInternalServerErrorWhenInstallationFails() {
-    when(principal.getName()).thenReturn("admin.user");
-    IgPackageInstallRequest request =
-        IgPackageInstallRequest.builder()
-            .packageId("hl7.fhir.us.qicore")
-            .packageVersion("7.0.2")
-            .build();
-    DownloadedPackageResult failedResult =
-        DownloadedPackageResult.builder()
-            .packageId("hl7.fhir.us.qicore")
-            .version("7.0.2")
-            .success(false)
-            .errorMessage("Failed to download package from registry")
-            .build();
-    when(igPackageService.installIgPackage(anyString(), anyString(), anyString()))
-        .thenReturn(failedResult);
-
-    ResponseEntity<DownloadedPackageResult> response =
-        controller.installIgPackage(principal, request);
-
-    assertNotNull(response);
-    assertEquals(500, response.getStatusCode().value());
-    assertThat(response.getBody(), is(notNullValue()));
-    assertThat(response.getBody().isSuccess(), is(false));
-    assertThat(response.getBody().getPackageId(), is(equalTo("hl7.fhir.us.qicore")));
-    assertThat(
-        response.getBody().getErrorMessage(),
-        is(equalTo("Failed to download package from registry")));
+    assertEquals(HttpStatus.ACCEPTED.value(), response.getStatusCode().value());
+    assertNotNull(response.getBody());
+    assertTrue(response.getBody().contains("hl7.fhir.us.qicore"));
+    assertTrue(response.getBody().contains("7.0.2"));
     verify(igPackageService, times(1)).installIgPackage(anyString(), anyString(), anyString());
   }
 }

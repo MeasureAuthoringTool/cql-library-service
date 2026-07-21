@@ -12,6 +12,7 @@ import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestTemplate;
 
 import java.net.URI;
+import java.util.List;
 
 @Slf4j
 @Service
@@ -20,11 +21,18 @@ public class VirusScanClient {
   private VirusScanConfig virusScanConfig;
   private RestTemplate virusScanRestTemplate;
 
-  public VirusScanResponseDto scanFile(Resource fileResource) {
-    // return clean scan results if virus scanning is disabled
+  /**
+   * Scans multiple files in a single multipart request. Each resource is appended under the {@code
+   * "files"} key, mirroring the multi-file API accepted by the virus scan service.
+   *
+   * @param fileResources the list of file resources to scan
+   * @return the aggregated scan result
+   */
+  public VirusScanResponseDto scanFiles(List<Resource> fileResources) {
     if (virusScanConfig.isScanDisabled()) {
       log.info("Virus scanning is disabled.");
-      return VirusScanResponseDto.builder().filesScanned(1).cleanFileCount(1).build();
+      int count = fileResources.size();
+      return VirusScanResponseDto.builder().filesScanned(count).cleanFileCount(count).build();
     }
 
     HttpHeaders headers = new HttpHeaders();
@@ -32,12 +40,19 @@ public class VirusScanClient {
     headers.set("apikey", virusScanConfig.getApiKey());
 
     MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
-    body.add("file", fileResource);
+    for (Resource resource : fileResources) {
+      body.add("files", resource);
+    }
+
     final String virusScanUrl = virusScanConfig.getBaseUrl() + virusScanConfig.getScanFileUri();
     final URI uri = URI.create(virusScanUrl);
+    log.info("Starting virus scan for {} file(s).", fileResources.size());
+    long startTime = System.currentTimeMillis();
     ResponseEntity<VirusScanResponseDto> response =
         virusScanRestTemplate.exchange(
             new RequestEntity<>(body, headers, HttpMethod.POST, uri), VirusScanResponseDto.class);
+    double elapsedTime = (System.currentTimeMillis() - startTime) / 1000.0;
+    log.info("Virus scan completed in {} seconds.", elapsedTime);
     return response.getBody();
   }
 }

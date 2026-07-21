@@ -3,6 +3,7 @@ package gov.cms.madie.cqllibraryservice.services;
 import gov.cms.madie.cqllibraryservice.dto.DownloadedPackageResult;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 @Slf4j
@@ -19,29 +20,33 @@ public class IgPackageService {
    * @param packageId the identifier of the IG package to install
    * @param packageVersion the version of the IG package to install
    * @param username the admin user initiating the installation
-   * @return the result of the package download operation
    */
-  public DownloadedPackageResult installIgPackage(
-      String packageId, String packageVersion, String username) {
+  @Async
+  public void installIgPackage(String packageId, String packageVersion, String username) {
     log.info(
         "User [{}] initiated IG package installation for packageId [{}], version [{}]",
         username,
         packageId,
         packageVersion);
 
+    long startTime = System.currentTimeMillis();
     DownloadedPackageResult result =
         fhirPackageDownloadService.downloadPackage(packageId, packageVersion, username);
+    double elapsedSeconds = (System.currentTimeMillis() - startTime) / 1000.0;
 
     if (result.isSuccess()) {
-      log.info("IG package [{}] version [{}] downloaded successfully", packageId, packageVersion);
-    } else {
-      log.warn(
-          "IG package [{}] version [{}] download failed: {}",
+      log.info(
+          "IG package [{}] version [{}] downloaded successfully in [{}] seconds",
           packageId,
           packageVersion,
+          elapsedSeconds);
+    } else {
+      log.warn(
+          "IG package [{}] version [{}] download failed after [{}] seconds: {}",
+          packageId,
+          packageVersion,
+          elapsedSeconds,
           result.getErrorMessage());
     }
-
-    return result;
   }
 }

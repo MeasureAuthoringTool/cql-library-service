@@ -9,11 +9,15 @@ import gov.cms.madie.models.scanner.VirusScanResponseDto;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.io.FileSystemResource;
+import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Service;
 import org.springframework.util.FileSystemUtils;
 import org.springframework.web.client.RestClientException;
 
 import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
@@ -124,18 +128,41 @@ public class FhirPackageDownloadServiceImpl implements FhirPackageDownloadServic
     }
 
     log.info("Scanning FHIR package {}#{} for viruses at {}", packageId, version, packagePath);
+
+    // Collect all files from the package directory to be sent for virus scanning.
+    List<Resource> filesToScan;
+    try {
+      filesToScan = collectFiles(packagePath);
+    } catch (IOException ex) {
+      String message =
+          "Failed to collect files for virus scanning of package "
+              + packageId
+              + "#"
+              + version
+              + ": "
+              + ex.getMessage();
+      log.error(message, ex);
+      deletePackage(packagePath);
+      markAsFailed(trackingRecord, message);
+      throw new VirusScanServiceException(message, ex);
+    }
+
+    log.info(
+        "sending {} file(s) for virus scan of {}#{}", filesToScan.size(), packageId, version);
+
     VirusScanResponseDto scanResult;
     try {
-      scanResult = virusScanClient.scanFile(new FileSystemResource(packagePath));
+      scanResult = virusScanClient.scanFiles(filesToScan);
     } catch (RestClientException ex) {
       String message =
-          "Virus scan service is unavailable for package "
+          "Virus scan service is error for package "
               + packageId
               + "#"
               + version
               + " - download blocked: "
               + ex.getMessage();
       log.error(message, ex);
+      deletePackage(packagePath);
       markAsFailed(trackingRecord, message);
       throw new VirusScanServiceException(message, ex);
     }
@@ -168,6 +195,32 @@ public class FhirPackageDownloadServiceImpl implements FhirPackageDownloadServic
     }
 
     return true;
+  }
+
+  /**
+   * Collects all files under {@code packagePath} as {@link Resource} instances suitable for
+   * multipart upload. If the path points to a single file (e.g. a {@code .json}), that file is
+   * returned as-is. If it points to a directory, all files are collected recursively.
+   *
+   * @param packagePath path to a file or directory
+   * @return a flat list of file resources
+   * @throws IOException if the path cannot be walked
+   */
+  private List<Resource> collectFiles(String packagePath) throws IOException {
+    File source = new File(packagePath);
+    List<Resource> resources = new ArrayList<>();
+    if (source.isFile()) {
+      resources.add(new FileSystemResource(source));
+    } else {
+      try (var stream = Files.walk(source.toPath())) {
+        stream
+            .filter(p -> !Files.isDirectory(p))
+            .map(Path::toFile)
+            .map(FileSystemResource::new)
+            .forEach(resources::add);
+      }
+    }
+    return resources;
   }
 
   private void deletePackage(String packagePath) {

@@ -21,29 +21,68 @@ import org.springframework.core.io.Resource;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.client.RestTemplate;
 
+import java.util.List;
+
 @ExtendWith(MockitoExtension.class)
 class VirusScanClientTest {
 
   @Mock private VirusScanConfig virusScanConfig;
   @Mock private RestTemplate virusScanRestTemplate;
-  @Mock private Resource fileResource;
+  @Mock private Resource fileResource1;
+  @Mock private Resource fileResource2;
 
   @InjectMocks private VirusScanClient virusScanClient;
 
   @Test
-  void scanFileReturnsCleanResultWhenScanningIsDisabled() {
+  void scanFilesReturnsCleanResultForAllFilesWhenScanningIsDisabled() {
     when(virusScanConfig.isScanDisabled()).thenReturn(true);
 
-    VirusScanResponseDto result = virusScanClient.scanFile(fileResource);
+    List<Resource> files = List.of(fileResource1, fileResource2);
+    VirusScanResponseDto result = virusScanClient.scanFiles(files);
 
     assertNotNull(result);
-    assertThat(result.getFilesScanned(), is(equalTo(1)));
-    assertThat(result.getCleanFileCount(), is(equalTo(1)));
+    assertThat(result.getFilesScanned(), is(equalTo(2)));
+    assertThat(result.getCleanFileCount(), is(equalTo(2)));
     verify(virusScanRestTemplate, never()).exchange(any(), eq(VirusScanResponseDto.class));
   }
 
   @Test
-  void scanFileCallsScanEndpointAndReturnsResponseWhenScanningIsEnabled() {
+  void scanFilesCallsScanEndpointAndReturnsResponseWhenScanningIsEnabled() {
+    VirusScanResponseDto expectedResponse =
+        VirusScanResponseDto.builder().filesScanned(2).cleanFileCount(2).build();
+
+    when(virusScanConfig.isScanDisabled()).thenReturn(false);
+    when(virusScanConfig.getBaseUrl()).thenReturn("http://virus-scan-service");
+    when(virusScanConfig.getScanFileUri()).thenReturn("/api/v1/scan");
+    when(virusScanConfig.getApiKey()).thenReturn("test");
+    when(virusScanRestTemplate.exchange(any(), eq(VirusScanResponseDto.class)))
+        .thenReturn(ResponseEntity.ok(expectedResponse));
+
+    List<Resource> files = List.of(fileResource1, fileResource2);
+    VirusScanResponseDto result = virusScanClient.scanFiles(files);
+
+    assertNotNull(result);
+    assertThat(result.getFilesScanned(), is(equalTo(2)));
+    assertThat(result.getCleanFileCount(), is(equalTo(2)));
+    verify(virusScanRestTemplate).exchange(any(), eq(VirusScanResponseDto.class));
+  }
+
+  @Test
+  void scanFilesReturnsNullWhenScanResponseBodyIsNull() {
+    when(virusScanConfig.isScanDisabled()).thenReturn(false);
+    when(virusScanConfig.getBaseUrl()).thenReturn("http://virus-scan-service");
+    when(virusScanConfig.getScanFileUri()).thenReturn("/api/v1/scan");
+    when(virusScanConfig.getApiKey()).thenReturn("test");
+    when(virusScanRestTemplate.exchange(any(), eq(VirusScanResponseDto.class)))
+        .thenReturn(ResponseEntity.ok(null));
+
+    VirusScanResponseDto result = virusScanClient.scanFiles(List.of(fileResource1));
+
+    assertThat(result, is(equalTo(null)));
+  }
+
+  @Test
+  void scanFilesHandlesSingleFileCorrectly() {
     VirusScanResponseDto expectedResponse =
         VirusScanResponseDto.builder().filesScanned(1).cleanFileCount(1).build();
 
@@ -54,7 +93,7 @@ class VirusScanClientTest {
     when(virusScanRestTemplate.exchange(any(), eq(VirusScanResponseDto.class)))
         .thenReturn(ResponseEntity.ok(expectedResponse));
 
-    VirusScanResponseDto result = virusScanClient.scanFile(fileResource);
+    VirusScanResponseDto result = virusScanClient.scanFiles(List.of(fileResource1));
 
     assertNotNull(result);
     assertThat(result.getFilesScanned(), is(equalTo(1)));
@@ -63,16 +102,14 @@ class VirusScanClientTest {
   }
 
   @Test
-  void scanFileReturnsNullWhenScanResponseBodyIsNull() {
-    when(virusScanConfig.isScanDisabled()).thenReturn(false);
-    when(virusScanConfig.getBaseUrl()).thenReturn("http://virus-scan-service");
-    when(virusScanConfig.getScanFileUri()).thenReturn("/api/v1/scan");
-    when(virusScanConfig.getApiKey()).thenReturn("test");
-    when(virusScanRestTemplate.exchange(any(), eq(VirusScanResponseDto.class)))
-        .thenReturn(ResponseEntity.ok(null));
+  void scanFilesReturnsCleanResultForEmptyListWhenScanningIsDisabled() {
+    when(virusScanConfig.isScanDisabled()).thenReturn(true);
 
-    VirusScanResponseDto result = virusScanClient.scanFile(fileResource);
+    VirusScanResponseDto result = virusScanClient.scanFiles(List.of());
 
-    assertThat(result, is(equalTo(null)));
+    assertNotNull(result);
+    assertThat(result.getFilesScanned(), is(equalTo(0)));
+    assertThat(result.getCleanFileCount(), is(equalTo(0)));
+    verify(virusScanRestTemplate, never()).exchange(any(), eq(VirusScanResponseDto.class));
   }
 }

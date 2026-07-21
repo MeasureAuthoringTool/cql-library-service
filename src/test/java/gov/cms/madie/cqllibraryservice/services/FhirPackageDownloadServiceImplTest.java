@@ -5,14 +5,15 @@ import gov.cms.madie.cqllibraryservice.models.PackageDownloadStatus;
 import gov.cms.madie.cqllibraryservice.models.PackageTrackingRecord;
 import gov.cms.madie.cqllibraryservice.repositories.PackageTrackingRepository;
 import gov.cms.madie.models.scanner.VirusScanResponseDto;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.api.io.TempDir;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.core.io.FileSystemResource;
 import org.springframework.web.client.ResourceAccessException;
 
 import java.io.IOException;
@@ -34,12 +35,20 @@ class FhirPackageDownloadServiceImplTest {
   @Mock private VirusScanClient virusScanClient;
   @Captor private ArgumentCaptor<PackageTrackingRecord> trackingRecordCaptor;
 
+  @TempDir Path tempDir;
+
   private static final String PACKAGE_ID = "hl7.fhir.us.qicore";
   private static final String VERSION = "7.0.2";
   private static final String USERNAME = "admin.user";
-  private static final String ROOT_PATH = "/cache/hl7.fhir.us.qicore#7.0.2";
   private static final String DEP_1 = "hl7.fhir.us.core";
   private static final String DEP_2 = "hl7.fhir.uv.extensions";
+
+  private String rootPath;
+
+  @BeforeEach
+  void setUp() throws IOException {
+    rootPath = Files.createDirectory(tempDir.resolve("hl7.fhir.us.qicore#7.0.2")).toString();
+  }
 
   private void stubAdapterWithPaths(List<String> paths) throws Exception {
     when(packageCacheManagerAdapter.loadPackageWithDependencies(
@@ -63,16 +72,16 @@ class FhirPackageDownloadServiceImplTest {
         .thenReturn(Optional.empty());
     when(packageTrackingRepository.save(any(PackageTrackingRecord.class)))
         .thenAnswer(invocation -> invocation.getArgument(0));
-    stubAdapterWithPaths(List.of(ROOT_PATH));
-    when(virusScanClient.scanFile(any(FileSystemResource.class)))
-        .thenReturn(VirusScanResponseDto.builder().filesScanned(1).cleanFileCount(1).build());
+    stubAdapterWithPaths(List.of(rootPath));
+    when(virusScanClient.scanFiles(any()))
+        .thenReturn(VirusScanResponseDto.builder().filesScanned(0).cleanFileCount(0).build());
 
     DownloadedPackageResult result = downloadService.downloadPackage(PACKAGE_ID, VERSION, USERNAME);
 
     assertTrue(result.isSuccess());
     assertEquals(PACKAGE_ID, result.getPackageId());
     assertEquals(VERSION, result.getVersion());
-    assertEquals(ROOT_PATH, result.getPackageLocation());
+    assertEquals(rootPath, result.getPackageLocation());
     assertNull(result.getErrorMessage());
 
     verify(packageTrackingRepository, atLeast(2)).save(trackingRecordCaptor.capture());
@@ -83,27 +92,11 @@ class FhirPackageDownloadServiceImplTest {
   }
 
   @Test
-  void testDownloadPackageCached() throws Exception {
-    when(packageTrackingRepository.findByPackageIdAndVersion(PACKAGE_ID, VERSION))
-        .thenReturn(Optional.empty());
-    when(packageTrackingRepository.save(any(PackageTrackingRecord.class)))
-        .thenAnswer(invocation -> invocation.getArgument(0));
-    stubAdapterWithPaths(List.of(ROOT_PATH));
-    when(virusScanClient.scanFile(any(FileSystemResource.class)))
-        .thenReturn(VirusScanResponseDto.builder().filesScanned(1).cleanFileCount(1).build());
-
-    DownloadedPackageResult result = downloadService.downloadPackage(PACKAGE_ID, VERSION, USERNAME);
-
-    assertTrue(result.isSuccess());
-    assertEquals(PACKAGE_ID, result.getPackageId());
-    assertEquals(VERSION, result.getVersion());
-    assertNull(result.getErrorMessage());
-  }
-
-  @Test
   void testDownloadPackageScansEachPackageImmediately() throws Exception {
-    String depPath1 = "/cache/hl7.fhir.us.core#6.1.0";
-    String depPath2 = "/cache/hl7.fhir.uv.extensions#1.0.0";
+    Path depDir1 = Files.createDirectory(tempDir.resolve("hl7.fhir.us.core#6.1.0"));
+    Path depDir2 = Files.createDirectory(tempDir.resolve("hl7.fhir.uv.extensions#1.0.0"));
+    String depPath1 = depDir1.toString();
+    String depPath2 = depDir2.toString();
     when(packageTrackingRepository.findByPackageIdAndVersion(PACKAGE_ID, VERSION))
         .thenReturn(Optional.empty());
     when(packageTrackingRepository.save(any(PackageTrackingRecord.class)))
@@ -114,8 +107,8 @@ class FhirPackageDownloadServiceImplTest {
             invocation -> {
               PackageDownloadedCallback cb = invocation.getArgument(2);
               List<String> keptPaths = new java.util.ArrayList<>();
-              if (cb.onDownloaded(PACKAGE_ID, VERSION, ROOT_PATH)) {
-                keptPaths.add(ROOT_PATH);
+              if (cb.onDownloaded(PACKAGE_ID, VERSION, rootPath)) {
+                keptPaths.add(rootPath);
               }
               if (cb.onDownloaded(DEP_1, "6.1.0", depPath1)) {
                 keptPaths.add(depPath1);
@@ -125,14 +118,14 @@ class FhirPackageDownloadServiceImplTest {
               }
               return keptPaths;
             });
-    when(virusScanClient.scanFile(any(FileSystemResource.class)))
-        .thenReturn(VirusScanResponseDto.builder().filesScanned(1).cleanFileCount(1).build());
+    when(virusScanClient.scanFiles(any()))
+        .thenReturn(VirusScanResponseDto.builder().filesScanned(0).cleanFileCount(0).build());
 
     DownloadedPackageResult result = downloadService.downloadPackage(PACKAGE_ID, VERSION, USERNAME);
 
     assertTrue(result.isSuccess());
-    assertEquals(ROOT_PATH, result.getPackageLocation());
-    verify(virusScanClient, times(3)).scanFile(any(FileSystemResource.class));
+    assertEquals(rootPath, result.getPackageLocation());
+    verify(virusScanClient, times(3)).scanFiles(any());
 
     verify(packageTrackingRepository, atLeast(4)).save(trackingRecordCaptor.capture());
     PackageTrackingRecord lastSaved =
@@ -157,8 +150,8 @@ class FhirPackageDownloadServiceImplTest {
               cb.onDownloaded(PACKAGE_ID, VERSION, infectedDir.toString());
               return List.of();
             });
-    when(virusScanClient.scanFile(any(FileSystemResource.class)))
-        .thenReturn(VirusScanResponseDto.builder().filesScanned(1).infectedFileCount(1).build());
+    when(virusScanClient.scanFiles(any()))
+        .thenReturn(VirusScanResponseDto.builder().filesScanned(0).infectedFileCount(1).build());
 
     DownloadedPackageResult result = downloadService.downloadPackage(PACKAGE_ID, VERSION, USERNAME);
 
@@ -175,9 +168,12 @@ class FhirPackageDownloadServiceImplTest {
 
   @Test
   void testDownloadPackageContinuesAfterInfectedDependency() throws Exception {
-    String cleanPath = "/cache/hl7.fhir.us.core#6.1.0";
-    String infectedPath = "/cache/evil.pkg#1.0.0";
-    String thirdPath = "/cache/hl7.fhir.uv.extensions#1.0.0";
+    Path depDir1 = Files.createDirectory(tempDir.resolve("hl7.fhir.us.core#6.1.0"));
+    Path infectedDep = Files.createDirectory(tempDir.resolve("evil.pkg#1.0.0"));
+    Path depDir2 = Files.createDirectory(tempDir.resolve("hl7.fhir.uv.extensions#1.0.0"));
+    String cleanPath = depDir1.toString();
+    String infectedPath = infectedDep.toString();
+    String thirdPath = depDir2.toString();
     when(packageTrackingRepository.findByPackageIdAndVersion(PACKAGE_ID, VERSION))
         .thenReturn(Optional.empty());
     when(packageTrackingRepository.save(any(PackageTrackingRecord.class)))
@@ -188,8 +184,8 @@ class FhirPackageDownloadServiceImplTest {
             invocation -> {
               PackageDownloadedCallback cb = invocation.getArgument(2);
               List<String> keptPaths = new java.util.ArrayList<>();
-              if (cb.onDownloaded(PACKAGE_ID, VERSION, ROOT_PATH)) {
-                keptPaths.add(ROOT_PATH);
+              if (cb.onDownloaded(PACKAGE_ID, VERSION, rootPath)) {
+                keptPaths.add(rootPath);
               }
               if (cb.onDownloaded(DEP_1, "6.1.0", cleanPath)) {
                 keptPaths.add(cleanPath);
@@ -202,22 +198,22 @@ class FhirPackageDownloadServiceImplTest {
               }
               return keptPaths;
             });
-    when(virusScanClient.scanFile(any(FileSystemResource.class)))
-        .thenReturn(VirusScanResponseDto.builder().filesScanned(1).cleanFileCount(1).build())
-        .thenReturn(VirusScanResponseDto.builder().filesScanned(1).cleanFileCount(1).build())
+    when(virusScanClient.scanFiles(any()))
+        .thenReturn(VirusScanResponseDto.builder().filesScanned(0).cleanFileCount(0).build())
+        .thenReturn(VirusScanResponseDto.builder().filesScanned(0).cleanFileCount(0).build())
         .thenReturn(
             VirusScanResponseDto.builder()
-                .filesScanned(1)
+                .filesScanned(0)
                 .cleanFileCount(0)
                 .infectedFileCount(1)
                 .build())
-        .thenReturn(VirusScanResponseDto.builder().filesScanned(1).cleanFileCount(1).build());
+        .thenReturn(VirusScanResponseDto.builder().filesScanned(0).cleanFileCount(0).build());
 
     DownloadedPackageResult result = downloadService.downloadPackage(PACKAGE_ID, VERSION, USERNAME);
 
     assertTrue(result.isSuccess());
-    assertEquals(ROOT_PATH, result.getPackageLocation());
-    verify(virusScanClient, times(4)).scanFile(any(FileSystemResource.class));
+    assertEquals(rootPath, result.getPackageLocation());
+    verify(virusScanClient, times(4)).scanFiles(any());
 
     verify(packageTrackingRepository, atLeast(2)).save(trackingRecordCaptor.capture());
     assertTrue(
@@ -242,29 +238,6 @@ class FhirPackageDownloadServiceImplTest {
     assertFalse(result.isSuccess());
     assertEquals(invalidPackageId, result.getPackageId());
     assertTrue(result.getErrorMessage().contains("Unable to find package"));
-
-    verify(packageTrackingRepository, atLeast(2)).save(trackingRecordCaptor.capture());
-    PackageTrackingRecord lastSaved =
-        trackingRecordCaptor.getAllValues().get(trackingRecordCaptor.getAllValues().size() - 1);
-    assertEquals(PackageDownloadStatus.DOWNLOAD_FAILED, lastSaved.getStatus());
-  }
-
-  @Test
-  void testDownloadPackageInvalidVersion() throws Exception {
-    String invalidVersion = "999.999.999";
-    when(packageTrackingRepository.findByPackageIdAndVersion(PACKAGE_ID, invalidVersion))
-        .thenReturn(Optional.empty());
-    when(packageTrackingRepository.save(any(PackageTrackingRecord.class)))
-        .thenAnswer(invocation -> invocation.getArgument(0));
-    when(packageCacheManagerAdapter.loadPackageWithDependencies(
-            eq(PACKAGE_ID), eq(invalidVersion), any(PackageDownloadedCallback.class)))
-        .thenThrow(new IOException("Package version not found: hl7.fhir.us.qicore#999.999.999"));
-
-    DownloadedPackageResult result =
-        downloadService.downloadPackage(PACKAGE_ID, invalidVersion, USERNAME);
-
-    assertFalse(result.isSuccess());
-    assertNotNull(result.getErrorMessage());
 
     verify(packageTrackingRepository, atLeast(2)).save(trackingRecordCaptor.capture());
     PackageTrackingRecord lastSaved =
@@ -324,9 +297,9 @@ class FhirPackageDownloadServiceImplTest {
         .thenReturn(Optional.of(existingRecord));
     when(packageTrackingRepository.save(any(PackageTrackingRecord.class)))
         .thenAnswer(invocation -> invocation.getArgument(0));
-    stubAdapterWithPaths(List.of(ROOT_PATH));
-    when(virusScanClient.scanFile(any(FileSystemResource.class)))
-        .thenReturn(VirusScanResponseDto.builder().filesScanned(1).cleanFileCount(1).build());
+    stubAdapterWithPaths(List.of(rootPath));
+    when(virusScanClient.scanFiles(any()))
+        .thenReturn(VirusScanResponseDto.builder().filesScanned(0).cleanFileCount(0).build());
 
     DownloadedPackageResult result = downloadService.downloadPackage(PACKAGE_ID, VERSION, USERNAME);
 
@@ -339,13 +312,23 @@ class FhirPackageDownloadServiceImplTest {
   }
 
   @Test
-  void testDownloadPackageVirusScanServiceDownBlocksRootPackageDownload() throws Exception {
+  void testDownloadPackageVirusScanServiceDownBlocksRootPackageDownloadAndDeletesResidual()
+      throws Exception {
+    Path pkgDir = Files.createDirectory(tempDir.resolve("root-pkg-down"));
+    String pkgPath = pkgDir.toString();
     when(packageTrackingRepository.findByPackageIdAndVersion(PACKAGE_ID, VERSION))
         .thenReturn(Optional.empty());
     when(packageTrackingRepository.save(any(PackageTrackingRecord.class)))
         .thenAnswer(invocation -> invocation.getArgument(0));
-    stubAdapterWithPaths(List.of(ROOT_PATH));
-    when(virusScanClient.scanFile(any(FileSystemResource.class)))
+    when(packageCacheManagerAdapter.loadPackageWithDependencies(
+            eq(PACKAGE_ID), eq(VERSION), any(PackageDownloadedCallback.class)))
+        .thenAnswer(
+            invocation -> {
+              PackageDownloadedCallback cb = invocation.getArgument(2);
+              cb.onDownloaded(PACKAGE_ID, VERSION, pkgPath);
+              return List.of();
+            });
+    when(virusScanClient.scanFiles(any()))
         .thenThrow(new ResourceAccessException("Connection refused: virus scan service is down"));
 
     DownloadedPackageResult result = downloadService.downloadPackage(PACKAGE_ID, VERSION, USERNAME);
@@ -354,6 +337,9 @@ class FhirPackageDownloadServiceImplTest {
     assertNull(result.getPackageLocation());
     assertNotNull(result.getErrorMessage());
     assertTrue(result.getErrorMessage().contains("unavailable"));
+    assertFalse(
+        Files.exists(pkgDir),
+        "Residual package directory should have been deleted on scan failure");
 
     verify(packageTrackingRepository, atLeast(2)).save(trackingRecordCaptor.capture());
     PackageTrackingRecord lastSaved =
@@ -362,8 +348,10 @@ class FhirPackageDownloadServiceImplTest {
   }
 
   @Test
-  void testDownloadPackageVirusScanServiceDownBlocksDownloadWhenDependencyFails() throws Exception {
-    String depPath = "/cache/hl7.fhir.us.core#6.1.0";
+  void testDownloadPackageVirusScanServiceDownBlocksDownloadWhenDependencyFailsAndDeletesResidual()
+      throws Exception {
+    Path depDir = Files.createDirectory(tempDir.resolve("hl7.fhir.us.core#6.1.0"));
+    String depPath = depDir.toString();
     when(packageTrackingRepository.findByPackageIdAndVersion(PACKAGE_ID, VERSION))
         .thenReturn(Optional.empty());
     when(packageTrackingRepository.save(any(PackageTrackingRecord.class)))
@@ -375,15 +363,15 @@ class FhirPackageDownloadServiceImplTest {
               PackageDownloadedCallback cb = invocation.getArgument(2);
               List<String> keptPaths = new java.util.ArrayList<>();
               // Root package scans cleanly
-              if (cb.onDownloaded(PACKAGE_ID, VERSION, ROOT_PATH)) {
-                keptPaths.add(ROOT_PATH);
+              if (cb.onDownloaded(PACKAGE_ID, VERSION, rootPath)) {
+                keptPaths.add(rootPath);
               }
               // Dependency scan throws — VirusScanServiceException propagates out
               cb.onDownloaded(DEP_1, "6.1.0", depPath);
               return keptPaths;
             });
-    when(virusScanClient.scanFile(any(FileSystemResource.class)))
-        .thenReturn(VirusScanResponseDto.builder().filesScanned(1).cleanFileCount(1).build())
+    when(virusScanClient.scanFiles(any()))
+        .thenReturn(VirusScanResponseDto.builder().filesScanned(0).cleanFileCount(0).build())
         .thenThrow(new ResourceAccessException("Connection refused: virus scan service is down"));
 
     DownloadedPackageResult result = downloadService.downloadPackage(PACKAGE_ID, VERSION, USERNAME);
@@ -392,6 +380,9 @@ class FhirPackageDownloadServiceImplTest {
     assertNull(result.getPackageLocation());
     assertNotNull(result.getErrorMessage());
     assertTrue(result.getErrorMessage().contains("unavailable"));
+    assertFalse(
+        Files.exists(depDir),
+        "Residual dependency directory should have been deleted on scan failure");
 
     verify(packageTrackingRepository, atLeast(2)).save(trackingRecordCaptor.capture());
     // Both the dependency and the root package should be marked DOWNLOAD_FAILED
@@ -400,5 +391,42 @@ class FhirPackageDownloadServiceImplTest {
                 .filter(r -> PackageDownloadStatus.DOWNLOAD_FAILED.equals(r.getStatus()))
                 .count()
             >= 2);
+  }
+
+  @Test
+  void testDownloadPackageCollectFilesFailureDeletesResidualDownload() throws Exception {
+    // Simulate a packagePath that exists as a file (not a dir) to force collectFiles failure
+    // by passing a directory path that suddenly disappears mid-scan
+    Path pkgDir = Files.createDirectory(tempDir.resolve("vanishing-pkg"));
+    String pkgPath = pkgDir.toString();
+    // Delete the directory after creating it so collectFiles will fail with NoSuchFileException
+    Files.delete(pkgDir);
+    // Re-create it so deletePackage can try to delete it (simulates partial download)
+    Files.createDirectory(pkgDir);
+
+    when(packageTrackingRepository.findByPackageIdAndVersion(PACKAGE_ID, VERSION))
+        .thenReturn(Optional.empty());
+    when(packageTrackingRepository.save(any(PackageTrackingRecord.class)))
+        .thenAnswer(invocation -> invocation.getArgument(0));
+    when(packageCacheManagerAdapter.loadPackageWithDependencies(
+            eq(PACKAGE_ID), eq(VERSION), any(PackageDownloadedCallback.class)))
+        .thenAnswer(
+            invocation -> {
+              PackageDownloadedCallback cb = invocation.getArgument(2);
+              // Delete dir just before callback so collectFiles fails
+              Files.delete(pkgDir);
+              cb.onDownloaded(PACKAGE_ID, VERSION, pkgPath);
+              return List.of();
+            });
+
+    DownloadedPackageResult result = downloadService.downloadPackage(PACKAGE_ID, VERSION, USERNAME);
+
+    assertFalse(result.isSuccess());
+    assertNotNull(result.getErrorMessage());
+
+    verify(packageTrackingRepository, atLeast(2)).save(trackingRecordCaptor.capture());
+    PackageTrackingRecord lastSaved =
+        trackingRecordCaptor.getAllValues().get(trackingRecordCaptor.getAllValues().size() - 1);
+    assertEquals(PackageDownloadStatus.DOWNLOAD_FAILED, lastSaved.getStatus());
   }
 }

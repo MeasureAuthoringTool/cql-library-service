@@ -37,7 +37,6 @@ import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 
 import gov.cms.madie.cqllibraryservice.config.security.SecurityConfig;
-import gov.cms.madie.cqllibraryservice.dto.DownloadedPackageResult;
 import gov.cms.madie.cqllibraryservice.repositories.CqlLibraryRepository;
 import gov.cms.madie.models.access.AclSpecification;
 import gov.cms.madie.models.access.RoleEnum;
@@ -405,15 +404,7 @@ public class CqlLibraryAdminControllerMvcTest {
 
   @Test
   void testInstallIgPackageSuccess() throws Exception {
-    DownloadedPackageResult downloadResult =
-        DownloadedPackageResult.builder()
-            .packageId("hl7.fhir.us.qicore")
-            .version("7.0.2")
-            .success(true)
-            .packageLocation("/cache/hl7.fhir.us.qicore#7.0.2")
-            .build();
-    when(igPackageService.installIgPackage(anyString(), anyString(), anyString()))
-        .thenReturn(downloadResult);
+    doNothing().when(igPackageService).installIgPackage(anyString(), anyString(), anyString());
 
     String requestBody = "{\"packageId\":\"hl7.fhir.us.qicore\",\"packageVersion\":\"7.0.2\"}";
 
@@ -426,12 +417,11 @@ public class CqlLibraryAdminControllerMvcTest {
                     .header("Authorization", TEST_OKTA)
                     .contentType(MediaType.APPLICATION_JSON)
                     .content(requestBody))
-            .andExpect(status().isOk())
-            .andExpect(jsonPath("$.success").value(true))
-            .andExpect(jsonPath("$.packageId").value("hl7.fhir.us.qicore"))
-            .andExpect(jsonPath("$.version").value("7.0.2"))
+            .andExpect(status().isAccepted())
+            .andExpect(content().string(org.hamcrest.Matchers.containsString("hl7.fhir.us.qicore")))
+            .andExpect(content().string(org.hamcrest.Matchers.containsString("7.0.2")))
             .andReturn();
-    assertEquals(HttpStatus.OK.value(), result.getResponse().getStatus());
+    assertEquals(HttpStatus.ACCEPTED.value(), result.getResponse().getStatus());
   }
 
   @Test
@@ -523,36 +513,5 @@ public class CqlLibraryAdminControllerMvcTest {
             .andExpect(status().isUnauthorized())
             .andReturn();
     assertEquals(HttpStatus.UNAUTHORIZED.value(), result.getResponse().getStatus());
-  }
-
-  @Test
-  void testInstallIgPackageReturnsInternalServerErrorWhenInstallationFails() throws Exception {
-    DownloadedPackageResult failedResult =
-        DownloadedPackageResult.builder()
-            .packageId("hl7.fhir.us.qicore")
-            .version("7.0.2")
-            .success(false)
-            .errorMessage("Failed to download package from registry")
-            .build();
-    when(igPackageService.installIgPackage(anyString(), anyString(), anyString()))
-        .thenReturn(failedResult);
-
-    String requestBody = "{\"packageId\":\"hl7.fhir.us.qicore\",\"packageVersion\":\"7.0.2\"}";
-
-    MvcResult result =
-        mockMvc
-            .perform(
-                MockMvcRequestBuilders.post("/cql-libraries/admin/ig-packages")
-                    .with(csrf())
-                    .with(user(TEST_USER_ID).roles("MADIE-ADMIN"))
-                    .header("Authorization", TEST_OKTA)
-                    .contentType(MediaType.APPLICATION_JSON)
-                    .content(requestBody))
-            .andExpect(status().isInternalServerError())
-            .andExpect(jsonPath("$.success").value(false))
-            .andExpect(jsonPath("$.packageId").value("hl7.fhir.us.qicore"))
-            .andExpect(jsonPath("$.errorMessage").value("Failed to download package from registry"))
-            .andReturn();
-    assertEquals(HttpStatus.INTERNAL_SERVER_ERROR.value(), result.getResponse().getStatus());
   }
 }

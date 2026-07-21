@@ -7,8 +7,9 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -29,13 +30,10 @@ class IgPackageServiceTest {
     when(fhirPackageDownloadService.downloadPackage(anyString(), anyString(), anyString()))
         .thenReturn(expectedResult);
 
-    DownloadedPackageResult result =
-        igPackageService.installIgPackage("hl7.fhir.us.qicore", "7.0.2", "admin.user");
+    igPackageService.installIgPackage("hl7.fhir.us.qicore", "7.0.2", "admin.user");
 
-    assertTrue(result.isSuccess());
-    assertEquals("hl7.fhir.us.qicore", result.getPackageId());
-    assertEquals("7.0.2", result.getVersion());
-    assertNull(result.getErrorMessage());
+    verify(fhirPackageDownloadService, times(1))
+        .downloadPackage("hl7.fhir.us.qicore", "7.0.2", "admin.user");
   }
 
   @Test
@@ -50,10 +48,9 @@ class IgPackageServiceTest {
     when(fhirPackageDownloadService.downloadPackage(anyString(), anyString(), anyString()))
         .thenReturn(failedResult);
 
-    DownloadedPackageResult result =
-        igPackageService.installIgPackage("some.invalid.package", "1.0.0", "admin.user");
+    igPackageService.installIgPackage("some.invalid.package", "1.0.0", "admin.user");
 
-    assertFalse(result.isSuccess());
-    assertEquals("Package not found", result.getErrorMessage());
+    verify(fhirPackageDownloadService, times(1))
+        .downloadPackage("some.invalid.package", "1.0.0", "admin.user");
   }
 }
