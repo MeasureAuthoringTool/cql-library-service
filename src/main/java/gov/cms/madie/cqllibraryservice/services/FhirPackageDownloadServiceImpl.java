@@ -36,7 +36,7 @@ public class FhirPackageDownloadServiceImpl implements FhirPackageDownloadServic
   @Override
   public DownloadedPackageResult downloadPackage(
       String packageId, String version, String username) {
-    log.info("Starting download for FHIR package {}#{}", packageId, version);
+    log.info("Starting download for IG {}#{}", packageId, version);
 
     PackageTrackingRecord trackingRecord = markAsDownloading(packageId, version, username);
     Set<String> childIgs = new LinkedHashSet<>();

@@ -86,7 +86,7 @@ public class PackageCacheManagerAdapter {
     }
     visited.add(key);
 
-    log.info("Loading FHIR package: {}", key);
+    log.info("Downloading FHIR package: {}", key);
     NpmPackage npmPackage = cacheManager.loadPackage(packageId, version);
     if (npmPackage == null) {
       log.warn("Package not found: {}", key);
@@ -110,12 +110,12 @@ public class PackageCacheManagerAdapter {
       if (dependencies != null) {
         for (String depId : dependencies.getNames()) {
           String depVersion = dependencies.asString(depId);
-          log.info("Loading dependency {}#{} (required by {})", depId, depVersion, key);
+          log.info("Downloading dependency {}#{} (required by {})", depId, depVersion, key);
           try {
             loadPackageWithDependencies(depId, depVersion, visited, collectedPaths, callback);
           } catch (Exception e) {
             log.warn(
-                "Failed to load dependency {}#{} required by {}: {}",
+                "Failed to download dependency {}#{} required by {}: {}",
                 depId,
                 depVersion,
                 key,
