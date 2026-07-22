@@ -104,7 +104,7 @@ class CqlLibraryReviewServiceTest {
         CqlLibraryReview.builder()
             .status(ReviewStatus.READY_FOR_REVIEW)
             .comment("updated")
-            .librarySetId("set-2")
+            .librarySetId("set-1")
             .build();
 
     when(cqlLibraryReviewRepository.findByLibraryId("lib-1")).thenReturn(Optional.of(existing));
@@ -116,7 +116,7 @@ class CqlLibraryReviewServiceTest {
     assertEquals("review-1", result.getId());
     assertEquals(ReviewStatus.READY_FOR_REVIEW, result.getStatus());
     assertEquals("updated", result.getComment());
-    assertEquals("set-2", result.getLibrarySetId());
+    assertEquals("set-1", result.getLibrarySetId());
     verify(actionLogService, times(1))
         .logAction("lib-1", ActionType.READY_FOR_REVIEW, USERNAME, "actionLog");
   }

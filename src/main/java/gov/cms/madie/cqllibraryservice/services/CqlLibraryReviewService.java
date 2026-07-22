@@ -65,9 +65,6 @@ public class CqlLibraryReviewService {
 
     existing.setStatus(newStatus);
     existing.setComment(review.getComment());
-    if (review.getLibrarySetId() != null) {
-      existing.setLibrarySetId(review.getLibrarySetId());
-    }
 
     CqlLibraryReview saved = cqlLibraryReviewRepository.save(existing);
     log.info("Updated review [{}] for CQL Library [{}]", saved.getId(), libraryId);
