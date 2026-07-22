@@ -28,15 +28,4 @@ public class AuthUtils {
       throw new PermissionDeniedException("CQL Library", cqlLibrary.getId(), username);
     }
   }
-
-  public static void checkOwnership(CqlLibrary cqlLibrary, String username) {
-    if (!cqlLibrary.getLibrarySet().getOwner().equalsIgnoreCase(username)) {
-      log.error(
-          "User [{}] is not the owner of CQL Library with id [{}]. Owner is [{}]",
-          username,
-          cqlLibrary.getId(),
-          cqlLibrary.getLibrarySet().getOwner());
-      throw new PermissionDeniedException("CQL Library", cqlLibrary.getId(), username);
-    }
-  }
 }
