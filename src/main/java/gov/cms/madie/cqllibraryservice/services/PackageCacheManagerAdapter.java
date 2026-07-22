@@ -1,6 +1,8 @@
 package gov.cms.madie.cqllibraryservice.services;
 
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
+import org.hl7.fhir.utilities.Utilities;
 import org.hl7.fhir.utilities.json.model.JsonObject;
 import org.hl7.fhir.utilities.npm.FilesystemPackageCacheManager;
 import org.hl7.fhir.utilities.npm.NpmPackage;
@@ -26,19 +28,14 @@ public class PackageCacheManagerAdapter {
 
   public PackageCacheManagerAdapter(@Value("${fhir.package.cache-path}") String cachePath)
       throws IOException {
-    if (cachePath != null && !cachePath.isBlank()) {
-      ensureDirectoryExists(cachePath);
-      log.info("Initializing FHIR package cache at configured path: {}", cachePath);
-      this.cacheManager =
-          new FilesystemPackageCacheManager.Builder().withCacheFolder(cachePath).build();
-    } else {
-      String defaultPath =
-          org.hl7.fhir.utilities.Utilities.path(
-              System.getProperty("user.home"), ".fhir", "packages");
-      ensureDirectoryExists(defaultPath);
-      log.info("Initializing FHIR package cache at default system path: {}", defaultPath);
-      this.cacheManager = new FilesystemPackageCacheManager.Builder().build();
-    }
+    String cacheDir =
+        StringUtils.isBlank(cachePath)
+            ? Utilities.path(System.getProperty("user.home"), ".fhir", "cql-library-packages")
+            : cachePath;
+    ensureDirectoryExists(cacheDir);
+    log.info("Initializing FHIR package cache at: {}", cacheDir);
+    this.cacheManager =
+        new FilesystemPackageCacheManager.Builder().withCacheFolder(cacheDir).build();
   }
 
   private void ensureDirectoryExists(String path) throws IOException {
