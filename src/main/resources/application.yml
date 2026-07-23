@@ -31,9 +31,9 @@ madie:
   virus-scan:
     disable-scan: ${DISABLE_VIRUS_SCAN:false}
     service:
-      base-url: ${VIRUS_SCAN_SERVICE_URL:http://localhost:5000}
+      base-url: ${VIRUS_SCAN_SERVICE_URL:}
       scan-file-uri: /scan-file
-      api-key: ${VIRUS_SCAN_SERVICE_APIKEY:1234567}
+      api-key: ${VIRUS_SCAN_SERVICE_APIKEY:}
 
 management:
   endpoints:
@@ -53,4 +53,4 @@ mongock:
 
 fhir:
   package:
-    cache-path: ${FHIR_PACKAGE_CACHE_PATH:your/local/path/to/cache}
+    cache-path: ${FHIR_PACKAGE_CACHE_PATH:}
