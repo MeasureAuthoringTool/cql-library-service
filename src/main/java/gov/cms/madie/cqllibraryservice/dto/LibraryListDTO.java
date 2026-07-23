@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import tools.jackson.databind.annotation.JsonDeserialize;
 import tools.jackson.databind.annotation.JsonSerialize;
 import gov.cms.madie.models.common.ModelType;
+import gov.cms.madie.models.common.ReviewStatus;
 import gov.cms.madie.models.common.Version;
 import gov.cms.madie.models.library.CqlLibrary;
 import gov.cms.madie.models.library.LibrarySet;
@@ -46,6 +47,9 @@ public class LibraryListDTO {
   private Instant lastModifiedAt;
   private boolean draft;
   private boolean hasAssociatedLibraries;
+
+  @JsonInclude(JsonInclude.Include.NON_NULL)
+  private ReviewStatus reviewStatus;
 
   @JsonInclude(JsonInclude.Include.NON_NULL)
   private CqlLibraryLock cqlLibraryLock;

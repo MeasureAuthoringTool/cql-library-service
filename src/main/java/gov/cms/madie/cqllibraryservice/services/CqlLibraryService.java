@@ -9,11 +9,14 @@ import gov.cms.madie.models.access.AclOperation;
 import gov.cms.madie.models.access.AclSpecification;
 import gov.cms.madie.models.access.RoleEnum;
 import gov.cms.madie.models.common.*;
+import gov.cms.madie.models.common.ReviewStatus;
 import gov.cms.madie.models.dto.LibraryUsage;
 import gov.cms.madie.models.dto.UserDetailsDto;
 import gov.cms.madie.models.library.CqlLibrary;
 import gov.cms.madie.models.library.CqlLibraryLockInfo;
+import gov.cms.madie.models.library.CqlLibraryReview;
 import gov.cms.madie.cqllibraryservice.repositories.CqlLibraryRepository;
+import gov.cms.madie.cqllibraryservice.repositories.CqlLibraryReviewRepository;
 import gov.cms.madie.models.library.LibrarySet;
 import gov.cms.madie.models.measure.ElmJson;
 
@@ -45,6 +48,7 @@ public class CqlLibraryService {
   private final CqlLibraryLockService cqlLibraryLockService;
   private final UserServiceClient userServiceClient;
   private final CqlLibraryAccessControlService cqlLibraryAccessControlService;
+  private final CqlLibraryReviewRepository cqlLibraryReviewRepository;
 
   public CqlLibrary updateCqlLibrary(CqlLibrary cqlLibrary, String username) {
     if (cqlLibrary == null || StringUtils.isBlank(cqlLibrary.getId())) {
@@ -120,7 +124,45 @@ public class CqlLibraryService {
     log.debug("Enriching {} libraries with user details", librariesPage.getContent().size());
     enrichWithUserDetails(librariesPage.getContent());
 
+    log.debug("Enriching {} libraries with review details", librariesPage.getContent().size());
+    enrichWithReviewStatus(librariesPage.getContent());
+
     return librariesPage;
+  }
+
+  private void enrichWithReviewStatus(List<LibraryListDTO> libraries) {
+    if (CollectionUtils.isEmpty(libraries)) {
+      return;
+    }
+
+    List<String> libraryIds =
+        libraries.stream()
+            .map(LibraryListDTO::getId)
+            .filter(Objects::nonNull)
+            .distinct()
+            .collect(Collectors.toList());
+
+    if (libraryIds.isEmpty()) {
+      return;
+    }
+
+    log.debug("Fetching review status for library ids: {}", libraryIds);
+    List<CqlLibraryReview> reviews = cqlLibraryReviewRepository.findAllByLibraryIdIn(libraryIds);
+    log.debug("Found {} review record(s) for {} library id(s)", reviews.size(), libraryIds.size());
+
+    Set<String> readyForReviewLibraryIds =
+        reviews.stream()
+            .filter(review -> ReviewStatus.READY_FOR_REVIEW.equals(review.getStatus()))
+            .map(CqlLibraryReview::getLibraryId)
+            .filter(Objects::nonNull)
+            .collect(Collectors.toSet());
+
+    libraries.forEach(
+        library -> {
+          if (readyForReviewLibraryIds.contains(library.getId())) {
+            library.setReviewStatus(ReviewStatus.READY_FOR_REVIEW);
+          }
+        });
   }
 
   private void enrichWithUserDetails(List<LibraryListDTO> libraries) {

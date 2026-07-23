@@ -21,7 +21,9 @@ import gov.cms.madie.models.common.*;
 import gov.cms.madie.models.dto.LibraryUsage;
 import gov.cms.madie.models.dto.UserDetailsDto;
 import gov.cms.madie.models.library.CqlLibrary;
+import gov.cms.madie.models.library.CqlLibraryReview;
 import gov.cms.madie.cqllibraryservice.repositories.CqlLibraryRepository;
+import gov.cms.madie.cqllibraryservice.repositories.CqlLibraryReviewRepository;
 import gov.cms.madie.models.library.LibrarySet;
 import gov.cms.madie.models.measure.ElmJson;
 import org.junit.jupiter.api.Test;
@@ -61,6 +63,7 @@ class CqlLibraryServiceTest {
 
   @Mock private UserServiceClient userServiceClient;
   @Mock private CqlLibraryAccessControlService cqlLibraryAccessControlService;
+  @Mock private CqlLibraryReviewRepository cqlLibraryReviewRepository;
 
   private final String USERNAME = "testUserName";
   private final String ACCESSTOKEN = "accessToken";
@@ -1910,6 +1913,86 @@ class CqlLibraryServiceTest {
 
     verify(userServiceClient, times(1))
         .getBulkUserDetails(List.of("owner1", "owner2", "owner3", "owner4", "owner5"));
+  }
+
+  @Test
+  void testGetLibrariesByCriteriaEnrichesReviewStatusOnlyForReadyForReview() {
+    // L1 -> READY_FOR_REVIEW, L2 -> NOT_READY_FOR_REVIEW, L3 -> no review record at all
+    LibraryListDTO library1 = LibraryListDTO.builder().id("L1").build();
+    LibraryListDTO library2 = LibraryListDTO.builder().id("L2").build();
+    LibraryListDTO library3 = LibraryListDTO.builder().id("L3").build();
+    List<LibraryListDTO> libraries = List.of(library1, library2, library3);
+    Page<LibraryListDTO> librariesPage = new PageImpl<>(libraries);
+
+    LibrarySearchCriteria criteria = new LibrarySearchCriteria();
+    OwnershipType ownershipType = OwnershipType.OWNED;
+    Pageable pageable = PageRequest.of(0, 10);
+    String username = "testUser";
+
+    when(cqlLibraryRepository.searchLibrariesByCriteria(
+            username, pageable, criteria, ownershipType))
+        .thenReturn(librariesPage);
+    when(cqlLibraryReviewRepository.findAllByLibraryIdIn(List.of("L1", "L2", "L3")))
+        .thenReturn(
+            List.of(
+                CqlLibraryReview.builder()
+                    .libraryId("L1")
+                    .status(ReviewStatus.READY_FOR_REVIEW)
+                    .build(),
+                CqlLibraryReview.builder()
+                    .libraryId("L2")
+                    .status(ReviewStatus.NOT_READY_FOR_REVIEW)
+                    .build()));
+
+    Page<LibraryListDTO> result =
+        cqlLibraryService.getLibrariesByCriteria(criteria, ownershipType, pageable, username);
+
+    assertEquals(ReviewStatus.READY_FOR_REVIEW, result.getContent().get(0).getReviewStatus());
+    assertNull(result.getContent().get(1).getReviewStatus());
+    assertNull(result.getContent().get(2).getReviewStatus());
+    verify(cqlLibraryReviewRepository, times(1)).findAllByLibraryIdIn(List.of("L1", "L2", "L3"));
+  }
+
+  @Test
+  void testGetLibrariesByCriteriaLeavesReviewStatusNullWhenNoReviewsFound() {
+    LibraryListDTO library1 = LibraryListDTO.builder().id("L1").build();
+    Page<LibraryListDTO> librariesPage = new PageImpl<>(List.of(library1));
+
+    LibrarySearchCriteria criteria = new LibrarySearchCriteria();
+    OwnershipType ownershipType = OwnershipType.OWNED;
+    Pageable pageable = PageRequest.of(0, 10);
+    String username = "testUser";
+
+    when(cqlLibraryRepository.searchLibrariesByCriteria(
+            username, pageable, criteria, ownershipType))
+        .thenReturn(librariesPage);
+    when(cqlLibraryReviewRepository.findAllByLibraryIdIn(List.of("L1")))
+        .thenReturn(Collections.emptyList());
+
+    Page<LibraryListDTO> result =
+        cqlLibraryService.getLibrariesByCriteria(criteria, ownershipType, pageable, username);
+
+    assertNull(result.getContent().get(0).getReviewStatus());
+  }
+
+  @Test
+  void testGetLibrariesByCriteriaDoesNotQueryReviewsWhenPageIsEmpty() {
+    Page<LibraryListDTO> emptyPage = new PageImpl<>(Collections.emptyList());
+
+    LibrarySearchCriteria criteria = new LibrarySearchCriteria();
+    OwnershipType ownershipType = OwnershipType.OWNED;
+    Pageable pageable = PageRequest.of(0, 10);
+    String username = "testUser";
+
+    when(cqlLibraryRepository.searchLibrariesByCriteria(
+            username, pageable, criteria, ownershipType))
+        .thenReturn(emptyPage);
+
+    Page<LibraryListDTO> result =
+        cqlLibraryService.getLibrariesByCriteria(criteria, ownershipType, pageable, username);
+
+    assertTrue(result.getContent().isEmpty());
+    verify(cqlLibraryReviewRepository, never()).findAllByLibraryIdIn(anyList());
   }
 
   @Test
