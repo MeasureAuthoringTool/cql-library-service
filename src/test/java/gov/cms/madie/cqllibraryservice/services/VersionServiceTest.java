@@ -46,6 +46,8 @@ class VersionServiceTest {
 
   @Mock CqlLibraryLockService cqlLibraryLockService;
 
+  @Mock CqlLibraryAccessControlService cqlLibraryAccessControlService;
+
   @InjectMocks VersionService versionService;
 
   @Captor private ArgumentCaptor<CqlLibrary> cqlLibraryArgumentCaptor;
@@ -278,6 +280,9 @@ class VersionServiceTest {
     when(cqlLibraryService.findCqlLibraryById(anyString(), anyString()))
         .thenReturn(existingCqlLibrary);
     doNothing().when(cqlLibraryService).checkDuplicateCqlLibraryName(anyString());
+    doThrow(new PermissionDeniedException("CQL Library", "testCqlLibraryId", "randomUser"))
+        .when(cqlLibraryAccessControlService)
+        .checkAccessPermissions(any(CqlLibrary.class), anyString());
 
     assertThrows(
         PermissionDeniedException.class,
