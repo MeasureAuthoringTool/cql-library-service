@@ -3,7 +3,6 @@ package gov.cms.madie.cqllibraryservice.services;
 import gov.cms.madie.cqllibraryservice.dto.LibraryListDTO;
 import gov.cms.madie.cqllibraryservice.dto.LockInfo;
 import gov.cms.madie.cqllibraryservice.exceptions.*;
-import gov.cms.madie.cqllibraryservice.utils.AuthUtils;
 import gov.cms.madie.models.common.ActionType;
 import gov.cms.madie.models.common.ModelType;
 import gov.cms.madie.models.library.CqlLibrary;
@@ -32,6 +31,7 @@ public class VersionService {
   private final ElmTranslatorClient elmTranslatorClient;
   private final AppConfigService appConfigService;
   private final CqlLibraryLockService cqlLibraryLockService;
+  private final CqlLibraryAccessControlService cqlLibraryAccessControlService;
 
   public CqlLibrary createVersion(String id, boolean isMajor, String username, String accessToken) {
     CqlLibrary cqlLibrary = cqlLibraryService.findCqlLibraryById(id, username);
@@ -106,7 +106,7 @@ public class VersionService {
   }
 
   private void validateCqlLibrary(CqlLibrary cqlLibrary, String username) {
-    AuthUtils.checkAccessPermissions(cqlLibrary, username);
+    cqlLibraryAccessControlService.checkAccessPermissions(cqlLibrary, username);
 
     if (!cqlLibrary.isDraft()) {
       log.error(
@@ -148,7 +148,7 @@ public class VersionService {
       cqlLibraryService.checkDuplicateCqlLibraryName(cqlLibraryName);
     }
 
-    AuthUtils.checkAccessPermissions(cqlLibrary, username);
+    cqlLibraryAccessControlService.checkAccessPermissions(cqlLibrary, username);
 
     if (cqlLibrary.isDraft()) {
       throw new ResourceNotDraftableException(
