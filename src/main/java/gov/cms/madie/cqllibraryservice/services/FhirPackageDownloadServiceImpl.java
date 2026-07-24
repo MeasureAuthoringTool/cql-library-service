@@ -142,8 +142,8 @@ public class FhirPackageDownloadServiceImpl implements FhirPackageDownloadServic
               + ": "
               + ex.getMessage();
       log.error(message, ex);
-      deletePackage(packagePath);
       markAsFailed(trackingRecord, message);
+      deletePackage(packagePath);
       throw new VirusScanServiceException(message, ex);
     }
 
@@ -161,14 +161,13 @@ public class FhirPackageDownloadServiceImpl implements FhirPackageDownloadServic
               + " - download blocked: "
               + ex.getMessage();
       log.error(message, ex);
-      deletePackage(packagePath);
       markAsFailed(trackingRecord, message);
+      deletePackage(packagePath);
       throw new VirusScanServiceException(message, ex);
     }
 
     int infectedCount = scanResult.getInfectedFileCount();
     if (infectedCount > 0) {
-      deletePackage(packagePath);
       String message =
           "Virus scan detected "
               + infectedCount
@@ -178,6 +177,7 @@ public class FhirPackageDownloadServiceImpl implements FhirPackageDownloadServic
               + version
               + " - infected files deleted";
       markAsInfected(trackingRecord, message);
+      deletePackage(packagePath);
       return false;
     }
 
@@ -227,10 +227,10 @@ public class FhirPackageDownloadServiceImpl implements FhirPackageDownloadServic
       File packageDir = new File(packagePath);
       if (packageDir.exists()) {
         FileSystemUtils.deleteRecursively(packageDir);
-        log.warn("Deleted infected package directory: {}", packagePath);
+        log.warn("Deleting the package directory: {}", packagePath);
       }
     } catch (Exception e) {
-      log.error("Failed to delete infected package directory {}: {}", packagePath, e.getMessage());
+      log.error("Failed to delete package directory {}: {}", packagePath, e.getMessage());
     }
   }
 
@@ -269,6 +269,7 @@ public class FhirPackageDownloadServiceImpl implements FhirPackageDownloadServic
   }
 
   private void markAsInfected(PackageTrackingRecord record, String errorMessage) {
+    log.info(errorMessage);
     record.setStatus(PackageStatus.ERROR_INFECTED_SO_REVIEW);
     record.setErrorMessage(errorMessage);
     packageTrackingRepository.save(record);
