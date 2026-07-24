@@ -72,6 +72,10 @@ public class SearchUtils {
           orConditions.add(
               Criteria.where("model").regex(".*" + Pattern.quote(searchField) + ".*", "i"));
           break;
+        case "review":
+          orConditions.add(
+              Criteria.where("reviewStatus").regex(".*" + Pattern.quote(searchField) + ".*", "i"));
+          break;
         default:
           if (!StringUtils.isBlank(property)) {
             orConditions.add(

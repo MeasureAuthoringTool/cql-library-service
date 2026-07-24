@@ -1590,6 +1590,63 @@ class CqlLibraryServiceTest {
   }
 
   @Test
+  public void getLibrariesByLibrarySetIdEnrichesReviewStatusPerInstance() {
+    String librarySetId = "testSetId";
+    LibrarySearchCriteria criteria =
+        LibrarySearchCriteria.builder().searchField("testField").build();
+    LibraryListDTO libraryV2 = LibraryListDTO.builder().id("L2").librarySetId(librarySetId).build();
+    LibraryListDTO libraryV1 = LibraryListDTO.builder().id("L1").librarySetId(librarySetId).build();
+
+    when(cqlLibraryRepository.findLibrariesByLibrarySetId(eq(librarySetId), eq(true), eq(criteria)))
+        .thenReturn(new ArrayList<>(List.of(libraryV2, libraryV1)));
+    when(cqlLibraryReviewRepository.findAllByLibrarySetId(librarySetId))
+        .thenReturn(
+            List.of(
+                CqlLibraryReview.builder()
+                    .libraryId("L1")
+                    .status(ReviewStatus.READY_FOR_REVIEW)
+                    .build(),
+                CqlLibraryReview.builder()
+                    .libraryId("L2")
+                    .status(ReviewStatus.NOT_READY_FOR_REVIEW)
+                    .build()));
+
+    List<LibraryListDTO> result =
+        cqlLibraryService.getLibrariesByLibrarySetId(librarySetId, true, criteria);
+
+    assertEquals(2, result.size());
+    assertEquals("", result.get(0).getReviewStatus());
+    assertEquals("Ready", result.get(1).getReviewStatus());
+  }
+
+  @Test
+  public void getLibrariesByLibrarySetIdFiltersToReadyWhenSearchingByReview() {
+    String librarySetId = "testSetId";
+    LibrarySearchCriteria criteria = new LibrarySearchCriteria("Ready", List.of("review"));
+    LibraryListDTO readyLibrary =
+        LibraryListDTO.builder().id("L1").librarySetId(librarySetId).build();
+    LibraryListDTO notReadyLibrary =
+        LibraryListDTO.builder().id("L2").librarySetId(librarySetId).build();
+
+    when(cqlLibraryRepository.findLibrariesByLibrarySetId(eq(librarySetId), eq(true), isNull()))
+        .thenReturn(new ArrayList<>(List.of(readyLibrary, notReadyLibrary)));
+    when(cqlLibraryReviewRepository.findAllByLibrarySetId(librarySetId))
+        .thenReturn(
+            List.of(
+                CqlLibraryReview.builder()
+                    .libraryId("L1")
+                    .status(ReviewStatus.READY_FOR_REVIEW)
+                    .build()));
+
+    List<LibraryListDTO> result =
+        cqlLibraryService.getLibrariesByLibrarySetId(librarySetId, true, criteria);
+
+    assertEquals(1, result.size());
+    assertEquals("L1", result.get(0).getId());
+    assertEquals("Ready", result.get(0).getReviewStatus());
+  }
+
+  @Test
   public void getLibrariesByLibrarySetIdThrowsExceptionWhenLibrarySetIdIsBlank() {
     LibrarySearchCriteria criteria =
         LibrarySearchCriteria.builder().searchField("testField").build();
@@ -1913,86 +1970,6 @@ class CqlLibraryServiceTest {
 
     verify(userServiceClient, times(1))
         .getBulkUserDetails(List.of("owner1", "owner2", "owner3", "owner4", "owner5"));
-  }
-
-  @Test
-  void testGetLibrariesByCriteriaEnrichesReviewStatusOnlyForReadyForReview() {
-    // L1 -> READY_FOR_REVIEW, L2 -> NOT_READY_FOR_REVIEW, L3 -> no review record at all
-    LibraryListDTO library1 = LibraryListDTO.builder().id("L1").build();
-    LibraryListDTO library2 = LibraryListDTO.builder().id("L2").build();
-    LibraryListDTO library3 = LibraryListDTO.builder().id("L3").build();
-    List<LibraryListDTO> libraries = List.of(library1, library2, library3);
-    Page<LibraryListDTO> librariesPage = new PageImpl<>(libraries);
-
-    LibrarySearchCriteria criteria = new LibrarySearchCriteria();
-    OwnershipType ownershipType = OwnershipType.OWNED;
-    Pageable pageable = PageRequest.of(0, 10);
-    String username = "testUser";
-
-    when(cqlLibraryRepository.searchLibrariesByCriteria(
-            username, pageable, criteria, ownershipType))
-        .thenReturn(librariesPage);
-    when(cqlLibraryReviewRepository.findAllByLibraryIdIn(List.of("L1", "L2", "L3")))
-        .thenReturn(
-            List.of(
-                CqlLibraryReview.builder()
-                    .libraryId("L1")
-                    .status(ReviewStatus.READY_FOR_REVIEW)
-                    .build(),
-                CqlLibraryReview.builder()
-                    .libraryId("L2")
-                    .status(ReviewStatus.NOT_READY_FOR_REVIEW)
-                    .build()));
-
-    Page<LibraryListDTO> result =
-        cqlLibraryService.getLibrariesByCriteria(criteria, ownershipType, pageable, username);
-
-    assertEquals(ReviewStatus.READY_FOR_REVIEW, result.getContent().get(0).getReviewStatus());
-    assertNull(result.getContent().get(1).getReviewStatus());
-    assertNull(result.getContent().get(2).getReviewStatus());
-    verify(cqlLibraryReviewRepository, times(1)).findAllByLibraryIdIn(List.of("L1", "L2", "L3"));
-  }
-
-  @Test
-  void testGetLibrariesByCriteriaLeavesReviewStatusNullWhenNoReviewsFound() {
-    LibraryListDTO library1 = LibraryListDTO.builder().id("L1").build();
-    Page<LibraryListDTO> librariesPage = new PageImpl<>(List.of(library1));
-
-    LibrarySearchCriteria criteria = new LibrarySearchCriteria();
-    OwnershipType ownershipType = OwnershipType.OWNED;
-    Pageable pageable = PageRequest.of(0, 10);
-    String username = "testUser";
-
-    when(cqlLibraryRepository.searchLibrariesByCriteria(
-            username, pageable, criteria, ownershipType))
-        .thenReturn(librariesPage);
-    when(cqlLibraryReviewRepository.findAllByLibraryIdIn(List.of("L1")))
-        .thenReturn(Collections.emptyList());
-
-    Page<LibraryListDTO> result =
-        cqlLibraryService.getLibrariesByCriteria(criteria, ownershipType, pageable, username);
-
-    assertNull(result.getContent().get(0).getReviewStatus());
-  }
-
-  @Test
-  void testGetLibrariesByCriteriaDoesNotQueryReviewsWhenPageIsEmpty() {
-    Page<LibraryListDTO> emptyPage = new PageImpl<>(Collections.emptyList());
-
-    LibrarySearchCriteria criteria = new LibrarySearchCriteria();
-    OwnershipType ownershipType = OwnershipType.OWNED;
-    Pageable pageable = PageRequest.of(0, 10);
-    String username = "testUser";
-
-    when(cqlLibraryRepository.searchLibrariesByCriteria(
-            username, pageable, criteria, ownershipType))
-        .thenReturn(emptyPage);
-
-    Page<LibraryListDTO> result =
-        cqlLibraryService.getLibrariesByCriteria(criteria, ownershipType, pageable, username);
-
-    assertTrue(result.getContent().isEmpty());
-    verify(cqlLibraryReviewRepository, never()).findAllByLibraryIdIn(anyList());
   }
 
   @Test

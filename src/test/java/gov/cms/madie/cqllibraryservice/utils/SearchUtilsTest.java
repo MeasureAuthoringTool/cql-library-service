@@ -84,6 +84,18 @@ class SearchUtilsTest {
   }
 
   @Test
+  void testAppendReviewSearchCriteria() {
+    Criteria base = new Criteria();
+    LibrarySearchCriteria input = new LibrarySearchCriteria("Ready", List.of("review"));
+
+    SearchUtils.appendAdditionalSearchCriteria(base, input);
+
+    String json = base.getCriteriaObject().toJson();
+    assertThat(json).contains("reviewStatus");
+    assertThat(json).contains("Ready");
+  }
+
+  @Test
   void testAppendDefaultSearchCriteriaWhenNoOptionalPropertiesProvided() {
     Criteria base = new Criteria();
     LibrarySearchCriteria input = new LibrarySearchCriteria("TestLib", null);

@@ -9,7 +9,6 @@ import gov.cms.madie.models.access.AclOperation;
 import gov.cms.madie.models.access.AclSpecification;
 import gov.cms.madie.models.access.RoleEnum;
 import gov.cms.madie.models.common.*;
-import gov.cms.madie.models.common.ReviewStatus;
 import gov.cms.madie.models.dto.LibraryUsage;
 import gov.cms.madie.models.dto.UserDetailsDto;
 import gov.cms.madie.models.library.CqlLibrary;
@@ -124,45 +123,7 @@ public class CqlLibraryService {
     log.debug("Enriching {} libraries with user details", librariesPage.getContent().size());
     enrichWithUserDetails(librariesPage.getContent());
 
-    log.debug("Enriching {} libraries with review details", librariesPage.getContent().size());
-    enrichWithReviewStatus(librariesPage.getContent());
-
     return librariesPage;
-  }
-
-  private void enrichWithReviewStatus(List<LibraryListDTO> libraries) {
-    if (CollectionUtils.isEmpty(libraries)) {
-      return;
-    }
-
-    List<String> libraryIds =
-        libraries.stream()
-            .map(LibraryListDTO::getId)
-            .filter(Objects::nonNull)
-            .distinct()
-            .collect(Collectors.toList());
-
-    if (libraryIds.isEmpty()) {
-      return;
-    }
-
-    log.debug("Fetching review status for library ids: {}", libraryIds);
-    List<CqlLibraryReview> reviews = cqlLibraryReviewRepository.findAllByLibraryIdIn(libraryIds);
-    log.debug("Found {} review record(s) for {} library id(s)", reviews.size(), libraryIds.size());
-
-    Set<String> readyForReviewLibraryIds =
-        reviews.stream()
-            .filter(review -> ReviewStatus.READY_FOR_REVIEW.equals(review.getStatus()))
-            .map(CqlLibraryReview::getLibraryId)
-            .filter(Objects::nonNull)
-            .collect(Collectors.toSet());
-
-    libraries.forEach(
-        library -> {
-          if (readyForReviewLibraryIds.contains(library.getId())) {
-            library.setReviewStatus(ReviewStatus.READY_FOR_REVIEW);
-          }
-        });
   }
 
   private void enrichWithUserDetails(List<LibraryListDTO> libraries) {
@@ -483,9 +444,20 @@ public class CqlLibraryService {
     if (StringUtils.isBlank(librarySetId)) {
       throw new BadRequestObjectException("Please provide library set ID.");
     }
+
+    // Review status is not a field on the cqlLibrary document - it lives in cqlLibraryReview and is
+    // enriched (and filtered) here by librarySetId. So strip "review" from the repo text-search
+    // criteria; otherwise the aggregation would match on a non-existent reviewStatus field.
+    boolean searchingByReview =
+        librarySearchCriteria != null
+            && librarySearchCriteria.getOptionalSearchProperties() != null
+            && librarySearchCriteria.getOptionalSearchProperties().contains("review")
+            && StringUtils.isNotBlank(librarySearchCriteria.getSearchField());
+    LibrarySearchCriteria repoCriteria = searchingByReview ? null : librarySearchCriteria;
+
     List<LibraryListDTO> librariesByLibrarySetId =
         cqlLibraryRepository.findLibrariesByLibrarySetId(
-            librarySetId, sortByLatestVersion, librarySearchCriteria);
+            librarySetId, sortByLatestVersion, repoCriteria);
 
     log.debug("Enriching {} libraries with user details", librariesByLibrarySetId.size());
 
@@ -500,7 +472,34 @@ public class CqlLibraryService {
       }
     }
 
+    enrichWithReviewStatus(librarySetId, librariesByLibrarySetId);
+
+    if (searchingByReview) {
+      final String searchField = librarySearchCriteria.getSearchField();
+      librariesByLibrarySetId =
+          librariesByLibrarySetId.stream()
+              .filter(
+                  library -> StringUtils.containsIgnoreCase(library.getReviewStatus(), searchField))
+              .collect(Collectors.toList());
+    }
+
     return librariesByLibrarySetId;
+  }
+
+  private void enrichWithReviewStatus(String librarySetId, List<LibraryListDTO> libraries) {
+    if (CollectionUtils.isEmpty(libraries)) {
+      return;
+    }
+    Set<String> readyForReviewLibraryIds =
+        cqlLibraryReviewRepository.findAllByLibrarySetId(librarySetId).stream()
+            .filter(review -> ReviewStatus.READY_FOR_REVIEW.equals(review.getStatus()))
+            .map(CqlLibraryReview::getLibraryId)
+            .filter(Objects::nonNull)
+            .collect(Collectors.toSet());
+    libraries.forEach(
+        library ->
+            library.setReviewStatus(
+                readyForReviewLibraryIds.contains(library.getId()) ? "Ready" : ""));
   }
 
   public boolean hasAssociatedLibraries(LibraryListDTO library) {
