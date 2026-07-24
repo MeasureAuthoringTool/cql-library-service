@@ -142,7 +142,6 @@ public class CqlLibrarySearchServiceImplTest {
               return new AggregationResults<>(List.of(facetDTO), new Document());
             });
 
-    // Filter By = Review, searching for "Ready"
     LibrarySearchCriteria criteria = new LibrarySearchCriteria("Ready", List.of("review"));
     cqlLibrarySearchServiceImpl.searchLibrariesByCriteria(
         "john", pageRequest, criteria, OwnershipType.OWNED);
