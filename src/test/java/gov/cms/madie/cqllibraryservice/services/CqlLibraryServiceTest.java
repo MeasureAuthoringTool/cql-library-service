@@ -1622,28 +1622,32 @@ class CqlLibraryServiceTest {
   @Test
   public void getLibrariesByLibrarySetIdFiltersToReadyWhenSearchingByReview() {
     String librarySetId = "testSetId";
-    LibrarySearchCriteria criteria = new LibrarySearchCriteria("Ready", List.of("review"));
-    LibraryListDTO readyLibrary =
-        LibraryListDTO.builder().id("L1").librarySetId(librarySetId).build();
-    LibraryListDTO notReadyLibrary =
-        LibraryListDTO.builder().id("L2").librarySetId(librarySetId).build();
+    LibrarySearchCriteria criteria =
+        LibrarySearchCriteria.builder().searchField("testField").build();
+    // Two versions; only L1 has been marked READY_FOR_REVIEW.
+    LibraryListDTO libraryV2 = LibraryListDTO.builder().id("L2").librarySetId(librarySetId).build();
+    LibraryListDTO libraryV1 = LibraryListDTO.builder().id("L1").librarySetId(librarySetId).build();
 
-    when(cqlLibraryRepository.findLibrariesByLibrarySetId(eq(librarySetId), eq(true), isNull()))
-        .thenReturn(new ArrayList<>(List.of(readyLibrary, notReadyLibrary)));
+    when(cqlLibraryRepository.findLibrariesByLibrarySetId(eq(librarySetId), eq(true), eq(criteria)))
+        .thenReturn(new ArrayList<>(List.of(libraryV2, libraryV1)));
     when(cqlLibraryReviewRepository.findAllByLibrarySetId(librarySetId))
         .thenReturn(
             List.of(
                 CqlLibraryReview.builder()
                     .libraryId("L1")
                     .status(ReviewStatus.READY_FOR_REVIEW)
+                    .build(),
+                CqlLibraryReview.builder()
+                    .libraryId("L2")
+                    .status(ReviewStatus.NOT_READY_FOR_REVIEW)
                     .build()));
 
     List<LibraryListDTO> result =
         cqlLibraryService.getLibrariesByLibrarySetId(librarySetId, true, criteria);
 
-    assertEquals(1, result.size());
-    assertEquals("L1", result.get(0).getId());
-    assertEquals("Ready", result.get(0).getReviewStatus());
+    assertEquals(2, result.size());
+    assertEquals("", result.get(0).getReviewStatus());
+    assertEquals("Ready", result.get(1).getReviewStatus());
   }
 
   @Test

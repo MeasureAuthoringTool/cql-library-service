@@ -445,19 +445,9 @@ public class CqlLibraryService {
       throw new BadRequestObjectException("Please provide library set ID.");
     }
 
-    // Review status is not a field on the cqlLibrary document - it lives in cqlLibraryReview and is
-    // enriched (and filtered) here by librarySetId. So strip "review" from the repo text-search
-    // criteria; otherwise the aggregation would match on a non-existent reviewStatus field.
-    boolean searchingByReview =
-        librarySearchCriteria != null
-            && librarySearchCriteria.getOptionalSearchProperties() != null
-            && librarySearchCriteria.getOptionalSearchProperties().contains("review")
-            && StringUtils.isNotBlank(librarySearchCriteria.getSearchField());
-    LibrarySearchCriteria repoCriteria = searchingByReview ? null : librarySearchCriteria;
-
     List<LibraryListDTO> librariesByLibrarySetId =
         cqlLibraryRepository.findLibrariesByLibrarySetId(
-            librarySetId, sortByLatestVersion, repoCriteria);
+            librarySetId, sortByLatestVersion, librarySearchCriteria);
 
     log.debug("Enriching {} libraries with user details", librariesByLibrarySetId.size());
 
@@ -473,15 +463,6 @@ public class CqlLibraryService {
     }
 
     enrichWithReviewStatus(librarySetId, librariesByLibrarySetId);
-
-    if (searchingByReview) {
-      final String searchField = librarySearchCriteria.getSearchField();
-      librariesByLibrarySetId =
-          librariesByLibrarySetId.stream()
-              .filter(
-                  library -> StringUtils.containsIgnoreCase(library.getReviewStatus(), searchField))
-              .collect(Collectors.toList());
-    }
 
     return librariesByLibrarySetId;
   }
