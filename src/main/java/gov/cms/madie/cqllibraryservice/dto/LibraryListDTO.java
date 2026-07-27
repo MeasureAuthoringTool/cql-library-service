@@ -46,6 +46,7 @@ public class LibraryListDTO {
   private Instant lastModifiedAt;
   private boolean draft;
   private boolean hasAssociatedLibraries;
+  private String reviewStatus;
 
   @JsonInclude(JsonInclude.Include.NON_NULL)
   private CqlLibraryLock cqlLibraryLock;
