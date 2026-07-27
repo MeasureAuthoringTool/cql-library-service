@@ -21,7 +21,9 @@ import gov.cms.madie.models.common.*;
 import gov.cms.madie.models.dto.LibraryUsage;
 import gov.cms.madie.models.dto.UserDetailsDto;
 import gov.cms.madie.models.library.CqlLibrary;
+import gov.cms.madie.models.library.CqlLibraryReview;
 import gov.cms.madie.cqllibraryservice.repositories.CqlLibraryRepository;
+import gov.cms.madie.cqllibraryservice.repositories.CqlLibraryReviewRepository;
 import gov.cms.madie.models.library.LibrarySet;
 import gov.cms.madie.models.measure.ElmJson;
 import org.junit.jupiter.api.Test;
@@ -61,6 +63,7 @@ class CqlLibraryServiceTest {
 
   @Mock private UserServiceClient userServiceClient;
   @Mock private CqlLibraryAccessControlService cqlLibraryAccessControlService;
+  @Mock private CqlLibraryReviewRepository cqlLibraryReviewRepository;
 
   private final String USERNAME = "testUserName";
   private final String ACCESSTOKEN = "accessToken";
@@ -1584,6 +1587,67 @@ class CqlLibraryServiceTest {
     assertEquals(1, result.size());
     assertEquals("John Doe", result.get(0).getOwnerDisplayName());
     verify(userServiceClient, times(1)).getSingleUserDetails(eq(ownerId));
+  }
+
+  @Test
+  public void getLibrariesByLibrarySetIdEnrichesReviewStatusPerInstance() {
+    String librarySetId = "testSetId";
+    LibrarySearchCriteria criteria =
+        LibrarySearchCriteria.builder().searchField("testField").build();
+    LibraryListDTO libraryV2 = LibraryListDTO.builder().id("L2").librarySetId(librarySetId).build();
+    LibraryListDTO libraryV1 = LibraryListDTO.builder().id("L1").librarySetId(librarySetId).build();
+
+    when(cqlLibraryRepository.findLibrariesByLibrarySetId(eq(librarySetId), eq(true), eq(criteria)))
+        .thenReturn(new ArrayList<>(List.of(libraryV2, libraryV1)));
+    when(cqlLibraryReviewRepository.findAllByLibrarySetId(librarySetId))
+        .thenReturn(
+            List.of(
+                CqlLibraryReview.builder()
+                    .libraryId("L1")
+                    .status(ReviewStatus.READY_FOR_REVIEW)
+                    .build(),
+                CqlLibraryReview.builder()
+                    .libraryId("L2")
+                    .status(ReviewStatus.NOT_READY_FOR_REVIEW)
+                    .build()));
+
+    List<LibraryListDTO> result =
+        cqlLibraryService.getLibrariesByLibrarySetId(librarySetId, true, criteria);
+
+    assertEquals(2, result.size());
+    assertEquals("", result.get(0).getReviewStatus());
+    assertEquals("Ready", result.get(1).getReviewStatus());
+  }
+
+  @Test
+  public void getLibrariesByLibrarySetIdFiltersToReadyWhenSearchingByReview() {
+    String librarySetId = "testSetId";
+    LibrarySearchCriteria criteria =
+        LibrarySearchCriteria.builder().searchField("testField").build();
+    // Two versions; only L1 has been marked READY_FOR_REVIEW.
+    LibraryListDTO libraryV2 = LibraryListDTO.builder().id("L2").librarySetId(librarySetId).build();
+    LibraryListDTO libraryV1 = LibraryListDTO.builder().id("L1").librarySetId(librarySetId).build();
+
+    when(cqlLibraryRepository.findLibrariesByLibrarySetId(eq(librarySetId), eq(true), eq(criteria)))
+        .thenReturn(new ArrayList<>(List.of(libraryV2, libraryV1)));
+    when(cqlLibraryReviewRepository.findAllByLibrarySetId(librarySetId))
+        .thenReturn(
+            List.of(
+                CqlLibraryReview.builder()
+                    .libraryId("L1")
+                    .status(ReviewStatus.READY_FOR_REVIEW)
+                    .build(),
+                CqlLibraryReview.builder()
+                    .libraryId("L2")
+                    .status(ReviewStatus.NOT_READY_FOR_REVIEW)
+                    .build()));
+
+    List<LibraryListDTO> result =
+        cqlLibraryService.getLibrariesByLibrarySetId(librarySetId, true, criteria);
+
+    assertEquals(2, result.size());
+    assertEquals("", result.get(0).getReviewStatus());
+    assertEquals("Ready", result.get(1).getReviewStatus());
   }
 
   @Test

@@ -13,7 +13,9 @@ import gov.cms.madie.models.dto.LibraryUsage;
 import gov.cms.madie.models.dto.UserDetailsDto;
 import gov.cms.madie.models.library.CqlLibrary;
 import gov.cms.madie.models.library.CqlLibraryLockInfo;
+import gov.cms.madie.models.library.CqlLibraryReview;
 import gov.cms.madie.cqllibraryservice.repositories.CqlLibraryRepository;
+import gov.cms.madie.cqllibraryservice.repositories.CqlLibraryReviewRepository;
 import gov.cms.madie.models.library.LibrarySet;
 import gov.cms.madie.models.measure.ElmJson;
 
@@ -45,6 +47,7 @@ public class CqlLibraryService {
   private final CqlLibraryLockService cqlLibraryLockService;
   private final UserServiceClient userServiceClient;
   private final CqlLibraryAccessControlService cqlLibraryAccessControlService;
+  private final CqlLibraryReviewRepository cqlLibraryReviewRepository;
 
   public CqlLibrary updateCqlLibrary(CqlLibrary cqlLibrary, String username) {
     if (cqlLibrary == null || StringUtils.isBlank(cqlLibrary.getId())) {
@@ -441,6 +444,7 @@ public class CqlLibraryService {
     if (StringUtils.isBlank(librarySetId)) {
       throw new BadRequestObjectException("Please provide library set ID.");
     }
+
     List<LibraryListDTO> librariesByLibrarySetId =
         cqlLibraryRepository.findLibrariesByLibrarySetId(
             librarySetId, sortByLatestVersion, librarySearchCriteria);
@@ -458,7 +462,25 @@ public class CqlLibraryService {
       }
     }
 
+    enrichWithReviewStatus(librarySetId, librariesByLibrarySetId);
+
     return librariesByLibrarySetId;
+  }
+
+  private void enrichWithReviewStatus(String librarySetId, List<LibraryListDTO> libraries) {
+    if (CollectionUtils.isEmpty(libraries)) {
+      return;
+    }
+    Set<String> readyForReviewLibraryIds =
+        cqlLibraryReviewRepository.findAllByLibrarySetId(librarySetId).stream()
+            .filter(review -> ReviewStatus.READY_FOR_REVIEW.equals(review.getStatus()))
+            .map(CqlLibraryReview::getLibraryId)
+            .filter(Objects::nonNull)
+            .collect(Collectors.toSet());
+    libraries.forEach(
+        library ->
+            library.setReviewStatus(
+                readyForReviewLibraryIds.contains(library.getId()) ? "Ready" : ""));
   }
 
   public boolean hasAssociatedLibraries(LibraryListDTO library) {
