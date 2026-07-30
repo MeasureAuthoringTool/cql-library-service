@@ -479,6 +479,47 @@ public class CqlLibrarySearchServiceImplTest {
   }
 
   @Test
+  void testFindLibrariesByLibrarySetIdJoinsReviewWhenFilteringByReview() {
+    LibrarySearchCriteria searchCriteria = new LibrarySearchCriteria();
+    searchCriteria.setSearchField("Ready");
+    searchCriteria.setOptionalSearchProperties(List.of("review"));
+
+    when(mongoTemplate.aggregate(
+            any(Aggregation.class), eq(CqlLibrary.class), eq(LibraryListDTO.class)))
+        .thenReturn(new AggregationResults<>(List.of(new LibraryListDTO()), new Document()));
+
+    cqlLibrarySearchServiceImpl.findLibrariesByLibrarySetId("set-1", false, searchCriteria);
+
+    ArgumentCaptor<Aggregation> captor = ArgumentCaptor.forClass(Aggregation.class);
+    verify(mongoTemplate)
+        .aggregate(captor.capture(), eq(CqlLibrary.class), eq(LibraryListDTO.class));
+
+    String pipeline = captor.getValue().toString();
+    assertTrue(pipeline.contains("cqlLibraryReview"));
+    assertTrue(pipeline.contains("reviewStatus"));
+    assertTrue(pipeline.contains("READY_FOR_REVIEW"));
+  }
+
+  @Test
+  void testFindLibrariesByLibrarySetIdSkipsReviewJoinForNonReviewSearches() {
+    LibrarySearchCriteria searchCriteria = new LibrarySearchCriteria();
+    searchCriteria.setSearchField("sample");
+    searchCriteria.setOptionalSearchProperties(List.of("library"));
+
+    when(mongoTemplate.aggregate(
+            any(Aggregation.class), eq(CqlLibrary.class), eq(LibraryListDTO.class)))
+        .thenReturn(new AggregationResults<>(List.of(new LibraryListDTO()), new Document()));
+
+    cqlLibrarySearchServiceImpl.findLibrariesByLibrarySetId("set-1", false, searchCriteria);
+
+    ArgumentCaptor<Aggregation> captor = ArgumentCaptor.forClass(Aggregation.class);
+    verify(mongoTemplate)
+        .aggregate(captor.capture(), eq(CqlLibrary.class), eq(LibraryListDTO.class));
+
+    assertFalse(captor.getValue().toString().contains("cqlLibraryReview"));
+  }
+
+  @Test
   void testFindLibrariesByLibrarySetIdWithSearchCriteria() {
     String librarySetId = "set789";
     boolean sortByLatestVersion = false;
