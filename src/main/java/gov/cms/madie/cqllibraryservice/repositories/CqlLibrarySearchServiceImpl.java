@@ -235,8 +235,6 @@ public class CqlLibrarySearchServiceImpl implements CqlLibrarySearchService {
 
     if (librarySearchCriteria != null
         && StringUtils.isNotBlank(librarySearchCriteria.getSearchField())) {
-      // Without this join reviewStatus is absent here, so a review filter would silently drop
-      // every associated library and the expanded row would come back empty
       if (isReviewSearch(librarySearchCriteria)) {
         operations.addAll(buildReviewLookupStages());
       }
