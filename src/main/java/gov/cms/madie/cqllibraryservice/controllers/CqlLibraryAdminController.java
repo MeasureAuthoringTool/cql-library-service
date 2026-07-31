@@ -7,9 +7,14 @@ import java.util.List;
 import java.util.Map;
 
 import gov.cms.madie.cqllibraryservice.dto.IgPackageInstallRequest;
+import gov.cms.madie.cqllibraryservice.dto.LibraryListDTO;
+import gov.cms.madie.cqllibraryservice.dto.LibrarySearchCriteria;
 import gov.cms.madie.cqllibraryservice.services.AdminService;
 import gov.cms.madie.cqllibraryservice.services.IgPackageService;
+import gov.cms.madie.cqllibraryservice.utils.PaginationUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -32,6 +37,7 @@ import gov.cms.madie.cqllibraryservice.services.CqlLibraryLockService;
 import gov.cms.madie.cqllibraryservice.services.CqlLibraryService;
 import gov.cms.madie.models.access.AclOperation;
 import gov.cms.madie.models.access.AclSpecification;
+import gov.cms.madie.models.common.OwnershipType;
 import gov.cms.madie.models.library.CqlLibrary;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -46,6 +52,23 @@ public class CqlLibraryAdminController {
   private final CqlLibraryService cqlLibraryService;
   private final AdminService adminService;
   private final IgPackageService igPackageService;
+
+  @PutMapping("/userProfile/{harpId}/searches")
+  @PreAuthorize("hasRole('MADIE-ADMIN')")
+  public ResponseEntity<Page<LibraryListDTO>> searchLibrariesForUser(
+      @PathVariable("harpId") String harpId,
+      @RequestParam(required = false, defaultValue = "ALL", name = "ownershipType")
+          OwnershipType ownershipType,
+      @RequestBody(required = false) LibrarySearchCriteria librarySearchCriteria,
+      @RequestParam(required = false, defaultValue = "10", name = "limit") int limit,
+      @RequestParam(required = false, defaultValue = "0", name = "page") int page,
+      @RequestParam(required = false, name = "sortInfo") String sortInfo) {
+    Pageable pageReq = PaginationUtils.createPageable(page, limit, sortInfo);
+    Page<LibraryListDTO> libraries =
+        cqlLibraryService.getLibrariesByCriteria(
+            librarySearchCriteria, ownershipType, pageReq, harpId.toLowerCase());
+    return ResponseEntity.ok(libraries);
+  }
 
   @DeleteMapping("/locks")
   @PreAuthorize("hasRole('MADIE-ADMIN')")

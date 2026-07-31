@@ -96,7 +96,7 @@ public class CqlLibrarySearchServiceImpl implements CqlLibrarySearchService {
                     .otherwise(""))
             .build();
     stages.add(addLibraryIdStringOperation);
-    stages.add(reviewLookupOperation); 
+    stages.add(reviewLookupOperation);
     stages.add(reviewStatusOperation);
     return stages;
   }

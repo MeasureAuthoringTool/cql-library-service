@@ -6,6 +6,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.*;
@@ -30,6 +31,7 @@ import org.springframework.context.annotation.Import;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
@@ -37,10 +39,14 @@ import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 
 import gov.cms.madie.cqllibraryservice.config.security.SecurityConfig;
+import gov.cms.madie.cqllibraryservice.dto.LibraryListDTO;
 import gov.cms.madie.cqllibraryservice.repositories.CqlLibraryRepository;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
 import gov.cms.madie.models.access.AclSpecification;
 import gov.cms.madie.models.access.RoleEnum;
 import gov.cms.madie.models.common.ActionType;
+import gov.cms.madie.models.common.OwnershipType;
 import gov.cms.madie.models.library.CqlLibrary;
 import gov.cms.madie.models.library.LibrarySet;
 
@@ -71,6 +77,43 @@ public class CqlLibraryAdminControllerMvcTest {
   private static final String TEST_USER_ID = "test-okta-user-id-123";
   public static final String ELM_SEVERITY = "Info";
   public static final String TEST_OKTA = "test-okta";
+
+  @Test
+  void testSearchLibrariesForUserDelegatesWithProfileHarpId() throws Exception {
+    LibraryListDTO library = LibraryListDTO.builder().id("library-1").build();
+    when(cqlLibraryService.getLibrariesByCriteria(
+            any(), eq(OwnershipType.OWNED), any(Pageable.class), eq("profile_user")))
+        .thenReturn(new PageImpl<>(List.of(library)));
+
+    mockMvc
+        .perform(
+            put("/cql-libraries/admin/userProfile/PROFILE_USER/searches?ownershipType=OWNED")
+                .with(csrf())
+                .with(user(TEST_USER_ID).roles("MADIE-ADMIN"))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{}"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.content[0].id", equalTo("library-1")));
+
+    verify(cqlLibraryService)
+        .getLibrariesByCriteria(
+            any(), eq(OwnershipType.OWNED), any(Pageable.class), eq("profile_user"));
+  }
+
+  @Test
+  void testSearchLibrariesForUserAcceptsBearerAuthenticatedAdminWithoutCsrf() throws Exception {
+    when(cqlLibraryService.getLibrariesByCriteria(
+            any(), eq(OwnershipType.OWNED), any(Pageable.class), eq("profile_user")))
+        .thenReturn(new PageImpl<>(List.of()));
+
+    mockMvc
+        .perform(
+            put("/cql-libraries/admin/userProfile/PROFILE_USER/searches?ownershipType=OWNED")
+                .with(jwt().authorities(new SimpleGrantedAuthority("ROLE_MADIE-ADMIN")))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{}"))
+        .andExpect(status().isOk());
+  }
 
   @Test
   public void testAdminLibraryGetSharedWith() throws Exception {
