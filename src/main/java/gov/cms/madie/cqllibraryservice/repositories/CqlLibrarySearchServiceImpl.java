@@ -96,9 +96,15 @@ public class CqlLibrarySearchServiceImpl implements CqlLibrarySearchService {
                     .otherwise(""))
             .build();
     stages.add(addLibraryIdStringOperation);
-    stages.add(reviewLookupOperation);
+    stages.add(reviewLookupOperation); 
     stages.add(reviewStatusOperation);
     return stages;
+  }
+
+  private boolean isReviewSearch(LibrarySearchCriteria librarySearchCriteria) {
+    return librarySearchCriteria != null
+        && librarySearchCriteria.getOptionalSearchProperties() != null
+        && librarySearchCriteria.getOptionalSearchProperties().contains("review");
   }
 
   public CqlLibrarySearchServiceImpl(MongoTemplate mongoTemplate) {
@@ -220,23 +226,29 @@ public class CqlLibrarySearchServiceImpl implements CqlLibrarySearchService {
       LibrarySearchCriteria librarySearchCriteria) {
     Criteria criteria = Criteria.where("active").is(true).and("librarySetId").is(librarySetId);
 
-    if (librarySearchCriteria != null
-        && StringUtils.isNotBlank(librarySearchCriteria.getSearchField())) {
-      appendAdditionalSearchCriteria(criteria, librarySearchCriteria);
-    }
-
-    MatchOperation matchOperation = match(criteria);
     LookupOperation lookupOperation = getLookupOperation();
     UnwindOperation unwindOperation = unwind("librarySet");
 
-    Aggregation aggregation;
-    if (sortByLatestVersion) {
-      SortOperation sortOperation = sort(Sort.by(Sort.Direction.DESC, "version"));
-      aggregation = newAggregation(lookupOperation, unwindOperation, matchOperation, sortOperation);
-    } else {
-      aggregation = newAggregation(lookupOperation, unwindOperation, matchOperation);
+    List<AggregationOperation> operations = new ArrayList<>();
+    operations.add(lookupOperation);
+    operations.add(unwindOperation);
+
+    if (librarySearchCriteria != null
+        && StringUtils.isNotBlank(librarySearchCriteria.getSearchField())) {
+      if (isReviewSearch(librarySearchCriteria)) {
+        operations.addAll(buildReviewLookupStages());
+      }
+      appendAdditionalSearchCriteria(criteria, librarySearchCriteria);
     }
-    var result = mongoTemplate.aggregate(aggregation, CqlLibrary.class, LibraryListDTO.class);
+
+    operations.add(match(criteria));
+
+    if (sortByLatestVersion) {
+      operations.add(sort(Sort.by(Sort.Direction.DESC, "version")));
+    }
+
+    var result =
+        mongoTemplate.aggregate(newAggregation(operations), CqlLibrary.class, LibraryListDTO.class);
     return result.getMappedResults();
   }
 
