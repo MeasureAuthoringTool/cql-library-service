@@ -11,9 +11,9 @@ import org.springframework.data.mongodb.core.mapping.Document;
 import java.time.Instant;
 
 /**
- * Represents a Common CQL Library imported from a FHIR Implementation Guide (IG) package.
+ * Represents a External CQL Library imported from a FHIR Implementation Guide (IG) package.
  *
- * <p>Common CQL Libraries are separate from user-created CQL Libraries. They are not editable by
+ * <p>External CQL Libraries are separate from user-created CQL Libraries. They are not editable by
  * users and are not included in user library validations, but are available for use by translation,
  * execution, and the CQL Builder.
  */
