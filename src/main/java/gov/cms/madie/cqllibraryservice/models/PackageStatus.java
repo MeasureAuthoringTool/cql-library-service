@@ -4,6 +4,8 @@ public enum PackageStatus {
   DOWNLOADING,
   DOWNLOADED,
   DOWNLOAD_FAILED,
+  // Common CQL Library import is in progress.
+  PROCESSING,
   // Package was successfully read and no CQL Libraries were found.
   PROCESSED,
   // Package was successfully read, and CQL Libraries found were persisted.

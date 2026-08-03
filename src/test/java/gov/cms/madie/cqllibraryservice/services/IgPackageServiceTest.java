@@ -8,15 +8,14 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class IgPackageServiceTest {
 
   @InjectMocks private IgPackageService igPackageService;
   @Mock private FhirPackageDownloadService fhirPackageDownloadService;
+  @Mock private ExternalLibraryImportService externalLibraryImportService;
 
   @Test
   void testInstallIgPackageSuccess() {
@@ -34,6 +33,7 @@ class IgPackageServiceTest {
 
     verify(fhirPackageDownloadService, times(1))
         .downloadPackage("hl7.fhir.us.qicore", "7.0.2", "admin.user");
+    verify(externalLibraryImportService, times(1)).importLibraries("hl7.fhir.us.qicore", "7.0.2");
   }
 
   @Test
@@ -52,5 +52,7 @@ class IgPackageServiceTest {
 
     verify(fhirPackageDownloadService, times(1))
         .downloadPackage("some.invalid.package", "1.0.0", "admin.user");
+    // Import should NOT be triggered when download fails.
+    verify(externalLibraryImportService, never()).importLibraries(anyString(), anyString());
   }
 }

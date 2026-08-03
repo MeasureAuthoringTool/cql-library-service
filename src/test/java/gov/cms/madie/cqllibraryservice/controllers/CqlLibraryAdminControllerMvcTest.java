@@ -38,6 +38,7 @@ import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 
 import gov.cms.madie.cqllibraryservice.config.security.SecurityConfig;
 import gov.cms.madie.cqllibraryservice.repositories.CqlLibraryRepository;
+import gov.cms.madie.cqllibraryservice.repositories.PackageTrackingRepository;
 import gov.cms.madie.models.access.AclSpecification;
 import gov.cms.madie.models.access.RoleEnum;
 import gov.cms.madie.models.common.ActionType;
@@ -59,6 +60,8 @@ public class CqlLibraryAdminControllerMvcTest {
   @MockitoBean private UserServiceClient userServiceClient;
   @MockitoBean AdminService adminService;
   @MockitoBean IgPackageService igPackageService;
+  @MockitoBean ExternalLibraryImportService externalLibraryImportService;
+  @MockitoBean PackageTrackingRepository packageTrackingRepository;
 
   @Captor private ArgumentCaptor<CqlLibrary> cqlLibraryArgumentCaptor;
 

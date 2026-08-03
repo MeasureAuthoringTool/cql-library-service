@@ -12,10 +12,12 @@ import org.springframework.stereotype.Service;
 public class IgPackageService {
 
   private final FhirPackageDownloadService fhirPackageDownloadService;
+  private final ExternalLibraryImportService externalLibraryImportService;
 
   /**
    * Initiates the IG package installation workflow. Downloads the FHIR NPM package from the
-   * registry and tracks the download status.
+   * registry, tracks the download status, and – on success – automatically triggers an async import
+   * of any Common CQL Libraries found in the package and its dependencies.
    *
    * @param packageId the identifier of the IG package to install
    * @param packageVersion the version of the IG package to install
@@ -29,23 +31,17 @@ public class IgPackageService {
         packageId,
         packageVersion);
 
-    long startTime = System.currentTimeMillis();
     DownloadedPackageResult result =
         fhirPackageDownloadService.downloadPackage(packageId, packageVersion, username);
-    double elapsedSeconds = (System.currentTimeMillis() - startTime) / 1000.0;
 
     if (result.isSuccess()) {
-      log.info(
-          "IG package [{}] version [{}] downloaded successfully in [{}] seconds",
-          packageId,
-          packageVersion,
-          elapsedSeconds);
+      // kick off external CQL Library import now that the package is in the cache.
+      externalLibraryImportService.importLibraries(packageId, packageVersion);
     } else {
       log.warn(
-          "IG package [{}] version [{}] download failed after [{}] seconds: {}",
+          "IG package [{}] version [{}] download failed: {}",
           packageId,
           packageVersion,
-          elapsedSeconds,
           result.getErrorMessage());
     }
   }

@@ -54,3 +54,4 @@ mongock:
 fhir:
   package:
     cache-path: ${FHIR_PACKAGE_CACHE_PATH:}
+  external-libraries-owner: ${EXTERNAL_LIBS_OWNER:}

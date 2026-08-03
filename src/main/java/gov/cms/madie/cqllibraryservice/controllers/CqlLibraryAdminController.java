@@ -7,7 +7,9 @@ import java.util.List;
 import java.util.Map;
 
 import gov.cms.madie.cqllibraryservice.dto.IgPackageInstallRequest;
+import gov.cms.madie.cqllibraryservice.repositories.PackageTrackingRepository;
 import gov.cms.madie.cqllibraryservice.services.AdminService;
+import gov.cms.madie.cqllibraryservice.services.ExternalLibraryImportService;
 import gov.cms.madie.cqllibraryservice.services.IgPackageService;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.http.HttpHeaders;
@@ -46,6 +48,8 @@ public class CqlLibraryAdminController {
   private final CqlLibraryService cqlLibraryService;
   private final AdminService adminService;
   private final IgPackageService igPackageService;
+  private final ExternalLibraryImportService externalLibraryImportService;
+  private final PackageTrackingRepository packageTrackingRepository;
 
   @DeleteMapping("/locks")
   @PreAuthorize("hasRole('MADIE-ADMIN')")
