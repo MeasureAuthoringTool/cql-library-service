@@ -288,8 +288,4 @@ public class FhirPackageDownloadServiceImpl implements FhirPackageDownloadServic
     record.setErrorMessage(errorMessage);
     packageTrackingRepository.save(record);
   }
-
-  private double elapsedSeconds(long startTimeNanos) {
-    return (System.nanoTime() - startTimeNanos) / 1_000_000_000.0;
-  }
 }
