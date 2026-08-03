@@ -109,7 +109,8 @@ class ExternalLibraryImportServiceTest {
 
     ExternalLibrary lib =
         ExternalLibrary.builder().libraryName("FHIRHelpers").version("4.3.000").build();
-    when(externalLibraryDiscoveryService.discoverLibraries(anyString(), anyString(), anyString()))
+    when(externalLibraryDiscoveryService.discoverLibrariesForPackage(
+            anyString(), anyString(), anyString()))
         .thenReturn(List.of(lib));
     when(externalLibraryPersistenceService.persistLibraries(anyList())).thenReturn(1);
 
@@ -141,7 +142,8 @@ class ExternalLibraryImportServiceTest {
         .when(packageCacheManagerAdapter)
         .loadPackageWithDependencies(eq(PKG_ID), eq(PKG_VERSION), any());
 
-    when(externalLibraryDiscoveryService.discoverLibraries(anyString(), anyString(), anyString()))
+    when(externalLibraryDiscoveryService.discoverLibrariesForPackage(
+            anyString(), anyString(), anyString()))
         .thenReturn(List.of());
     when(externalLibraryPersistenceService.persistLibraries(anyList())).thenReturn(0);
 
@@ -168,7 +170,7 @@ class ExternalLibraryImportServiceTest {
         ArgumentCaptor.forClass(PackageTrackingRecord.class);
     verify(packageTrackingRepository, never()).save(captor.capture());
     verify(externalLibraryDiscoveryService, never())
-        .discoverLibraries(anyString(), anyString(), anyString());
+        .discoverLibrariesForPackage(anyString(), anyString(), anyString());
     verify(externalLibraryPersistenceService, never()).persistLibraries(anyList());
   }
 
@@ -187,7 +189,8 @@ class ExternalLibraryImportServiceTest {
             })
         .when(packageCacheManagerAdapter)
         .loadPackageWithDependencies(eq(PKG_ID), eq(PKG_VERSION), any());
-    when(externalLibraryDiscoveryService.discoverLibraries(anyString(), anyString(), anyString()))
+    when(externalLibraryDiscoveryService.discoverLibrariesForPackage(
+            anyString(), anyString(), anyString()))
         .thenThrow(new RuntimeException(expectedError));
 
     importService.importLibraries(PKG_ID, PKG_VERSION);
@@ -234,7 +237,8 @@ class ExternalLibraryImportServiceTest {
         .when(packageCacheManagerAdapter)
         .loadPackageWithDependencies(eq(PKG_ID), eq(PKG_VERSION), any());
 
-    when(externalLibraryDiscoveryService.discoverLibraries(anyString(), anyString(), anyString()))
+    when(externalLibraryDiscoveryService.discoverLibrariesForPackage(
+            anyString(), anyString(), anyString()))
         .thenReturn(List.of());
     when(externalLibraryPersistenceService.persistLibraries(anyList())).thenReturn(0);
 
@@ -242,7 +246,7 @@ class ExternalLibraryImportServiceTest {
 
     // discoverLibraries called once per resolved package
     verify(externalLibraryDiscoveryService, times(2))
-        .discoverLibraries(anyString(), anyString(), anyString());
+        .discoverLibrariesForPackage(anyString(), anyString(), anyString());
 
     assertThat(savedSnapshots)
         .anyMatch(

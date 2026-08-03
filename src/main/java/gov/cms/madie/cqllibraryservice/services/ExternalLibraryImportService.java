@@ -89,7 +89,7 @@ public class ExternalLibraryImportService {
 
         try {
           List<ExternalLibrary> discoveredLibraries =
-              externalLibraryDiscoveryService.discoverLibraries(path, pkgId, pkgVersion);
+              externalLibraryDiscoveryService.discoverLibrariesForPackage(path, pkgId, pkgVersion);
           packageDiscovered = discoveredLibraries.size();
           totalDiscovered += packageDiscovered;
 

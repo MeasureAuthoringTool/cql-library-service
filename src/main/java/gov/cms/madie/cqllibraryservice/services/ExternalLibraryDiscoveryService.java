@@ -43,7 +43,7 @@ public class ExternalLibraryDiscoveryService {
    * @param igPackageVersion the IG package version (e.g. {@code 6.0.0})
    * @return candidate {@link ExternalLibrary} objects ready for persistence
    */
-  public List<ExternalLibrary> discoverLibraries(
+  public List<ExternalLibrary> discoverLibrariesForPackage(
       String packagePath, String igPackageId, String igPackageVersion) {
     List<ExternalLibrary> allLibraries = new ArrayList<>();
     try {
