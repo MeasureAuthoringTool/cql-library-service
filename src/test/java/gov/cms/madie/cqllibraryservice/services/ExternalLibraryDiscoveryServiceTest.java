@@ -1,12 +1,11 @@
 package gov.cms.madie.cqllibraryservice.services;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import gov.cms.madie.cqllibraryservice.models.ExternalLibrary;
 import org.hl7.fhir.utilities.json.model.JsonObject;
 import org.hl7.fhir.utilities.npm.NpmPackage;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -21,20 +20,14 @@ import static org.mockito.Mockito.*;
 @ExtendWith(MockitoExtension.class)
 class ExternalLibraryDiscoveryServiceTest {
 
-  private ExternalLibraryDiscoveryService discoveryService;
-
   @Mock private NpmPackage npmPackage;
   @Mock private JsonObject npm;
+  @InjectMocks private ExternalLibraryDiscoveryService discoveryService;
 
   private static final String NAMESPACE_CANONICAL = "http://hl7.org/fhir/us/qicore";
   private static final String NAMESPACE_PREFIX = "hl7.fhir.us.qicore";
   private static final String PACKAGE_ID = "hl7.fhir.us.qicore";
   private static final String PACKAGE_VERSION = "6.0.0";
-
-  @BeforeEach
-  void setUp() {
-    discoveryService = new ExternalLibraryDiscoveryService(new ObjectMapper());
-  }
 
   // ---------------------------------------------------------------------------
   // Helpers

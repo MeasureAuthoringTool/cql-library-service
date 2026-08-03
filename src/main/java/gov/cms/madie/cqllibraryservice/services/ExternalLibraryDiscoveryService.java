@@ -35,8 +35,6 @@ import java.util.List;
 @RequiredArgsConstructor
 public class ExternalLibraryDiscoveryService {
 
-  private final ObjectMapper objectMapper;
-
   /**
    * Discovers all valid CQL logic libraries from the given package path.
    *
@@ -149,7 +147,7 @@ public class ExternalLibraryDiscoveryService {
       InputStream stream, String canonical, String namespacePrefix, String filename)
       throws IOException {
 
-    JsonNode root = objectMapper.readTree(stream);
+    JsonNode root = new ObjectMapper().readTree(stream);
 
     // 1. Must be resourceType == "Library"
     if (!"Library".equals(root.path("resourceType").asText(null))) {
