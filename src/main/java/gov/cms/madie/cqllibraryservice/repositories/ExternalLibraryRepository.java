@@ -7,9 +7,9 @@ import java.util.Optional;
 
 public interface ExternalLibraryRepository extends MongoRepository<ExternalLibrary, String> {
 
-  Optional<ExternalLibrary> findByCanonicalAndLibraryName(
+  Optional<ExternalLibrary> findByPackageCanonicalAndLibraryName(
       String namespaceCanonical, String libraryName);
 
-  boolean existsByCanonicalAndLibraryNameAndVersion(
+  boolean existsByPackageCanonicalAndLibraryNameAndVersion(
       String canonical, String libraryName, String version);
 }

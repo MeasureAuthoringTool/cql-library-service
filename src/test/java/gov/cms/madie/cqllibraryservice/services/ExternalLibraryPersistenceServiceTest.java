@@ -38,7 +38,7 @@ class ExternalLibraryPersistenceServiceTest {
     return ExternalLibrary.builder()
         .libraryName(libraryName)
         .version(version)
-        .canonical(NAMESPACE)
+        .packageCanonical(NAMESPACE)
         .namespacePrefix("hl7.fhir.us.qicore")
         .cqlContent("library " + libraryName + " version '" + version + "'")
         .build();
@@ -51,10 +51,10 @@ class ExternalLibraryPersistenceServiceTest {
   @Test
   void persistLibrariesCreateNew() {
     ExternalLibrary candidate = buildCandidate(LIBRARY_NAME, VERSION);
-    when(externalLibraryRepository.existsByCanonicalAndLibraryNameAndVersion(
+    when(externalLibraryRepository.existsByPackageCanonicalAndLibraryNameAndVersion(
             NAMESPACE, LIBRARY_NAME, VERSION))
         .thenReturn(false);
-    when(externalLibraryRepository.findByCanonicalAndLibraryName(NAMESPACE, LIBRARY_NAME))
+    when(externalLibraryRepository.findByPackageCanonicalAndLibraryName(NAMESPACE, LIBRARY_NAME))
         .thenReturn(Optional.empty());
     when(librarySetRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
     when(externalLibraryRepository.save(any())).thenReturn(candidate);
@@ -73,7 +73,7 @@ class ExternalLibraryPersistenceServiceTest {
   @Test
   void persistLibrariesDuplicateLibraryIsSkipped() {
     ExternalLibrary candidate = buildCandidate(LIBRARY_NAME, VERSION);
-    when(externalLibraryRepository.existsByCanonicalAndLibraryNameAndVersion(
+    when(externalLibraryRepository.existsByPackageCanonicalAndLibraryNameAndVersion(
             NAMESPACE, LIBRARY_NAME, VERSION))
         .thenReturn(true);
 
@@ -90,10 +90,10 @@ class ExternalLibraryPersistenceServiceTest {
     ExternalLibrary existingLibrary = buildCandidate(LIBRARY_NAME, "4.0.000");
     existingLibrary.setLibrarySetId("set-abc");
 
-    when(externalLibraryRepository.existsByCanonicalAndLibraryNameAndVersion(
+    when(externalLibraryRepository.existsByPackageCanonicalAndLibraryNameAndVersion(
             anyString(), eq(LIBRARY_NAME), anyString()))
         .thenReturn(false);
-    when(externalLibraryRepository.findByCanonicalAndLibraryName(NAMESPACE, LIBRARY_NAME))
+    when(externalLibraryRepository.findByPackageCanonicalAndLibraryName(NAMESPACE, LIBRARY_NAME))
         .thenReturn(Optional.of(existingLibrary));
     when(externalLibraryRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
@@ -113,7 +113,7 @@ class ExternalLibraryPersistenceServiceTest {
   void findOrCreateLibrarySetExistingSetIsReused() {
     ExternalLibrary existing = buildCandidate(LIBRARY_NAME, VERSION);
     existing.setLibrarySetId("existing-id");
-    when(externalLibraryRepository.findByCanonicalAndLibraryName(NAMESPACE, LIBRARY_NAME))
+    when(externalLibraryRepository.findByPackageCanonicalAndLibraryName(NAMESPACE, LIBRARY_NAME))
         .thenReturn(Optional.of(existing));
 
     String id = persistenceService.findOrCreateLibrarySet(NAMESPACE, LIBRARY_NAME);
@@ -125,7 +125,7 @@ class ExternalLibraryPersistenceServiceTest {
 
   @Test
   void findOrCreateLibrarySetNoExistingSetCreatesNew() {
-    when(externalLibraryRepository.findByCanonicalAndLibraryName(NAMESPACE, LIBRARY_NAME))
+    when(externalLibraryRepository.findByPackageCanonicalAndLibraryName(NAMESPACE, LIBRARY_NAME))
         .thenReturn(Optional.empty());
     when(librarySetRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
 
@@ -144,7 +144,7 @@ class ExternalLibraryPersistenceServiceTest {
   void findOrCreateLibrarySetDuplicateNotCreatedWhenCalledTwice() {
     ExternalLibrary existing = buildCandidate(LIBRARY_NAME, VERSION);
     existing.setLibrarySetId("set-id");
-    when(externalLibraryRepository.findByCanonicalAndLibraryName(NAMESPACE, LIBRARY_NAME))
+    when(externalLibraryRepository.findByPackageCanonicalAndLibraryName(NAMESPACE, LIBRARY_NAME))
         .thenReturn(Optional.of(existing));
 
     persistenceService.findOrCreateLibrarySet(NAMESPACE, LIBRARY_NAME);
@@ -156,12 +156,12 @@ class ExternalLibraryPersistenceServiceTest {
   @Test
   void persistLibrariesLibrarySetIdAssignedBeforeSave() {
     ExternalLibrary candidate = buildCandidate(LIBRARY_NAME, VERSION);
-    when(externalLibraryRepository.existsByCanonicalAndLibraryNameAndVersion(
+    when(externalLibraryRepository.existsByPackageCanonicalAndLibraryNameAndVersion(
             NAMESPACE, LIBRARY_NAME, VERSION))
         .thenReturn(false);
     ExternalLibrary existingLibrary = buildCandidate(LIBRARY_NAME, "4.0.000");
     existingLibrary.setLibrarySetId("set-xyz");
-    when(externalLibraryRepository.findByCanonicalAndLibraryName(NAMESPACE, LIBRARY_NAME))
+    when(externalLibraryRepository.findByPackageCanonicalAndLibraryName(NAMESPACE, LIBRARY_NAME))
         .thenReturn(Optional.of(existingLibrary));
     when(externalLibraryRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 

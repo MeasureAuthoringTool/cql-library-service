@@ -19,9 +19,9 @@ import java.util.UUID;
  * <p>Responsibilities:
  *
  * <ul>
- *   <li>Find or create a {@link LibrarySet} for each unique {@code (canonical, libraryName)}
+ *   <li>Find or create a {@link LibrarySet} for each unique {@code (packageCanonical, libraryName)}
  *       combination.
- *   <li>Skip duplicate {@code (canonical, libraryName, version)} entries.
+ *   <li>Skip duplicate {@code (packageCanonical, libraryName, version)} entries.
  *   <li>Persist new {@link ExternalLibrary} records.
  * </ul>
  */
@@ -56,24 +56,25 @@ public class ExternalLibraryPersistenceService {
 
   /** Persists a single library, returning true if saved or false if it was a duplicate. */
   private boolean persistSingleLibrary(ExternalLibrary library) {
-    if (externalLibraryRepository.existsByCanonicalAndLibraryNameAndVersion(
-        library.getCanonical(), library.getLibraryName(), library.getVersion())) {
+    if (externalLibraryRepository.existsByPackageCanonicalAndLibraryNameAndVersion(
+        library.getPackageCanonical(), library.getLibraryName(), library.getVersion())) {
       log.info(
           "Skipping duplicate ExternalLibrary [{}/{}@{}]",
-          library.getCanonical(),
+          library.getPackageCanonical(),
           library.getLibraryName(),
           library.getVersion());
       return false;
     }
 
-    String librarySetId = findOrCreateLibrarySet(library.getCanonical(), library.getLibraryName());
+    String librarySetId =
+        findOrCreateLibrarySet(library.getPackageCanonical(), library.getLibraryName());
     library.setLibrarySetId(librarySetId);
 
     externalLibraryRepository.save(library);
     actionLogService.logAction(library.getId(), ActionType.IMPORTED, defaultOwner, "actionLog");
     log.info(
         "Persisted ExternalLibrary [{}/{}@{}] under LibrarySet [{}]",
-        library.getCanonical(),
+        library.getPackageCanonical(),
         library.getLibraryName(),
         library.getVersion(),
         librarySetId);
@@ -84,13 +85,13 @@ public class ExternalLibraryPersistenceService {
    * Finds an existing {@link LibrarySet} for the given namespace and library name, or creates a new
    * one if none exists.
    *
-   * @param namespaceCanonical the IG canonical URL
+   * @param packageCanonical the IG packageCanonical URL
    * @param libraryName the CQL library name
    * @return the ID of the found or newly-created {@link LibrarySet}
    */
-  String findOrCreateLibrarySet(String namespaceCanonical, String libraryName) {
+  String findOrCreateLibrarySet(String packageCanonical, String libraryName) {
     return externalLibraryRepository
-        .findByCanonicalAndLibraryName(namespaceCanonical, libraryName)
+        .findByPackageCanonicalAndLibraryName(packageCanonical, libraryName)
         .map(ExternalLibrary::getLibrarySetId)
         .orElseGet(
             () -> {

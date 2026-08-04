@@ -24,21 +24,26 @@ import java.time.Instant;
 @Document
 @CompoundIndex(
     name = "ns_canonical_library_name_version_idx",
-    def = "{'canonical': 1, 'libraryName': 1, 'version': 1}",
+    def = "{'packageCanonical': 1, 'libraryName': 1, 'version': 1}",
     unique = true)
 public class ExternalLibrary {
 
   @Id private String id;
   private String librarySetId;
+
+  /** Machine-readable library name (e.g. FHIRCommon) */
   private String libraryName;
+
+  /** Human-readable library title (e.g. "FHIR Common") */
   private String libraryTitle;
+
   private String description;
   private String version;
 
   /**
    * The canonical URL of the IG that contains this library (from {@code package.json#canonical}).
    */
-  private String canonical;
+  private String packageCanonical;
 
   /** The NPM package name of the IG that contains this library (from {@code package.json#name}). */
   private String namespacePrefix;

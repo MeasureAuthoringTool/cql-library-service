@@ -183,7 +183,7 @@ class ExternalLibraryDiscoveryServiceTest {
     ExternalLibrary lib = result.get(0);
     assertThat(lib.getLibraryName()).isEqualTo("FHIRHelpers");
     assertThat(lib.getVersion()).isEqualTo("4.3.000");
-    assertThat(lib.getCanonical()).isEqualTo(NAMESPACE_CANONICAL);
+    assertThat(lib.getPackageCanonical()).isEqualTo(NAMESPACE_CANONICAL);
     assertThat(lib.getNamespacePrefix()).isEqualTo(NAMESPACE_PREFIX);
     assertThat(lib.getCqlContent()).contains("library FHIRHelpers");
     assertThat(lib.isDraft()).isFalse();
@@ -296,7 +296,7 @@ class ExternalLibraryDiscoveryServiceTest {
         discoveryService.discoverLibraries(npmPackage, PACKAGE_ID, PACKAGE_VERSION);
 
     assertThat(result).hasSize(1);
-    assertThat(result.get(0).getCanonical()).isEqualTo(NAMESPACE_CANONICAL);
+    assertThat(result.get(0).getPackageCanonical()).isEqualTo(NAMESPACE_CANONICAL);
     assertThat(result.get(0).getNamespacePrefix()).isEqualTo(NAMESPACE_PREFIX);
   }
 

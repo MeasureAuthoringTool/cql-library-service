@@ -232,8 +232,7 @@ class PackageCacheManagerAdapterTest {
   void loadPackageWithDependenciesSkipsHl7TerminologyRootPackage() throws Exception {
     PackageDownloadedCallback cb = mock(PackageDownloadedCallback.class);
 
-    List<String> result =
-        adapter.loadPackageWithDependencies("hl7.terminology.r4", "1.0.0", cb);
+    List<String> result = adapter.loadPackageWithDependencies("hl7.terminology.r4", "1.0.0", cb);
 
     assertTrue(result.isEmpty(), "Terminology package should be skipped and return empty list");
     verifyNoInteractions(cb);

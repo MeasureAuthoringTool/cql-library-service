@@ -78,10 +78,10 @@ public class ExternalLibraryDiscoveryService {
       return discoveredLibraries;
     }
 
-    String namespaceCanonical = npm.asString("canonical");
+    String packageCanonical = npm.asString("canonical");
     String namespacePrefix = npm.asString("name");
 
-    if (StringUtils.isBlank(namespaceCanonical)) {
+    if (StringUtils.isBlank(packageCanonical)) {
       log.warn(
           "Package [{}#{}] package.json is missing 'canonical' – skipping",
           igPackageId,
@@ -116,7 +116,7 @@ public class ExternalLibraryDiscoveryService {
     for (String filename : libraryFiles) {
       try (InputStream resourceStream = npmPackage.load("package", filename)) {
         ExternalLibrary discoveredLibrary =
-            parseLibraryResource(resourceStream, namespaceCanonical, namespacePrefix, filename);
+            parseLibraryResource(resourceStream, packageCanonical, namespacePrefix, filename);
         if (discoveredLibrary != null) {
           discoveredLibraries.add(discoveredLibrary);
           log.debug(
@@ -144,7 +144,7 @@ public class ExternalLibraryDiscoveryService {
    * it meets all criteria, or {@code null} if it should be ignored.
    */
   private ExternalLibrary parseLibraryResource(
-      InputStream stream, String canonical, String namespacePrefix, String filename)
+      InputStream stream, String packageCanonical, String namespacePrefix, String filename)
       throws IOException {
 
     JsonNode root = new ObjectMapper().readTree(stream);
@@ -189,7 +189,7 @@ public class ExternalLibraryDiscoveryService {
         .libraryTitle(title)
         .version(version)
         .description(description)
-        .canonical(canonical)
+        .packageCanonical(packageCanonical)
         .namespacePrefix(namespacePrefix)
         .publisher(publisher)
         .cqlContent(cqlContent)
