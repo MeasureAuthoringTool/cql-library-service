@@ -16,8 +16,8 @@ public class IgPackageService {
 
   /**
    * Initiates the IG package installation workflow. Downloads the FHIR NPM package from the
-   * registry, tracks the download status, and – on success – automatically triggers an async import
-   * of any Common CQL Libraries found in the package and its dependencies.
+   * registry, tracks the download status, and – on success – automatically triggers an import of
+   * any CQL Libraries found in the package and its dependencies.
    *
    * @param packageId the identifier of the IG package to install
    * @param packageVersion the version of the IG package to install
