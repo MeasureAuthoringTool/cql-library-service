@@ -31,7 +31,7 @@ import java.util.UUID;
 public class ExternalLibraryPersistenceService {
 
   @Value("${fhir.external-libraries-owner}")
-  private static String defaultOwner;
+  private String defaultOwner;
 
   private final ExternalLibraryRepository externalLibraryRepository;
   private final LibrarySetRepository librarySetRepository;
