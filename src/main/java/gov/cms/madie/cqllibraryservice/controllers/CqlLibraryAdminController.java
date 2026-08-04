@@ -140,8 +140,9 @@ public class CqlLibraryAdminController {
 
   /**
    * Asynchronous operation that initiates the installation of an IG (Implementation Guide) package
-   * for a given package ID and version. It downloads the IG(including its transitive dependencies)
-   * and then imports the CQL Libraries from it(including its transitive dependencies).
+   * for a given package ID (e.g. {@code hl7.fhir.us.qicore}) and version (e.g. {@code 7.0.2}). It
+   * downloads the IG(including its transitive dependencies) and then imports the CQL Libraries from
+   * it(including its transitive dependencies).
    *
    * @param principal the currently authenticated user
    * @param request the IG package installation request containing the {@code packageId} and {@code
