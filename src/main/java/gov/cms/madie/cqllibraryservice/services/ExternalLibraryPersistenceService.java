@@ -68,7 +68,6 @@ public class ExternalLibraryPersistenceService {
 
     String librarySetId = findOrCreateLibrarySet(library.getCanonical(), library.getLibraryName());
     library.setLibrarySetId(librarySetId);
-    library.setLibrarySetId(librarySetId);
 
     externalLibraryRepository.save(library);
     actionLogService.logAction(library.getId(), ActionType.IMPORTED, defaultOwner, "actionLog");
