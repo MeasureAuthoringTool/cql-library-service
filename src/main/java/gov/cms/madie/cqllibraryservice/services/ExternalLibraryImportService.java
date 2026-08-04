@@ -28,9 +28,6 @@ import java.util.List;
  *   <li>Update status to {@code INSTALLED} if any libraries were persisted, {@code PROCESSED} if
  *       none were found, or {@code ERROR} on unrecoverable failure.
  * </ol>
- *
- * <p>The main entry point ({@link #importLibraries}) is annotated with {@code @Async} so that
- * callers receive control back immediately while processing continues in the background.
  */
 @Slf4j
 @Service
