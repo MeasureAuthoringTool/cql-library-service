@@ -138,6 +138,17 @@ public class CqlLibraryAdminController {
         .body(adminService.exportSharedWithLibraries(libraryids, username, accessToken));
   }
 
+  /**
+   * Asynchronous operation that initiates the installation of an IG (Implementation Guide) package
+   * for a given package ID and version. It downloads the IG(including its transitive dependencies)
+   * and then imports the CQL Libraries from it(including its transitive dependencies).
+   *
+   * @param principal the currently authenticated user
+   * @param request the IG package installation request containing the {@code packageId} and {@code
+   *     packageVersion} to install
+   * @return a {@link ResponseEntity} with HTTP status {@code 202 Accepted} and a confirmation
+   *     message indicating that the installation has been started
+   */
   @PostMapping("/ig-packages")
   @PreAuthorize("hasRole('MADIE-ADMIN')")
   public ResponseEntity<String> installIgPackage(
@@ -153,7 +164,7 @@ public class CqlLibraryAdminController {
     igPackageService.installIgPackage(sanitizedPackageId, sanitizedPackageVersion, username);
     return ResponseEntity.accepted()
         .body(
-            "IG package installation has been started for package"
+            "IG package installation has been started for package "
                 + sanitizedPackageId
                 + "#"
                 + sanitizedPackageVersion);
