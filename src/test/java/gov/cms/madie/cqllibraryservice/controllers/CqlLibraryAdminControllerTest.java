@@ -16,11 +16,16 @@ import java.security.Principal;
 import java.util.List;
 import java.util.Set;
 
+import gov.cms.madie.cqllibraryservice.dto.LibraryListDTO;
+import gov.cms.madie.cqllibraryservice.dto.LibrarySearchCriteria;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 
@@ -32,6 +37,7 @@ import gov.cms.madie.cqllibraryservice.services.IgPackageService;
 import gov.cms.madie.models.access.AclOperation;
 import gov.cms.madie.models.access.AclSpecification;
 import gov.cms.madie.models.access.RoleEnum;
+import gov.cms.madie.models.common.OwnershipType;
 
 @ExtendWith(MockitoExtension.class)
 public class CqlLibraryAdminControllerTest {
@@ -93,6 +99,26 @@ public class CqlLibraryAdminControllerTest {
     verify(cqlLibraryService, times(1))
         .updateAccessControlList(anyString(), any(), anyString(), any(Boolean.class), anyString());
     assertThat(output.getBody(), equalTo(aclSpecifications));
+  }
+
+  @Test
+  void testSearchLibrariesForUserUsesProfileHarpId() {
+    LibrarySearchCriteria criteria = LibrarySearchCriteria.builder().searchField("helper").build();
+    Page<LibraryListDTO> libraries =
+        new PageImpl<>(List.of(LibraryListDTO.builder().id("library-1").build()));
+    when(cqlLibraryService.getLibrariesByCriteria(
+            eq(criteria), eq(OwnershipType.OWNED), any(Pageable.class), eq("profile_user")))
+        .thenReturn(libraries);
+
+    ResponseEntity<Page<LibraryListDTO>> response =
+        controller.searchLibrariesForUser(
+            "PROFILE_USER", OwnershipType.OWNED, criteria, 10, 0, "lastModifiedAt,false");
+
+    assertEquals(HttpStatus.OK, response.getStatusCode());
+    assertEquals(libraries, response.getBody());
+    verify(cqlLibraryService)
+        .getLibrariesByCriteria(
+            eq(criteria), eq(OwnershipType.OWNED), any(Pageable.class), eq("profile_user"));
   }
 
   @Test

@@ -5,6 +5,7 @@ import gov.cms.madie.cqllibraryservice.exceptions.BadRequestObjectException;
 import gov.cms.madie.cqllibraryservice.exceptions.InvalidIdException;
 import gov.cms.madie.cqllibraryservice.locks.CqlLibraryLock;
 import gov.cms.madie.cqllibraryservice.services.*;
+import gov.cms.madie.cqllibraryservice.utils.PaginationUtils;
 import gov.cms.madie.models.access.AclSpecification;
 import gov.cms.madie.models.common.Action;
 import gov.cms.madie.models.common.ActionType;
@@ -27,9 +28,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -63,26 +62,7 @@ public class CqlLibraryController {
       @RequestParam(required = false, defaultValue = "0", name = "page") int page,
       @RequestParam(required = false, name = "sortInfo") String sortInfo) {
     final String username = principal.getName().toLowerCase();
-    Pageable pageReq;
-    // if sortInfo provided
-    if (sortInfo != null && !sortInfo.trim().isEmpty()) {
-      String[] sortParts = sortInfo.split(",");
-      // sort parts correct length
-      if (sortParts.length == 2) {
-        String sortBy = sortParts[0];
-        boolean desc = Boolean.parseBoolean(sortParts[1]);
-        pageReq =
-            PageRequest.of(
-                page, limit, Sort.by(desc ? Sort.Order.desc(sortBy) : Sort.Order.asc(sortBy)));
-      } else {
-        // sortParts wrong length
-        // in case we provide bad info we just do last modified
-        pageReq = PageRequest.of(page, limit, Sort.by(Sort.Order.desc("lastModifiedAt")));
-      }
-      // default behavior no sort.
-    } else {
-      pageReq = PageRequest.of(page, limit, Sort.by(Sort.Order.desc("lastModifiedAt")));
-    }
+    Pageable pageReq = PaginationUtils.createPageable(page, limit, sortInfo);
     Page<LibraryListDTO> cqlLibraries =
         cqlLibraryService.getLibrariesByCriteria(
             librarySearchCriteria, ownershipType, pageReq, username);

@@ -438,7 +438,8 @@ class VersionServiceTest {
     assertThat(savedValue.getVersion(), is(equalTo(existingCqlLibrary.getVersion())));
     assertThat(savedValue.getLibrarySetId(), is(equalTo(existingCqlLibrary.getLibrarySetId())));
     assertThat(savedValue.getModel(), is(equalTo(ModelType.US_QUALITY_CORE_0_5_0.getValue())));
-    assertThat(savedValue.getCql(), containsStringIgnoringCase("using USQualityCore version '0.5.0'"));
+    assertThat(
+        savedValue.getCql(), containsStringIgnoringCase("using USQualityCore version '0.5.0'"));
   }
 
   @Test
