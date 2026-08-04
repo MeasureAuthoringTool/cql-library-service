@@ -1,8 +1,8 @@
 package gov.cms.madie.cqllibraryservice.services;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ObjectNode;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.node.ObjectNode;
 import gov.cms.madie.cqllibraryservice.models.ExternalLibrary;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -144,13 +144,12 @@ public class ExternalLibraryDiscoveryService {
    * it meets all criteria, or {@code null} if it should be ignored.
    */
   private ExternalLibrary parseLibraryResource(
-      InputStream stream, String packageCanonical, String namespacePrefix, String filename)
-      throws IOException {
+      InputStream stream, String packageCanonical, String namespacePrefix, String filename) {
 
     JsonNode root = new ObjectMapper().readTree(stream);
 
     // 1. Must be resourceType == "Library"
-    if (!"Library".equals(root.path("resourceType").asText(null))) {
+    if (!"Library".equals(root.path("resourceType").asString(null))) {
       log.debug("Ignoring non-Library resource in file [{}]", filename);
       return null;
     }
@@ -168,11 +167,11 @@ public class ExternalLibraryDiscoveryService {
       return null;
     }
 
-    String libraryName = root.path("name").asText(null);
-    String version = root.path("version").asText(null);
-    String title = root.path("title").asText(null);
-    String description = root.path("description").asText(null);
-    String publisher = root.path("publisher").asText(null);
+    String libraryName = root.path("name").asString(null);
+    String version = root.path("version").asString(null);
+    String title = root.path("title").asString(null);
+    String description = root.path("description").asString(null);
+    String publisher = root.path("publisher").asString(null);
 
     if (StringUtils.isBlank(libraryName)) {
       log.warn("Library resource [{}] is missing 'name' – skipping", filename);
@@ -208,7 +207,7 @@ public class ExternalLibraryDiscoveryService {
    * dedicated {@code cqlContent} field, so dropping the whole array here is safe.
    */
   private String stripContentData(JsonNode root) {
-    ObjectNode copy = root.deepCopy();
+    ObjectNode copy = root.deepCopy().asObject();
     copy.remove("content");
     return copy.toString();
   }
@@ -220,7 +219,7 @@ public class ExternalLibraryDiscoveryService {
       return false;
     }
     for (JsonNode coding : codings) {
-      if ("logic-library".equals(coding.path("code").asText(null))) {
+      if ("logic-library".equals(coding.path("code").asString(null))) {
         return true;
       }
     }
@@ -237,8 +236,8 @@ public class ExternalLibraryDiscoveryService {
       return null;
     }
     for (JsonNode content : contentArray) {
-      if ("text/cql".equals(content.path("contentType").asText(null))) {
-        String base64Data = content.path("data").asText(null);
+      if ("text/cql".equals(content.path("contentType").asString(null))) {
+        String base64Data = content.path("data").asString(null);
         if (base64Data != null) {
           try {
             return new String(Base64.getDecoder().decode(base64Data), StandardCharsets.UTF_8);
