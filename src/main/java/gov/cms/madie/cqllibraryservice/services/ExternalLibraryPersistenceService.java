@@ -44,18 +44,18 @@ public class ExternalLibraryPersistenceService {
    * @return the number of libraries actually saved to MongoDB
    */
   public int persistLibraries(List<ExternalLibrary> libraries) {
-    int persisted = 0;
+    int totalPersisted = 0;
     for (ExternalLibrary library : libraries) {
-      persisted += persistSingleLibrary(library);
+      boolean persisted = persistSingleLibrary(library);
+      if (persisted) {
+        totalPersisted = totalPersisted + 1;
+      }
     }
-    return persisted;
+    return totalPersisted;
   }
 
-  /**
-   * Persists a single library, returning 1 if saved or 0 if it was a duplicate which caller can use
-   * for counting number of libraries persisted.
-   */
-  private int persistSingleLibrary(ExternalLibrary library) {
+  /** Persists a single library, returning true if saved or false if it was a duplicate. */
+  private boolean persistSingleLibrary(ExternalLibrary library) {
     if (externalLibraryRepository.existsByCanonicalAndLibraryNameAndVersion(
         library.getCanonical(), library.getLibraryName(), library.getVersion())) {
       log.info(
@@ -63,7 +63,7 @@ public class ExternalLibraryPersistenceService {
           library.getCanonical(),
           library.getLibraryName(),
           library.getVersion());
-      return 0;
+      return false;
     }
 
     String librarySetId = findOrCreateLibrarySet(library.getCanonical(), library.getLibraryName());
@@ -78,7 +78,7 @@ public class ExternalLibraryPersistenceService {
         library.getLibraryName(),
         library.getVersion(),
         librarySetId);
-    return 1;
+    return true;
   }
 
   /**
