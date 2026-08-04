@@ -50,8 +50,8 @@ public class ExternalLibraryImportService {
     long startTime = System.nanoTime();
 
     // IG level counts
-    int totalDiscovered = 0;
-    int totalPersisted = 0;
+    int totalLibrariesDiscovered = 0;
+    int totalLibrariesPersisted = 0;
 
     try {
       // Collect package paths via the existing adapter (handles recursion + circular dep guard).
@@ -81,30 +81,30 @@ public class ExternalLibraryImportService {
         PackageTrackingRecord packageRecord = markAsProcessing(pkgId, pkgVersion);
 
         // Package level counts
-        int packageDiscovered = 0;
-        int packagePersisted = 0;
+        int librariesDiscovered = 0;
+        int librariesPersisted = 0;
 
         try {
           List<ExternalLibrary> discoveredLibraries =
               externalLibraryDiscoveryService.discoverLibrariesForPackage(path, pkgId, pkgVersion);
-          packageDiscovered = discoveredLibraries.size();
-          totalDiscovered += packageDiscovered;
+          librariesDiscovered = discoveredLibraries.size();
+          totalLibrariesDiscovered += librariesDiscovered;
 
-          packagePersisted =
+          librariesPersisted =
               externalLibraryPersistenceService.persistLibraries(discoveredLibraries);
-          totalPersisted += packagePersisted;
+          totalLibrariesPersisted += librariesPersisted;
 
           PackageStatus packageStatus =
               discoveredLibraries.isEmpty() ? PackageStatus.PROCESSED : PackageStatus.INSTALLED;
-          markAsCompleted(packageRecord, packageStatus, packageDiscovered, packagePersisted);
+          markAsCompleted(packageRecord, packageStatus, librariesDiscovered, librariesPersisted);
 
           log.info(
               "Package [{}#{}]: status=[{}], discovered [{}], persisted [{}] CQL Libraries",
               pkgId,
               pkgVersion,
               packageStatus,
-              packageDiscovered,
-              packagePersisted);
+              librariesDiscovered,
+              librariesPersisted);
         } catch (Exception ex) {
           log.error(
               "Import failed while processing package [{}#{}]: {}",
@@ -112,7 +112,7 @@ public class ExternalLibraryImportService {
               pkgVersion,
               ex.getMessage(),
               ex);
-          markAsError(packageRecord, ex.getMessage(), packageDiscovered, packagePersisted);
+          markAsError(packageRecord, ex.getMessage(), librariesDiscovered, librariesPersisted);
         }
       }
 
@@ -120,8 +120,8 @@ public class ExternalLibraryImportService {
           "Import completed for [{}#{}], discovered=[{}], persisted=[{}]",
           packageId,
           packageVersion,
-          totalDiscovered,
-          totalPersisted);
+          totalLibrariesDiscovered,
+          totalLibrariesPersisted);
 
     } catch (Exception ex) {
       log.error(
