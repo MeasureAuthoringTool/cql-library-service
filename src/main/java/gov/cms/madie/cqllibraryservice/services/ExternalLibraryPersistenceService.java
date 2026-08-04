@@ -51,7 +51,10 @@ public class ExternalLibraryPersistenceService {
     return persisted;
   }
 
-  /** Persists a single library, returning 1 if saved or 0 if it was a duplicate. */
+  /**
+   * Persists a single library, returning 1 if saved or 0 if it was a duplicate which caller can use
+   * for counting number of libraries persisted.
+   */
   private int persistSingleLibrary(ExternalLibrary library) {
     if (externalLibraryRepository.existsByCanonicalAndLibraryNameAndVersion(
         library.getCanonical(), library.getLibraryName(), library.getVersion())) {
