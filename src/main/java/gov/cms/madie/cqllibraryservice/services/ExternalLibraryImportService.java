@@ -136,10 +136,6 @@ public class ExternalLibraryImportService {
     }
   }
 
-  // ---------------------------------------------------------------------------
-  // Status helpers
-  // ---------------------------------------------------------------------------
-
   /**
    * Marks the tracking record as {@code PROCESSING} and resets import counters. Creates the record
    * if it does not exist yet.
