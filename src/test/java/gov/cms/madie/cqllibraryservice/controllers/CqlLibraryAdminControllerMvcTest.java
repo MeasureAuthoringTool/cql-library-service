@@ -43,6 +43,7 @@ import gov.cms.madie.cqllibraryservice.dto.LibraryListDTO;
 import gov.cms.madie.cqllibraryservice.repositories.CqlLibraryRepository;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
+import gov.cms.madie.cqllibraryservice.repositories.PackageTrackingRepository;
 import gov.cms.madie.models.access.AclSpecification;
 import gov.cms.madie.models.access.RoleEnum;
 import gov.cms.madie.models.common.ActionType;
@@ -65,6 +66,8 @@ public class CqlLibraryAdminControllerMvcTest {
   @MockitoBean private UserServiceClient userServiceClient;
   @MockitoBean AdminService adminService;
   @MockitoBean IgPackageService igPackageService;
+  @MockitoBean ExternalLibraryImportService externalLibraryImportService;
+  @MockitoBean PackageTrackingRepository packageTrackingRepository;
 
   @Captor private ArgumentCaptor<CqlLibrary> cqlLibraryArgumentCaptor;
 

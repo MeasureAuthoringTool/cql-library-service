@@ -37,6 +37,7 @@ public class FhirPackageDownloadServiceImpl implements FhirPackageDownloadServic
   public DownloadedPackageResult downloadPackage(
       String packageId, String version, String username) {
     log.info("Starting download for IG {}#{}", packageId, version);
+    final long startTimeNanos = System.nanoTime();
 
     PackageTrackingRecord trackingRecord = markAsDownloading(packageId, version, username);
     Set<String> childIgs = new LinkedHashSet<>();
@@ -112,6 +113,9 @@ public class FhirPackageDownloadServiceImpl implements FhirPackageDownloadServic
           .packageLocation(null)
           .errorMessage(ex.getMessage())
           .build();
+    } finally {
+      double elapsedSeconds = (System.nanoTime() - startTimeNanos) / 1_000_000_000.0;
+      log.info("Download process took: {} seconds", elapsedSeconds);
     }
   }
 

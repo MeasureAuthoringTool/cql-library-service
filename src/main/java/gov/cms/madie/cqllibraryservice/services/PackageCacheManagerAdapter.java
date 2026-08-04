@@ -24,6 +24,8 @@ import java.util.Set;
 @Component
 public class PackageCacheManagerAdapter {
 
+  private static final List<String> TERMINOLOGY_PACKAGES =
+      List.of("hl7.terminology", "us.nlm.vsac");
   private final FilesystemPackageCacheManager cacheManager;
 
   public PackageCacheManagerAdapter(@Value("${fhir.package.cache-path}") String cachePath)
@@ -76,6 +78,12 @@ public class PackageCacheManagerAdapter {
       List<String> collectedPaths,
       PackageDownloadedCallback callback)
       throws Exception {
+
+    if (isTerminologyPackage(packageId)) {
+      log.debug("Skipping terminology package download: {}", packageId);
+      return;
+    }
+
     String key = packageId + "#" + version;
     if (visited.contains(key)) {
       log.debug("Skipping already-visited package: {}", key);
@@ -121,5 +129,9 @@ public class PackageCacheManagerAdapter {
         }
       }
     }
+  }
+
+  private boolean isTerminologyPackage(String packageId) {
+    return TERMINOLOGY_PACKAGES.stream().anyMatch(packageId::startsWith);
   }
 }
