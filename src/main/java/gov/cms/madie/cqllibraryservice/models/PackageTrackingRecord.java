@@ -32,15 +32,15 @@ public class PackageTrackingRecord {
   private Instant downloadedAt;
   private String initiatedBy;
 
-  /** Number of Common CQL Libraries discovered across all packages during the last import run. */
+  /** Number of CQL Libraries discovered across all packages during the last import run. */
   private Integer discoveredLibraryCount;
 
-  /** Number of Common CQL Libraries actually persisted during the last import run. */
+  /** Number of CQL Libraries actually persisted during the last import run. */
   private Integer persistedLibraryCount;
 
-  /** Timestamp when the most recent Common CQL Library import started. */
+  /** Timestamp when the most recent CQL Library import started. */
   private Instant importStartedAt;
 
-  /** Timestamp when the most recent Common CQL Library import completed. */
+  /** Timestamp when the most recent CQL Library import completed. */
   private Instant importCompletedAt;
 }

@@ -21,7 +21,7 @@ import java.time.Instant;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Document(collection = "externalLibrary")
+@Document
 @CompoundIndex(
     name = "ns_canonical_library_name_version_idx",
     def = "{'canonical': 1, 'libraryName': 1, 'version': 1}",
