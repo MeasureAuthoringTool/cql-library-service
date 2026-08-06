@@ -126,13 +126,52 @@ public class CqlLibraryService {
     return librariesPage;
   }
 
+  /**
+   * Builds an enriched list of {@link LibraryListDTO} for the given libraries keyed by review
+   * status. Fetches the libraries, maps them to DTOs (with review status) and enriches owner
+   * display names. The full list is returned (no pagination); ordering is left to the client.
+   * Authorization is NOT enforced here; callers (e.g. {@code CqlLibraryReviewService}) must verify
+   * access first.
+   *
+   * @param statusByLibraryId map of library id to its review status (typically READY_FOR_REVIEW)
+   * @return the enriched list of {@link LibraryListDTO} for the requested libraries
+   */
+  public List<LibraryListDTO> getReviewLibraries(Map<String, ReviewStatus> statusByLibraryId) {
+    if (statusByLibraryId == null || statusByLibraryId.isEmpty()) {
+      return List.of();
+    }
+
+    List<LibraryListDTO> libraries =
+        cqlLibraryRepository.findByIdIn(statusByLibraryId.keySet()).stream()
+            .map(library -> toReviewLibraryListDTO(library, statusByLibraryId.get(library.getId())))
+            .collect(Collectors.toList());
+
+    enrichWithUserDetails(libraries);
+
+    return libraries;
+  }
+
+  private LibraryListDTO toReviewLibraryListDTO(CqlLibrary library, ReviewStatus reviewStatus) {
+    LibrarySet librarySet = librarySetService.findByLibrarySetId(library.getLibrarySetId());
+    return LibraryListDTO.builder()
+        .id(library.getId())
+        .librarySetId(library.getLibrarySetId())
+        .cqlLibraryName(library.getCqlLibraryName())
+        .model(library.getModel())
+        .version(library.getVersion())
+        .draft(library.isDraft())
+        .createdAt(library.getCreatedAt())
+        .lastModifiedAt(library.getLastModifiedAt())
+        .librarySet(librarySet)
+        .reviewStatus(ReviewStatus.READY_FOR_REVIEW.equals(reviewStatus) ? "Ready" : "")
+        .build();
+  }
+
   private void enrichWithUserDetails(List<LibraryListDTO> libraries) {
     if (CollectionUtils.isEmpty(libraries)) {
-      log.debug("No libraries to enrich");
       return;
     }
 
-    // Extract unique owner HARP IDs
     List<String> ownerIds =
         libraries.stream()
             .map(lib -> lib.getLibrarySet() != null ? lib.getLibrarySet().getOwner() : null)
@@ -140,17 +179,12 @@ public class CqlLibraryService {
             .distinct()
             .collect(Collectors.toList());
 
-    log.debug("Found {} unique owner IDs: {}", ownerIds.size(), ownerIds);
-
     if (ownerIds.isEmpty()) {
-      log.debug("No owner IDs found to fetch user details");
       return;
     }
 
-    // Fetch user details in bulk
     Map<String, UserDetailsDto> userDetailsMap = userServiceClient.getBulkUserDetails(ownerIds);
 
-    // Enrich each library with user details
     libraries.forEach(
         library -> {
           if (library.getLibrarySet() != null && library.getLibrarySet().getOwner() != null) {
@@ -235,19 +269,15 @@ public class CqlLibraryService {
     } else {
       CqlLibrary cqlLibrary = libs.get(0);
       if (fetchElm) {
-        try {
-          final ElmJson elmJson =
-              elmTranslatorClient.getElmJson(
-                  cqlLibrary.getCql(), cqlLibrary.getModel(), accessToken, elmErrorSeverity);
-          if (elmTranslatorClient.hasErrors(elmJson)) {
-            log.error("CQL-ELM translator found errors in the CQL for library [{}]!", name);
-            throw new CqlElmTranslationErrorException(cqlLibrary.getCqlLibraryName());
-          }
-          cqlLibrary.setElmJson(elmJson.getJson());
-          cqlLibrary.setElmXml(elmJson.getXml());
-        } catch (CqlElmTranslationServiceException | CqlElmTranslationErrorException e) {
-          throw e;
+        final ElmJson elmJson =
+            elmTranslatorClient.getElmJson(
+                cqlLibrary.getCql(), cqlLibrary.getModel(), accessToken, elmErrorSeverity);
+        if (elmTranslatorClient.hasErrors(elmJson)) {
+          log.error("CQL-ELM translator found errors in the CQL for library [{}]!", name);
+          throw new CqlElmTranslationErrorException(cqlLibrary.getCqlLibraryName());
         }
+        cqlLibrary.setElmJson(elmJson.getJson());
+        cqlLibrary.setElmXml(elmJson.getXml());
       }
       LibrarySet librarySet = librarySetService.findByLibrarySetId(cqlLibrary.getLibrarySetId());
       cqlLibrary.setLibrarySet(librarySet);
