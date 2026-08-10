@@ -28,6 +28,9 @@ madie:
     base-url: ${EXCEL_EXPORT_SERVICE:http://localhost:3000/api}
     libraries:
       access-report-api-path: /excel/library-shared-access-report
+  security:
+    system-api-key: ${MADIE_SYSTEM_API_KEY}
+    api-key-header: ${MADIE_SYSTEM_API_KEY_HEADER:x-madie-api-key}
   virus-scan:
     disable-scan: ${DISABLE_VIRUS_SCAN:false}
     service:
