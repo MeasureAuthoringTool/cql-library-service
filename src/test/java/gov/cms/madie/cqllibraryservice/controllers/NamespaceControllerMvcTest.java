@@ -28,8 +28,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @ExtendWith(MockitoExtension.class)
 public class NamespaceControllerMvcTest {
 
-  private static final String API_KEY_HEADER = "x-madie-api-key";
-  private static final String API_KEY_VALUE = "a1b2-c3d4-e5f6";
+  private static final String API_KEY_HEADER = "custom-header";
+  private static final String API_KEY_VALUE = "test value";
 
   @MockitoBean private UserServiceClient userServiceClient;
   @MockitoBean private NamespaceService namespaceService;
@@ -72,8 +72,7 @@ public class NamespaceControllerMvcTest {
   @Test
   public void testGetAllNamespacesReturnsUnauthorizedWhenApiKeyIsWrong() throws Exception {
     mockMvc
-        .perform(
-            get("/cql-libraries/namespaces").with(csrf()).header(API_KEY_HEADER, "wrong-api-key"))
+        .perform(get("/cql-libraries/namespaces").with(csrf()).header(API_KEY_HEADER, "wrong key"))
         .andExpect(status().isUnauthorized());
     verify(namespaceService, never()).getAllNamespaces();
   }

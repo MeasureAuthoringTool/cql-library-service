@@ -240,14 +240,13 @@ public class CqlLibraryService {
               .orElseThrow(
                   () -> {
                     log.error(
-                        "Could not find namespaced Library resource with canonical: [{}], name: [{}], version: [{}]",
+                        "Could not find Library with canonical: [{}], name: [{}], version: [{}]",
                         namespaceCanonical.get(),
                         name,
                         version);
                     return new ResourceNotFoundException(
                         "Library", "name", name + " in namespace " + namespaceCanonical.get());
                   });
-
       return CqlLibrary.builder()
           .cqlLibraryName(externalLibrary.getLibraryName())
           .version(Version.parse(externalLibrary.getVersion()))
@@ -255,7 +254,6 @@ public class CqlLibraryService {
           .draft(externalLibrary.isDraft())
           .build();
     }
-
     List<CqlLibrary> libs =
         model.isPresent()
             ? cqlLibraryRepository.findAllByCqlLibraryNameAndDraftAndVersionAndModel(
@@ -290,7 +288,6 @@ public class CqlLibraryService {
       }
       LibrarySet librarySet = librarySetService.findByLibrarySetId(cqlLibrary.getLibrarySetId());
       cqlLibrary.setLibrarySet(librarySet);
-
       if (librarySet != null && StringUtils.isNotBlank(librarySet.getOwner())) {
         UserDetailsDto details = userServiceClient.getSingleUserDetails(librarySet.getOwner());
         cqlLibrary.setOwnerDisplayName(resolveOwnerDisplayName(details, librarySet.getOwner()));
@@ -403,7 +400,6 @@ public class CqlLibraryService {
           "Library is being used actively, hence can not be deleted.");
     }
     List<CqlLibrary> libraries = cqlLibraryRepository.findAllByCqlLibraryName(name);
-
     for (CqlLibrary cqlLibrary : libraries) {
       LibrarySet librarySet = librarySetService.findByLibrarySetId(cqlLibrary.getLibrarySetId());
 
