@@ -31,6 +31,12 @@ madie:
   security:
     system-api-key: ${MADIE_SYSTEM_API_KEY}
     api-key-header: ${MADIE_SYSTEM_API_KEY_HEADER:x-madie-api-key}
+  virus-scan:
+    disable-scan: ${DISABLE_VIRUS_SCAN:false}
+    service:
+      base-url: ${VIRUS_SCAN_SERVICE_URL:}
+      scan-file-uri: /scan-file
+      api-key: ${VIRUS_SCAN_SERVICE_APIKEY:}
 
 management:
   endpoints:
@@ -47,3 +53,8 @@ okta:
 mongock:
   migration-scan-package:
     - gov.cms.madie.cqllibraryservice.config
+
+fhir:
+  package:
+    cache-path: ${FHIR_PACKAGE_CACHE_PATH:}
+  external-libraries-owner: ${EXTERNAL_LIBS_OWNER:}

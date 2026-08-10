@@ -30,7 +30,7 @@ public class UserRoleConverter implements Converter<Jwt, JwtAuthenticationToken>
 
   @Override
   public JwtAuthenticationToken convert(Jwt jwt) {
-    String userId = jwt.getSubject();
+    String userId = jwt.getSubject().toLowerCase();
     UserRolesDto userRolesDto = userServiceClient.getUserRoles(userId, jwt.getTokenValue());
     if (userRolesDto == null) {
       log.warn("No User found for user harp ID: {}", userId);

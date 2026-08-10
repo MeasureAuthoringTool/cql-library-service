@@ -72,6 +72,41 @@ public class CqlLibrarySearchServiceImpl implements CqlLibrarySearchService {
     return stages;
   }
 
+  private List<AggregationOperation> buildReviewLookupStages() {
+    List<AggregationOperation> stages = new ArrayList<>();
+    AddFieldsOperation addLibraryIdStringOperation =
+        addFields()
+            .addFieldWithValue("libraryIdString", ConvertOperators.valueOf("_id").convertToString())
+            .build();
+    LookupOperation reviewLookupOperation =
+        LookupOperation.newLookup()
+            .from("cqlLibraryReview")
+            .localField("libraryIdString")
+            .foreignField("libraryId")
+            .as("review");
+    AddFieldsOperation reviewStatusOperation =
+        addFields()
+            .addFieldWithValue(
+                "reviewStatus",
+                ConditionalOperators.when(
+                        ComparisonOperators.Eq.valueOf(
+                                ArrayOperators.ArrayElemAt.arrayOf("$review.status").elementAt(0))
+                            .equalToValue("READY_FOR_REVIEW"))
+                    .then("Ready")
+                    .otherwise(""))
+            .build();
+    stages.add(addLibraryIdStringOperation);
+    stages.add(reviewLookupOperation);
+    stages.add(reviewStatusOperation);
+    return stages;
+  }
+
+  private boolean isReviewSearch(LibrarySearchCriteria librarySearchCriteria) {
+    return librarySearchCriteria != null
+        && librarySearchCriteria.getOptionalSearchProperties() != null
+        && librarySearchCriteria.getOptionalSearchProperties().contains("review");
+  }
+
   public CqlLibrarySearchServiceImpl(MongoTemplate mongoTemplate) {
     this.mongoTemplate = mongoTemplate;
   }
@@ -84,6 +119,7 @@ public class CqlLibrarySearchServiceImpl implements CqlLibrarySearchService {
       OwnershipType ownershipType) {
     LookupOperation lookupOperation = getLookupOperation();
     UnwindOperation unwindOperation = unwind("librarySet");
+    List<AggregationOperation> reviewStages = buildReviewLookupStages();
 
     Criteria criteria = Criteria.where("active").is(true);
 
@@ -110,20 +146,17 @@ public class CqlLibrarySearchServiceImpl implements CqlLibrarySearchService {
             .as("queryResults");
 
     // Find all the libraries that matches the given Criteria and fetch unique librarySetIds
+    List<AggregationOperation> matchOps = new ArrayList<>();
+    matchOps.add(lookupOperation);
+    matchOps.add(unwindOperation);
+    matchOps.addAll(reviewStages);
+    matchOps.add(matchOperation);
+    matchOps.add(
+        group("librarySetId").count().as("matchCount").first("_id").as("matchedLibraryId"));
+
     List<LibrarySetMatchCountDTO> matchedLibrarySetCounts =
         mongoTemplate
-            .aggregate(
-                newAggregation(
-                    lookupOperation,
-                    unwindOperation,
-                    matchOperation,
-                    group("librarySetId")
-                        .count()
-                        .as("matchCount")
-                        .first("_id")
-                        .as("matchedLibraryId")),
-                CqlLibrary.class,
-                LibrarySetMatchCountDTO.class)
+            .aggregate(newAggregation(matchOps), CqlLibrary.class, LibrarySetMatchCountDTO.class)
             .getMappedResults();
 
     Map<String, LibrarySetMatchCountDTO> matchInfoMap =
@@ -150,6 +183,7 @@ public class CqlLibrarySearchServiceImpl implements CqlLibrarySearchService {
     List<AggregationOperation> ops = new ArrayList<>();
     ops.add(lookupOperation);
     ops.add(unwindOperation);
+    ops.addAll(reviewStages);
     ops.add(matchLibrarySetIds);
     ops.add(sortByVersionAndDraft);
     ops.add(groupByLibrarySet);
@@ -192,23 +226,29 @@ public class CqlLibrarySearchServiceImpl implements CqlLibrarySearchService {
       LibrarySearchCriteria librarySearchCriteria) {
     Criteria criteria = Criteria.where("active").is(true).and("librarySetId").is(librarySetId);
 
-    if (librarySearchCriteria != null
-        && StringUtils.isNotBlank(librarySearchCriteria.getSearchField())) {
-      appendAdditionalSearchCriteria(criteria, librarySearchCriteria);
-    }
-
-    MatchOperation matchOperation = match(criteria);
     LookupOperation lookupOperation = getLookupOperation();
     UnwindOperation unwindOperation = unwind("librarySet");
 
-    Aggregation aggregation;
-    if (sortByLatestVersion) {
-      SortOperation sortOperation = sort(Sort.by(Sort.Direction.DESC, "version"));
-      aggregation = newAggregation(lookupOperation, unwindOperation, matchOperation, sortOperation);
-    } else {
-      aggregation = newAggregation(lookupOperation, unwindOperation, matchOperation);
+    List<AggregationOperation> operations = new ArrayList<>();
+    operations.add(lookupOperation);
+    operations.add(unwindOperation);
+
+    if (librarySearchCriteria != null
+        && StringUtils.isNotBlank(librarySearchCriteria.getSearchField())) {
+      if (isReviewSearch(librarySearchCriteria)) {
+        operations.addAll(buildReviewLookupStages());
+      }
+      appendAdditionalSearchCriteria(criteria, librarySearchCriteria);
     }
-    var result = mongoTemplate.aggregate(aggregation, CqlLibrary.class, LibraryListDTO.class);
+
+    operations.add(match(criteria));
+
+    if (sortByLatestVersion) {
+      operations.add(sort(Sort.by(Sort.Direction.DESC, "version")));
+    }
+
+    var result =
+        mongoTemplate.aggregate(newAggregation(operations), CqlLibrary.class, LibraryListDTO.class);
     return result.getMappedResults();
   }
 

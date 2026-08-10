@@ -3,6 +3,7 @@ package gov.cms.madie.cqllibraryservice.config.security;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.util.List;
@@ -31,7 +32,7 @@ public class UserRoleConverterTest {
 
   @Test
   public void testConvert() {
-    String HARP_ID = "testUser";
+    String HARP_ID = "Test.User@Example.com";
     when(jwt.getSubject()).thenReturn(HARP_ID);
     UserRolesDto userRolesDto =
         UserRolesDto.builder()
@@ -49,6 +50,7 @@ public class UserRoleConverterTest {
     assertTrue(
         result.getAuthorities().stream()
             .anyMatch(auth -> auth.getAuthority().equals("ROLE_MADIE-ADMIN")));
+    verify(userServiceClient).getUserRoles("test.user@example.com", "token");
   }
 
   @Test

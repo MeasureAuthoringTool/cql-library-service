@@ -19,9 +19,12 @@ import org.springframework.data.mongodb.core.aggregation.Aggregation;
 import org.springframework.data.mongodb.core.aggregation.AggregationResults;
 import org.springframework.data.mongodb.repository.config.EnableMongoRepositories;
 
+import org.mockito.ArgumentCaptor;
+
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
@@ -120,6 +123,44 @@ public class CqlLibrarySearchServiceImplTest {
     assertEquals(page1Libraries.get(0).getId(), library1.getId());
     assertEquals(page1Libraries.get(1).getId(), library2.getId());
     assertEquals(page1Libraries.get(2).getId(), library3.getId());
+  }
+
+  @Test
+  public void testSearchLibrariesByCriteriaBuildsValidReviewPipeline() {
+    PageRequest pageRequest = PageRequest.of(0, 3);
+
+    when(mongoTemplate.aggregate(any(Aggregation.class), (Class<?>) any(), any()))
+        .thenAnswer(
+            invocation -> {
+              Class<?> outputClass = invocation.getArgument(2);
+              if (outputClass.equals(LibrarySetMatchCountDTO.class)) {
+                return new AggregationResults<>(
+                    List.of(new LibrarySetMatchCountDTO("1-1", 1, "1")), new Document());
+              }
+              FacetDTO facetDTO =
+                  FacetDTO.builder().queryResults(List.of(library1)).count(List.of()).build();
+              return new AggregationResults<>(List.of(facetDTO), new Document());
+            });
+
+    LibrarySearchCriteria criteria = new LibrarySearchCriteria("Ready", List.of("review"));
+    cqlLibrarySearchServiceImpl.searchLibrariesByCriteria(
+        "john", pageRequest, criteria, OwnershipType.OWNED);
+
+    ArgumentCaptor<Aggregation> captor = ArgumentCaptor.forClass(Aggregation.class);
+    verify(mongoTemplate, atLeastOnce()).aggregate(captor.capture(), (Class<?>) any(), any());
+
+    String pipelines =
+        captor.getAllValues().stream()
+            .map(agg -> agg.toPipeline(Aggregation.DEFAULT_CONTEXT).toString())
+            .collect(Collectors.joining("\n"));
+
+    assertTrue(pipelines.contains("cqlLibraryReview"));
+    assertTrue(pipelines.contains("libraryId"));
+    assertTrue(pipelines.contains("toString"));
+    // Derives the "Ready" label via $cond on READY_FOR_REVIEW
+    assertTrue(pipelines.contains("READY_FOR_REVIEW"));
+    assertTrue(pipelines.contains("Ready"));
+    assertTrue(pipelines.contains("reviewStatus"));
   }
 
   @Test
@@ -435,6 +476,47 @@ public class CqlLibrarySearchServiceImplTest {
     assertNotNull(results);
     verify(mongoTemplate)
         .aggregate(any(Aggregation.class), eq(CqlLibrary.class), eq(LibraryListDTO.class));
+  }
+
+  @Test
+  void testFindLibrariesByLibrarySetIdJoinsReviewWhenFilteringByReview() {
+    LibrarySearchCriteria searchCriteria = new LibrarySearchCriteria();
+    searchCriteria.setSearchField("Ready");
+    searchCriteria.setOptionalSearchProperties(List.of("review"));
+
+    when(mongoTemplate.aggregate(
+            any(Aggregation.class), eq(CqlLibrary.class), eq(LibraryListDTO.class)))
+        .thenReturn(new AggregationResults<>(List.of(new LibraryListDTO()), new Document()));
+
+    cqlLibrarySearchServiceImpl.findLibrariesByLibrarySetId("set-1", false, searchCriteria);
+
+    ArgumentCaptor<Aggregation> captor = ArgumentCaptor.forClass(Aggregation.class);
+    verify(mongoTemplate)
+        .aggregate(captor.capture(), eq(CqlLibrary.class), eq(LibraryListDTO.class));
+
+    String pipeline = captor.getValue().toString();
+    assertTrue(pipeline.contains("cqlLibraryReview"));
+    assertTrue(pipeline.contains("reviewStatus"));
+    assertTrue(pipeline.contains("READY_FOR_REVIEW"));
+  }
+
+  @Test
+  void testFindLibrariesByLibrarySetIdSkipsReviewJoinForNonReviewSearches() {
+    LibrarySearchCriteria searchCriteria = new LibrarySearchCriteria();
+    searchCriteria.setSearchField("sample");
+    searchCriteria.setOptionalSearchProperties(List.of("library"));
+
+    when(mongoTemplate.aggregate(
+            any(Aggregation.class), eq(CqlLibrary.class), eq(LibraryListDTO.class)))
+        .thenReturn(new AggregationResults<>(List.of(new LibraryListDTO()), new Document()));
+
+    cqlLibrarySearchServiceImpl.findLibrariesByLibrarySetId("set-1", false, searchCriteria);
+
+    ArgumentCaptor<Aggregation> captor = ArgumentCaptor.forClass(Aggregation.class);
+    verify(mongoTemplate)
+        .aggregate(captor.capture(), eq(CqlLibrary.class), eq(LibraryListDTO.class));
+
+    assertFalse(captor.getValue().toString().contains("cqlLibraryReview"));
   }
 
   @Test
