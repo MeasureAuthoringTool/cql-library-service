@@ -22,8 +22,10 @@ import gov.cms.madie.models.dto.LibraryUsage;
 import gov.cms.madie.models.dto.UserDetailsDto;
 import gov.cms.madie.models.library.CqlLibrary;
 import gov.cms.madie.models.library.CqlLibraryReview;
+import gov.cms.madie.cqllibraryservice.models.ExternalLibrary;
 import gov.cms.madie.cqllibraryservice.repositories.CqlLibraryRepository;
 import gov.cms.madie.cqllibraryservice.repositories.CqlLibraryReviewRepository;
+import gov.cms.madie.cqllibraryservice.repositories.ExternalLibraryRepository;
 import gov.cms.madie.models.library.LibrarySet;
 import gov.cms.madie.models.measure.ElmJson;
 import org.junit.jupiter.api.Test;
@@ -64,6 +66,7 @@ class CqlLibraryServiceTest {
   @Mock private UserServiceClient userServiceClient;
   @Mock private CqlLibraryAccessControlService cqlLibraryAccessControlService;
   @Mock private CqlLibraryReviewRepository cqlLibraryReviewRepository;
+  @Mock private ExternalLibraryRepository externalLibraryRepository;
 
   private final String USERNAME = "testUserName";
   private final String ACCESSTOKEN = "accessToken";
@@ -189,6 +192,51 @@ class CqlLibraryServiceTest {
     assertEquals(cqlLibrary.getCqlLibraryName(), versionedCqlLibrary.getCqlLibraryName());
     assertEquals(cqlLibrary.getVersion(), versionedCqlLibrary.getVersion());
     assertEquals(cqlLibrary.getModel(), versionedCqlLibrary.getModel());
+  }
+
+  @Test
+  void testGetVersionedCqlLibraryByNamespaceCanonical() {
+    ExternalLibrary externalLibrary =
+        ExternalLibrary.builder()
+            .libraryName("FHIRHelpers")
+            .version("1.0.000")
+            .cqlContent("library FHIRHelpers version '1.0.000'")
+            .build();
+    when(externalLibraryRepository.findByPackageCanonicalAndLibraryNameAndVersion(
+            "http://hl7.org/fhir/us/qicore", "FHIRHelpers", "1.0.000"))
+        .thenReturn(Optional.of(externalLibrary));
+
+    CqlLibrary result =
+        cqlLibraryService.getVersionedCqlLibrary(
+            "FHIRHelpers",
+            "1.0.000",
+            Optional.empty(),
+            Optional.of("http://hl7.org/fhir/us/qicore"),
+            false,
+            "Info",
+            null);
+
+    assertEquals("FHIRHelpers", result.getCqlLibraryName());
+    assertEquals("library FHIRHelpers version '1.0.000'", result.getCql());
+  }
+
+  @Test
+  void testGetVersionedCqlLibraryByNamespaceCanonicalNotFound() {
+    when(externalLibraryRepository.findByPackageCanonicalAndLibraryNameAndVersion(
+            "http://hl7.org/fhir/us/qicore", "FHIRHelpers", "1.0.000"))
+        .thenReturn(Optional.empty());
+
+    assertThrows(
+        ResourceNotFoundException.class,
+        () ->
+            cqlLibraryService.getVersionedCqlLibrary(
+                "FHIRHelpers",
+                "1.0.000",
+                Optional.empty(),
+                Optional.of("http://hl7.org/fhir/us/qicore"),
+                false,
+                "Info",
+                null));
   }
 
   private CqlLibrary mockSingleVersionedLibraryForOwnerEnrichment(String owner) {

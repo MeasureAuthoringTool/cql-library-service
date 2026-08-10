@@ -7,6 +7,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.util.AntPathMatcher;
+import org.springframework.util.StringUtils;
 import org.springframework.web.filter.OncePerRequestFilter;
 import java.io.IOException;
 import java.util.Collections;
@@ -28,10 +29,17 @@ public class ApiKeyFilter extends OncePerRequestFilter {
 
   @Override
   protected boolean shouldNotFilter(HttpServletRequest request) {
+    // In a real servlet container, getServletPath() returns the path relative to the context.
+    // In MockMvc (test environment), getServletPath() may return "" while getPathInfo()
+    // holds the actual path — workaround for test cases.
     String path = request.getServletPath();
+    if (!StringUtils.hasLength(path)) {
+      path = request.getPathInfo();
+    }
 
     // Match current request against your list of allowed paths
-    return pathsToFilter.stream().noneMatch(pattern -> pathMatcher.match(pattern, path));
+    final String resolvedPath = path;
+    return pathsToFilter.stream().noneMatch(pattern -> pathMatcher.match(pattern, resolvedPath));
   }
 
   @Override

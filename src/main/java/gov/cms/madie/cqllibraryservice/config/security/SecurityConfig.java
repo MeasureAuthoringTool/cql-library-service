@@ -52,7 +52,10 @@ public class SecurityConfig {
                     jwt -> jwt.jwtAuthenticationConverter(roleConverter)))
         // It must run after OAuth2 processing handles the Okta token
         .addFilterAfter(
-            new ApiKeyFilter(apiKeyHeader, apiKeyValue, List.of("/cql-libraries/cql")),
+            new ApiKeyFilter(
+                apiKeyHeader,
+                apiKeyValue,
+                List.of("/cql-libraries/cql", "/cql-libraries/namespaces")),
             org.springframework.security.oauth2.server.resource.web.authentication
                 .BearerTokenAuthenticationFilter.class)
         .headers(

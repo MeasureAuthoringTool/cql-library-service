@@ -5,6 +5,7 @@ import gov.cms.madie.cqllibraryservice.dto.*;
 import gov.cms.madie.cqllibraryservice.exceptions.*;
 import gov.cms.madie.cqllibraryservice.locks.CqlLibraryLock;
 import gov.cms.madie.cqllibraryservice.repositories.LibrarySetRepository;
+import gov.cms.madie.cqllibraryservice.repositories.ExternalLibraryRepository;
 import gov.cms.madie.models.access.AclOperation;
 import gov.cms.madie.models.access.AclSpecification;
 import gov.cms.madie.models.access.RoleEnum;
@@ -14,6 +15,7 @@ import gov.cms.madie.models.dto.UserDetailsDto;
 import gov.cms.madie.models.library.CqlLibrary;
 import gov.cms.madie.models.library.CqlLibraryLockInfo;
 import gov.cms.madie.models.library.CqlLibraryReview;
+import gov.cms.madie.cqllibraryservice.models.ExternalLibrary;
 import gov.cms.madie.cqllibraryservice.repositories.CqlLibraryRepository;
 import gov.cms.madie.cqllibraryservice.repositories.CqlLibraryReviewRepository;
 import gov.cms.madie.models.library.LibrarySet;
@@ -48,6 +50,7 @@ public class CqlLibraryService {
   private final UserServiceClient userServiceClient;
   private final CqlLibraryAccessControlService cqlLibraryAccessControlService;
   private final CqlLibraryReviewRepository cqlLibraryReviewRepository;
+  private final ExternalLibraryRepository externalLibraryRepository;
 
   public CqlLibrary updateCqlLibrary(CqlLibrary cqlLibrary, String username) {
     if (cqlLibrary == null || StringUtils.isBlank(cqlLibrary.getId())) {
@@ -217,6 +220,42 @@ public class CqlLibraryService {
       boolean fetchElm,
       String elmErrorSeverity,
       final String accessToken) {
+    return getVersionedCqlLibrary(
+        name, version, model, Optional.empty(), fetchElm, elmErrorSeverity, accessToken);
+  }
+
+  public CqlLibrary getVersionedCqlLibrary(
+      String name,
+      String version,
+      Optional<String> model,
+      Optional<String> namespaceCanonical,
+      boolean fetchElm,
+      String elmErrorSeverity,
+      final String accessToken) {
+    if (namespaceCanonical.isPresent() && StringUtils.isNotBlank(namespaceCanonical.get())) {
+      ExternalLibrary externalLibrary =
+          externalLibraryRepository
+              .findByPackageCanonicalAndLibraryNameAndVersion(
+                  namespaceCanonical.get(), name, version)
+              .orElseThrow(
+                  () -> {
+                    log.error(
+                        "Could not find namespaced Library resource with canonical: [{}], name: [{}], version: [{}]",
+                        namespaceCanonical.get(),
+                        name,
+                        version);
+                    return new ResourceNotFoundException(
+                        "Library", "name", name + " in namespace " + namespaceCanonical.get());
+                  });
+
+      return CqlLibrary.builder()
+          .cqlLibraryName(externalLibrary.getLibraryName())
+          .version(Version.parse(externalLibrary.getVersion()))
+          .cql(externalLibrary.getCqlContent())
+          .draft(externalLibrary.isDraft())
+          .build();
+    }
+
     List<CqlLibrary> libs =
         model.isPresent()
             ? cqlLibraryRepository.findAllByCqlLibraryNameAndDraftAndVersionAndModel(
