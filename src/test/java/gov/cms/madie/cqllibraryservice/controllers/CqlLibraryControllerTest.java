@@ -15,6 +15,7 @@ import gov.cms.madie.cqllibraryservice.dto.CqlFileComparisonDTO;
 import gov.cms.madie.cqllibraryservice.dto.LibraryListDTO;
 import gov.cms.madie.cqllibraryservice.dto.LibrarySearchCriteria;
 import gov.cms.madie.cqllibraryservice.dto.MadieFeatureFlag;
+import gov.cms.madie.cqllibraryservice.dto.NamespaceDTO;
 import gov.cms.madie.cqllibraryservice.exceptions.BadRequestObjectException;
 import gov.cms.madie.cqllibraryservice.exceptions.InvalidIdException;
 import gov.cms.madie.cqllibraryservice.exceptions.PermissionDeniedException;
@@ -56,6 +57,8 @@ class CqlLibraryControllerTest {
   @Mock private CqlDifferentiatorService cqlDifferentiatorService;
 
   @Mock private AppConfigService appConfigService;
+
+  @Mock private NamespaceService namespaceService;
 
   @Mock Principal principal;
 
@@ -402,6 +405,22 @@ class CqlLibraryControllerTest {
 
     var result = cqlLibraryController.getAllOwners(List.of("set1", "set2"));
     assertEquals(mockedResponse, result.getBody());
+  }
+
+  @Test
+  public void testGetAllNamespaces() {
+    List<NamespaceDTO> mockedResponse =
+        List.of(
+            NamespaceDTO.builder()
+                .namespaceCanonical("http://hl7.org/fhir/us/qicore")
+                .namespacePrefix("hl7.fhir.us.qicore")
+                .build());
+    when(namespaceService.getAllNamespaces()).thenReturn(mockedResponse);
+
+    ResponseEntity<List<NamespaceDTO>> response = cqlLibraryController.getAllNamespaces();
+
+    assertEquals(HttpStatus.OK, response.getStatusCode());
+    assertEquals(mockedResponse, response.getBody());
   }
 
   @Test

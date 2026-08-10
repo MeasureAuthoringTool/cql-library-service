@@ -51,6 +51,7 @@ public class CqlLibraryController {
   private final CqlDifferentiatorService cqlDifferentiatorService;
   private final CqlLibraryLockService cqlLibraryLockService;
   private final AppConfigService appConfigService;
+  private final NamespaceService namespaceService;
 
   @PutMapping("/searches")
   public ResponseEntity<Page<LibraryListDTO>> fetchLibrariesByCriteria(
@@ -75,6 +76,11 @@ public class CqlLibraryController {
     List<String> results = librarySetService.getAllOwners(librarySetIds);
     log.info("results: {}", results);
     return ResponseEntity.status(HttpStatus.OK).body(results);
+  }
+
+  @GetMapping("/namespaces")
+  public ResponseEntity<List<NamespaceDTO>> getAllNamespaces() {
+    return ResponseEntity.ok(namespaceService.getAllNamespaces());
   }
 
   @GetMapping("/{id}")

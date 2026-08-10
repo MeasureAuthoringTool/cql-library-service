@@ -86,6 +86,7 @@ public class CqlLibraryControllerMvcTest {
   @MockitoBean ActionLogService actionLogService;
   @MockitoBean private UserServiceClient userServiceClient;
   @MockitoBean private CqlLibraryLockService cqlLibraryLockService;
+  @MockitoBean private NamespaceService namespaceService;
 
   @Captor private ArgumentCaptor<CqlLibrary> cqlLibraryArgumentCaptor;
 
@@ -523,6 +524,30 @@ public class CqlLibraryControllerMvcTest {
         .andExpect(jsonPath("$.id").isNotEmpty())
         .andExpect(jsonPath("$.model").value(ModelType.US_QUALITY_CORE_0_5_0.toString()))
         .andExpect(jsonPath("$.createdBy").value(TEST_USER_ID));
+  }
+
+  @Test
+  public void testGetAllNamespacesReturnsKnownNamespaces() throws Exception {
+    when(namespaceService.getAllNamespaces())
+        .thenReturn(
+            List.of(
+                NamespaceDTO.builder()
+                    .namespaceCanonical("http://hl7.org/fhir/us/qicore")
+                    .namespacePrefix("hl7.fhir.us.qicore")
+                    .build(),
+                NamespaceDTO.builder()
+                    .namespaceCanonical("http://hl7.org/fhir/uv/cqm")
+                    .namespacePrefix("hl7.fhir.uv.cqm")
+                    .build()));
+    mockMvc
+        .perform(get("/cql-libraries/namespaces").with(user(TEST_USER_ID)).with(csrf()))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.length()").value(2))
+        .andExpect(jsonPath("$[0].namespaceCanonical").value("http://hl7.org/fhir/us/qicore"))
+        .andExpect(jsonPath("$[0].namespacePrefix").value("hl7.fhir.us.qicore"))
+        .andExpect(jsonPath("$[1].namespaceCanonical").value("http://hl7.org/fhir/uv/cqm"))
+        .andExpect(jsonPath("$[1].namespacePrefix").value("hl7.fhir.uv.cqm"));
+    verify(namespaceService, times(1)).getAllNamespaces();
   }
 
   @Test
