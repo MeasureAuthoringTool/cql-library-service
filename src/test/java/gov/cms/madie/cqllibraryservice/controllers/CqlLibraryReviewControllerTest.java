@@ -8,6 +8,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import gov.cms.madie.cqllibraryservice.dto.LibraryListDTO;
 import gov.cms.madie.cqllibraryservice.services.CqlLibraryReviewService;
 import gov.cms.madie.models.common.ReviewStatus;
 import gov.cms.madie.models.library.CqlLibraryReview;
@@ -113,5 +114,23 @@ class CqlLibraryReviewControllerTest {
     assertNotNull(response);
     assertEquals(HttpStatus.OK, response.getStatusCode());
     assertEquals(1, response.getBody().size());
+  }
+
+  @Test
+  void getAllReadyForReviewReturnsListOfLibraries() {
+    when(principal.getName()).thenReturn("test.user");
+    LibraryListDTO library =
+        LibraryListDTO.builder().id("lib-1").librarySetId("set-1").reviewStatus("Ready").build();
+    when(cqlLibraryReviewService.getAllReadyForReview(anyString(), anyString()))
+        .thenReturn(List.of(library));
+
+    ResponseEntity<List<LibraryListDTO>> response =
+        controller.getAllReadyForReview(principal, "Bearer token");
+
+    assertNotNull(response);
+    assertEquals(HttpStatus.OK, response.getStatusCode());
+    assertEquals(1, response.getBody().size());
+    assertEquals("lib-1", response.getBody().get(0).getId());
+    verify(cqlLibraryReviewService).getAllReadyForReview("test.user", "Bearer token");
   }
 }

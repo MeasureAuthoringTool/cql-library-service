@@ -426,6 +426,60 @@ class CqlLibraryAccessControlServiceTest {
   }
 
   @Test
+  void hasReviewerRoleReturnsTrueWhenUserHasReviewerRole() {
+    String username = "reviewerUser";
+    String accessToken = "token123";
+
+    UserRolesDto userRolesDto = new UserRolesDto();
+    userRolesDto.setRoles(List.of("MADiE-Reviewer", "OtherRole"));
+
+    when(userServiceClient.getUserRoles(username, accessToken)).thenReturn(userRolesDto);
+
+    assertThat(accessControlService.hasReviewerRole(username, accessToken), is(true));
+  }
+
+  @Test
+  void hasReviewerRoleReturnsFalseWhenUserDoesNotHaveReviewerRole() {
+    String username = "regularUser";
+    String accessToken = "token123";
+
+    UserRolesDto userRolesDto = new UserRolesDto();
+    userRolesDto.setRoles(List.of("OtherRole"));
+
+    when(userServiceClient.getUserRoles(username, accessToken)).thenReturn(userRolesDto);
+
+    assertThat(accessControlService.hasReviewerRole(username, accessToken), is(false));
+  }
+
+  @Test
+  void verifyReviewerAccessSucceedsForReviewer() {
+    String username = "reviewerUser";
+    String accessToken = "token123";
+
+    UserRolesDto userRolesDto = new UserRolesDto();
+    userRolesDto.setRoles(List.of("MADiE-Reviewer"));
+
+    when(userServiceClient.getUserRoles(username, accessToken)).thenReturn(userRolesDto);
+
+    assertDoesNotThrow(() -> accessControlService.verifyReviewerAccess(username, accessToken));
+  }
+
+  @Test
+  void verifyReviewerAccessThrowsWhenNotReviewer() {
+    String username = "regularUser";
+    String accessToken = "token123";
+
+    UserRolesDto userRolesDto = new UserRolesDto();
+    userRolesDto.setRoles(List.of("OtherRole"));
+
+    when(userServiceClient.getUserRoles(username, accessToken)).thenReturn(userRolesDto);
+
+    assertThrows(
+        PermissionDeniedException.class,
+        () -> accessControlService.verifyReviewerAccess(username, accessToken));
+  }
+
+  @Test
   void validateHarpIdSucceedsForActiveUser() {
     String userId = "user123";
     String accessToken = "token123";

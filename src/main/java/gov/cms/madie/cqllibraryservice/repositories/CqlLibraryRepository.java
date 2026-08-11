@@ -44,4 +44,6 @@ public interface CqlLibraryRepository
   int countAllByLibrarySetIdAndActiveAndIdIsNot(String librarySetId, boolean active, String id);
 
   List<CqlLibrary> findByLibrarySetIdIn(Collection<String> librarySetIds);
+
+  List<CqlLibrary> findByIdIn(Collection<String> ids);
 }
