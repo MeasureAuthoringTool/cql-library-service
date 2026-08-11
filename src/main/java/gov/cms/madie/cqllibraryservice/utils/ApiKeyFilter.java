@@ -11,20 +11,20 @@ import org.springframework.util.StringUtils;
 import org.springframework.web.filter.OncePerRequestFilter;
 import java.io.IOException;
 import java.util.Collections;
-import java.util.List;
+import java.util.Set;
 
 public class ApiKeyFilter extends OncePerRequestFilter {
 
   private final String apiKeyHeader;
   private final String apiKeyValue;
-  private final List<String> pathsToFilter;
+  private final Set<String> pathsToFilter;
   private final AntPathMatcher pathMatcher = new AntPathMatcher();
 
   // Constructor now accepts a List of target paths
-  public ApiKeyFilter(String apiKeyHeader, String apiKeyValue, List<String> pathsToFilter) {
+  public ApiKeyFilter(String apiKeyHeader, String apiKeyValue, Set<String> pathsToFilter) {
     this.apiKeyHeader = apiKeyHeader;
     this.apiKeyValue = apiKeyValue;
-    this.pathsToFilter = pathsToFilter != null ? pathsToFilter : Collections.emptyList();
+    this.pathsToFilter = pathsToFilter != null ? pathsToFilter : Collections.emptySet();
   }
 
   @Override
