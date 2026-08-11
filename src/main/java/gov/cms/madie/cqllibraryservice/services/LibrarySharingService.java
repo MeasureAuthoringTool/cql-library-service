@@ -116,7 +116,7 @@ public class LibrarySharingService {
     boolean isAdminRole = cqlLibraryAccessControlService.hasAdminRole(performedBy, accessToken);
     verifyShareAuthorization(libraryUserIdMap, performedBy, true, isAdminRole);
 
-    return updateAccessControll(libraryUserIdMap, "Grant", performedBy, isAdminRole, accessToken);
+    return updateAccessControl(libraryUserIdMap, "Grant", performedBy, isAdminRole, accessToken);
   }
 
   public Map<String, List<AclSpecification>> unshareLibraries(
@@ -129,7 +129,7 @@ public class LibrarySharingService {
     boolean isAdminRole = cqlLibraryAccessControlService.hasAdminRole(username, accessToken);
     verifyShareAuthorization(libraryUserIdMap, username, false, isAdminRole);
 
-    return updateAccessControll(libraryUserIdMap, "Revoke", username, isAdminRole, accessToken);
+    return updateAccessControl(libraryUserIdMap, "Revoke", username, isAdminRole, accessToken);
   }
 
   private void verifyShareAuthorization(
@@ -181,7 +181,7 @@ public class LibrarySharingService {
         .toList();
   }
 
-  private Map<String, List<AclSpecification>> updateAccessControll(
+  private Map<String, List<AclSpecification>> updateAccessControl(
       Map<String, List<String>> libraryUserIdMap,
       String type,
       String performedBy,
@@ -207,7 +207,7 @@ public class LibrarySharingService {
     return libraryIdToAclSpecification;
   }
 
-  private List<AclSpecification> updateAccessControlList(
+  List<AclSpecification> updateAccessControlList(
       String cqlLibraryId,
       AclOperation aclOperation,
       String performedBy,

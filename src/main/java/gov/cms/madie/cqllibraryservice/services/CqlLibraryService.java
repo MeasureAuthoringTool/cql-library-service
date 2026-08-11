@@ -355,23 +355,8 @@ public class CqlLibraryService {
       String performedBy,
       boolean isAdminRole,
       String accessToken) {
-    Optional<CqlLibrary> persistedLibrary = cqlLibraryRepository.findById(cqlLibraryId);
-    if (persistedLibrary.isEmpty()) {
-      throw new ResourceNotFoundException("Library does not exist: " + cqlLibraryId);
-    }
-
-    if (AclOperation.AclAction.GRANT.equals(aclOperation.getAction())) {
-      aclOperation
-          .getAcls()
-          .forEach(
-              acl -> cqlLibraryAccessControlService.validateHarpId(acl.getUserId(), accessToken));
-    }
-
-    CqlLibrary library = persistedLibrary.get();
-    LibrarySet librarySet =
-        librarySetService.updateLibrarySetAcls(
-            library.getLibrarySetId(), aclOperation, performedBy, isAdminRole);
-    return librarySet.getAcls();
+    return librarySharingService.updateAccessControlList(
+        cqlLibraryId, aclOperation, performedBy, isAdminRole, accessToken);
   }
 
   public CqlLibrary deleteDraftLibrary(final String id, final String userId) {
