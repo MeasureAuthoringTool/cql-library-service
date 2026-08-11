@@ -8,7 +8,6 @@ import gov.cms.madie.cqllibraryservice.repositories.LibrarySetRepository;
 import gov.cms.madie.cqllibraryservice.repositories.ExternalLibraryRepository;
 import gov.cms.madie.models.access.AclOperation;
 import gov.cms.madie.models.access.AclSpecification;
-import gov.cms.madie.models.access.RoleEnum;
 import gov.cms.madie.models.common.*;
 import gov.cms.madie.models.dto.LibraryUsage;
 import gov.cms.madie.models.dto.UserDetailsDto;
@@ -51,6 +50,7 @@ public class CqlLibraryService {
   private final CqlLibraryAccessControlService cqlLibraryAccessControlService;
   private final CqlLibraryReviewRepository cqlLibraryReviewRepository;
   private final ExternalLibraryRepository externalLibraryRepository;
+  private final LibrarySharingService librarySharingService;
 
   public CqlLibrary updateCqlLibrary(CqlLibrary cqlLibrary, String username) {
     if (cqlLibrary == null || StringUtils.isBlank(cqlLibrary.getId())) {
@@ -556,148 +556,17 @@ public class CqlLibraryService {
 
   public Map<String, List<SharedUser>> getSharedLibraries(
       List<String> libraryIds, String username) {
-    Map<String, List<SharedUser>> sharedLibraries = new HashMap<>();
-
-    for (String libraryId : libraryIds) {
-      CqlLibrary library = findCqlLibraryById(libraryId, username);
-
-      if (library.getLibrarySet() == null) {
-        throw new ResourceNotFoundException(
-            "Library set does not exist for library with ID : " + libraryId);
-      }
-      if (library.getLibrarySet().getAcls() == null) {
-        sharedLibraries.put(libraryId, Collections.emptyList());
-      } else {
-        List<String> userIds =
-            library.getLibrarySet().getAcls().stream()
-                .filter(
-                    aclSpecification -> aclSpecification.getRoles().contains(RoleEnum.SHARED_WITH))
-                .map(AclSpecification::getUserId)
-                .toList();
-        LibrarySetActionLog librarySetActionLog =
-            actionLogService.findLibrarySetActionLogByTargetId(library.getLibrarySetId());
-
-        if (librarySetActionLog != null) {
-          Collections.reverse(librarySetActionLog.getActions());
-          List<AccessControlAction> shareActions =
-              librarySetActionLog.getActions().stream()
-                  .filter(action -> action.getActionType().equals(ActionType.SHARED))
-                  .toList();
-          List<SharedUser> sharedUsers =
-              userIds.stream()
-                  .map(
-                      userId -> {
-                        SharedUser sharedUser = SharedUser.builder().userId(userId).build();
-                        Optional<AccessControlAction> latestShareActionByUserId =
-                            shareActions.stream()
-                                .filter(action -> action.getSharedWith().equals(userId))
-                                .findFirst();
-                        latestShareActionByUserId.ifPresent(
-                            action -> sharedUser.setPerformedAt(action.getPerformedAt()));
-
-                        return sharedUser;
-                      })
-                  .toList();
-          sharedLibraries.put(libraryId, sharedUsers);
-        } else {
-          sharedLibraries.put(
-              libraryId,
-              userIds.stream().map(userId -> SharedUser.builder().userId(userId).build()).toList());
-        }
-      }
-    }
-    List<String> userIds =
-        sharedLibraries.values().stream()
-            .flatMap(List::stream)
-            .map(SharedUser::getUserId)
-            .distinct()
-            .toList();
-
-    Map<String, UserDetailsDto> userDetailsMap = userServiceClient.getBulkUserDetails(userIds);
-
-    sharedLibraries.values().stream()
-        .flatMap(List::stream)
-        .forEach(
-            sharedUser ->
-                sharedUser.setDisplayName(
-                    librarySetService.formatDisplayName(userDetailsMap, sharedUser.getUserId())));
-
-    return sharedLibraries;
+    return librarySharingService.getSharedLibraries(libraryIds, username);
   }
 
   public Map<String, List<AclSpecification>> shareLibraries(
       Map<String, List<String>> libraryUserIdMap, String performedBy, String accessToken) {
-    log.info(
-        "User [{}] has called shareLibraries with libraryUserIdMap [{}]",
-        performedBy,
-        libraryUserIdMap);
-
-    boolean isAdminRole = cqlLibraryAccessControlService.hasAdminRole(performedBy, accessToken);
-    verifyShareAuthorization(libraryUserIdMap, performedBy, true, isAdminRole);
-
-    return updateAccessControll(libraryUserIdMap, "Grant", performedBy, isAdminRole, accessToken);
+    return librarySharingService.shareLibraries(libraryUserIdMap, performedBy, accessToken);
   }
 
   public Map<String, List<AclSpecification>> unshareLibraries(
       Map<String, List<String>> libraryUserIdMap, String username, String accessToken) {
-    log.info(
-        "User [{}] has called unshareLibraries with libraryUserIdMap [{}]",
-        username,
-        libraryUserIdMap);
-
-    boolean isAdminRole = cqlLibraryAccessControlService.hasAdminRole(username, accessToken);
-    verifyShareAuthorization(libraryUserIdMap, username, false, isAdminRole);
-
-    return updateAccessControll(libraryUserIdMap, "Revoke", username, isAdminRole, accessToken);
-  }
-
-  private void verifyShareAuthorization(
-      Map<String, List<String>> libraryUserIdMap,
-      String username,
-      boolean ownerOnly,
-      boolean isAdminRole) {
-    log.info(
-        "User [{}] has called verifyShareAuthorization to determine whether operation with [{}]"
-            + " is allowed to be performed",
-        username,
-        libraryUserIdMap);
-
-    libraryUserIdMap
-        .keySet()
-        .forEach(
-            libraryId -> {
-              CqlLibrary library = findCqlLibraryById(libraryId, username);
-              cqlLibraryAccessControlService.verifyAuthorization(
-                  username,
-                  library,
-                  ownerOnly ? List.of() : List.of(RoleEnum.SHARED_WITH),
-                  isAdminRole);
-            });
-    log.info(
-        "User [{}] successfully called verifyShareAuthorization and determined that operation "
-            + "with [{}] is allowed to be performed",
-        username,
-        libraryUserIdMap);
-  }
-
-  private AclOperation buildAclOperation(List<String> userIds, String operation) {
-    AclOperation.AclAction aclOperationAction =
-        operation.equals("Grant") ? AclOperation.AclAction.GRANT : AclOperation.AclAction.REVOKE;
-    return AclOperation.builder()
-        .acls(buildShareAclSpecifications(userIds))
-        .action(aclOperationAction)
-        .build();
-  }
-
-  private List<AclSpecification> buildShareAclSpecifications(List<String> userIds) {
-    return userIds.stream()
-        .map(
-            userId ->
-                AclSpecification.builder()
-                    .userId(userId.toLowerCase())
-                    .roles(Set.of(RoleEnum.SHARED_WITH))
-                    .build())
-        .toList();
+    return librarySharingService.unshareLibraries(libraryUserIdMap, username, accessToken);
   }
 
   public List<String> transferLibraries(
@@ -748,31 +617,5 @@ public class CqlLibraryService {
         userName,
         cqlLibraryId);
     return cqlLibraryHistory;
-  }
-
-  private Map<String, List<AclSpecification>> updateAccessControll(
-      Map<String, List<String>> libraryUserIdMap,
-      String type,
-      String performedBy,
-      boolean isAdminRole,
-      String accessToken) {
-    Map<String, List<AclSpecification>> libraryIdToAclSpecification = new HashMap<>();
-    libraryUserIdMap.forEach(
-        (libraryId, userIds) -> {
-          AclOperation aclOperation = buildAclOperation(userIds, type);
-          libraryIdToAclSpecification.put(
-              libraryId,
-              updateAccessControlList(
-                  libraryId, aclOperation, performedBy, isAdminRole, accessToken));
-        });
-
-    log.info(
-        "User [{}] successfully called [{}] with libraryUserIdMap [{}]. The "
-            + "AclSpecification is now [{}]",
-        performedBy,
-        "Grant".equalsIgnoreCase(type) ? "shared library(s)" : "unshareLibraries",
-        libraryUserIdMap,
-        libraryIdToAclSpecification);
-    return libraryIdToAclSpecification;
   }
 }
