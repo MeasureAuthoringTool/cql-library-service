@@ -229,9 +229,11 @@ public class CqlLibraryController {
 
   @DeleteMapping("/{id}")
   public ResponseEntity<CqlLibrary> hardDeleteLibrary(
-      @PathVariable("id") String id, Principal principal) {
+      @PathVariable("id") String id,
+      Principal principal,
+      @RequestHeader("Authorization") String accessToken) {
     final String username = principal.getName().toLowerCase();
-    return ResponseEntity.ok(cqlLibraryService.deleteDraftLibrary(id, username));
+    return ResponseEntity.ok(cqlLibraryService.deleteDraftLibrary(id, username, accessToken));
   }
 
   @GetMapping("/shared")
