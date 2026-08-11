@@ -2,11 +2,14 @@ package gov.cms.madie.cqllibraryservice.services;
 
 import gov.cms.madie.cqllibraryservice.exceptions.GeneralConflictException;
 import gov.cms.madie.cqllibraryservice.exceptions.ResourceNotFoundException;
+import gov.cms.madie.cqllibraryservice.dto.LibraryListDTO;
 import gov.cms.madie.cqllibraryservice.repositories.CqlLibraryReviewRepository;
 import gov.cms.madie.models.common.ActionType;
 import gov.cms.madie.models.common.ReviewStatus;
 import gov.cms.madie.models.library.CqlLibraryReview;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -20,6 +23,8 @@ public class CqlLibraryReviewService {
 
   private final CqlLibraryReviewRepository cqlLibraryReviewRepository;
   private final ActionLogService actionLogService;
+  private final CqlLibraryService cqlLibraryService;
+  private final CqlLibraryAccessControlService cqlLibraryAccessControlService;
 
   /**
    * Creates a new review document for the given library. Enforces the one-review-per-library
@@ -103,6 +108,32 @@ public class CqlLibraryReviewService {
    */
   public List<CqlLibraryReview> getReviewsByLibrarySetId(String librarySetId) {
     return cqlLibraryReviewRepository.findAllByLibrarySetId(librarySetId);
+  }
+
+  /**
+   * Retrieves the full, enriched list of libraries that are currently marked as ready for review
+   * (i.e. review status is READY_FOR_REVIEW). This method owns the review concerns: it verifies the
+   * caller has the MADiE-Reviewer role and gathers the libraries currently in review, then
+   * delegates to {@link CqlLibraryService#getReviewLibraries} to fetch and enrich the libraries.
+   * The full list is returned (no pagination); ordering is left to the client.
+   *
+   * @param username the HARP id of the requesting user
+   * @param accessToken the bearer token used to verify the reviewer role
+   * @return the list of libraries marked as ready for review
+   */
+  public List<LibraryListDTO> getAllReadyForReview(String username, String accessToken) {
+    cqlLibraryAccessControlService.verifyReviewerAccess(username, accessToken);
+
+    Map<String, ReviewStatus> statusByLibraryId =
+        cqlLibraryReviewRepository.findAllByStatus(ReviewStatus.READY_FOR_REVIEW).stream()
+            .filter(review -> review.getLibraryId() != null)
+            .collect(
+                Collectors.toMap(
+                    CqlLibraryReview::getLibraryId,
+                    CqlLibraryReview::getStatus,
+                    (existing, duplicate) -> existing));
+
+    return cqlLibraryService.getReviewLibraries(statusByLibraryId);
   }
 
   /**

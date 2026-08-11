@@ -2277,4 +2277,50 @@ class CqlLibraryServiceTest {
     verify(elmTranslatorClient, times(0))
         .getElmJson(anyString(), anyString(), anyString(), anyString());
   }
+
+  @Test
+  public void testGetReviewLibrariesReturnsEnrichedList() {
+    Map<String, ReviewStatus> statusByLibraryId = Map.of("lib-1", ReviewStatus.READY_FOR_REVIEW);
+
+    LibrarySet librarySet = new LibrarySet();
+    librarySet.setOwner("owner-1");
+    CqlLibrary library =
+        CqlLibrary.builder()
+            .id("lib-1")
+            .librarySetId("set-1")
+            .cqlLibraryName("Lib1")
+            .model("QI-Core v4.1.1")
+            .draft(true)
+            .build();
+    when(cqlLibraryRepository.findByIdIn(anySet())).thenReturn(List.of(library));
+    when(librarySetService.findByLibrarySetId("set-1")).thenReturn(librarySet);
+
+    UserDetailsDto ownerDetails = new UserDetailsDto();
+    ownerDetails.setFirstName("Jane");
+    ownerDetails.setLastName("Doe");
+    when(userServiceClient.getBulkUserDetails(anyList()))
+        .thenReturn(Map.of("owner-1", ownerDetails));
+
+    List<LibraryListDTO> result = cqlLibraryService.getReviewLibraries(statusByLibraryId);
+
+    assertNotNull(result);
+    assertEquals(1, result.size());
+    LibraryListDTO dto = result.get(0);
+    assertEquals("lib-1", dto.getId());
+    assertEquals("Lib1", dto.getCqlLibraryName());
+    assertEquals("QI-Core v4.1.1", dto.getModel());
+    assertTrue(dto.isDraft());
+    assertEquals("Ready", dto.getReviewStatus());
+    assertEquals(librarySet, dto.getLibrarySet());
+    assertEquals("Jane Doe", dto.getOwnerDisplayName());
+  }
+
+  @Test
+  public void testGetReviewLibrariesReturnsEmptyListForEmptyMap() {
+    List<LibraryListDTO> result = cqlLibraryService.getReviewLibraries(Map.of());
+
+    assertNotNull(result);
+    assertTrue(result.isEmpty());
+    verify(cqlLibraryRepository, never()).findByIdIn(anySet());
+  }
 }

@@ -1,5 +1,6 @@
 package gov.cms.madie.cqllibraryservice.controllers;
 
+import gov.cms.madie.cqllibraryservice.dto.LibraryListDTO;
 import gov.cms.madie.cqllibraryservice.services.CqlLibraryReviewService;
 import gov.cms.madie.models.library.CqlLibraryReview;
 import java.security.Principal;
@@ -13,6 +14,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -51,5 +53,13 @@ public class CqlLibraryReviewController {
   public ResponseEntity<List<CqlLibraryReview>> getReviewsByLibrarySetId(
       @PathVariable String librarySetId) {
     return ResponseEntity.ok(cqlLibraryReviewService.getReviewsByLibrarySetId(librarySetId));
+  }
+
+  @GetMapping("/reviews")
+  public ResponseEntity<List<LibraryListDTO>> getAllReadyForReview(
+      Principal principal, @RequestHeader("Authorization") String accessToken) {
+    final String username = principal.getName().toLowerCase();
+    log.info("User [{}] is fetching all libraries marked as ready for review", username);
+    return ResponseEntity.ok(cqlLibraryReviewService.getAllReadyForReview(username, accessToken));
   }
 }

@@ -87,6 +87,27 @@ public class CqlLibraryAccessControlService {
     return isAdmin;
   }
 
+  public boolean hasReviewerRole(String username, String accessToken) {
+    UserRolesDto userRolesDto = userServiceClient.getUserRoles(username, accessToken);
+    return userRolesDto != null
+        && userRolesDto.getRoles() != null
+        && userRolesDto.getRoles().contains("MADiE-Reviewer");
+  }
+
+  /**
+   * Ensures the given user has the MADiE-Reviewer role. Throws a {@link PermissionDeniedException}
+   * (HTTP 403) when the user is not a reviewer.
+   *
+   * @param username the HARP id of the user
+   * @param accessToken the bearer token used to look up the user's roles
+   */
+  public void verifyReviewerAccess(String username, String accessToken) {
+    if (!hasReviewerRole(username, accessToken)) {
+      log.error("User [{}] does not have the MADiE-Reviewer role", username);
+      throw new PermissionDeniedException("CQL Library Reviews", "all", username);
+    }
+  }
+
   public void validateHarpId(String userId, String accessToken) {
     UserDetailsDto userDetailsDto = userServiceClient.getUserDetails(userId, accessToken);
     if (userDetailsDto == null || !UserStatus.ACTIVE.equals(userDetailsDto.getUserStatus())) {
