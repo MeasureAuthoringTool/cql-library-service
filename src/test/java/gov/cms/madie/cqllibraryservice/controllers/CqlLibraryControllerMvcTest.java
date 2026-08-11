@@ -1428,7 +1428,7 @@ public class CqlLibraryControllerMvcTest {
   public void testHardDeleteDraftLibraryForNonOwnerReturnsForbidden() throws Exception {
     String libraryId = "f225481c-921e-4015-9e14-e5046bfac9ff";
 
-    when(cqlLibraryService.deleteDraftLibrary(anyString(), anyString()))
+    when(cqlLibraryService.deleteDraftLibrary(anyString(), anyString(), anyString()))
         .thenThrow(new PermissionDeniedException("CQL Library", libraryId, TEST_USER_ID));
 
     mockMvc
@@ -1440,14 +1440,14 @@ public class CqlLibraryControllerMvcTest {
                 .contentType(MediaType.APPLICATION_JSON_VALUE))
         .andExpect(status().isForbidden());
 
-    verify(cqlLibraryService, times(1)).deleteDraftLibrary(eq(libraryId), anyString());
+    verify(cqlLibraryService, times(1)).deleteDraftLibrary(eq(libraryId), anyString(), anyString());
   }
 
   @Test
   public void testHardDeleteDraftLibraryForMissingLibraryReturnsNotFound() throws Exception {
     String libraryId = "f225481c-921e-4015-9e14-e5046bfac9ff";
 
-    when(cqlLibraryService.deleteDraftLibrary(anyString(), anyString()))
+    when(cqlLibraryService.deleteDraftLibrary(anyString(), anyString(), anyString()))
         .thenThrow(new ResourceNotFoundException("CQL Library", libraryId));
 
     mockMvc
@@ -1459,14 +1459,15 @@ public class CqlLibraryControllerMvcTest {
                 .contentType(MediaType.APPLICATION_JSON_VALUE))
         .andExpect(status().isNotFound());
 
-    verify(cqlLibraryService, times(1)).deleteDraftLibrary(eq(libraryId), eq(TEST_USER_ID));
+    verify(cqlLibraryService, times(1))
+        .deleteDraftLibrary(eq(libraryId), eq(TEST_USER_ID), anyString());
   }
 
   @Test
   public void testHardDeleteDraftLibraryForNonDraftReturnsConflict() throws Exception {
     String libraryId = "f225481c-921e-4015-9e14-e5046bfac9ff";
 
-    when(cqlLibraryService.deleteDraftLibrary(anyString(), anyString()))
+    when(cqlLibraryService.deleteDraftLibrary(anyString(), anyString(), anyString()))
         .thenThrow(
             new GeneralConflictException(
                 String.format(
@@ -1482,14 +1483,15 @@ public class CqlLibraryControllerMvcTest {
                 .contentType(MediaType.APPLICATION_JSON_VALUE))
         .andExpect(status().isConflict());
 
-    verify(cqlLibraryService, times(1)).deleteDraftLibrary(eq(libraryId), eq(TEST_USER_ID));
+    verify(cqlLibraryService, times(1))
+        .deleteDraftLibrary(eq(libraryId), eq(TEST_USER_ID), anyString());
   }
 
   @Test
   public void testHardDeleteDraftLibraryForDraftReturnsDeletedLibrary() throws Exception {
     String libraryId = "f225481c-921e-4015-9e14-e5046bfac9ff";
 
-    when(cqlLibraryService.deleteDraftLibrary(anyString(), anyString()))
+    when(cqlLibraryService.deleteDraftLibrary(anyString(), anyString(), anyString()))
         .thenReturn(
             CqlLibrary.builder().cqlLibraryName("WillBeDeleted").draft(true).id(libraryId).build());
 
@@ -1505,7 +1507,8 @@ public class CqlLibraryControllerMvcTest {
         .andExpect(jsonPath("$.cqlLibraryName").value("WillBeDeleted"))
         .andExpect(status().isOk());
 
-    verify(cqlLibraryService, times(1)).deleteDraftLibrary(eq(libraryId), eq(TEST_USER_ID));
+    verify(cqlLibraryService, times(1))
+        .deleteDraftLibrary(eq(libraryId), eq(TEST_USER_ID), anyString());
   }
 
   @Test

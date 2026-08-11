@@ -470,7 +470,7 @@ class CqlLibraryServiceTest {
 
     assertThrows(
         ResourceNotFoundException.class,
-        () -> cqlLibraryService.deleteDraftLibrary("MISSING", "TEST_USER"));
+        () -> cqlLibraryService.deleteDraftLibrary("MISSING", "TEST_USER", "ACCESSTOKEN"));
   }
 
   @Test
@@ -489,7 +489,7 @@ class CqlLibraryServiceTest {
 
     assertThrows(
         InvalidResourceStateException.class,
-        () -> cqlLibraryService.deleteDraftLibrary("LibID", "TEST_USER"));
+        () -> cqlLibraryService.deleteDraftLibrary("LibID", "TEST_USER", "ACCESSTOKEN"));
   }
 
   @Test
@@ -507,7 +507,7 @@ class CqlLibraryServiceTest {
 
     assertThrows(
         PermissionDeniedException.class,
-        () -> cqlLibraryService.deleteDraftLibrary("LibID", "TEST_USER"));
+        () -> cqlLibraryService.deleteDraftLibrary("LibID", "TEST_USER", "ACCESSTOKEN"));
   }
 
   @Test
@@ -524,7 +524,7 @@ class CqlLibraryServiceTest {
         .thenReturn(LibrarySet.builder().librarySetId("LibSetID").owner("TEST_USER").build());
     doNothing().when(cqlLibraryRepository).delete(any(CqlLibrary.class));
 
-    CqlLibrary output = cqlLibraryService.deleteDraftLibrary("LibID", "TEST_USER");
+    CqlLibrary output = cqlLibraryService.deleteDraftLibrary("LibID", "TEST_USER", "ACCESSTOKEN");
 
     assertThat(output, is(notNullValue()));
     assertThat(output, is(equalTo(library)));
@@ -538,7 +538,7 @@ class CqlLibraryServiceTest {
 
     assertThrows(
         ResourceLockedException.class,
-        () -> cqlLibraryService.deleteDraftLibrary("LibID", "TEST_USER"));
+        () -> cqlLibraryService.deleteDraftLibrary("LibID", "TEST_USER", "ACCESSTOKEN"));
     // ensure repository was never touched due to early lock failure
     verifyNoInteractions(cqlLibraryRepository, librarySetService);
   }
@@ -560,7 +560,7 @@ class CqlLibraryServiceTest {
         .thenReturn(LibrarySet.builder().librarySetId("LibSetID").owner("TEST_USER").build());
     doNothing().when(cqlLibraryRepository).delete(any(CqlLibrary.class));
 
-    CqlLibrary output = cqlLibraryService.deleteDraftLibrary("LibID", "TEST_USER");
+    CqlLibrary output = cqlLibraryService.deleteDraftLibrary("LibID", "TEST_USER", "ACCESSTOKEN");
 
     assertThat(output, is(notNullValue()));
     assertThat(output.getId(), is(equalTo("LibID")));
@@ -1764,7 +1764,7 @@ class CqlLibraryServiceTest {
         .thenReturn(LibrarySet.builder().librarySetId("LibSetID").owner("TEST_USER").build());
     doNothing().when(cqlLibraryRepository).delete(any(CqlLibrary.class));
 
-    CqlLibrary output = cqlLibraryService.deleteDraftLibrary("LibID", "TEST_USER");
+    CqlLibrary output = cqlLibraryService.deleteDraftLibrary("LibID", "TEST_USER", "ACCESSTOKEN");
 
     assertThat(output, is(notNullValue()));
     assertThat(output.getId(), is(equalTo("LibID")));
@@ -1931,5 +1931,35 @@ class CqlLibraryServiceTest {
     assertNotNull(result);
     assertTrue(result.isEmpty());
     verify(cqlLibraryRepository, never()).findByIdIn(anySet());
+  }
+
+  @Test
+  public void testDeleteDraftLibraryWithAdminUserNonOwner() {
+    CqlLibrary library =
+        CqlLibrary.builder()
+            .draft(true)
+            .id("LibID")
+            .librarySetId("LibSetID")
+            .version(Version.parse("1.0.0"))
+            .build();
+
+    when(cqlLibraryRepository.findById("LibID")).thenReturn(Optional.of(library));
+
+    when(librarySetService.findByLibrarySetId("LibSetID"))
+        .thenReturn(LibrarySet.builder().librarySetId("LibSetID").owner("SOME_OTHER_USER").build());
+
+    when(cqlLibraryAccessControlService.hasAdminRole(eq("TEST_USER"), eq("ACCESSTOKEN")))
+        .thenReturn(true);
+
+    doNothing().when(cqlLibraryRepository).delete(any(CqlLibrary.class));
+
+    CqlLibrary result = cqlLibraryService.deleteDraftLibrary("LibID", "TEST_USER", "ACCESSTOKEN");
+
+    assertNotNull(result);
+    assertEquals("LibID", result.getId());
+
+    verify(cqlLibraryAccessControlService).hasAdminRole("TEST_USER", "ACCESSTOKEN");
+    verify(cqlLibraryRepository).delete(library);
+    verify(cqlLibraryLockService).unlockCqlLibrary("LibID", "TEST_USER");
   }
 }

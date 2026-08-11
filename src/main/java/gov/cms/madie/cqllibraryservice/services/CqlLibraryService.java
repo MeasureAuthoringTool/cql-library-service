@@ -359,10 +359,11 @@ public class CqlLibraryService {
         cqlLibraryId, aclOperation, performedBy, isAdminRole, accessToken);
   }
 
-  public CqlLibrary deleteDraftLibrary(final String id, final String userId) {
+  public CqlLibrary deleteDraftLibrary(final String id, final String userId, String accessToken) {
     enforceLocking(id, userId);
     CqlLibrary cqlLibrary = findCqlLibraryById(id, userId);
-    if (!userId.equalsIgnoreCase(cqlLibrary.getLibrarySet().getOwner())) {
+    Boolean hasAdminRole = cqlLibraryAccessControlService.hasAdminRole(userId, accessToken);
+    if (!hasAdminRole && !userId.equalsIgnoreCase(cqlLibrary.getLibrarySet().getOwner())) {
       throw new PermissionDeniedException("CQL Library", cqlLibrary.getId(), userId);
     }
 
