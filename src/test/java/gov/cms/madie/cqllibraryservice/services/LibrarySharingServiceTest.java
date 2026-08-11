@@ -321,11 +321,6 @@ class LibrarySharingServiceTest {
     when(librarySetService.updateLibrarySetAcls(any(), any(), any(), any(Boolean.class)))
         .thenReturn(librarySet1);
 
-    AclSpecification aclSpecification1 =
-        AclSpecification.builder().userId("testuser").roles(Set.of(RoleEnum.SHARED_WITH)).build();
-    AclSpecification aclSpecification2 =
-        AclSpecification.builder().userId("userid2").roles(Set.of(RoleEnum.SHARED_WITH)).build();
-
     Map<String, List<AclSpecification>> result =
         librarySharingService.shareLibraries(libraries, "testUser", ACCESSTOKEN);
 
@@ -367,9 +362,6 @@ class LibrarySharingServiceTest {
     when(librarySetService.updateLibrarySetAcls(any(), any(), any(), any(Boolean.class)))
         .thenReturn(librarySet1);
     when(cqlLibraryAccessControlService.hasAdminRole(anyString(), anyString())).thenReturn(false);
-
-    AclSpecification aclSpecification1 =
-        AclSpecification.builder().userId("testUser").roles(Set.of(RoleEnum.SHARED_WITH)).build();
 
     Map<String, List<AclSpecification>> result =
         librarySharingService.shareLibraries(libraries, "testUser", ACCESSTOKEN);
