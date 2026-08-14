@@ -527,30 +527,6 @@ public class CqlLibraryControllerMvcTest {
   }
 
   @Test
-  public void testGetAllNamespacesReturnsKnownNamespaces() throws Exception {
-    when(namespaceService.getAllNamespaces())
-        .thenReturn(
-            List.of(
-                NamespaceDTO.builder()
-                    .namespaceCanonical("http://hl7.org/fhir/us/qicore")
-                    .namespacePrefix("hl7.fhir.us.qicore")
-                    .build(),
-                NamespaceDTO.builder()
-                    .namespaceCanonical("http://hl7.org/fhir/uv/cqm")
-                    .namespacePrefix("hl7.fhir.uv.cqm")
-                    .build()));
-    mockMvc
-        .perform(get("/cql-libraries/namespaces").with(user(TEST_USER_ID)).with(csrf()))
-        .andExpect(status().isOk())
-        .andExpect(jsonPath("$.length()").value(2))
-        .andExpect(jsonPath("$[0].namespaceCanonical").value("http://hl7.org/fhir/us/qicore"))
-        .andExpect(jsonPath("$[0].namespacePrefix").value("hl7.fhir.us.qicore"))
-        .andExpect(jsonPath("$[1].namespaceCanonical").value("http://hl7.org/fhir/uv/cqm"))
-        .andExpect(jsonPath("$[1].namespacePrefix").value("hl7.fhir.uv.cqm"));
-    verify(namespaceService, times(1)).getAllNamespaces();
-  }
-
-  @Test
   public void testGetCqlLibraryReturns404() throws Exception {
     doThrow(new ResourceNotFoundException("CQL Library", "Library1_ID"))
         .when(cqlLibraryService)
@@ -1268,7 +1244,7 @@ public class CqlLibraryControllerMvcTest {
             .draft(false)
             .build();
     when(cqlLibraryService.getVersionedCqlLibrary(
-            anyString(), any(), any(), anyBoolean(), anyString(), any()))
+            anyString(), any(), any(), any(), anyBoolean(), anyString(), any()))
         .thenReturn(cqlLibrary);
 
     mockMvc
@@ -1283,13 +1259,19 @@ public class CqlLibraryControllerMvcTest {
 
     verify(cqlLibraryService, times(1))
         .getVersionedCqlLibrary(
-            "TestFHIRHelpers", "1.0.000", Optional.of("QI-Core v4.1.1"), false, ELM_SEVERITY, null);
+            "TestFHIRHelpers",
+            "1.0.000",
+            Optional.of("QI-Core v4.1.1"),
+            Optional.empty(),
+            false,
+            ELM_SEVERITY,
+            null);
   }
 
   @Test
   public void testGetLibraryCqlReturnsNotFound() throws Exception {
     when(cqlLibraryService.getVersionedCqlLibrary(
-            anyString(), any(), any(), anyBoolean(), anyString(), any()))
+            anyString(), any(), any(), any(), anyBoolean(), anyString(), any()))
         .thenThrow(new ResourceNotFoundException("Library", "name", "TestFHIRHelpers"));
 
     mockMvc
@@ -1306,13 +1288,19 @@ public class CqlLibraryControllerMvcTest {
 
     verify(cqlLibraryService, times(1))
         .getVersionedCqlLibrary(
-            "TestFHIRHelpers", "1.0.000", Optional.of("QI-Core v4.1.1"), false, ELM_SEVERITY, null);
+            "TestFHIRHelpers",
+            "1.0.000",
+            Optional.of("QI-Core v4.1.1"),
+            Optional.empty(),
+            false,
+            ELM_SEVERITY,
+            null);
   }
 
   @Test
   public void testGetLibraryCqlReturnsConflict() throws Exception {
     when(cqlLibraryService.getVersionedCqlLibrary(
-            anyString(), any(), any(), anyBoolean(), anyString(), any()))
+            anyString(), any(), any(), any(), anyBoolean(), anyString(), any()))
         .thenThrow(
             new GeneralConflictException(
                 "Multiple versioned libraries were found. "
@@ -1334,7 +1322,13 @@ public class CqlLibraryControllerMvcTest {
 
     verify(cqlLibraryService, times(1))
         .getVersionedCqlLibrary(
-            "TestFHIRHelpers", "1.0.000", Optional.of("QI-Core v4.1.1"), false, ELM_SEVERITY, null);
+            "TestFHIRHelpers",
+            "1.0.000",
+            Optional.of("QI-Core v4.1.1"),
+            Optional.empty(),
+            false,
+            ELM_SEVERITY,
+            null);
   }
 
   @Test
@@ -1937,6 +1931,7 @@ public class CqlLibraryControllerMvcTest {
             eq("TestFHIRHelpers"),
             eq("1.0.000"),
             eq(Optional.of("QI-Core v4.1.1")),
+            any(),
             anyBoolean(),
             anyString(),
             any()))

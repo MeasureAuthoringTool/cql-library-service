@@ -7,31 +7,39 @@ import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.util.AntPathMatcher;
+import org.springframework.util.StringUtils;
 import org.springframework.web.filter.OncePerRequestFilter;
 import java.io.IOException;
 import java.util.Collections;
-import java.util.List;
+import java.util.Set;
 
 public class ApiKeyFilter extends OncePerRequestFilter {
 
   private final String apiKeyHeader;
   private final String apiKeyValue;
-  private final List<String> pathsToFilter;
+  private final Set<String> pathsToFilter;
   private final AntPathMatcher pathMatcher = new AntPathMatcher();
 
   // Constructor now accepts a List of target paths
-  public ApiKeyFilter(String apiKeyHeader, String apiKeyValue, List<String> pathsToFilter) {
+  public ApiKeyFilter(String apiKeyHeader, String apiKeyValue, Set<String> pathsToFilter) {
     this.apiKeyHeader = apiKeyHeader;
     this.apiKeyValue = apiKeyValue;
-    this.pathsToFilter = pathsToFilter != null ? pathsToFilter : Collections.emptyList();
+    this.pathsToFilter = pathsToFilter != null ? pathsToFilter : Collections.emptySet();
   }
 
   @Override
   protected boolean shouldNotFilter(HttpServletRequest request) {
+    // In a real servlet container, getServletPath() returns the path relative to the context.
+    // In MockMvc (test environment), getServletPath() may return "" while getPathInfo()
+    // holds the actual path — workaround for test cases.
     String path = request.getServletPath();
+    if (!StringUtils.hasLength(path)) {
+      path = request.getPathInfo();
+    }
 
     // Match current request against your list of allowed paths
-    return pathsToFilter.stream().noneMatch(pattern -> pathMatcher.match(pattern, path));
+    final String resolvedPath = path;
+    return pathsToFilter.stream().noneMatch(pattern -> pathMatcher.match(pattern, resolvedPath));
   }
 
   @Override
