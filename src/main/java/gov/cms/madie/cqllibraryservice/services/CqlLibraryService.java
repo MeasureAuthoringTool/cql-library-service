@@ -10,6 +10,7 @@ import gov.cms.madie.models.access.AclOperation;
 import gov.cms.madie.models.access.AclSpecification;
 import gov.cms.madie.models.common.*;
 import gov.cms.madie.models.dto.LibraryUsage;
+import gov.cms.madie.models.dto.CqlLibraryDto;
 import gov.cms.madie.models.dto.UserDetailsDto;
 import gov.cms.madie.models.library.CqlLibrary;
 import gov.cms.madie.models.library.CqlLibraryLockInfo;
@@ -247,25 +248,35 @@ public class CqlLibraryService {
     return !Objects.equals(persistedCqlLibrary.getCqlLibraryName(), cqlLibrary.getCqlLibraryName());
   }
 
-  public CqlLibrary getVersionedCqlLibrary(
-      String name,
-      String version,
-      Optional<String> model,
-      boolean fetchElm,
-      String elmErrorSeverity,
-      final String accessToken) {
-    return getVersionedCqlLibrary(
-        name, version, model, Optional.empty(), fetchElm, elmErrorSeverity, accessToken);
-  }
-
-  public CqlLibrary getVersionedCqlLibrary(
+  public CqlLibraryDto getVersionedCqlLibrary(
       String name,
       String version,
       Optional<String> model,
       Optional<String> namespaceCanonical,
+      Optional<String> namespacePrefix,
       boolean fetchElm,
       String elmErrorSeverity,
       final String accessToken) {
+    if (namespaceCanonical.filter(StringUtils::isNotBlank).isPresent()
+        && namespacePrefix.filter(StringUtils::isNotBlank).isPresent()) {
+      throw new BadRequestObjectException(
+          "Only one of namespaceCanonical and namespacePrefix may be provided.");
+    }
+    log.info("fetchElm: {}", fetchElm);
+    CqlLibraryDto cqlLibrary =
+        resolveVersionedCqlLibrary(name, version, model, namespaceCanonical, namespacePrefix);
+    if (fetchElm) {
+      addElm(cqlLibrary, elmErrorSeverity, accessToken);
+    }
+    return cqlLibrary;
+  }
+
+  private CqlLibraryDto resolveVersionedCqlLibrary(
+      String name,
+      String version,
+      Optional<String> model,
+      Optional<String> namespaceCanonical,
+      Optional<String> namespacePrefix) {
     if (namespaceCanonical.isPresent() && StringUtils.isNotBlank(namespaceCanonical.get())) {
       ExternalLibrary externalLibrary =
           externalLibraryRepository
@@ -281,13 +292,29 @@ public class CqlLibraryService {
                     return new ResourceNotFoundException(
                         "Library", "name", name + " in namespace " + namespaceCanonical.get());
                   });
-      return CqlLibrary.builder()
-          .cqlLibraryName(externalLibrary.getLibraryName())
-          .version(Version.parse(externalLibrary.getVersion()))
-          .cql(externalLibrary.getCqlContent())
-          .draft(externalLibrary.isDraft())
-          .build();
+      return mapExternalLibrary(externalLibrary);
     }
+    if (namespacePrefix.isPresent() && StringUtils.isNotBlank(namespacePrefix.get())) {
+      ExternalLibrary externalLibrary =
+          externalLibraryRepository
+              .findByNamespacePrefixAndLibraryNameAndVersion(namespacePrefix.get(), name, version)
+              .orElseThrow(
+                  () -> {
+                    log.error(
+                        "Could not find Library with namespace prefix: [{}],"
+                            + " name: [{}], version: [{}]",
+                        namespacePrefix.get(),
+                        name,
+                        version);
+                    return new ResourceNotFoundException(
+                        "Library", "name", name + " in namespace " + namespacePrefix.get());
+                  });
+      return mapExternalLibrary(externalLibrary);
+    }
+    return resolveMadieLibrary(name, version, model);
+  }
+
+  private CqlLibraryDto resolveMadieLibrary(String name, String version, Optional<String> model) {
     List<CqlLibrary> libs =
         model.isPresent()
             ? cqlLibraryRepository.findAllByCqlLibraryNameAndDraftAndVersionAndModel(
@@ -303,28 +330,67 @@ public class CqlLibraryService {
           "Multiple versioned libraries were found. "
               + "Please provide additional filters "
               + "to narrow down the results to a single library.");
-    } else {
-      CqlLibrary cqlLibrary = libs.get(0);
-      if (fetchElm) {
-        final ElmJson elmJson =
-            elmTranslatorClient.getElmJson(
-                cqlLibrary.getCql(), cqlLibrary.getModel(), accessToken, elmErrorSeverity);
-        if (elmTranslatorClient.hasErrors(elmJson)) {
-          log.error("CQL-ELM translator found errors in the CQL for library [{}]!", name);
-          throw new CqlElmTranslationErrorException(cqlLibrary.getCqlLibraryName());
-        }
-        cqlLibrary.setElmJson(elmJson.getJson());
-        cqlLibrary.setElmXml(elmJson.getXml());
-      }
-      LibrarySet librarySet = librarySetService.findByLibrarySetId(cqlLibrary.getLibrarySetId());
-      cqlLibrary.setLibrarySet(librarySet);
-      if (librarySet != null && StringUtils.isNotBlank(librarySet.getOwner())) {
-        UserDetailsDto details = userServiceClient.getSingleUserDetails(librarySet.getOwner());
-        cqlLibrary.setOwnerDisplayName(resolveOwnerDisplayName(details, librarySet.getOwner()));
-      }
-
-      return cqlLibrary;
     }
+
+    CqlLibrary cqlLibrary = libs.get(0);
+    LibrarySet librarySet = librarySetService.findByLibrarySetId(cqlLibrary.getLibrarySetId());
+    cqlLibrary.setLibrarySet(librarySet);
+    if (librarySet != null && StringUtils.isNotBlank(librarySet.getOwner())) {
+      UserDetailsDto details = userServiceClient.getSingleUserDetails(librarySet.getOwner());
+      cqlLibrary.setOwnerDisplayName(resolveOwnerDisplayName(details, librarySet.getOwner()));
+    }
+    return mapMadieLibrary(cqlLibrary);
+  }
+
+  private CqlLibraryDto mapExternalLibrary(ExternalLibrary externalLibrary) {
+    return CqlLibraryDto.builder()
+        .id(externalLibrary.getId())
+        .cqlLibraryName(externalLibrary.getLibraryName())
+        .model(ModelType.FHIR_4_0_1.getValue())
+        .version(externalLibrary.getVersion())
+        .librarySetId(externalLibrary.getLibrarySetId())
+        .cql(externalLibrary.getCqlContent())
+        .publisher(externalLibrary.getPublisher())
+        .description(externalLibrary.getDescription())
+        .namespacePrefix(externalLibrary.getNamespacePrefix())
+        .fhirResource(externalLibrary.getFhirResource())
+        .draft(externalLibrary.isDraft())
+        .external(true)
+        .build();
+  }
+
+  private void addElm(CqlLibraryDto cqlLibrary, String elmErrorSeverity, String accessToken) {
+    ElmJson elmJson =
+        elmTranslatorClient.getElmJson(
+            cqlLibrary.getCql(), cqlLibrary.getModel(), accessToken, elmErrorSeverity);
+    if (elmTranslatorClient.hasErrors(elmJson)) {
+      log.error(
+          "CQL-ELM translator found errors in the CQL for library [{}]!",
+          cqlLibrary.getCqlLibraryName());
+      throw new CqlElmTranslationErrorException(cqlLibrary.getCqlLibraryName());
+    }
+    cqlLibrary.setElmJson(elmJson.getJson());
+    cqlLibrary.setElmXml(elmJson.getXml());
+  }
+
+  private CqlLibraryDto mapMadieLibrary(CqlLibrary cqlLibrary) {
+    return CqlLibraryDto.builder()
+        .id(cqlLibrary.getId())
+        .cqlLibraryName(cqlLibrary.getCqlLibraryName())
+        .model(cqlLibrary.getModel())
+        .version(cqlLibrary.getVersion().toString())
+        .cql(cqlLibrary.getCql())
+        .elmJson(cqlLibrary.getElmJson())
+        .elmXml(cqlLibrary.getElmXml())
+        .publisher(cqlLibrary.getPublisher())
+        .description(cqlLibrary.getDescription())
+        .experimental(cqlLibrary.isExperimental())
+        .draft(cqlLibrary.isDraft())
+        .ownerDisplayName(cqlLibrary.getOwnerDisplayName())
+        .librarySetId(cqlLibrary.getLibrarySetId())
+        .librarySet(cqlLibrary.getLibrarySet())
+        .external(false)
+        .build();
   }
 
   public CqlLibrary findCqlLibraryById(String id, String username) {

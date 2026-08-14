@@ -1,5 +1,6 @@
 package gov.cms.madie.cqllibraryservice.services;
 
+import gov.cms.madie.models.dto.CqlLibraryDto;
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.notNullValue;
@@ -157,14 +158,23 @@ class CqlLibraryServiceTest {
             any(), anyBoolean(), any(), anyString()))
         .thenReturn(cqlLibraries);
     when(elmTranslatorClient.getElmJson(anyString(), anyString(), anyString(), anyString()))
-        .thenReturn(ElmJson.builder().json("{\"library\": {}}").build());
-    CqlLibrary versionedCqlLibrary =
+        .thenReturn(ElmJson.builder().json("{\"library\": {}}").xml("<library/>").build());
+    CqlLibraryDto versionedCqlLibrary =
         cqlLibraryService.getVersionedCqlLibrary(
-            "TestFHIRHelpers", "1.0.000", Optional.of("QI-Core v4.1.1"), true, "Info", "test-okta");
+            "TestFHIRHelpers",
+            "1.0.000",
+            Optional.of("QI-Core v4.1.1"),
+            Optional.empty(),
+            Optional.empty(),
+            true,
+            "Info",
+            "test-okta");
     assertNotNull(versionedCqlLibrary);
     assertEquals(cqlLibrary1.getCqlLibraryName(), versionedCqlLibrary.getCqlLibraryName());
-    assertEquals(cqlLibrary1.getVersion(), versionedCqlLibrary.getVersion());
+    assertEquals(cqlLibrary1.getVersion().toString(), versionedCqlLibrary.getVersion());
     assertEquals(cqlLibrary1.getModel(), versionedCqlLibrary.getModel());
+    assertEquals("{\"library\": {}}", versionedCqlLibrary.getElmJson());
+    assertEquals("<library/>", versionedCqlLibrary.getElmXml());
   }
 
   @Test
@@ -183,12 +193,19 @@ class CqlLibraryServiceTest {
         .thenReturn(cqlLibraries);
     when(elmTranslatorClient.getElmJson(anyString(), anyString(), anyString(), anyString()))
         .thenReturn(ElmJson.builder().json("{\"library\": {}}").build());
-    CqlLibrary versionedCqlLibrary =
+    CqlLibraryDto versionedCqlLibrary =
         cqlLibraryService.getVersionedCqlLibrary(
-            "TestFHIRHelpers", "1.0.000", Optional.empty(), true, "Info", "test-okta");
+            "TestFHIRHelpers",
+            "1.0.000",
+            Optional.empty(),
+            Optional.empty(),
+            Optional.empty(),
+            true,
+            "Info",
+            "test-okta");
     assertNotNull(versionedCqlLibrary);
     assertEquals(cqlLibrary.getCqlLibraryName(), versionedCqlLibrary.getCqlLibraryName());
-    assertEquals(cqlLibrary.getVersion(), versionedCqlLibrary.getVersion());
+    assertEquals(cqlLibrary.getVersion().toString(), versionedCqlLibrary.getVersion());
     assertEquals(cqlLibrary.getModel(), versionedCqlLibrary.getModel());
   }
 
@@ -198,24 +215,32 @@ class CqlLibraryServiceTest {
         ExternalLibrary.builder()
             .libraryName("FHIRHelpers")
             .version("1.0.000")
+            .librarySetId("external-library-set-id")
+            .namespacePrefix("hl7.fhir.us.qicore")
             .cqlContent("library FHIRHelpers version '1.0.000'")
             .build();
     when(externalLibraryRepository.findByPackageCanonicalAndLibraryNameAndVersion(
             "http://hl7.org/fhir/us/qicore", "FHIRHelpers", "1.0.000"))
         .thenReturn(Optional.of(externalLibrary));
 
-    CqlLibrary result =
+    CqlLibraryDto result =
         cqlLibraryService.getVersionedCqlLibrary(
             "FHIRHelpers",
             "1.0.000",
             Optional.empty(),
             Optional.of("http://hl7.org/fhir/us/qicore"),
+            Optional.empty(),
             false,
             "Info",
             null);
 
     assertEquals("FHIRHelpers", result.getCqlLibraryName());
     assertEquals("library FHIRHelpers version '1.0.000'", result.getCql());
+    assertTrue(result.isExternal());
+    assertEquals("1.0.000", result.getVersion());
+    assertEquals("external-library-set-id", result.getLibrarySetId());
+    verify(elmTranslatorClient, never())
+        .getElmJson(anyString(), anyString(), anyString(), anyString());
   }
 
   @Test
@@ -232,9 +257,123 @@ class CqlLibraryServiceTest {
                 "1.0.000",
                 Optional.empty(),
                 Optional.of("http://hl7.org/fhir/us/qicore"),
+                Optional.empty(),
                 false,
                 "Info",
                 null));
+  }
+
+  @Test
+  void testGetVersionedCqlLibraryByNamespacePrefix() {
+    ExternalLibrary externalLibrary =
+        ExternalLibrary.builder()
+            .libraryName("FHIRHelpers")
+            .version("1.0.000")
+            .namespacePrefix("hl7.fhir.us.qicore")
+            .cqlContent("library FHIRHelpers version '1.0.000'")
+            .build();
+    when(externalLibraryRepository.findByNamespacePrefixAndLibraryNameAndVersion(
+            "hl7.fhir.us.qicore", "FHIRHelpers", "1.0.000"))
+        .thenReturn(Optional.of(externalLibrary));
+
+    CqlLibraryDto result =
+        cqlLibraryService.getVersionedCqlLibrary(
+            "FHIRHelpers",
+            "1.0.000",
+            Optional.empty(),
+            Optional.empty(),
+            Optional.of("hl7.fhir.us.qicore"),
+            false,
+            "Info",
+            null);
+
+    assertEquals("FHIRHelpers", result.getCqlLibraryName());
+    assertEquals("library FHIRHelpers version '1.0.000'", result.getCql());
+    assertTrue(result.isExternal());
+    assertEquals("hl7.fhir.us.qicore", result.getNamespacePrefix());
+  }
+
+  @Test
+  void testGetVersionedCqlLibraryByNamespacePrefixNotFound() {
+    when(externalLibraryRepository.findByNamespacePrefixAndLibraryNameAndVersion(
+            "hl7.fhir.us.qicore", "FHIRHelpers", "1.0.000"))
+        .thenReturn(Optional.empty());
+
+    assertThrows(
+        ResourceNotFoundException.class,
+        () ->
+            cqlLibraryService.getVersionedCqlLibrary(
+                "FHIRHelpers",
+                "1.0.000",
+                Optional.empty(),
+                Optional.empty(),
+                Optional.of("hl7.fhir.us.qicore"),
+                false,
+                "Info",
+                null));
+  }
+
+  @Test
+  void testGetVersionedCqlLibraryByNamespacePrefixGeneratesElmWhenRequested() {
+    // given - mocks
+    ExternalLibrary externalLibrary =
+        ExternalLibrary.builder()
+            .libraryName("FHIRHelpers")
+            .version("1.0.1")
+            .namespacePrefix("hl7.fhir.us.qicore")
+            .cqlContent("library FHIRHelpers version '1.0.1'")
+            .fhirResource("{\"resourceType\":\"Library\"}")
+            .build();
+    ElmJson elmJson = ElmJson.builder().json("ELM JSON").xml("ELM XML").build();
+    when(externalLibraryRepository.findByNamespacePrefixAndLibraryNameAndVersion(
+            "hl7.fhir.us.qicore", "FHIRHelpers", "1.0.1"))
+        .thenReturn(Optional.of(externalLibrary));
+    when(elmTranslatorClient.getElmJson(
+            externalLibrary.getCqlContent(), ModelType.FHIR_4_0_1.getValue(), "test-okta", "Info"))
+        .thenReturn(elmJson);
+    when(elmTranslatorClient.hasErrors(elmJson)).thenReturn(false);
+
+    // when - call method under test
+    CqlLibraryDto result =
+        cqlLibraryService.getVersionedCqlLibrary(
+            "FHIRHelpers",
+            "1.0.1",
+            Optional.empty(),
+            Optional.empty(),
+            Optional.of("hl7.fhir.us.qicore"),
+            true,
+            "Info",
+            "test-okta");
+
+    // then - assertions
+    assertEquals("ELM JSON", result.getElmJson());
+    assertEquals("ELM XML", result.getElmXml());
+    assertEquals("{\"resourceType\":\"Library\"}", result.getFhirResource());
+    verify(elmTranslatorClient)
+        .getElmJson(
+            externalLibrary.getCqlContent(), ModelType.FHIR_4_0_1.getValue(), "test-okta", "Info");
+  }
+
+  @Test
+  void testGetVersionedCqlLibraryRejectsCanonicalAndPrefix() {
+    BadRequestObjectException exception =
+        assertThrows(
+            BadRequestObjectException.class,
+            () ->
+                cqlLibraryService.getVersionedCqlLibrary(
+                    "FHIRHelpers",
+                    "1.0.000",
+                    Optional.empty(),
+                    Optional.of("http://hl7.org/fhir/us/qicore"),
+                    Optional.of("hl7.fhir.us.qicore"),
+                    false,
+                    "Info",
+                    null));
+
+    assertEquals(
+        "Only one of namespaceCanonical and namespacePrefix may be provided.",
+        exception.getMessage());
+    verifyNoInteractions(externalLibraryRepository, cqlLibraryRepository);
   }
 
   private CqlLibrary mockSingleVersionedLibraryForOwnerEnrichment(String owner) {
@@ -260,11 +399,21 @@ class CqlLibraryServiceTest {
     when(userServiceClient.getSingleUserDetails("owner1"))
         .thenReturn(UserDetailsDto.builder().firstName("John").lastName("Doe").build());
 
-    CqlLibrary result =
+    CqlLibraryDto result =
         cqlLibraryService.getVersionedCqlLibrary(
-            "TestFHIRHelpers", "1.0.000", Optional.empty(), false, "Info", "test-okta");
+            "TestFHIRHelpers",
+            "1.0.000",
+            Optional.empty(),
+            Optional.empty(),
+            Optional.empty(),
+            false,
+            "Info",
+            "test-okta");
 
     assertEquals("John Doe", result.getOwnerDisplayName());
+    assertEquals("libSetId", result.getLibrarySetId());
+    assertNotNull(result.getLibrarySet());
+    assertEquals("libSetId", result.getLibrarySet().getLibrarySetId());
   }
 
   @Test
@@ -273,9 +422,16 @@ class CqlLibraryServiceTest {
     when(userServiceClient.getSingleUserDetails("owner1"))
         .thenReturn(UserDetailsDto.builder().firstName("").lastName("").build());
 
-    CqlLibrary result =
+    CqlLibraryDto result =
         cqlLibraryService.getVersionedCqlLibrary(
-            "TestFHIRHelpers", "1.0.000", Optional.empty(), false, "Info", "test-okta");
+            "TestFHIRHelpers",
+            "1.0.000",
+            Optional.empty(),
+            Optional.empty(),
+            Optional.empty(),
+            false,
+            "Info",
+            "test-okta");
 
     assertEquals("owner1", result.getOwnerDisplayName());
   }
@@ -285,9 +441,16 @@ class CqlLibraryServiceTest {
     mockSingleVersionedLibraryForOwnerEnrichment("owner1");
     when(userServiceClient.getSingleUserDetails("owner1")).thenReturn(null);
 
-    CqlLibrary result =
+    CqlLibraryDto result =
         cqlLibraryService.getVersionedCqlLibrary(
-            "TestFHIRHelpers", "1.0.000", Optional.empty(), false, "Info", "test-okta");
+            "TestFHIRHelpers",
+            "1.0.000",
+            Optional.empty(),
+            Optional.empty(),
+            Optional.empty(),
+            false,
+            "Info",
+            "test-okta");
 
     assertEquals("-", result.getOwnerDisplayName());
   }
@@ -301,7 +464,14 @@ class CqlLibraryServiceTest {
         ResourceNotFoundException.class,
         () ->
             cqlLibraryService.getVersionedCqlLibrary(
-                "TestFHIRHelpers", "1.0.000", Optional.empty(), true, "Info", "test-okta"));
+                "TestFHIRHelpers",
+                "1.0.000",
+                Optional.empty(),
+                Optional.empty(),
+                Optional.empty(),
+                true,
+                "Info",
+                "test-okta"));
   }
 
   @Test
@@ -329,7 +499,14 @@ class CqlLibraryServiceTest {
         GeneralConflictException.class,
         () ->
             cqlLibraryService.getVersionedCqlLibrary(
-                "TestFHIRHelpers", "1.0.000", Optional.empty(), true, "Info", "test-okta"));
+                "TestFHIRHelpers",
+                "1.0.000",
+                Optional.empty(),
+                Optional.empty(),
+                Optional.empty(),
+                true,
+                "Info",
+                "test-okta"));
   }
 
   @Test
@@ -1723,6 +1900,7 @@ class CqlLibraryServiceTest {
             .id(cqlLibraryId)
             .cqlLibraryName(cqlLibraryName)
             .librarySetId(librarySetId)
+            .version(Version.parse("1.0.000"))
             .cql("library test version '1.0.0'")
             .model("QI-Core v4.1.1")
             .build();
@@ -1742,6 +1920,8 @@ class CqlLibraryServiceTest {
                 cqlLibraryName,
                 "1.0.000",
                 Optional.of("QI-Core v4.1.1"),
+                Optional.empty(),
+                Optional.empty(),
                 true,
                 "Info",
                 "test-okta"));
@@ -1875,13 +2055,20 @@ class CqlLibraryServiceTest {
             anyString(), anyBoolean(), any(), anyString()))
         .thenReturn(List.of(library));
 
-    CqlLibrary result =
+    CqlLibraryDto result =
         cqlLibraryService.getVersionedCqlLibrary(
-            cqlLibraryName, version, Optional.of(model), false, "Info", "test-okta");
+            cqlLibraryName,
+            version,
+            Optional.of(model),
+            Optional.empty(),
+            Optional.empty(),
+            false,
+            "Info",
+            "test-okta");
 
     assertNotNull(result);
     assertEquals(cqlLibraryName, result.getCqlLibraryName());
-    assertEquals(Version.parse(version), result.getVersion());
+    assertEquals(version, result.getVersion());
     assertEquals(model, result.getModel());
     verify(elmTranslatorClient, times(0))
         .getElmJson(anyString(), anyString(), anyString(), anyString());
