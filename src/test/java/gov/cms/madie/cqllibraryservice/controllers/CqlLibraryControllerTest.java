@@ -1,5 +1,6 @@
 package gov.cms.madie.cqllibraryservice.controllers;
 
+import gov.cms.madie.models.dto.CqlLibraryDto;
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.notNullValue;
@@ -644,28 +645,43 @@ class CqlLibraryControllerTest {
   @Test
   public void testGetLibraryCql() {
     when(cqlLibraryService.getVersionedCqlLibrary(
-            anyString(), any(), any(), any(), anyBoolean(), anyString(), any()))
-        .thenReturn(CqlLibrary.builder().cql("Test Cql").build());
+            anyString(), any(), any(), any(), any(), anyBoolean(), anyString(), any()))
+        .thenReturn(CqlLibraryDto.builder().cql("Test Cql").build());
     String cql =
         cqlLibraryController.getLibraryCql(
             "TestCqlLibrary", "1.0.000", Optional.empty(), Optional.empty());
 
     verify(cqlLibraryService, times(1))
-        .getVersionedCqlLibrary(anyString(), any(), any(), any(), anyBoolean(), anyString(), any());
+        .getVersionedCqlLibrary(
+            anyString(), any(), any(), any(), any(), anyBoolean(), anyString(), any());
     assertEquals("Test Cql", cql);
   }
 
   @Test
   public void testGetVersionedCqlLibrary() {
     when(cqlLibraryService.getVersionedCqlLibrary(
-            anyString(), any(), any(), anyBoolean(), anyString(), any()))
-        .thenReturn(CqlLibrary.builder().build());
-    ResponseEntity<CqlLibrary> versionedCqlLibrary =
+            anyString(), any(), any(), any(), any(), anyBoolean(), anyString(), any()))
+        .thenReturn(CqlLibraryDto.builder().build());
+    ResponseEntity<CqlLibraryDto> versionedCqlLibrary =
         cqlLibraryController.getVersionedCqlLibrary(
-            "TestCqlLibrary", "1.0.000", Optional.empty(), true, "Info", "test-token");
+            "TestCqlLibrary",
+            "1.0.000",
+            Optional.empty(),
+            Optional.of("hl7.fhir.us.qicore"),
+            true,
+            "Info",
+            "test-token");
 
     verify(cqlLibraryService, times(1))
-        .getVersionedCqlLibrary(anyString(), any(), any(), anyBoolean(), anyString(), any());
+        .getVersionedCqlLibrary(
+            "TestCqlLibrary",
+            "1.0.000",
+            Optional.empty(),
+            Optional.empty(),
+            Optional.of("hl7.fhir.us.qicore"),
+            true,
+            "Info",
+            "test-token");
     assertEquals(HttpStatus.OK, versionedCqlLibrary.getStatusCode());
   }
 

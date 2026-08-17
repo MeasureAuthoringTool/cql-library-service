@@ -16,6 +16,9 @@ public interface ExternalLibraryRepository extends MongoRepository<ExternalLibra
   Optional<ExternalLibrary> findByPackageCanonicalAndLibraryNameAndVersion(
       String namespaceCanonical, String libraryName, String version);
 
+  Optional<ExternalLibrary> findByNamespacePrefixAndLibraryNameAndVersion(
+      String namespacePrefix, String libraryName, String version);
+
   boolean existsByPackageCanonicalAndLibraryNameAndVersion(
       String canonical, String libraryName, String version);
 
