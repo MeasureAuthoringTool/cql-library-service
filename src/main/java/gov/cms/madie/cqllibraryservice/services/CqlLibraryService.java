@@ -278,38 +278,11 @@ public class CqlLibraryService {
       Optional<String> namespaceCanonical,
       Optional<String> namespacePrefix) {
     if (namespaceCanonical.isPresent() && StringUtils.isNotBlank(namespaceCanonical.get())) {
-      ExternalLibrary externalLibrary =
-          externalLibraryRepository
-              .findByPackageCanonicalAndLibraryNameAndVersion(
-                  namespaceCanonical.get(), name, version)
-              .orElseThrow(
-                  () -> {
-                    log.error(
-                        "Could not find Library with canonical: [{}], name: [{}], version: [{}]",
-                        namespaceCanonical.get(),
-                        name,
-                        version);
-                    return new ResourceNotFoundException(
-                        "Library", "name", name + " in namespace " + namespaceCanonical.get());
-                  });
-      return mapExternalLibrary(externalLibrary);
+      return mapExternalLibrary(
+          getExternalLibraryByCanonical(namespaceCanonical.get(), name, version));
     }
     if (namespacePrefix.isPresent() && StringUtils.isNotBlank(namespacePrefix.get())) {
-      ExternalLibrary externalLibrary =
-          externalLibraryRepository
-              .findByNamespacePrefixAndLibraryNameAndVersion(namespacePrefix.get(), name, version)
-              .orElseThrow(
-                  () -> {
-                    log.error(
-                        "Could not find Library with namespace prefix: [{}],"
-                            + " name: [{}], version: [{}]",
-                        namespacePrefix.get(),
-                        name,
-                        version);
-                    return new ResourceNotFoundException(
-                        "Library", "name", name + " in namespace " + namespacePrefix.get());
-                  });
-      return mapExternalLibrary(externalLibrary);
+      return mapExternalLibrary(getExternalLibraryByPrefix(namespacePrefix.get(), name, version));
     }
     return resolveMadieLibrary(name, version, model);
   }
@@ -357,6 +330,37 @@ public class CqlLibraryService {
         .draft(externalLibrary.isDraft())
         .external(true)
         .build();
+  }
+
+  private ExternalLibrary getExternalLibraryByCanonical(
+      String canonical, String name, String version) {
+    return externalLibraryRepository
+        .findByPackageCanonicalAndLibraryNameAndVersion(canonical, name, version)
+        .orElseThrow(
+            () -> {
+              log.error(
+                  "Could not find Library with canonical: [{}], name: [{}], version: [{}]",
+                  canonical,
+                  name,
+                  version);
+              return new ResourceNotFoundException(
+                  "Library", "name", name + " in namespace canonical " + canonical);
+            });
+  }
+
+  private ExternalLibrary getExternalLibraryByPrefix(String prefix, String name, String version) {
+    return externalLibraryRepository
+        .findByNamespacePrefixAndLibraryNameAndVersion(prefix, name, version)
+        .orElseThrow(
+            () -> {
+              log.error(
+                  "Could not find Library with namespace prefix: [{}], name: [{}], version: [{}]",
+                  prefix,
+                  name,
+                  version);
+              return new ResourceNotFoundException(
+                  "Library", "name", name + " in namespace prefix" + prefix);
+            });
   }
 
   private void addElm(CqlLibraryDto cqlLibrary, String elmErrorSeverity, String accessToken) {
