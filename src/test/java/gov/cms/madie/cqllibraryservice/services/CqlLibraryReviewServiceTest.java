@@ -1,8 +1,10 @@
 package gov.cms.madie.cqllibraryservice.services;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doThrow;
@@ -167,6 +169,124 @@ class CqlLibraryReviewServiceTest {
   }
 
   @Test
+  void updateReviewLogsReviewInProgressWhenStatusIsInProgress() {
+    CqlLibraryReview existing =
+        CqlLibraryReview.builder()
+            .id("review-1")
+            .libraryId("lib-1")
+            .librarySetId("set-1")
+            .status(ReviewStatus.READY_FOR_REVIEW)
+            .build();
+
+    CqlLibraryReview update = CqlLibraryReview.builder().status(ReviewStatus.IN_PROGRESS).build();
+
+    when(cqlLibraryReviewRepository.findByLibraryId("lib-1")).thenReturn(Optional.of(existing));
+    when(cqlLibraryReviewRepository.save(any(CqlLibraryReview.class)))
+        .thenAnswer(invocation -> invocation.getArgument(0));
+
+    cqlLibraryReviewService.updateReview("lib-1", update, USERNAME);
+
+    verify(actionLogService, times(1))
+        .logAction("lib-1", ActionType.REVIEW_IN_PROGRESS, USERNAME, "actionLog");
+  }
+
+  @Test
+  void updateReviewLogsReviewCompleteWhenStatusIsComplete() {
+    CqlLibraryReview existing =
+        CqlLibraryReview.builder()
+            .id("review-1")
+            .libraryId("lib-1")
+            .librarySetId("set-1")
+            .status(ReviewStatus.IN_PROGRESS)
+            .build();
+
+    CqlLibraryReview update = CqlLibraryReview.builder().status(ReviewStatus.COMPLETE).build();
+
+    when(cqlLibraryReviewRepository.findByLibraryId("lib-1")).thenReturn(Optional.of(existing));
+    when(cqlLibraryReviewRepository.save(any(CqlLibraryReview.class)))
+        .thenAnswer(invocation -> invocation.getArgument(0));
+
+    cqlLibraryReviewService.updateReview("lib-1", update, USERNAME);
+
+    verify(actionLogService, times(1))
+        .logAction("lib-1", ActionType.REVIEW_COMPLETE, USERNAME, "actionLog");
+  }
+
+  @Test
+  void updateReviewPersistsReviewers() {
+    CqlLibraryReview existing =
+        CqlLibraryReview.builder()
+            .id("review-1")
+            .libraryId("lib-1")
+            .librarySetId("set-1")
+            .status(ReviewStatus.READY_FOR_REVIEW)
+            .reviewers(List.of("olduser"))
+            .build();
+
+    CqlLibraryReview update =
+        CqlLibraryReview.builder()
+            .status(ReviewStatus.READY_FOR_REVIEW)
+            .reviewers(List.of("jtraeger", "zuser"))
+            .build();
+
+    when(cqlLibraryReviewRepository.findByLibraryId("lib-1")).thenReturn(Optional.of(existing));
+    when(cqlLibraryReviewRepository.save(any(CqlLibraryReview.class)))
+        .thenAnswer(invocation -> invocation.getArgument(0));
+
+    CqlLibraryReview result = cqlLibraryReviewService.updateReview("lib-1", update, USERNAME);
+
+    assertEquals(List.of("jtraeger", "zuser"), result.getReviewers());
+    // A reviewer-only change must not add a history record.
+    verify(actionLogService, never())
+        .logAction(anyString(), any(ActionType.class), anyString(), anyString());
+  }
+
+  @Test
+  void updateReviewKeepsExistingStatusWhenPayloadHasNoStatus() {
+    CqlLibraryReview existing =
+        CqlLibraryReview.builder()
+            .id("review-1")
+            .libraryId("lib-1")
+            .librarySetId("set-1")
+            .status(ReviewStatus.COMPLETE)
+            .build();
+
+    // Reviewer-only edit: no status supplied.
+    CqlLibraryReview update = CqlLibraryReview.builder().reviewers(List.of("jtraeger")).build();
+
+    when(cqlLibraryReviewRepository.findByLibraryId("lib-1")).thenReturn(Optional.of(existing));
+    when(cqlLibraryReviewRepository.save(any(CqlLibraryReview.class)))
+        .thenAnswer(invocation -> invocation.getArgument(0));
+
+    CqlLibraryReview result = cqlLibraryReviewService.updateReview("lib-1", update, USERNAME);
+
+    assertEquals(ReviewStatus.COMPLETE, result.getStatus());
+    verify(actionLogService, never())
+        .logAction(anyString(), any(ActionType.class), anyString(), anyString());
+  }
+
+  @Test
+  void createReviewPersistsReviewersAndLogsInProgress() {
+    CqlLibraryReview newReview =
+        CqlLibraryReview.builder()
+            .libraryId("lib-1")
+            .librarySetId("set-1")
+            .status(ReviewStatus.IN_PROGRESS)
+            .reviewers(List.of("jtraeger"))
+            .build();
+
+    when(cqlLibraryReviewRepository.existsByLibraryId("lib-1")).thenReturn(false);
+    when(cqlLibraryReviewRepository.save(any(CqlLibraryReview.class)))
+        .thenAnswer(invocation -> invocation.getArgument(0));
+
+    CqlLibraryReview result = cqlLibraryReviewService.createReview(newReview, USERNAME);
+
+    assertEquals(List.of("jtraeger"), result.getReviewers());
+    verify(actionLogService, times(1))
+        .logAction("lib-1", ActionType.REVIEW_IN_PROGRESS, USERNAME, "actionLog");
+  }
+
+  @Test
   void updateReviewLogsNotReadyForReviewWhenToggledOff() {
     CqlLibraryReview existing =
         CqlLibraryReview.builder()
@@ -255,15 +375,23 @@ class CqlLibraryReviewServiceTest {
 
   @Test
   void getAllReadyForReviewVerifiesAccessAndDelegatesWithStatusMap() {
-    CqlLibraryReview other =
+    CqlLibraryReview inProgress =
         CqlLibraryReview.builder()
             .id("review-2")
             .libraryId("lib-2")
             .librarySetId("set-2")
-            .status(ReviewStatus.READY_FOR_REVIEW)
+            .status(ReviewStatus.IN_PROGRESS)
             .build();
-    when(cqlLibraryReviewRepository.findAllByStatus(ReviewStatus.READY_FOR_REVIEW))
-        .thenReturn(List.of(review, other));
+    CqlLibraryReview complete =
+        CqlLibraryReview.builder()
+            .id("review-3")
+            .libraryId("lib-3")
+            .librarySetId("set-3")
+            .status(ReviewStatus.COMPLETE)
+            .build();
+    ArgumentCaptor<List<ReviewStatus>> statusesCaptor = ArgumentCaptor.forClass(List.class);
+    when(cqlLibraryReviewRepository.findAllByStatusIn(statusesCaptor.capture()))
+        .thenReturn(List.of(review, inProgress, complete));
 
     LibraryListDTO dto =
         LibraryListDTO.builder().id("lib-1").librarySetId("set-1").reviewStatus("Ready").build();
@@ -277,11 +405,18 @@ class CqlLibraryReviewServiceTest {
     assertEquals("lib-1", results.get(0).getId());
     // reviewer access is enforced before any data is gathered
     verify(cqlLibraryAccessControlService, times(1)).verifyReviewerAccess(USERNAME, ACCESS_TOKEN);
+    List<ReviewStatus> queriedStatuses = statusesCaptor.getValue();
+    assertEquals(3, queriedStatuses.size());
+    assertTrue(queriedStatuses.contains(ReviewStatus.READY_FOR_REVIEW));
+    assertTrue(queriedStatuses.contains(ReviewStatus.IN_PROGRESS));
+    assertTrue(queriedStatuses.contains(ReviewStatus.COMPLETE));
+    assertFalse(queriedStatuses.contains(ReviewStatus.NOT_READY_FOR_REVIEW));
     // review documents are collapsed into an id -> status map for the library service
     Map<String, ReviewStatus> statusByLibraryId = mapCaptor.getValue();
-    assertEquals(2, statusByLibraryId.size());
+    assertEquals(3, statusByLibraryId.size());
     assertEquals(ReviewStatus.READY_FOR_REVIEW, statusByLibraryId.get("lib-1"));
-    assertEquals(ReviewStatus.READY_FOR_REVIEW, statusByLibraryId.get("lib-2"));
+    assertEquals(ReviewStatus.IN_PROGRESS, statusByLibraryId.get("lib-2"));
+    assertEquals(ReviewStatus.COMPLETE, statusByLibraryId.get("lib-3"));
   }
 
   @Test
@@ -295,7 +430,7 @@ class CqlLibraryReviewServiceTest {
         () -> cqlLibraryReviewService.getAllReadyForReview(USERNAME, ACCESS_TOKEN));
 
     // no review data is read and nothing is delegated when access is denied
-    verify(cqlLibraryReviewRepository, never()).findAllByStatus(any());
+    verify(cqlLibraryReviewRepository, never()).findAllByStatusIn(any());
     verify(cqlLibraryService, never()).getReviewLibraries(any());
   }
 }

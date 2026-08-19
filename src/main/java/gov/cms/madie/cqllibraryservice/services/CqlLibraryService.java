@@ -154,6 +154,26 @@ public class CqlLibraryService {
     return libraries;
   }
 
+  /**
+   * Display label for a review status, matching the labels the library list aggregation projects.
+   * Statuses without a label (e.g. NOT_READY_FOR_REVIEW) show nothing in the Review column.
+   */
+  private static String toReviewStatusLabel(ReviewStatus reviewStatus) {
+    if (reviewStatus == null) {
+      return "";
+    }
+    switch (reviewStatus) {
+      case READY_FOR_REVIEW:
+        return "Ready";
+      case IN_PROGRESS:
+        return "In Progress";
+      case COMPLETE:
+        return "Complete";
+      default:
+        return "";
+    }
+  }
+
   private LibraryListDTO toReviewLibraryListDTO(CqlLibrary library, ReviewStatus reviewStatus) {
     LibrarySet librarySet = librarySetService.findByLibrarySetId(library.getLibrarySetId());
     return LibraryListDTO.builder()
@@ -166,7 +186,7 @@ public class CqlLibraryService {
         .createdAt(library.getCreatedAt())
         .lastModifiedAt(library.getLastModifiedAt())
         .librarySet(librarySet)
-        .reviewStatus(ReviewStatus.READY_FOR_REVIEW.equals(reviewStatus) ? "Ready" : "")
+        .reviewStatus(toReviewStatusLabel(reviewStatus))
         .build();
   }
 

@@ -3,6 +3,7 @@ package gov.cms.madie.cqllibraryservice.repositories;
 import gov.cms.madie.cqllibraryservice.dto.*;
 import gov.cms.madie.models.access.RoleEnum;
 import gov.cms.madie.models.common.OwnershipType;
+import gov.cms.madie.models.common.ReviewStatus;
 import gov.cms.madie.models.library.CqlLibrary;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.data.domain.Page;
@@ -72,6 +73,16 @@ public class CqlLibrarySearchServiceImpl implements CqlLibrarySearchService {
     return stages;
   }
 
+  /** Matches one review status on the joined review document and projects its display label. */
+  private ConditionalOperators.Switch.CaseOperator reviewStatusCase(
+      ReviewStatus status, String label) {
+    return ConditionalOperators.Switch.CaseOperator.when(
+            ComparisonOperators.Eq.valueOf(
+                    ArrayOperators.ArrayElemAt.arrayOf("$review.status").elementAt(0))
+                .equalToValue(status.name()))
+        .then(label);
+  }
+
   private List<AggregationOperation> buildReviewLookupStages() {
     List<AggregationOperation> stages = new ArrayList<>();
     AddFieldsOperation addLibraryIdStringOperation =
@@ -88,12 +99,11 @@ public class CqlLibrarySearchServiceImpl implements CqlLibrarySearchService {
         addFields()
             .addFieldWithValue(
                 "reviewStatus",
-                ConditionalOperators.when(
-                        ComparisonOperators.Eq.valueOf(
-                                ArrayOperators.ArrayElemAt.arrayOf("$review.status").elementAt(0))
-                            .equalToValue("READY_FOR_REVIEW"))
-                    .then("Ready")
-                    .otherwise(""))
+                ConditionalOperators.Switch.switchCases(
+                        reviewStatusCase(ReviewStatus.READY_FOR_REVIEW, "Ready"),
+                        reviewStatusCase(ReviewStatus.IN_PROGRESS, "In Progress"),
+                        reviewStatusCase(ReviewStatus.COMPLETE, "Complete"))
+                    .defaultTo(""))
             .build();
     stages.add(addLibraryIdStringOperation);
     stages.add(reviewLookupOperation);

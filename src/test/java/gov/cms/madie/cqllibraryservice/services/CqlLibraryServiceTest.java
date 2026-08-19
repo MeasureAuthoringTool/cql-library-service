@@ -40,6 +40,7 @@ import org.springframework.data.domain.PageRequest;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
+import java.util.stream.Collectors;
 
 import gov.cms.madie.cqllibraryservice.dto.LockInfo;
 import org.springframework.data.domain.Pageable;
@@ -1922,6 +1923,35 @@ class CqlLibraryServiceTest {
     assertEquals("Ready", dto.getReviewStatus());
     assertEquals(librarySet, dto.getLibrarySet());
     assertEquals("Jane Doe", dto.getOwnerDisplayName());
+  }
+
+  @Test
+  public void testGetReviewLibrariesLabelsEveryInReviewStatus() {
+    Map<String, ReviewStatus> statusByLibraryId =
+        Map.of(
+            "lib-1", ReviewStatus.READY_FOR_REVIEW,
+            "lib-2", ReviewStatus.IN_PROGRESS,
+            "lib-3", ReviewStatus.COMPLETE);
+
+    LibrarySet librarySet = new LibrarySet();
+    librarySet.setOwner("owner-1");
+    List<CqlLibrary> libraries =
+        List.of(
+            CqlLibrary.builder().id("lib-1").librarySetId("set-1").cqlLibraryName("L1").build(),
+            CqlLibrary.builder().id("lib-2").librarySetId("set-1").cqlLibraryName("L2").build(),
+            CqlLibrary.builder().id("lib-3").librarySetId("set-1").cqlLibraryName("L3").build());
+    when(cqlLibraryRepository.findByIdIn(anySet())).thenReturn(libraries);
+    when(librarySetService.findByLibrarySetId("set-1")).thenReturn(librarySet);
+    when(userServiceClient.getBulkUserDetails(anyList())).thenReturn(Map.of());
+
+    Map<String, String> labelById =
+        cqlLibraryService.getReviewLibraries(statusByLibraryId).stream()
+            .collect(Collectors.toMap(LibraryListDTO::getId, LibraryListDTO::getReviewStatus));
+
+    // A library stays on the reviews tab with its own label once review has begun.
+    assertEquals("Ready", labelById.get("lib-1"));
+    assertEquals("In Progress", labelById.get("lib-2"));
+    assertEquals("Complete", labelById.get("lib-3"));
   }
 
   @Test

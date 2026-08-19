@@ -157,9 +157,13 @@ public class CqlLibrarySearchServiceImplTest {
     assertTrue(pipelines.contains("cqlLibraryReview"));
     assertTrue(pipelines.contains("libraryId"));
     assertTrue(pipelines.contains("toString"));
-    // Derives the "Ready" label via $cond on READY_FOR_REVIEW
+    // Derives the display label via $switch over every in-review status.
     assertTrue(pipelines.contains("READY_FOR_REVIEW"));
     assertTrue(pipelines.contains("Ready"));
+    assertTrue(pipelines.contains("IN_PROGRESS"));
+    assertTrue(pipelines.contains("In Progress"));
+    assertTrue(pipelines.contains("COMPLETE"));
+    assertTrue(pipelines.contains("Complete"));
     assertTrue(pipelines.contains("reviewStatus"));
   }
 
@@ -498,6 +502,8 @@ public class CqlLibrarySearchServiceImplTest {
     assertTrue(pipeline.contains("cqlLibraryReview"));
     assertTrue(pipeline.contains("reviewStatus"));
     assertTrue(pipeline.contains("READY_FOR_REVIEW"));
+    assertTrue(pipeline.contains("IN_PROGRESS"));
+    assertTrue(pipeline.contains("COMPLETE"));
   }
 
   @Test
