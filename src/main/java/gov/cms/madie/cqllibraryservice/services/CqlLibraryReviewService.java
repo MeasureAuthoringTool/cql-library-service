@@ -1,10 +1,9 @@
 package gov.cms.madie.cqllibraryservice.services;
 
+import gov.cms.madie.cqllibraryservice.dto.LibraryListDTO;
 import gov.cms.madie.cqllibraryservice.exceptions.GeneralConflictException;
 import gov.cms.madie.cqllibraryservice.exceptions.ResourceNotFoundException;
-import gov.cms.madie.cqllibraryservice.dto.LibraryListDTO;
 import gov.cms.madie.cqllibraryservice.repositories.CqlLibraryReviewRepository;
-import gov.cms.madie.models.common.ActionType;
 import gov.cms.madie.models.common.ReviewStatus;
 import gov.cms.madie.models.library.CqlLibraryReview;
 import java.util.List;
@@ -20,6 +19,9 @@ import org.springframework.stereotype.Service;
 public class CqlLibraryReviewService {
 
   private static final String LIBRARY_HISTORY_COLLECTION = "actionLog";
+
+  private static final List<ReviewStatus> IN_REVIEW_STATUSES =
+      List.of(ReviewStatus.READY_FOR_REVIEW, ReviewStatus.IN_PROGRESS, ReviewStatus.COMPLETE);
 
   private final CqlLibraryReviewRepository cqlLibraryReviewRepository;
   private final ActionLogService actionLogService;
@@ -68,8 +70,11 @@ public class CqlLibraryReviewService {
     final ReviewStatus previousStatus = existing.getStatus();
     final ReviewStatus newStatus = review.getStatus();
 
-    existing.setStatus(newStatus);
+    if (newStatus != null) {
+      existing.setStatus(newStatus);
+    }
     existing.setComment(review.getComment());
+    existing.setReviewers(review.getReviewers());
 
     CqlLibraryReview saved = cqlLibraryReviewRepository.save(existing);
     log.info("Updated review [{}] for CQL Library [{}]", saved.getId(), libraryId);
@@ -111,21 +116,21 @@ public class CqlLibraryReviewService {
   }
 
   /**
-   * Retrieves the full, enriched list of libraries that are currently marked as ready for review
-   * (i.e. review status is READY_FOR_REVIEW). This method owns the review concerns: it verifies the
-   * caller has the MADiE-Reviewer role and gathers the libraries currently in review, then
-   * delegates to {@link CqlLibraryService#getReviewLibraries} to fetch and enrich the libraries.
-   * The full list is returned (no pagination); ordering is left to the client.
+   * Retrieves the full, enriched list of libraries that are currently under review, i.e. whose
+   * review status is Ready, In Progress or Complete. This method owns the review concerns: it
+   * verifies the caller has the MADiE-Reviewer role and gathers the libraries currently in review,
+   * then delegates to {@link CqlLibraryService#getReviewLibraries} to fetch and enrich the
+   * libraries. The full list is returned (no pagination); ordering is left to the client.
    *
    * @param username the HARP id of the requesting user
    * @param accessToken the bearer token used to verify the reviewer role
-   * @return the list of libraries marked as ready for review
+   * @return the list of libraries under review
    */
-  public List<LibraryListDTO> getAllReadyForReview(String username, String accessToken) {
+  public List<LibraryListDTO> getLibrariesInReview(String username, String accessToken) {
     cqlLibraryAccessControlService.verifyReviewerAccess(username, accessToken);
 
     Map<String, ReviewStatus> statusByLibraryId =
-        cqlLibraryReviewRepository.findAllByStatus(ReviewStatus.READY_FOR_REVIEW).stream()
+        cqlLibraryReviewRepository.findAllByStatusIn(IN_REVIEW_STATUSES).stream()
             .filter(review -> review.getLibraryId() != null)
             .collect(
                 Collectors.toMap(
@@ -137,8 +142,8 @@ public class CqlLibraryReviewService {
   }
 
   /**
-   * Logs a review status change against the library instance (not the library set) history. When
-   * the "Mark as Ready" toggle is ON the status is READY_FOR_REVIEW; when OFF it is
+   * Logs a review status change against the library instance (not the library set) history. Each
+   * status logs its own event: READY_FOR_REVIEW, REVIEW_IN_PROGRESS, REVIEW_COMPLETE, or
    * NOT_READY_FOR_REVIEW. No additional info is recorded.
    *
    * @param libraryId the library instance id the event is logged against
@@ -149,10 +154,7 @@ public class CqlLibraryReviewService {
     if (status == null) {
       return;
     }
-    ActionType actionType =
-        ReviewStatus.READY_FOR_REVIEW.equals(status)
-            ? ActionType.READY_FOR_REVIEW
-            : ActionType.NOT_READY_FOR_REVIEW;
-    actionLogService.logAction(libraryId, actionType, username, LIBRARY_HISTORY_COLLECTION);
+    actionLogService.logAction(
+        libraryId, status.toActionType(), username, LIBRARY_HISTORY_COLLECTION);
   }
 }

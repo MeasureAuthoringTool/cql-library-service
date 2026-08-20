@@ -4,35 +4,33 @@ import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 import gov.cms.madie.cqllibraryservice.dto.*;
 import gov.cms.madie.cqllibraryservice.exceptions.*;
 import gov.cms.madie.cqllibraryservice.locks.CqlLibraryLock;
-import gov.cms.madie.cqllibraryservice.repositories.LibrarySetRepository;
+import gov.cms.madie.cqllibraryservice.models.ExternalLibrary;
+import gov.cms.madie.cqllibraryservice.repositories.CqlLibraryRepository;
+import gov.cms.madie.cqllibraryservice.repositories.CqlLibraryReviewRepository;
 import gov.cms.madie.cqllibraryservice.repositories.ExternalLibraryRepository;
+import gov.cms.madie.cqllibraryservice.repositories.LibrarySetRepository;
+import gov.cms.madie.cqllibraryservice.utils.LibraryUtils;
 import gov.cms.madie.models.access.AclOperation;
 import gov.cms.madie.models.access.AclSpecification;
 import gov.cms.madie.models.common.*;
-import gov.cms.madie.models.dto.LibraryUsage;
 import gov.cms.madie.models.dto.CqlLibraryDto;
+import gov.cms.madie.models.dto.LibraryUsage;
 import gov.cms.madie.models.dto.UserDetailsDto;
 import gov.cms.madie.models.library.CqlLibrary;
 import gov.cms.madie.models.library.CqlLibraryLockInfo;
 import gov.cms.madie.models.library.CqlLibraryReview;
-import gov.cms.madie.cqllibraryservice.models.ExternalLibrary;
-import gov.cms.madie.cqllibraryservice.repositories.CqlLibraryRepository;
-import gov.cms.madie.cqllibraryservice.repositories.CqlLibraryReviewRepository;
 import gov.cms.madie.models.library.LibrarySet;
 import gov.cms.madie.models.measure.ElmJson;
-
 import java.time.Instant;
 import java.util.*;
 import java.util.stream.Collectors;
-
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
-import org.apache.commons.collections4.CollectionUtils;
-import gov.cms.madie.cqllibraryservice.utils.LibraryUtils;
 
 @Slf4j
 @Service
@@ -137,7 +135,7 @@ public class CqlLibraryService {
    * Authorization is NOT enforced here; callers (e.g. {@code CqlLibraryReviewService}) must verify
    * access first.
    *
-   * @param statusByLibraryId map of library id to its review status (typically READY_FOR_REVIEW)
+   * @param statusByLibraryId map of library id to its review status
    * @return the enriched list of {@link LibraryListDTO} for the requested libraries
    */
   public List<LibraryListDTO> getReviewLibraries(Map<String, ReviewStatus> statusByLibraryId) {
@@ -167,8 +165,24 @@ public class CqlLibraryService {
         .createdAt(library.getCreatedAt())
         .lastModifiedAt(library.getLastModifiedAt())
         .librarySet(librarySet)
-        .reviewStatus(ReviewStatus.READY_FOR_REVIEW.equals(reviewStatus) ? "Ready" : "")
+        .reviewStatus(toReviewStatusDisplayName(reviewStatus))
         .build();
+  }
+
+  private String toReviewStatusDisplayName(ReviewStatus reviewStatus) {
+    if (reviewStatus == null) {
+      return "";
+    }
+    switch (reviewStatus) {
+      case READY_FOR_REVIEW:
+        return "Ready";
+      case IN_PROGRESS:
+        return "In Progress";
+      case COMPLETE:
+        return "Complete";
+      default:
+        return "";
+    }
   }
 
   private void enrichWithUserDetails(List<LibraryListDTO> libraries) {
