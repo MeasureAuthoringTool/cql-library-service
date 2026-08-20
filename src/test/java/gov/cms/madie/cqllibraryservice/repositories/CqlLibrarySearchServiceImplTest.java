@@ -1,14 +1,24 @@
 package gov.cms.madie.cqllibraryservice.repositories;
 
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.*;
+
 import gov.cms.madie.cqllibraryservice.dto.*;
+import gov.cms.madie.cqllibraryservice.locks.CqlLibraryLock;
+import gov.cms.madie.models.common.OwnershipType;
 import gov.cms.madie.models.library.CqlLibrary;
 import gov.cms.madie.models.library.LibrarySet;
-import gov.cms.madie.models.common.OwnershipType;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+import java.util.stream.Collectors;
 import org.bson.Document;
-
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -18,19 +28,6 @@ import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.aggregation.Aggregation;
 import org.springframework.data.mongodb.core.aggregation.AggregationResults;
 import org.springframework.data.mongodb.repository.config.EnableMongoRepositories;
-
-import org.mockito.ArgumentCaptor;
-
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
-import java.util.stream.Collectors;
-
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.*;
-import gov.cms.madie.cqllibraryservice.locks.CqlLibraryLock;
 
 @ExtendWith(MockitoExtension.class)
 @EnableMongoRepositories(basePackages = "com.gov.madie.measure.repository")
@@ -157,9 +154,13 @@ public class CqlLibrarySearchServiceImplTest {
     assertTrue(pipelines.contains("cqlLibraryReview"));
     assertTrue(pipelines.contains("libraryId"));
     assertTrue(pipelines.contains("toString"));
-    // Derives the "Ready" label via $cond on READY_FOR_REVIEW
+    // Derives the display label via $switch, one case per in-review status
     assertTrue(pipelines.contains("READY_FOR_REVIEW"));
     assertTrue(pipelines.contains("Ready"));
+    assertTrue(pipelines.contains("IN_PROGRESS"));
+    assertTrue(pipelines.contains("In Progress"));
+    assertTrue(pipelines.contains("COMPLETE"));
+    assertTrue(pipelines.contains("Complete"));
     assertTrue(pipelines.contains("reviewStatus"));
   }
 

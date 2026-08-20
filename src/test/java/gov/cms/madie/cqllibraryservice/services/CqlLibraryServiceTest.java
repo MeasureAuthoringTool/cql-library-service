@@ -1,6 +1,5 @@
 package gov.cms.madie.cqllibraryservice.services;
 
-import gov.cms.madie.models.dto.CqlLibraryDto;
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.notNullValue;
@@ -9,25 +8,32 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
+import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
+import gov.cms.madie.cqllibraryservice.dto.LibraryListDTO;
 import gov.cms.madie.cqllibraryservice.dto.LibrarySearchCriteria;
 import gov.cms.madie.cqllibraryservice.dto.LibrarySetDTO;
-import gov.cms.madie.cqllibraryservice.dto.LibraryListDTO;
+import gov.cms.madie.cqllibraryservice.dto.LockInfo;
 import gov.cms.madie.cqllibraryservice.dto.SharedUser;
 import gov.cms.madie.cqllibraryservice.exceptions.*;
 import gov.cms.madie.cqllibraryservice.locks.CqlLibraryLock;
-import gov.cms.madie.cqllibraryservice.repositories.LibrarySetRepository;
-import gov.cms.madie.models.access.AclSpecification;
-import gov.cms.madie.models.common.*;
-import gov.cms.madie.models.dto.LibraryUsage;
-import gov.cms.madie.models.dto.UserDetailsDto;
-import gov.cms.madie.models.library.CqlLibrary;
-import gov.cms.madie.models.library.CqlLibraryReview;
 import gov.cms.madie.cqllibraryservice.models.ExternalLibrary;
 import gov.cms.madie.cqllibraryservice.repositories.CqlLibraryRepository;
 import gov.cms.madie.cqllibraryservice.repositories.CqlLibraryReviewRepository;
 import gov.cms.madie.cqllibraryservice.repositories.ExternalLibraryRepository;
+import gov.cms.madie.cqllibraryservice.repositories.LibrarySetRepository;
+import gov.cms.madie.models.access.AclSpecification;
+import gov.cms.madie.models.common.*;
+import gov.cms.madie.models.dto.CqlLibraryDto;
+import gov.cms.madie.models.dto.LibraryUsage;
+import gov.cms.madie.models.dto.UserDetailsDto;
+import gov.cms.madie.models.library.CqlLibrary;
+import gov.cms.madie.models.library.CqlLibraryReview;
 import gov.cms.madie.models.library.LibrarySet;
 import gov.cms.madie.models.measure.ElmJson;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
+import java.util.*;
+import java.util.stream.Collectors;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -37,16 +43,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
-
-import java.time.Instant;
-import java.time.temporal.ChronoUnit;
-import java.util.*;
-
-import gov.cms.madie.cqllibraryservice.dto.LockInfo;
 import org.springframework.data.domain.Pageable;
 import org.springframework.test.util.ReflectionTestUtils;
-
-import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 
 @ExtendWith(MockitoExtension.class)
 class CqlLibraryServiceTest {
@@ -859,7 +857,9 @@ class CqlLibraryServiceTest {
         ex.getMessage(),
         is(
             equalTo(
-                "Response could not be completed because the HARP id of owner1 passed in does not match the owner of the library with the library id of libraryId. The owner of the library is owner2")));
+                "Response could not be completed because the HARP id of owner1 passed in does not"
+                    + " match the owner of the library with the library id of libraryId. The owner"
+                    + " of the library is owner2")));
 
     verify(cqlLibraryRepository, times(0)).deleteAll(List.of(cqlLibrary));
   }
@@ -2109,6 +2109,34 @@ class CqlLibraryServiceTest {
     assertEquals("Ready", dto.getReviewStatus());
     assertEquals(librarySet, dto.getLibrarySet());
     assertEquals("Jane Doe", dto.getOwnerDisplayName());
+  }
+
+  @Test
+  public void testGetReviewLibrariesLabelsEveryInReviewStatus() {
+    Map<String, ReviewStatus> statusByLibraryId =
+        Map.of(
+            "lib-1", ReviewStatus.READY_FOR_REVIEW,
+            "lib-2", ReviewStatus.IN_PROGRESS,
+            "lib-3", ReviewStatus.COMPLETE);
+
+    LibrarySet librarySet = new LibrarySet();
+    librarySet.setOwner("owner-1");
+    List<CqlLibrary> libraries =
+        List.of(
+            CqlLibrary.builder().id("lib-1").librarySetId("set-1").cqlLibraryName("Lib1").build(),
+            CqlLibrary.builder().id("lib-2").librarySetId("set-1").cqlLibraryName("Lib2").build(),
+            CqlLibrary.builder().id("lib-3").librarySetId("set-1").cqlLibraryName("Lib3").build());
+    when(cqlLibraryRepository.findByIdIn(anySet())).thenReturn(libraries);
+    when(librarySetService.findByLibrarySetId("set-1")).thenReturn(librarySet);
+    when(userServiceClient.getBulkUserDetails(anyList())).thenReturn(Map.of());
+
+    Map<String, String> statusById =
+        cqlLibraryService.getReviewLibraries(statusByLibraryId).stream()
+            .collect(Collectors.toMap(LibraryListDTO::getId, LibraryListDTO::getReviewStatus));
+
+    assertEquals("Ready", statusById.get("lib-1"));
+    assertEquals("In Progress", statusById.get("lib-2"));
+    assertEquals("Complete", statusById.get("lib-3"));
   }
 
   @Test

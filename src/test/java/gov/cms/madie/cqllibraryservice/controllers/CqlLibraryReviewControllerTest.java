@@ -117,20 +117,20 @@ class CqlLibraryReviewControllerTest {
   }
 
   @Test
-  void getAllReadyForReviewReturnsListOfLibraries() {
+  void getLibrariesInReviewReturnsListOfLibraries() {
     when(principal.getName()).thenReturn("test.user");
     LibraryListDTO library =
         LibraryListDTO.builder().id("lib-1").librarySetId("set-1").reviewStatus("Ready").build();
-    when(cqlLibraryReviewService.getAllReadyForReview(anyString(), anyString()))
+    when(cqlLibraryReviewService.getLibrariesInReview(anyString(), anyString()))
         .thenReturn(List.of(library));
 
     ResponseEntity<List<LibraryListDTO>> response =
-        controller.getAllReadyForReview(principal, "Bearer token");
+        controller.getLibrariesInReview(principal, "Bearer token");
 
     assertNotNull(response);
     assertEquals(HttpStatus.OK, response.getStatusCode());
     assertEquals(1, response.getBody().size());
     assertEquals("lib-1", response.getBody().get(0).getId());
-    verify(cqlLibraryReviewService).getAllReadyForReview("test.user", "Bearer token");
+    verify(cqlLibraryReviewService).getLibrariesInReview("test.user", "Bearer token");
   }
 }

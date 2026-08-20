@@ -56,10 +56,10 @@ public class CqlLibraryReviewController {
   }
 
   @GetMapping("/reviews")
-  public ResponseEntity<List<LibraryListDTO>> getAllReadyForReview(
+  public ResponseEntity<List<LibraryListDTO>> getLibrariesInReview(
       Principal principal, @RequestHeader("Authorization") String accessToken) {
     final String username = principal.getName().toLowerCase();
-    log.info("User [{}] is fetching all libraries marked as ready for review", username);
-    return ResponseEntity.ok(cqlLibraryReviewService.getAllReadyForReview(username, accessToken));
+    log.info("User [{}] is fetching all libraries under review", username);
+    return ResponseEntity.ok(cqlLibraryReviewService.getLibrariesInReview(username, accessToken));
   }
 }
