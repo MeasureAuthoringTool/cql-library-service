@@ -154,7 +154,6 @@ public class CqlLibrarySearchServiceImplTest {
     assertTrue(pipelines.contains("cqlLibraryReview"));
     assertTrue(pipelines.contains("libraryId"));
     assertTrue(pipelines.contains("toString"));
-    // Derives the display label via $switch, one case per in-review status
     assertTrue(pipelines.contains("READY_FOR_REVIEW"));
     assertTrue(pipelines.contains("Ready"));
     assertTrue(pipelines.contains("IN_PROGRESS"));

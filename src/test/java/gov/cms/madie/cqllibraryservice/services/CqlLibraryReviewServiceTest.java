@@ -225,7 +225,6 @@ class CqlLibraryReviewServiceTest {
             .librarySetId("set-1")
             .status(ReviewStatus.COMPLETE)
             .build();
-    // The manage review dialog can save reviewers/comment without touching the status.
     CqlLibraryReview update =
         CqlLibraryReview.builder().comment("assigned").reviewers(List.of("jane", "john")).build();
 
@@ -338,7 +337,6 @@ class CqlLibraryReviewServiceTest {
     Map<String, ReviewStatus> statusByLibraryId = mapCaptor.getValue();
     assertEquals(3, statusByLibraryId.size());
     assertEquals(ReviewStatus.READY_FOR_REVIEW, statusByLibraryId.get("lib-1"));
-    // in progress and complete libraries stay on the reviews list, same as measures
     assertEquals(ReviewStatus.IN_PROGRESS, statusByLibraryId.get("lib-2"));
     assertEquals(ReviewStatus.COMPLETE, statusByLibraryId.get("lib-3"));
   }

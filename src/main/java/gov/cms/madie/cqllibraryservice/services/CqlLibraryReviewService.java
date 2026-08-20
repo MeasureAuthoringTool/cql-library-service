@@ -20,7 +20,6 @@ public class CqlLibraryReviewService {
 
   private static final String LIBRARY_HISTORY_COLLECTION = "actionLog";
 
-  // The statuses that put a library on the "All Reviews" tab
   private static final List<ReviewStatus> IN_REVIEW_STATUSES =
       List.of(ReviewStatus.READY_FOR_REVIEW, ReviewStatus.IN_PROGRESS, ReviewStatus.COMPLETE);
 
