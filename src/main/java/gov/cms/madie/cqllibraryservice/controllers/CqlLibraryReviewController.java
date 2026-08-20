@@ -2,6 +2,7 @@ package gov.cms.madie.cqllibraryservice.controllers;
 
 import gov.cms.madie.cqllibraryservice.dto.LibraryListDTO;
 import gov.cms.madie.cqllibraryservice.services.CqlLibraryReviewService;
+import gov.cms.madie.models.common.OwnershipType;
 import gov.cms.madie.models.library.CqlLibraryReview;
 import java.security.Principal;
 import java.util.List;
@@ -9,14 +10,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestHeader;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 @Slf4j
 @RestController
@@ -57,9 +51,13 @@ public class CqlLibraryReviewController {
 
   @GetMapping("/reviews")
   public ResponseEntity<List<LibraryListDTO>> getAllReadyForReview(
-      Principal principal, @RequestHeader("Authorization") String accessToken) {
+      Principal principal,
+      @RequestHeader("Authorization") String accessToken,
+      @RequestParam(required = false, defaultValue = "ALL", name = "ownershipType")
+          OwnershipType ownershipType) {
     final String username = principal.getName().toLowerCase();
     log.info("User [{}] is fetching all libraries marked as ready for review", username);
-    return ResponseEntity.ok(cqlLibraryReviewService.getAllReadyForReview(username, accessToken));
+    return ResponseEntity.ok(
+        cqlLibraryReviewService.getAllReadyForReview(username, accessToken, ownershipType));
   }
 }

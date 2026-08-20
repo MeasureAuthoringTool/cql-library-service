@@ -17,6 +17,7 @@ import gov.cms.madie.cqllibraryservice.exceptions.PermissionDeniedException;
 import gov.cms.madie.cqllibraryservice.exceptions.ResourceNotFoundException;
 import gov.cms.madie.cqllibraryservice.repositories.CqlLibraryReviewRepository;
 import gov.cms.madie.models.common.ActionType;
+import gov.cms.madie.models.common.OwnershipType;
 import gov.cms.madie.models.common.ReviewStatus;
 import gov.cms.madie.models.library.CqlLibraryReview;
 import java.util.List;
@@ -60,6 +61,7 @@ class CqlLibraryReviewServiceTest {
             .librarySetId("set-1")
             .status(ReviewStatus.READY_FOR_REVIEW)
             .comment("Looks good")
+            .reviewers(List.of(USERNAME))
             .build();
   }
 
@@ -271,7 +273,7 @@ class CqlLibraryReviewServiceTest {
     when(cqlLibraryService.getReviewLibraries(mapCaptor.capture())).thenReturn(List.of(dto));
 
     List<LibraryListDTO> results =
-        cqlLibraryReviewService.getAllReadyForReview(USERNAME, ACCESS_TOKEN);
+        cqlLibraryReviewService.getAllReadyForReview(USERNAME, ACCESS_TOKEN, OwnershipType.ALL);
 
     assertEquals(1, results.size());
     assertEquals("lib-1", results.get(0).getId());
@@ -292,10 +294,45 @@ class CqlLibraryReviewServiceTest {
 
     assertThrows(
         PermissionDeniedException.class,
-        () -> cqlLibraryReviewService.getAllReadyForReview(USERNAME, ACCESS_TOKEN));
+        () ->
+            cqlLibraryReviewService.getAllReadyForReview(
+                USERNAME, ACCESS_TOKEN, OwnershipType.ALL));
 
     // no review data is read and nothing is delegated when access is denied
     verify(cqlLibraryReviewRepository, never()).findAllByStatus(any());
     verify(cqlLibraryService, never()).getReviewLibraries(any());
+  }
+
+  @Test
+  void getAllReadyForReviewForOwnedReviews() {
+    CqlLibraryReview other =
+        CqlLibraryReview.builder()
+            .id("review-2")
+            .libraryId("lib-2")
+            .librarySetId("set-2")
+            .status(ReviewStatus.READY_FOR_REVIEW)
+            .reviewers(List.of(USERNAME))
+            .build();
+    when(cqlLibraryReviewRepository.findAllByStatusAndReviewersContaining(
+            ReviewStatus.READY_FOR_REVIEW, USERNAME))
+        .thenReturn(List.of(review, other));
+
+    LibraryListDTO dto =
+        LibraryListDTO.builder().id("lib-1").librarySetId("set-1").reviewStatus("Ready").build();
+    ArgumentCaptor<Map<String, ReviewStatus>> mapCaptor = ArgumentCaptor.forClass(Map.class);
+    when(cqlLibraryService.getReviewLibraries(mapCaptor.capture())).thenReturn(List.of(dto));
+
+    List<LibraryListDTO> results =
+        cqlLibraryReviewService.getAllReadyForReview(USERNAME, ACCESS_TOKEN, OwnershipType.OWNED);
+
+    assertEquals(1, results.size());
+    assertEquals("lib-1", results.get(0).getId());
+    // reviewer access is enforced before any data is gathered
+    verify(cqlLibraryAccessControlService, times(1)).verifyReviewerAccess(USERNAME, ACCESS_TOKEN);
+    // review documents are collapsed into an id -> status map for the library service
+    Map<String, ReviewStatus> statusByLibraryId = mapCaptor.getValue();
+    assertEquals(2, statusByLibraryId.size());
+    assertEquals(ReviewStatus.READY_FOR_REVIEW, statusByLibraryId.get("lib-1"));
+    assertEquals(ReviewStatus.READY_FOR_REVIEW, statusByLibraryId.get("lib-2"));
   }
 }
