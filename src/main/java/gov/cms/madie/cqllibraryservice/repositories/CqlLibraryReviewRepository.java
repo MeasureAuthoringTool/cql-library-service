@@ -18,7 +18,7 @@ public interface CqlLibraryReviewRepository extends MongoRepository<CqlLibraryRe
   List<CqlLibraryReview> findAllByStatusIn(Collection<ReviewStatus> statuses);
 
   List<CqlLibraryReview> findAllByStatusInAndReviewersContaining(
-          Collection<ReviewStatus> statuses, String reviewer);
+      Collection<ReviewStatus> statuses, String reviewer);
 
   boolean existsByLibraryId(String libraryId);
 }

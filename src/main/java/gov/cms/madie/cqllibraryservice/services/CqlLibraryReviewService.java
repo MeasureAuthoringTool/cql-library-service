@@ -4,7 +4,6 @@ import gov.cms.madie.cqllibraryservice.dto.LibraryListDTO;
 import gov.cms.madie.cqllibraryservice.exceptions.GeneralConflictException;
 import gov.cms.madie.cqllibraryservice.exceptions.ResourceNotFoundException;
 import gov.cms.madie.cqllibraryservice.repositories.CqlLibraryReviewRepository;
-import gov.cms.madie.models.common.ActionType;
 import gov.cms.madie.models.common.OwnershipType;
 import gov.cms.madie.models.common.ReviewStatus;
 import gov.cms.madie.models.library.CqlLibraryReview;
@@ -26,6 +25,8 @@ public class CqlLibraryReviewService {
 
   private static final List<ReviewStatus> IN_REVIEW_STATUSES =
       List.of(ReviewStatus.READY_FOR_REVIEW, ReviewStatus.IN_PROGRESS, ReviewStatus.COMPLETE);
+  private static final List<ReviewStatus> MY_REVIEW_STATUSES =
+      List.of(ReviewStatus.READY_FOR_REVIEW, ReviewStatus.IN_PROGRESS);
 
   private final CqlLibraryReviewRepository cqlLibraryReviewRepository;
   private final ActionLogService actionLogService;
@@ -138,7 +139,7 @@ public class CqlLibraryReviewService {
     if (ownershipType.equals(OwnershipType.OWNED)) {
       statusByLibraryId =
           cqlLibraryReviewRepository
-              .findAllByStatusInAndReviewersContaining(IN_REVIEW_STATUSES, username)
+              .findAllByStatusInAndReviewersContaining(MY_REVIEW_STATUSES, username)
               .stream()
               .filter(review -> review.getLibraryId() != null)
               .collect(

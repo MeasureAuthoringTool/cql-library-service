@@ -371,8 +371,7 @@ class CqlLibraryReviewServiceTest {
             .reviewers(List.of(USERNAME))
             .build();
     when(cqlLibraryReviewRepository.findAllByStatusInAndReviewersContaining(
-            List.of(
-                    ReviewStatus.READY_FOR_REVIEW, ReviewStatus.IN_PROGRESS, ReviewStatus.COMPLETE), USERNAME))
+            List.of(ReviewStatus.READY_FOR_REVIEW, ReviewStatus.IN_PROGRESS), USERNAME))
         .thenReturn(List.of(review, other));
 
     LibraryListDTO dto =
