@@ -50,14 +50,14 @@ public class CqlLibraryReviewController {
   }
 
   @GetMapping("/reviews")
-  public ResponseEntity<List<LibraryListDTO>> getAllReadyForReview(
+  public ResponseEntity<List<LibraryListDTO>> getLibrariesInReview(
       Principal principal,
       @RequestHeader("Authorization") String accessToken,
       @RequestParam(required = false, defaultValue = "ALL", name = "ownershipType")
           OwnershipType ownershipType) {
     final String username = principal.getName().toLowerCase();
-    log.info("User [{}] is fetching all libraries marked as ready for review", username);
+    log.info("User [{}] is fetching all libraries under review", username);
     return ResponseEntity.ok(
-        cqlLibraryReviewService.getAllReadyForReview(username, accessToken, ownershipType));
+        cqlLibraryReviewService.getLibrariesInReview(username, accessToken, ownershipType));
   }
 }
