@@ -138,7 +138,7 @@ public class CqlLibraryReviewService {
     if (ownershipType.equals(OwnershipType.OWNED)) {
       statusByLibraryId =
           cqlLibraryReviewRepository
-              .findAllByStatusAndReviewersContaining(ReviewStatus.READY_FOR_REVIEW, username)
+              .findAllByStatusInAndReviewersContaining(IN_REVIEW_STATUSES, username)
               .stream()
               .filter(review -> review.getLibraryId() != null)
               .collect(

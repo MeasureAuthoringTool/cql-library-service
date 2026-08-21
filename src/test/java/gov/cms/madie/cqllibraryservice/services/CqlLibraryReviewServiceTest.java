@@ -370,8 +370,9 @@ class CqlLibraryReviewServiceTest {
             .status(ReviewStatus.READY_FOR_REVIEW)
             .reviewers(List.of(USERNAME))
             .build();
-    when(cqlLibraryReviewRepository.findAllByStatusAndReviewersContaining(
-            ReviewStatus.READY_FOR_REVIEW, USERNAME))
+    when(cqlLibraryReviewRepository.findAllByStatusInAndReviewersContaining(
+            List.of(
+                    ReviewStatus.READY_FOR_REVIEW, ReviewStatus.IN_PROGRESS, ReviewStatus.COMPLETE), USERNAME))
         .thenReturn(List.of(review, other));
 
     LibraryListDTO dto =
@@ -380,7 +381,7 @@ class CqlLibraryReviewServiceTest {
     when(cqlLibraryService.getReviewLibraries(mapCaptor.capture())).thenReturn(List.of(dto));
 
     List<LibraryListDTO> results =
-        cqlLibraryReviewService.getAllReadyForReview(USERNAME, ACCESS_TOKEN, OwnershipType.OWNED);
+        cqlLibraryReviewService.getLibrariesInReview(USERNAME, ACCESS_TOKEN, OwnershipType.OWNED);
 
     assertEquals(1, results.size());
     assertEquals("lib-1", results.get(0).getId());
