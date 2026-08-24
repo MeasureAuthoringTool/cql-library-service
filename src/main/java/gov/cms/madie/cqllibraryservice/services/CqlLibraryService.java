@@ -606,16 +606,20 @@ public class CqlLibraryService {
     if (CollectionUtils.isEmpty(libraries)) {
       return;
     }
-    Set<String> readyForReviewLibraryIds =
+
+    Map<String, ReviewStatus> statusByLibraryId =
         cqlLibraryReviewRepository.findAllByLibrarySetId(librarySetId).stream()
-            .filter(review -> ReviewStatus.READY_FOR_REVIEW.equals(review.getStatus()))
-            .map(CqlLibraryReview::getLibraryId)
-            .filter(Objects::nonNull)
-            .collect(Collectors.toSet());
+            .filter(review -> review.getLibraryId() != null && review.getStatus() != null)
+            .collect(
+                Collectors.toMap(
+                    CqlLibraryReview::getLibraryId,
+                    CqlLibraryReview::getStatus,
+                    (existing, duplicate) -> existing));
+
     libraries.forEach(
         library ->
             library.setReviewStatus(
-                readyForReviewLibraryIds.contains(library.getId()) ? "Ready" : ""));
+                toReviewStatusDisplayName(statusByLibraryId.get(library.getId()))));
   }
 
   public boolean hasAssociatedLibraries(LibraryListDTO library) {
