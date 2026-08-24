@@ -392,4 +392,67 @@ class CqlLibraryReviewServiceTest {
     assertEquals(ReviewStatus.READY_FOR_REVIEW, statusByLibraryId.get("lib-1"));
     assertEquals(ReviewStatus.READY_FOR_REVIEW, statusByLibraryId.get("lib-2"));
   }
+
+  @Test
+  void getLibrariesInReviewFiltersOutNullLibraryIds() {
+    CqlLibraryReview missingLibraryId =
+        CqlLibraryReview.builder()
+            .id("review-missing")
+            .librarySetId("set-1")
+            .status(ReviewStatus.IN_PROGRESS)
+            .build();
+    CqlLibraryReview valid =
+        CqlLibraryReview.builder()
+            .id("review-2")
+            .libraryId("lib-2")
+            .librarySetId("set-2")
+            .status(ReviewStatus.IN_PROGRESS)
+            .build();
+
+    when(cqlLibraryReviewRepository.findAllByStatusIn(
+            List.of(
+                ReviewStatus.READY_FOR_REVIEW, ReviewStatus.IN_PROGRESS, ReviewStatus.COMPLETE)))
+        .thenReturn(List.of(missingLibraryId, valid));
+
+    ArgumentCaptor<Map<String, ReviewStatus>> mapCaptor = ArgumentCaptor.forClass(Map.class);
+    when(cqlLibraryService.getReviewLibraries(mapCaptor.capture()))
+        .thenReturn(List.of(new LibraryListDTO()));
+
+    cqlLibraryReviewService.getLibrariesInReview(USERNAME, ACCESS_TOKEN, OwnershipType.ALL);
+
+    Map<String, ReviewStatus> statusByLibraryId = mapCaptor.getValue();
+    assertEquals(1, statusByLibraryId.size());
+    assertEquals(ReviewStatus.IN_PROGRESS, statusByLibraryId.get("lib-2"));
+  }
+
+  @Test
+  void getLibrariesInReviewPreservesFirstStatusWhenDuplicateLibraryIdsExist() {
+    CqlLibraryReview first =
+        CqlLibraryReview.builder()
+            .id("review-1")
+            .libraryId("lib-dup")
+            .librarySetId("set-1")
+            .status(ReviewStatus.READY_FOR_REVIEW)
+            .build();
+    CqlLibraryReview duplicate =
+        CqlLibraryReview.builder()
+            .id("review-2")
+            .libraryId("lib-dup")
+            .librarySetId("set-2")
+            .status(ReviewStatus.COMPLETE)
+            .build();
+
+    when(cqlLibraryReviewRepository.findAllByStatusIn(
+            List.of(
+                ReviewStatus.READY_FOR_REVIEW, ReviewStatus.IN_PROGRESS, ReviewStatus.COMPLETE)))
+        .thenReturn(List.of(first, duplicate));
+
+    ArgumentCaptor<Map<String, ReviewStatus>> mapCaptor = ArgumentCaptor.forClass(Map.class);
+    when(cqlLibraryService.getReviewLibraries(mapCaptor.capture()))
+        .thenReturn(List.of(new LibraryListDTO()));
+
+    cqlLibraryReviewService.getLibrariesInReview(USERNAME, ACCESS_TOKEN, OwnershipType.ALL);
+
+    assertEquals(ReviewStatus.READY_FOR_REVIEW, mapCaptor.getValue().get("lib-dup"));
+  }
 }
