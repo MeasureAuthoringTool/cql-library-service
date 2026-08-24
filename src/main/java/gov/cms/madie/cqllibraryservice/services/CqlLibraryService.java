@@ -276,7 +276,6 @@ public class CqlLibraryService {
       throw new BadRequestObjectException(
           "Only one of namespaceCanonical and namespacePrefix may be provided.");
     }
-    log.info("fetchElm: {}", fetchElm);
     ResolvedCqlLibrary resolvedLibrary =
         resolveVersionedCqlLibrary(name, version, model, namespaceCanonical, namespacePrefix);
     if (fetchElm) {
