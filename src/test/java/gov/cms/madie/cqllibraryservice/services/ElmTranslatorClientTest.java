@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import gov.cms.madie.cqllibraryservice.config.EnvironmentConfig;
@@ -20,6 +21,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpEntity;
@@ -28,6 +30,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.web.util.UriComponentsBuilder;
 
 @ExtendWith(MockitoExtension.class)
 class ElmTranslatorClientTest {
@@ -70,6 +73,34 @@ class ElmTranslatorClientTest {
         elmTranslatorClient.getElmJson(
             "TEST_CQL", ModelType.QI_CORE.getValue(), "TEST_TOKEN", "Error");
     assertThat(output, is(equalTo(elmJson)));
+  }
+
+  @Test
+  void testRestTemplatePassesNamespaceCanonical() {
+    // given
+    String namespaceCanonical = "http://hl7.org/fhir/us/qicore";
+    ElmJson elmJson = ElmJson.builder().json("{}").xml("<></>").build();
+    when(restTemplate.exchange(
+            any(URI.class), eq(HttpMethod.PUT), any(HttpEntity.class), eq(ElmJson.class)))
+        .thenReturn(ResponseEntity.ok(elmJson));
+
+    // when
+    ElmJson output =
+        elmTranslatorClient.getElmJson(
+            "TEST_CQL", ModelType.QI_CORE.getValue(), "TEST_TOKEN", "Error", namespaceCanonical);
+
+    // then
+    ArgumentCaptor<URI> uriCaptor = ArgumentCaptor.forClass(URI.class);
+    verify(restTemplate)
+        .exchange(
+            uriCaptor.capture(), eq(HttpMethod.PUT), any(HttpEntity.class), eq(ElmJson.class));
+    assertThat(output, is(equalTo(elmJson)));
+    assertThat(
+        UriComponentsBuilder.fromUri(uriCaptor.getValue())
+            .build()
+            .getQueryParams()
+            .getFirst("namespaceCanonical"),
+        is(equalTo(namespaceCanonical)));
   }
 
   @Test
