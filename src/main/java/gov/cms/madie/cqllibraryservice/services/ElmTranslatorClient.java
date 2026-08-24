@@ -30,6 +30,15 @@ public class ElmTranslatorClient {
 
   public ElmJson getElmJson(
       final String cql, String libraryModel, String accessToken, String errorSeverity) {
+    return getElmJson(cql, libraryModel, accessToken, errorSeverity, null);
+  }
+
+  public ElmJson getElmJson(
+      final String cql,
+      String libraryModel,
+      String accessToken,
+      String errorSeverity,
+      String namespaceCanonical) {
     try {
       URI uri = getCqlElmTranslationServiceUri(libraryModel);
       HttpHeaders headers = new HttpHeaders();
@@ -38,6 +47,9 @@ public class ElmTranslatorClient {
 
       UriComponentsBuilder uriBuilder =
           UriComponentsBuilder.fromUri(uri).queryParam("errorSeverity", errorSeverity);
+      if (StringUtils.isNotBlank(namespaceCanonical)) {
+        uriBuilder.queryParam("namespaceCanonical", namespaceCanonical);
+      }
 
       HttpEntity<String> cqlEntity = new HttpEntity<>(cql, headers);
       return elmTranslatorRestTemplate
