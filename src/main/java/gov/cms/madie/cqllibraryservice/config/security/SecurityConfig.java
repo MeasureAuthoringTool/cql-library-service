@@ -11,7 +11,7 @@ import org.springframework.security.config.annotation.web.configuration.EnableWe
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
 
-import java.util.List;
+import java.util.Set;
 
 @Configuration
 @EnableWebSecurity
@@ -19,6 +19,8 @@ import java.util.List;
 public class SecurityConfig {
 
   private static final String[] AUTH_WHITELIST = {"/actuator/**"};
+  private static final Set<String> API_KEY_SECURED_PATHS =
+      Set.of("/cql-libraries/cql", "/cql-libraries/namespaces");
 
   private final String apiKeyHeader;
   private final String apiKeyValue;
@@ -52,7 +54,7 @@ public class SecurityConfig {
                     jwt -> jwt.jwtAuthenticationConverter(roleConverter)))
         // It must run after OAuth2 processing handles the Okta token
         .addFilterAfter(
-            new ApiKeyFilter(apiKeyHeader, apiKeyValue, List.of("/cql-libraries/cql")),
+            new ApiKeyFilter(apiKeyHeader, apiKeyValue, API_KEY_SECURED_PATHS),
             org.springframework.security.oauth2.server.resource.web.authentication
                 .BearerTokenAuthenticationFilter.class)
         .headers(

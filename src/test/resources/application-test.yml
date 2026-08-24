@@ -8,4 +8,5 @@ spring:
 
 madie:
   security:
-    system-api-key: ${MADIE_SYSTEM_API_KEY:a1b2-c3d4-e5f6}
+    system-api-key: ${MADIE_SYSTEM_API_KEY:test value}
+    api-key-header: custom-header

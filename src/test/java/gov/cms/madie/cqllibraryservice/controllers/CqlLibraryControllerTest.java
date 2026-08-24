@@ -1,5 +1,6 @@
 package gov.cms.madie.cqllibraryservice.controllers;
 
+import gov.cms.madie.models.dto.CqlLibraryDto;
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.notNullValue;
@@ -15,7 +16,6 @@ import gov.cms.madie.cqllibraryservice.dto.CqlFileComparisonDTO;
 import gov.cms.madie.cqllibraryservice.dto.LibraryListDTO;
 import gov.cms.madie.cqllibraryservice.dto.LibrarySearchCriteria;
 import gov.cms.madie.cqllibraryservice.dto.MadieFeatureFlag;
-import gov.cms.madie.cqllibraryservice.dto.NamespaceDTO;
 import gov.cms.madie.cqllibraryservice.exceptions.BadRequestObjectException;
 import gov.cms.madie.cqllibraryservice.exceptions.InvalidIdException;
 import gov.cms.madie.cqllibraryservice.exceptions.PermissionDeniedException;
@@ -57,8 +57,6 @@ class CqlLibraryControllerTest {
   @Mock private CqlDifferentiatorService cqlDifferentiatorService;
 
   @Mock private AppConfigService appConfigService;
-
-  @Mock private NamespaceService namespaceService;
 
   @Mock Principal principal;
 
@@ -408,22 +406,6 @@ class CqlLibraryControllerTest {
   }
 
   @Test
-  public void testGetAllNamespaces() {
-    List<NamespaceDTO> mockedResponse =
-        List.of(
-            NamespaceDTO.builder()
-                .namespaceCanonical("http://hl7.org/fhir/us/qicore")
-                .namespacePrefix("hl7.fhir.us.qicore")
-                .build());
-    when(namespaceService.getAllNamespaces()).thenReturn(mockedResponse);
-
-    ResponseEntity<List<NamespaceDTO>> response = cqlLibraryController.getAllNamespaces();
-
-    assertEquals(HttpStatus.OK, response.getStatusCode());
-    assertEquals(mockedResponse, response.getBody());
-  }
-
-  @Test
   public void testGetCqlLibraryThrowsExceptionForNotFound() {
     Principal principal = mock(Principal.class);
     when(principal.getName()).thenReturn("test.user");
@@ -663,26 +645,43 @@ class CqlLibraryControllerTest {
   @Test
   public void testGetLibraryCql() {
     when(cqlLibraryService.getVersionedCqlLibrary(
-            anyString(), any(), any(), anyBoolean(), anyString(), any()))
-        .thenReturn(CqlLibrary.builder().cql("Test Cql").build());
-    String cql = cqlLibraryController.getLibraryCql("TestCqlLibrary", "1.0.000", Optional.empty());
+            anyString(), any(), any(), any(), any(), anyBoolean(), anyString(), any()))
+        .thenReturn(CqlLibraryDto.builder().cql("Test Cql").build());
+    String cql =
+        cqlLibraryController.getLibraryCql(
+            "TestCqlLibrary", "1.0.000", Optional.empty(), Optional.empty());
 
     verify(cqlLibraryService, times(1))
-        .getVersionedCqlLibrary(anyString(), any(), any(), anyBoolean(), anyString(), any());
+        .getVersionedCqlLibrary(
+            anyString(), any(), any(), any(), any(), anyBoolean(), anyString(), any());
     assertEquals("Test Cql", cql);
   }
 
   @Test
   public void testGetVersionedCqlLibrary() {
     when(cqlLibraryService.getVersionedCqlLibrary(
-            anyString(), any(), any(), anyBoolean(), anyString(), any()))
-        .thenReturn(CqlLibrary.builder().build());
-    ResponseEntity<CqlLibrary> versionedCqlLibrary =
+            anyString(), any(), any(), any(), any(), anyBoolean(), anyString(), any()))
+        .thenReturn(CqlLibraryDto.builder().build());
+    ResponseEntity<CqlLibraryDto> versionedCqlLibrary =
         cqlLibraryController.getVersionedCqlLibrary(
-            "TestCqlLibrary", "1.0.000", Optional.empty(), true, "Info", "test-token");
+            "TestCqlLibrary",
+            "1.0.000",
+            Optional.empty(),
+            Optional.of("hl7.fhir.us.qicore"),
+            true,
+            "Info",
+            "test-token");
 
     verify(cqlLibraryService, times(1))
-        .getVersionedCqlLibrary(anyString(), any(), any(), anyBoolean(), anyString(), any());
+        .getVersionedCqlLibrary(
+            "TestCqlLibrary",
+            "1.0.000",
+            Optional.empty(),
+            Optional.empty(),
+            Optional.of("hl7.fhir.us.qicore"),
+            true,
+            "Info",
+            "test-token");
     assertEquals(HttpStatus.OK, versionedCqlLibrary.getStatusCode());
   }
 

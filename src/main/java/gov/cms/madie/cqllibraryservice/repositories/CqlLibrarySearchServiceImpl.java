@@ -1,9 +1,20 @@
 package gov.cms.madie.cqllibraryservice.repositories;
 
+import static gov.cms.madie.cqllibraryservice.utils.SearchUtils.appendAdditionalSearchCriteria;
+import static org.springframework.data.mongodb.core.aggregation.Aggregation.*;
+import static org.springframework.data.mongodb.core.aggregation.Aggregation.project;
+
 import gov.cms.madie.cqllibraryservice.dto.*;
 import gov.cms.madie.models.access.RoleEnum;
 import gov.cms.madie.models.common.OwnershipType;
+import gov.cms.madie.models.common.ReviewStatus;
 import gov.cms.madie.models.library.CqlLibrary;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
@@ -11,20 +22,9 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.aggregation.*;
+import org.springframework.data.mongodb.core.aggregation.ArrayOperators;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.stereotype.Repository;
-
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-import java.util.function.Function;
-import java.util.stream.Collectors;
-
-import static gov.cms.madie.cqllibraryservice.utils.SearchUtils.appendAdditionalSearchCriteria;
-import static org.springframework.data.mongodb.core.aggregation.Aggregation.*;
-import static org.springframework.data.mongodb.core.aggregation.Aggregation.project;
-import org.springframework.data.mongodb.core.aggregation.ArrayOperators;
 
 @Repository
 public class CqlLibrarySearchServiceImpl implements CqlLibrarySearchService {
@@ -88,17 +88,25 @@ public class CqlLibrarySearchServiceImpl implements CqlLibrarySearchService {
         addFields()
             .addFieldWithValue(
                 "reviewStatus",
-                ConditionalOperators.when(
-                        ComparisonOperators.Eq.valueOf(
-                                ArrayOperators.ArrayElemAt.arrayOf("$review.status").elementAt(0))
-                            .equalToValue("READY_FOR_REVIEW"))
-                    .then("Ready")
-                    .otherwise(""))
+                ConditionalOperators.switchCases(
+                        reviewStatusCase(ReviewStatus.READY_FOR_REVIEW, "Ready"),
+                        reviewStatusCase(ReviewStatus.IN_PROGRESS, "In Progress"),
+                        reviewStatusCase(ReviewStatus.COMPLETE, "Complete"))
+                    .defaultTo(""))
             .build();
     stages.add(addLibraryIdStringOperation);
     stages.add(reviewLookupOperation);
     stages.add(reviewStatusOperation);
     return stages;
+  }
+
+  private ConditionalOperators.Switch.CaseOperator reviewStatusCase(
+      ReviewStatus status, String displayName) {
+    return ConditionalOperators.Switch.CaseOperator.when(
+            ComparisonOperators.Eq.valueOf(
+                    ArrayOperators.ArrayElemAt.arrayOf("$review.status").elementAt(0))
+                .equalToValue(status.name()))
+        .then(displayName);
   }
 
   private boolean isReviewSearch(LibrarySearchCriteria librarySearchCriteria) {

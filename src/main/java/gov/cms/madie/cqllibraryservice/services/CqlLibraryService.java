@@ -4,33 +4,33 @@ import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 import gov.cms.madie.cqllibraryservice.dto.*;
 import gov.cms.madie.cqllibraryservice.exceptions.*;
 import gov.cms.madie.cqllibraryservice.locks.CqlLibraryLock;
+import gov.cms.madie.cqllibraryservice.models.ExternalLibrary;
+import gov.cms.madie.cqllibraryservice.repositories.CqlLibraryRepository;
+import gov.cms.madie.cqllibraryservice.repositories.CqlLibraryReviewRepository;
+import gov.cms.madie.cqllibraryservice.repositories.ExternalLibraryRepository;
 import gov.cms.madie.cqllibraryservice.repositories.LibrarySetRepository;
+import gov.cms.madie.cqllibraryservice.utils.LibraryUtils;
 import gov.cms.madie.models.access.AclOperation;
 import gov.cms.madie.models.access.AclSpecification;
-import gov.cms.madie.models.access.RoleEnum;
 import gov.cms.madie.models.common.*;
+import gov.cms.madie.models.dto.CqlLibraryDto;
 import gov.cms.madie.models.dto.LibraryUsage;
 import gov.cms.madie.models.dto.UserDetailsDto;
 import gov.cms.madie.models.library.CqlLibrary;
 import gov.cms.madie.models.library.CqlLibraryLockInfo;
 import gov.cms.madie.models.library.CqlLibraryReview;
-import gov.cms.madie.cqllibraryservice.repositories.CqlLibraryRepository;
-import gov.cms.madie.cqllibraryservice.repositories.CqlLibraryReviewRepository;
 import gov.cms.madie.models.library.LibrarySet;
 import gov.cms.madie.models.measure.ElmJson;
-
 import java.time.Instant;
 import java.util.*;
 import java.util.stream.Collectors;
-
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
-import org.apache.commons.collections4.CollectionUtils;
-import gov.cms.madie.cqllibraryservice.utils.LibraryUtils;
 
 @Slf4j
 @Service
@@ -48,6 +48,8 @@ public class CqlLibraryService {
   private final UserServiceClient userServiceClient;
   private final CqlLibraryAccessControlService cqlLibraryAccessControlService;
   private final CqlLibraryReviewRepository cqlLibraryReviewRepository;
+  private final ExternalLibraryRepository externalLibraryRepository;
+  private final LibrarySharingService librarySharingService;
 
   public CqlLibrary updateCqlLibrary(CqlLibrary cqlLibrary, String username) {
     if (cqlLibrary == null || StringUtils.isBlank(cqlLibrary.getId())) {
@@ -133,7 +135,7 @@ public class CqlLibraryService {
    * Authorization is NOT enforced here; callers (e.g. {@code CqlLibraryReviewService}) must verify
    * access first.
    *
-   * @param statusByLibraryId map of library id to its review status (typically READY_FOR_REVIEW)
+   * @param statusByLibraryId map of library id to its review status
    * @return the enriched list of {@link LibraryListDTO} for the requested libraries
    */
   public List<LibraryListDTO> getReviewLibraries(Map<String, ReviewStatus> statusByLibraryId) {
@@ -163,8 +165,24 @@ public class CqlLibraryService {
         .createdAt(library.getCreatedAt())
         .lastModifiedAt(library.getLastModifiedAt())
         .librarySet(librarySet)
-        .reviewStatus(ReviewStatus.READY_FOR_REVIEW.equals(reviewStatus) ? "Ready" : "")
+        .reviewStatus(toReviewStatusDisplayName(reviewStatus))
         .build();
+  }
+
+  private String toReviewStatusDisplayName(ReviewStatus reviewStatus) {
+    if (reviewStatus == null) {
+      return "";
+    }
+    switch (reviewStatus) {
+      case READY_FOR_REVIEW:
+        return "Ready";
+      case IN_PROGRESS:
+        return "In Progress";
+      case COMPLETE:
+        return "Complete";
+      default:
+        return "";
+    }
   }
 
   private void enrichWithUserDetails(List<LibraryListDTO> libraries) {
@@ -244,13 +262,46 @@ public class CqlLibraryService {
     return !Objects.equals(persistedCqlLibrary.getCqlLibraryName(), cqlLibrary.getCqlLibraryName());
   }
 
-  public CqlLibrary getVersionedCqlLibrary(
+  public CqlLibraryDto getVersionedCqlLibrary(
       String name,
       String version,
       Optional<String> model,
+      Optional<String> namespaceCanonical,
+      Optional<String> namespacePrefix,
       boolean fetchElm,
       String elmErrorSeverity,
       final String accessToken) {
+    if (namespaceCanonical.filter(StringUtils::isNotBlank).isPresent()
+        && namespacePrefix.filter(StringUtils::isNotBlank).isPresent()) {
+      throw new BadRequestObjectException(
+          "Only one of namespaceCanonical and namespacePrefix may be provided.");
+    }
+    log.info("fetchElm: {}", fetchElm);
+    CqlLibraryDto cqlLibrary =
+        resolveVersionedCqlLibrary(name, version, model, namespaceCanonical, namespacePrefix);
+    if (fetchElm) {
+      addElm(cqlLibrary, elmErrorSeverity, accessToken);
+    }
+    return cqlLibrary;
+  }
+
+  private CqlLibraryDto resolveVersionedCqlLibrary(
+      String name,
+      String version,
+      Optional<String> model,
+      Optional<String> namespaceCanonical,
+      Optional<String> namespacePrefix) {
+    if (namespaceCanonical.isPresent() && StringUtils.isNotBlank(namespaceCanonical.get())) {
+      return mapExternalLibrary(
+          getExternalLibraryByCanonical(namespaceCanonical.get(), name, version));
+    }
+    if (namespacePrefix.isPresent() && StringUtils.isNotBlank(namespacePrefix.get())) {
+      return mapExternalLibrary(getExternalLibraryByPrefix(namespacePrefix.get(), name, version));
+    }
+    return resolveMadieLibrary(name, version, model);
+  }
+
+  private CqlLibraryDto resolveMadieLibrary(String name, String version, Optional<String> model) {
     List<CqlLibrary> libs =
         model.isPresent()
             ? cqlLibraryRepository.findAllByCqlLibraryNameAndDraftAndVersionAndModel(
@@ -266,29 +317,98 @@ public class CqlLibraryService {
           "Multiple versioned libraries were found. "
               + "Please provide additional filters "
               + "to narrow down the results to a single library.");
-    } else {
-      CqlLibrary cqlLibrary = libs.get(0);
-      if (fetchElm) {
-        final ElmJson elmJson =
-            elmTranslatorClient.getElmJson(
-                cqlLibrary.getCql(), cqlLibrary.getModel(), accessToken, elmErrorSeverity);
-        if (elmTranslatorClient.hasErrors(elmJson)) {
-          log.error("CQL-ELM translator found errors in the CQL for library [{}]!", name);
-          throw new CqlElmTranslationErrorException(cqlLibrary.getCqlLibraryName());
-        }
-        cqlLibrary.setElmJson(elmJson.getJson());
-        cqlLibrary.setElmXml(elmJson.getXml());
-      }
-      LibrarySet librarySet = librarySetService.findByLibrarySetId(cqlLibrary.getLibrarySetId());
-      cqlLibrary.setLibrarySet(librarySet);
-
-      if (librarySet != null && StringUtils.isNotBlank(librarySet.getOwner())) {
-        UserDetailsDto details = userServiceClient.getSingleUserDetails(librarySet.getOwner());
-        cqlLibrary.setOwnerDisplayName(resolveOwnerDisplayName(details, librarySet.getOwner()));
-      }
-
-      return cqlLibrary;
     }
+
+    CqlLibrary cqlLibrary = libs.get(0);
+    LibrarySet librarySet = librarySetService.findByLibrarySetId(cqlLibrary.getLibrarySetId());
+    cqlLibrary.setLibrarySet(librarySet);
+    if (librarySet != null && StringUtils.isNotBlank(librarySet.getOwner())) {
+      UserDetailsDto details = userServiceClient.getSingleUserDetails(librarySet.getOwner());
+      cqlLibrary.setOwnerDisplayName(resolveOwnerDisplayName(details, librarySet.getOwner()));
+    }
+    return mapMadieLibrary(cqlLibrary);
+  }
+
+  private CqlLibraryDto mapExternalLibrary(ExternalLibrary externalLibrary) {
+    return CqlLibraryDto.builder()
+        .id(externalLibrary.getId())
+        .cqlLibraryName(externalLibrary.getLibraryName())
+        .model(ModelType.FHIR_4_0_1.getValue())
+        .version(externalLibrary.getVersion())
+        .librarySetId(externalLibrary.getLibrarySetId())
+        .cql(externalLibrary.getCqlContent())
+        .publisher(externalLibrary.getPublisher())
+        .description(externalLibrary.getDescription())
+        .namespacePrefix(externalLibrary.getNamespacePrefix())
+        .fhirResource(externalLibrary.getFhirResource())
+        .draft(externalLibrary.isDraft())
+        .external(true)
+        .build();
+  }
+
+  private ExternalLibrary getExternalLibraryByCanonical(
+      String canonical, String name, String version) {
+    return externalLibraryRepository
+        .findByPackageCanonicalAndLibraryNameAndVersion(canonical, name, version)
+        .orElseThrow(
+            () -> {
+              log.error(
+                  "Could not find Library with canonical: [{}], name: [{}], version: [{}]",
+                  canonical,
+                  name,
+                  version);
+              return new ResourceNotFoundException(
+                  "Library", "name", name + " in namespace canonical " + canonical);
+            });
+  }
+
+  private ExternalLibrary getExternalLibraryByPrefix(String prefix, String name, String version) {
+    return externalLibraryRepository
+        .findByNamespacePrefixAndLibraryNameAndVersion(prefix, name, version)
+        .orElseThrow(
+            () -> {
+              log.error(
+                  "Could not find Library with namespace prefix: [{}], name: [{}], version: [{}]",
+                  prefix,
+                  name,
+                  version);
+              return new ResourceNotFoundException(
+                  "Library", "name", name + " in namespace prefix" + prefix);
+            });
+  }
+
+  private void addElm(CqlLibraryDto cqlLibrary, String elmErrorSeverity, String accessToken) {
+    ElmJson elmJson =
+        elmTranslatorClient.getElmJson(
+            cqlLibrary.getCql(), cqlLibrary.getModel(), accessToken, elmErrorSeverity);
+    if (elmTranslatorClient.hasErrors(elmJson)) {
+      log.error(
+          "CQL-ELM translator found errors in the CQL for library [{}]!",
+          cqlLibrary.getCqlLibraryName());
+      throw new CqlElmTranslationErrorException(cqlLibrary.getCqlLibraryName());
+    }
+    cqlLibrary.setElmJson(elmJson.getJson());
+    cqlLibrary.setElmXml(elmJson.getXml());
+  }
+
+  private CqlLibraryDto mapMadieLibrary(CqlLibrary cqlLibrary) {
+    return CqlLibraryDto.builder()
+        .id(cqlLibrary.getId())
+        .cqlLibraryName(cqlLibrary.getCqlLibraryName())
+        .model(cqlLibrary.getModel())
+        .version(cqlLibrary.getVersion().toString())
+        .cql(cqlLibrary.getCql())
+        .elmJson(cqlLibrary.getElmJson())
+        .elmXml(cqlLibrary.getElmXml())
+        .publisher(cqlLibrary.getPublisher())
+        .description(cqlLibrary.getDescription())
+        .experimental(cqlLibrary.isExperimental())
+        .draft(cqlLibrary.isDraft())
+        .ownerDisplayName(cqlLibrary.getOwnerDisplayName())
+        .librarySetId(cqlLibrary.getLibrarySetId())
+        .librarySet(cqlLibrary.getLibrarySet())
+        .external(false)
+        .build();
   }
 
   public CqlLibrary findCqlLibraryById(String id, String username) {
@@ -319,29 +439,14 @@ public class CqlLibraryService {
       String performedBy,
       boolean isAdminRole,
       String accessToken) {
-    Optional<CqlLibrary> persistedLibrary = cqlLibraryRepository.findById(cqlLibraryId);
-    if (persistedLibrary.isEmpty()) {
-      throw new ResourceNotFoundException("Library does not exist: " + cqlLibraryId);
-    }
-
-    if (AclOperation.AclAction.GRANT.equals(aclOperation.getAction())) {
-      aclOperation
-          .getAcls()
-          .forEach(
-              acl -> cqlLibraryAccessControlService.validateHarpId(acl.getUserId(), accessToken));
-    }
-
-    CqlLibrary library = persistedLibrary.get();
-    LibrarySet librarySet =
-        librarySetService.updateLibrarySetAcls(
-            library.getLibrarySetId(), aclOperation, performedBy, isAdminRole);
-    return librarySet.getAcls();
+    return librarySharingService.updateAccessControlList(
+        cqlLibraryId, aclOperation, performedBy, isAdminRole, accessToken);
   }
 
   public CqlLibrary deleteDraftLibrary(final String id, final String userId, String accessToken) {
     enforceLocking(id, userId);
     CqlLibrary cqlLibrary = findCqlLibraryById(id, userId);
-    Boolean hasAdminRole = cqlLibraryAccessControlService.hasAdminRole(userId, accessToken);
+    boolean hasAdminRole = cqlLibraryAccessControlService.hasAdminRole(userId, accessToken);
     if (!hasAdminRole && !userId.equalsIgnoreCase(cqlLibrary.getLibrarySet().getOwner())) {
       throw new PermissionDeniedException("CQL Library", cqlLibrary.getId(), userId);
     }
@@ -395,7 +500,6 @@ public class CqlLibraryService {
           "Library is being used actively, hence can not be deleted.");
     }
     List<CqlLibrary> libraries = cqlLibraryRepository.findAllByCqlLibraryName(name);
-
     for (CqlLibrary cqlLibrary : libraries) {
       LibrarySet librarySet = librarySetService.findByLibrarySetId(cqlLibrary.getLibrarySetId());
 
@@ -522,148 +626,17 @@ public class CqlLibraryService {
 
   public Map<String, List<SharedUser>> getSharedLibraries(
       List<String> libraryIds, String username) {
-    Map<String, List<SharedUser>> sharedLibraries = new HashMap<>();
-
-    for (String libraryId : libraryIds) {
-      CqlLibrary library = findCqlLibraryById(libraryId, username);
-
-      if (library.getLibrarySet() == null) {
-        throw new ResourceNotFoundException(
-            "Library set does not exist for library with ID : " + libraryId);
-      }
-      if (library.getLibrarySet().getAcls() == null) {
-        sharedLibraries.put(libraryId, Collections.emptyList());
-      } else {
-        List<String> userIds =
-            library.getLibrarySet().getAcls().stream()
-                .filter(
-                    aclSpecification -> aclSpecification.getRoles().contains(RoleEnum.SHARED_WITH))
-                .map(AclSpecification::getUserId)
-                .toList();
-        LibrarySetActionLog librarySetActionLog =
-            actionLogService.findLibrarySetActionLogByTargetId(library.getLibrarySetId());
-
-        if (librarySetActionLog != null) {
-          Collections.reverse(librarySetActionLog.getActions());
-          List<AccessControlAction> shareActions =
-              librarySetActionLog.getActions().stream()
-                  .filter(action -> action.getActionType().equals(ActionType.SHARED))
-                  .toList();
-          List<SharedUser> sharedUsers =
-              userIds.stream()
-                  .map(
-                      userId -> {
-                        SharedUser sharedUser = SharedUser.builder().userId(userId).build();
-                        Optional<AccessControlAction> latestShareActionByUserId =
-                            shareActions.stream()
-                                .filter(action -> action.getSharedWith().equals(userId))
-                                .findFirst();
-                        latestShareActionByUserId.ifPresent(
-                            action -> sharedUser.setPerformedAt(action.getPerformedAt()));
-
-                        return sharedUser;
-                      })
-                  .toList();
-          sharedLibraries.put(libraryId, sharedUsers);
-        } else {
-          sharedLibraries.put(
-              libraryId,
-              userIds.stream().map(userId -> SharedUser.builder().userId(userId).build()).toList());
-        }
-      }
-    }
-    List<String> userIds =
-        sharedLibraries.values().stream()
-            .flatMap(List::stream)
-            .map(SharedUser::getUserId)
-            .distinct()
-            .toList();
-
-    Map<String, UserDetailsDto> userDetailsMap = userServiceClient.getBulkUserDetails(userIds);
-
-    sharedLibraries.values().stream()
-        .flatMap(List::stream)
-        .forEach(
-            sharedUser ->
-                sharedUser.setDisplayName(
-                    librarySetService.formatDisplayName(userDetailsMap, sharedUser.getUserId())));
-
-    return sharedLibraries;
+    return librarySharingService.getSharedLibraries(libraryIds, username);
   }
 
   public Map<String, List<AclSpecification>> shareLibraries(
       Map<String, List<String>> libraryUserIdMap, String performedBy, String accessToken) {
-    log.info(
-        "User [{}] has called shareLibraries with libraryUserIdMap [{}]",
-        performedBy,
-        libraryUserIdMap);
-
-    boolean isAdminRole = cqlLibraryAccessControlService.hasAdminRole(performedBy, accessToken);
-    verifyShareAuthorization(libraryUserIdMap, performedBy, true, isAdminRole);
-
-    return updateAccessControll(libraryUserIdMap, "Grant", performedBy, isAdminRole, accessToken);
+    return librarySharingService.shareLibraries(libraryUserIdMap, performedBy, accessToken);
   }
 
   public Map<String, List<AclSpecification>> unshareLibraries(
       Map<String, List<String>> libraryUserIdMap, String username, String accessToken) {
-    log.info(
-        "User [{}] has called unshareLibraries with libraryUserIdMap [{}]",
-        username,
-        libraryUserIdMap);
-
-    boolean isAdminRole = cqlLibraryAccessControlService.hasAdminRole(username, accessToken);
-    verifyShareAuthorization(libraryUserIdMap, username, false, isAdminRole);
-
-    return updateAccessControll(libraryUserIdMap, "Revoke", username, isAdminRole, accessToken);
-  }
-
-  private void verifyShareAuthorization(
-      Map<String, List<String>> libraryUserIdMap,
-      String username,
-      boolean ownerOnly,
-      boolean isAdminRole) {
-    log.info(
-        "User [{}] has called verifyShareAuthorization to determine whether operation with [{}]"
-            + " is allowed to be performed",
-        username,
-        libraryUserIdMap);
-
-    libraryUserIdMap
-        .keySet()
-        .forEach(
-            libraryId -> {
-              CqlLibrary library = findCqlLibraryById(libraryId, username);
-              cqlLibraryAccessControlService.verifyAuthorization(
-                  username,
-                  library,
-                  ownerOnly ? List.of() : List.of(RoleEnum.SHARED_WITH),
-                  isAdminRole);
-            });
-    log.info(
-        "User [{}] successfully called verifyShareAuthorization and determined that operation "
-            + "with [{}] is allowed to be performed",
-        username,
-        libraryUserIdMap);
-  }
-
-  private AclOperation buildAclOperation(List<String> userIds, String operation) {
-    AclOperation.AclAction aclOperationAction =
-        operation.equals("Grant") ? AclOperation.AclAction.GRANT : AclOperation.AclAction.REVOKE;
-    return AclOperation.builder()
-        .acls(buildShareAclSpecifications(userIds))
-        .action(aclOperationAction)
-        .build();
-  }
-
-  private List<AclSpecification> buildShareAclSpecifications(List<String> userIds) {
-    return userIds.stream()
-        .map(
-            userId ->
-                AclSpecification.builder()
-                    .userId(userId.toLowerCase())
-                    .roles(Set.of(RoleEnum.SHARED_WITH))
-                    .build())
-        .toList();
+    return librarySharingService.unshareLibraries(libraryUserIdMap, username, accessToken);
   }
 
   public List<String> transferLibraries(
@@ -714,31 +687,5 @@ public class CqlLibraryService {
         userName,
         cqlLibraryId);
     return cqlLibraryHistory;
-  }
-
-  private Map<String, List<AclSpecification>> updateAccessControll(
-      Map<String, List<String>> libraryUserIdMap,
-      String type,
-      String performedBy,
-      boolean isAdminRole,
-      String accessToken) {
-    Map<String, List<AclSpecification>> libraryIdToAclSpecification = new HashMap<>();
-    libraryUserIdMap.forEach(
-        (libraryId, userIds) -> {
-          AclOperation aclOperation = buildAclOperation(userIds, type);
-          libraryIdToAclSpecification.put(
-              libraryId,
-              updateAccessControlList(
-                  libraryId, aclOperation, performedBy, isAdminRole, accessToken));
-        });
-
-    log.info(
-        "User [{}] successfully called [{}] with libraryUserIdMap [{}]. The "
-            + "AclSpecification is now [{}]",
-        performedBy,
-        "Grant".equalsIgnoreCase(type) ? "shared library(s)" : "unshareLibraries",
-        libraryUserIdMap,
-        libraryIdToAclSpecification);
-    return libraryIdToAclSpecification;
   }
 }

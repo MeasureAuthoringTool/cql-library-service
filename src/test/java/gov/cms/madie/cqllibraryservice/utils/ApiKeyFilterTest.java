@@ -11,6 +11,7 @@ import org.springframework.mock.web.MockHttpServletResponse;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
@@ -25,7 +26,7 @@ class ApiKeyFilterTest {
   @Test
   void shouldNotFilterFalseWhenPathMatchesPattern() {
     // given - set up mocks
-    ApiKeyFilter filter = new ApiKeyFilter("api-key", "secret", List.of("/api/**"));
+    ApiKeyFilter filter = new ApiKeyFilter("api-key", "secret", Set.of("/api/**"));
     MockHttpServletRequest request = new MockHttpServletRequest();
     request.setServletPath("/api/libraries");
 
@@ -39,7 +40,7 @@ class ApiKeyFilterTest {
   @Test
   void shouldNotFilterTrueWhenPathDoesNotMatchPattern() {
     // given - set up mocks
-    ApiKeyFilter filter = new ApiKeyFilter("api-key", "secret", List.of("/api/**"));
+    ApiKeyFilter filter = new ApiKeyFilter("api-key", "secret", Set.of("/api/**"));
     MockHttpServletRequest request = new MockHttpServletRequest();
     request.setServletPath("/health");
 
@@ -68,7 +69,7 @@ class ApiKeyFilterTest {
   void doFilterInternalKeepsExistingAuthenticationWhenAlreadyAuthenticated()
       throws ServletException, IOException {
     // given - set up mocks
-    ApiKeyFilter filter = new ApiKeyFilter("api-key", "secret", List.of("/api/**"));
+    ApiKeyFilter filter = new ApiKeyFilter("api-key", "secret", Set.of("/api/**"));
     MockHttpServletRequest request = new MockHttpServletRequest();
     MockHttpServletResponse response = new MockHttpServletResponse();
     FilterChain filterChain = mock(FilterChain.class);
@@ -88,7 +89,7 @@ class ApiKeyFilterTest {
   void doFilterInternalSetsApiKeyAuthenticationWhenHeaderMatches()
       throws ServletException, IOException {
     // given - set up mocks
-    ApiKeyFilter filter = new ApiKeyFilter("api-key", "secret", List.of("/api/**"));
+    ApiKeyFilter filter = new ApiKeyFilter("api-key", "secret", Set.of("/api/**"));
     MockHttpServletRequest request = new MockHttpServletRequest();
     request.addHeader("api-key", "secret");
     MockHttpServletResponse response = new MockHttpServletResponse();
@@ -108,7 +109,7 @@ class ApiKeyFilterTest {
   void doFilterInternalDoesNotSetAuthenticationWhenHeaderIsMissing()
       throws ServletException, IOException {
     // given - set up mocks
-    ApiKeyFilter filter = new ApiKeyFilter("api-key", "secret", List.of("/api/**"));
+    ApiKeyFilter filter = new ApiKeyFilter("api-key", "secret", Set.of("/api/**"));
     MockHttpServletRequest request = new MockHttpServletRequest();
     MockHttpServletResponse response = new MockHttpServletResponse();
     FilterChain filterChain = mock(FilterChain.class);
@@ -125,7 +126,7 @@ class ApiKeyFilterTest {
   void doFilterInternalDoesNotSetAuthenticationWhenHeaderIsInvalid()
       throws ServletException, IOException {
     // given - set up mocks
-    ApiKeyFilter filter = new ApiKeyFilter("api-key", "secret", List.of("/api/**"));
+    ApiKeyFilter filter = new ApiKeyFilter("api-key", "secret", Set.of("/api/**"));
     MockHttpServletRequest request = new MockHttpServletRequest();
     request.addHeader("api-key", "wrong");
     MockHttpServletResponse response = new MockHttpServletResponse();

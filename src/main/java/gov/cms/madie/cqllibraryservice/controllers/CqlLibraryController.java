@@ -12,6 +12,7 @@ import gov.cms.madie.models.common.ActionType;
 import gov.cms.madie.models.common.ModelType;
 import gov.cms.madie.models.common.OwnershipType;
 import gov.cms.madie.models.dto.LibraryUsage;
+import gov.cms.madie.models.dto.CqlLibraryDto;
 import gov.cms.madie.models.library.CqlLibrary;
 import gov.cms.madie.models.library.CqlLibraryDraft;
 import gov.cms.madie.models.common.Version;
@@ -51,7 +52,6 @@ public class CqlLibraryController {
   private final CqlDifferentiatorService cqlDifferentiatorService;
   private final CqlLibraryLockService cqlLibraryLockService;
   private final AppConfigService appConfigService;
-  private final NamespaceService namespaceService;
 
   @PutMapping("/searches")
   public ResponseEntity<Page<LibraryListDTO>> fetchLibrariesByCriteria(
@@ -78,11 +78,6 @@ public class CqlLibraryController {
     return ResponseEntity.status(HttpStatus.OK).body(results);
   }
 
-  @GetMapping("/namespaces")
-  public ResponseEntity<List<NamespaceDTO>> getAllNamespaces() {
-    return ResponseEntity.ok(namespaceService.getAllNamespaces());
-  }
-
   @GetMapping("/{id}")
   public ResponseEntity<CqlLibrary> getCqlLibrary(
       @PathVariable("id") String id, Principal principal) {
@@ -91,16 +86,28 @@ public class CqlLibraryController {
   }
 
   @GetMapping("/versioned")
-  public ResponseEntity<CqlLibrary> getVersionedCqlLibrary(
+  public ResponseEntity<CqlLibraryDto> getVersionedCqlLibrary(
       @RequestParam String name,
       @RequestParam String version,
       @RequestParam Optional<String> model,
+      @RequestParam Optional<String> namespacePrefix,
       @RequestParam(defaultValue = "true") boolean includeElm,
       @RequestParam(defaultValue = "Info") String elmErrorSeverity,
       @RequestHeader("Authorization") String accessToken) {
+    log.info(
+        "Getting versioned library with namespace prefix: [{}]; library name: [{}]",
+        namespacePrefix.orElse("N/A"),
+        name);
     return ResponseEntity.ok(
         cqlLibraryService.getVersionedCqlLibrary(
-            name, version, model, includeElm, elmErrorSeverity, accessToken));
+            name,
+            version,
+            model,
+            Optional.empty(),
+            namespacePrefix,
+            includeElm,
+            elmErrorSeverity,
+            accessToken));
   }
 
   @GetMapping("/library-set/{setId}")
@@ -180,9 +187,11 @@ public class CqlLibraryController {
   public String getLibraryCql(
       @RequestParam String name,
       @RequestParam String version,
-      @RequestParam Optional<String> model) {
+      @RequestParam Optional<String> model,
+      @RequestParam Optional<String> namespaceCanonical) {
     return cqlLibraryService
-        .getVersionedCqlLibrary(name, version, model, false, "Info", null)
+        .getVersionedCqlLibrary(
+            name, version, model, namespaceCanonical, Optional.empty(), false, "Info", null)
         .getCql();
   }
 

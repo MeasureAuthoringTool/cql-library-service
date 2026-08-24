@@ -2,6 +2,7 @@ package gov.cms.madie.cqllibraryservice.repositories;
 
 import gov.cms.madie.models.common.ReviewStatus;
 import gov.cms.madie.models.library.CqlLibraryReview;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.data.mongodb.repository.MongoRepository;
@@ -14,7 +15,7 @@ public interface CqlLibraryReviewRepository extends MongoRepository<CqlLibraryRe
 
   List<CqlLibraryReview> findAllByLibrarySetId(String librarySetId);
 
-  List<CqlLibraryReview> findAllByStatus(ReviewStatus status);
+  List<CqlLibraryReview> findAllByStatusIn(Collection<ReviewStatus> statuses);
 
   boolean existsByLibraryId(String libraryId);
 }
