@@ -2086,7 +2086,14 @@ class CqlLibraryServiceTest {
 
   @Test
   public void testGetReviewLibrariesReturnsEnrichedList() {
-    Map<String, ReviewStatus> statusByLibraryId = Map.of("lib-1", ReviewStatus.READY_FOR_REVIEW);
+    Map<String, CqlLibraryReview> reviewByLibraryId =
+        Map.of(
+            "lib-1",
+            CqlLibraryReview.builder()
+                .libraryId("lib-1")
+                .status(ReviewStatus.READY_FOR_REVIEW)
+                .reviewers(List.of("reviewer-1", "reviewer-2"))
+                .build());
 
     LibrarySet librarySet = new LibrarySet();
     librarySet.setOwner("owner-1");
@@ -2104,10 +2111,19 @@ class CqlLibraryServiceTest {
     UserDetailsDto ownerDetails = new UserDetailsDto();
     ownerDetails.setFirstName("Jane");
     ownerDetails.setLastName("Doe");
+    UserDetailsDto reviewerOneDetails = new UserDetailsDto();
+    reviewerOneDetails.setFirstName("Alex");
+    reviewerOneDetails.setLastName("Smith");
+    UserDetailsDto reviewerTwoDetails = new UserDetailsDto();
+    reviewerTwoDetails.setFirstName("OnlyFirst");
     when(userServiceClient.getBulkUserDetails(anyList()))
-        .thenReturn(Map.of("owner-1", ownerDetails));
+        .thenReturn(
+            Map.of(
+                "owner-1", ownerDetails,
+                "reviewer-1", reviewerOneDetails,
+                "reviewer-2", reviewerTwoDetails));
 
-    List<LibraryListDTO> result = cqlLibraryService.getReviewLibraries(statusByLibraryId);
+    List<LibraryListDTO> result = cqlLibraryService.getReviewLibraries(reviewByLibraryId);
 
     assertNotNull(result);
     assertEquals(1, result.size());
@@ -2117,17 +2133,30 @@ class CqlLibraryServiceTest {
     assertEquals("QI-Core v4.1.1", dto.getModel());
     assertTrue(dto.isDraft());
     assertEquals("Ready", dto.getReviewStatus());
+    assertEquals(List.of("Alex Smith", "reviewer-2"), dto.getReviewers());
     assertEquals(librarySet, dto.getLibrarySet());
     assertEquals("Jane Doe", dto.getOwnerDisplayName());
   }
 
   @Test
   public void testGetReviewLibrariesLabelsEveryInReviewStatus() {
-    Map<String, ReviewStatus> statusByLibraryId =
+    Map<String, CqlLibraryReview> reviewByLibraryId =
         Map.of(
-            "lib-1", ReviewStatus.READY_FOR_REVIEW,
-            "lib-2", ReviewStatus.IN_PROGRESS,
-            "lib-3", ReviewStatus.COMPLETE);
+            "lib-1",
+                CqlLibraryReview.builder()
+                    .libraryId("lib-1")
+                    .status(ReviewStatus.READY_FOR_REVIEW)
+                    .build(),
+            "lib-2",
+                CqlLibraryReview.builder()
+                    .libraryId("lib-2")
+                    .status(ReviewStatus.IN_PROGRESS)
+                    .build(),
+            "lib-3",
+                CqlLibraryReview.builder()
+                    .libraryId("lib-3")
+                    .status(ReviewStatus.COMPLETE)
+                    .build());
 
     LibrarySet librarySet = new LibrarySet();
     librarySet.setOwner("owner-1");
@@ -2141,7 +2170,7 @@ class CqlLibraryServiceTest {
     when(userServiceClient.getBulkUserDetails(anyList())).thenReturn(Map.of());
 
     Map<String, String> statusById =
-        cqlLibraryService.getReviewLibraries(statusByLibraryId).stream()
+        cqlLibraryService.getReviewLibraries(reviewByLibraryId).stream()
             .collect(Collectors.toMap(LibraryListDTO::getId, LibraryListDTO::getReviewStatus));
 
     assertEquals("Ready", statusById.get("lib-1"));
