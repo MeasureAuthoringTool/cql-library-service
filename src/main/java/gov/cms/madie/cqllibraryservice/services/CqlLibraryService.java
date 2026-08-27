@@ -276,29 +276,37 @@ public class CqlLibraryService {
       throw new BadRequestObjectException(
           "Only one of namespaceCanonical and namespacePrefix may be provided.");
     }
-    log.info("fetchElm: {}", fetchElm);
-    CqlLibraryDto cqlLibrary =
+    ResolvedCqlLibrary resolvedLibrary =
         resolveVersionedCqlLibrary(name, version, model, namespaceCanonical, namespacePrefix);
     if (fetchElm) {
-      addElm(cqlLibrary, elmErrorSeverity, accessToken);
+      addElm(
+          resolvedLibrary.cqlLibrary(),
+          resolvedLibrary.namespaceCanonical(),
+          elmErrorSeverity,
+          accessToken);
     }
-    return cqlLibrary;
+    return resolvedLibrary.cqlLibrary();
   }
 
-  private CqlLibraryDto resolveVersionedCqlLibrary(
+  private ResolvedCqlLibrary resolveVersionedCqlLibrary(
       String name,
       String version,
       Optional<String> model,
       Optional<String> namespaceCanonical,
       Optional<String> namespacePrefix) {
     if (namespaceCanonical.isPresent() && StringUtils.isNotBlank(namespaceCanonical.get())) {
-      return mapExternalLibrary(
-          getExternalLibraryByCanonical(namespaceCanonical.get(), name, version));
+      ExternalLibrary externalLibrary =
+          getExternalLibraryByCanonical(namespaceCanonical.get(), name, version);
+      return new ResolvedCqlLibrary(
+          mapExternalLibrary(externalLibrary), externalLibrary.getPackageCanonical());
     }
     if (namespacePrefix.isPresent() && StringUtils.isNotBlank(namespacePrefix.get())) {
-      return mapExternalLibrary(getExternalLibraryByPrefix(namespacePrefix.get(), name, version));
+      ExternalLibrary externalLibrary =
+          getExternalLibraryByPrefix(namespacePrefix.get(), name, version);
+      return new ResolvedCqlLibrary(
+          mapExternalLibrary(externalLibrary), externalLibrary.getPackageCanonical());
     }
-    return resolveMadieLibrary(name, version, model);
+    return new ResolvedCqlLibrary(resolveMadieLibrary(name, version, model), null);
   }
 
   private CqlLibraryDto resolveMadieLibrary(String name, String version, Optional<String> model) {
@@ -377,10 +385,25 @@ public class CqlLibraryService {
             });
   }
 
-  private void addElm(CqlLibraryDto cqlLibrary, String elmErrorSeverity, String accessToken) {
-    ElmJson elmJson =
-        elmTranslatorClient.getElmJson(
-            cqlLibrary.getCql(), cqlLibrary.getModel(), accessToken, elmErrorSeverity);
+  private void addElm(
+      CqlLibraryDto cqlLibrary,
+      String namespaceCanonical,
+      String elmErrorSeverity,
+      String accessToken) {
+    ElmJson elmJson;
+    if (StringUtils.isNotBlank(namespaceCanonical)) {
+      elmJson =
+          elmTranslatorClient.getElmJson(
+              cqlLibrary.getCql(),
+              cqlLibrary.getModel(),
+              accessToken,
+              elmErrorSeverity,
+              namespaceCanonical);
+    } else {
+      elmJson =
+          elmTranslatorClient.getElmJson(
+              cqlLibrary.getCql(), cqlLibrary.getModel(), accessToken, elmErrorSeverity);
+    }
     if (elmTranslatorClient.hasErrors(elmJson)) {
       log.error(
           "CQL-ELM translator found errors in the CQL for library [{}]!",
@@ -390,6 +413,8 @@ public class CqlLibraryService {
     cqlLibrary.setElmJson(elmJson.getJson());
     cqlLibrary.setElmXml(elmJson.getXml());
   }
+
+  private record ResolvedCqlLibrary(CqlLibraryDto cqlLibrary, String namespaceCanonical) {}
 
   private CqlLibraryDto mapMadieLibrary(CqlLibrary cqlLibrary) {
     return CqlLibraryDto.builder()
@@ -606,16 +631,20 @@ public class CqlLibraryService {
     if (CollectionUtils.isEmpty(libraries)) {
       return;
     }
-    Set<String> readyForReviewLibraryIds =
+
+    Map<String, ReviewStatus> statusByLibraryId =
         cqlLibraryReviewRepository.findAllByLibrarySetId(librarySetId).stream()
-            .filter(review -> ReviewStatus.READY_FOR_REVIEW.equals(review.getStatus()))
-            .map(CqlLibraryReview::getLibraryId)
-            .filter(Objects::nonNull)
-            .collect(Collectors.toSet());
+            .filter(review -> review.getLibraryId() != null && review.getStatus() != null)
+            .collect(
+                Collectors.toMap(
+                    CqlLibraryReview::getLibraryId,
+                    CqlLibraryReview::getStatus,
+                    (existing, duplicate) -> existing));
+
     libraries.forEach(
         library ->
             library.setReviewStatus(
-                readyForReviewLibraryIds.contains(library.getId()) ? "Ready" : ""));
+                toReviewStatusDisplayName(statusByLibraryId.get(library.getId()))));
   }
 
   public boolean hasAssociatedLibraries(LibraryListDTO library) {

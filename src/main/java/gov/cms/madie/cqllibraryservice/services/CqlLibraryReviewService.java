@@ -4,8 +4,11 @@ import gov.cms.madie.cqllibraryservice.dto.LibraryListDTO;
 import gov.cms.madie.cqllibraryservice.exceptions.GeneralConflictException;
 import gov.cms.madie.cqllibraryservice.exceptions.ResourceNotFoundException;
 import gov.cms.madie.cqllibraryservice.repositories.CqlLibraryReviewRepository;
+import gov.cms.madie.models.common.OwnershipType;
 import gov.cms.madie.models.common.ReviewStatus;
 import gov.cms.madie.models.library.CqlLibraryReview;
+
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -22,6 +25,8 @@ public class CqlLibraryReviewService {
 
   private static final List<ReviewStatus> IN_REVIEW_STATUSES =
       List.of(ReviewStatus.READY_FOR_REVIEW, ReviewStatus.IN_PROGRESS, ReviewStatus.COMPLETE);
+  private static final List<ReviewStatus> MY_REVIEW_STATUSES =
+      List.of(ReviewStatus.READY_FOR_REVIEW, ReviewStatus.IN_PROGRESS);
 
   private final CqlLibraryReviewRepository cqlLibraryReviewRepository;
   private final ActionLogService actionLogService;
@@ -126,17 +131,33 @@ public class CqlLibraryReviewService {
    * @param accessToken the bearer token used to verify the reviewer role
    * @return the list of libraries under review
    */
-  public List<LibraryListDTO> getLibrariesInReview(String username, String accessToken) {
+  public List<LibraryListDTO> getLibrariesInReview(
+      String username, String accessToken, OwnershipType ownershipType) {
     cqlLibraryAccessControlService.verifyReviewerAccess(username, accessToken);
 
-    Map<String, ReviewStatus> statusByLibraryId =
-        cqlLibraryReviewRepository.findAllByStatusIn(IN_REVIEW_STATUSES).stream()
-            .filter(review -> review.getLibraryId() != null)
-            .collect(
-                Collectors.toMap(
-                    CqlLibraryReview::getLibraryId,
-                    CqlLibraryReview::getStatus,
-                    (existing, duplicate) -> existing));
+    Map<String, ReviewStatus> statusByLibraryId = new HashMap<>();
+    if (ownershipType.equals(OwnershipType.OWNED)) {
+      statusByLibraryId =
+          cqlLibraryReviewRepository
+              .findAllByStatusInAndReviewersContaining(MY_REVIEW_STATUSES, username)
+              .stream()
+              .filter(review -> review.getLibraryId() != null)
+              .collect(
+                  Collectors.toMap(
+                      CqlLibraryReview::getLibraryId,
+                      CqlLibraryReview::getStatus,
+                      (existing, duplicate) -> existing));
+    } else {
+
+      statusByLibraryId =
+          cqlLibraryReviewRepository.findAllByStatusIn(IN_REVIEW_STATUSES).stream()
+              .filter(review -> review.getLibraryId() != null)
+              .collect(
+                  Collectors.toMap(
+                      CqlLibraryReview::getLibraryId,
+                      CqlLibraryReview::getStatus,
+                      (existing, duplicate) -> existing));
+    }
 
     return cqlLibraryService.getReviewLibraries(statusByLibraryId);
   }

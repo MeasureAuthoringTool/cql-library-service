@@ -314,10 +314,12 @@ class CqlLibraryServiceTest {
   @Test
   void testGetVersionedCqlLibraryByNamespacePrefixGeneratesElmWhenRequested() {
     // given - mocks
+    String namespaceCanonical = "http://hl7.org/fhir/us/qicore";
     ExternalLibrary externalLibrary =
         ExternalLibrary.builder()
             .libraryName("FHIRHelpers")
             .version("1.0.1")
+            .packageCanonical(namespaceCanonical)
             .namespacePrefix("hl7.fhir.us.qicore")
             .cqlContent("library FHIRHelpers version '1.0.1'")
             .fhirResource("{\"resourceType\":\"Library\"}")
@@ -327,7 +329,11 @@ class CqlLibraryServiceTest {
             "hl7.fhir.us.qicore", "FHIRHelpers", "1.0.1"))
         .thenReturn(Optional.of(externalLibrary));
     when(elmTranslatorClient.getElmJson(
-            externalLibrary.getCqlContent(), ModelType.FHIR_4_0_1.getValue(), "test-okta", "Info"))
+            externalLibrary.getCqlContent(),
+            ModelType.FHIR_4_0_1.getValue(),
+            "test-okta",
+            "Info",
+            namespaceCanonical))
         .thenReturn(elmJson);
     when(elmTranslatorClient.hasErrors(elmJson)).thenReturn(false);
 
@@ -349,7 +355,11 @@ class CqlLibraryServiceTest {
     assertEquals("{\"resourceType\":\"Library\"}", result.getFhirResource());
     verify(elmTranslatorClient)
         .getElmJson(
-            externalLibrary.getCqlContent(), ModelType.FHIR_4_0_1.getValue(), "test-okta", "Info");
+            externalLibrary.getCqlContent(),
+            ModelType.FHIR_4_0_1.getValue(),
+            "test-okta",
+            "Info",
+            namespaceCanonical);
   }
 
   @Test
