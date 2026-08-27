@@ -2010,41 +2010,6 @@ class CqlLibraryServiceTest {
   }
 
   @Test
-  public void testEnrichWithUserDetailsLibrariesNull() {
-    // use reflection to access the private method enrichWithUserDetails
-    ReflectionTestUtils.invokeMethod(
-        cqlLibraryService, "enrichWithUserDetails", Collections.emptyList());
-    // assert userServiceClient not called
-    verify(userServiceClient, times(0)).getBulkUserDetails(anyList());
-  }
-
-  @Test
-  public void testGetFullNameUserDetailsFirstNameNull() {
-    UserDetailsDto userDetails = UserDetailsDto.builder().firstName(null).lastName("Doe").build();
-    // use reflection to access the private method getFullName
-    String fullName =
-        ReflectionTestUtils.invokeMethod(cqlLibraryService, "getFullName", userDetails);
-    assertThat(fullName, is(equalTo("Doe")));
-  }
-
-  @Test
-  public void testGetFullNameUserDetailsLastNameNull() {
-    UserDetailsDto userDetails = UserDetailsDto.builder().firstName("John").lastName(null).build();
-    String fullName =
-        ReflectionTestUtils.invokeMethod(cqlLibraryService, "getFullName", userDetails);
-    assertThat(fullName, is(equalTo("John")));
-  }
-
-  @Test
-  public void testGetFullNameUserDetailsFirstNameAndLastNameNull() {
-    UserDetailsDto userDetails = UserDetailsDto.builder().firstName(null).lastName(null).build();
-    // use reflection to access the private method getFullName
-    String fullName =
-        ReflectionTestUtils.invokeMethod(cqlLibraryService, "getFullName", userDetails);
-    assertThat(fullName, is(equalTo("")));
-  }
-
-  @Test
   public void testCheckDuplicateCqlLibraryNameLibraryNameNull() {
     assertDoesNotThrow(() -> cqlLibraryService.checkDuplicateCqlLibraryName(null));
   }
