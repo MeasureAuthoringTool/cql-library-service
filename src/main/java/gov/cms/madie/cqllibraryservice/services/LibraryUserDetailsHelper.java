@@ -4,9 +4,11 @@ import gov.cms.madie.cqllibraryservice.dto.LibraryListDTO;
 import gov.cms.madie.models.dto.UserDetailsDto;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.stream.Collectors;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -37,16 +39,15 @@ final class LibraryUserDetailsHelper {
             .distinct()
             .collect(Collectors.toList());
 
-    List<String> userIds = new ArrayList<>(ownerIds);
-    userIds.addAll(reviewerIds);
-    List<String> distinctUserIds = userIds.stream().distinct().collect(Collectors.toList());
+    Set<String> distinctUserIds = new LinkedHashSet<>(ownerIds);
+    distinctUserIds.addAll(reviewerIds);
 
     if (distinctUserIds.isEmpty()) {
       return;
     }
 
     Map<String, UserDetailsDto> userDetailsMap =
-        userServiceClient.getBulkUserDetails(distinctUserIds);
+        userServiceClient.getBulkUserDetails(new ArrayList<>(distinctUserIds));
     final Map<String, UserDetailsDto> userDetailsById =
         userDetailsMap != null ? userDetailsMap : Collections.emptyMap();
 
