@@ -135,17 +135,22 @@ public class CqlLibraryService {
    * Authorization is NOT enforced here; callers (e.g. {@code CqlLibraryReviewService}) must verify
    * access first.
    *
-   * @param statusByLibraryId map of library id to its review status
+   * @param reviewByLibraryId map of library id to its review document
    * @return the enriched list of {@link LibraryListDTO} for the requested libraries
    */
-  public List<LibraryListDTO> getReviewLibraries(Map<String, ReviewStatus> statusByLibraryId) {
-    if (statusByLibraryId == null || statusByLibraryId.isEmpty()) {
+  public List<LibraryListDTO> getReviewLibraries(Map<String, CqlLibraryReview> reviewByLibraryId) {
+    if (reviewByLibraryId == null || reviewByLibraryId.isEmpty()) {
       return List.of();
     }
 
     List<LibraryListDTO> libraries =
-        cqlLibraryRepository.findByIdIn(statusByLibraryId.keySet()).stream()
-            .map(library -> toReviewLibraryListDTO(library, statusByLibraryId.get(library.getId())))
+        cqlLibraryRepository.findByIdIn(reviewByLibraryId.keySet()).stream()
+            .map(
+                library ->
+                    LibraryReviewDtoHelper.toReviewLibraryListDTO(
+                        library,
+                        reviewByLibraryId.get(library.getId()),
+                        librarySetService.findByLibrarySetId(library.getLibrarySetId())))
             .collect(Collectors.toList());
 
     enrichWithUserDetails(libraries);
@@ -153,102 +158,12 @@ public class CqlLibraryService {
     return libraries;
   }
 
-  private LibraryListDTO toReviewLibraryListDTO(CqlLibrary library, ReviewStatus reviewStatus) {
-    LibrarySet librarySet = librarySetService.findByLibrarySetId(library.getLibrarySetId());
-    return LibraryListDTO.builder()
-        .id(library.getId())
-        .librarySetId(library.getLibrarySetId())
-        .cqlLibraryName(library.getCqlLibraryName())
-        .model(library.getModel())
-        .version(library.getVersion())
-        .draft(library.isDraft())
-        .createdAt(library.getCreatedAt())
-        .lastModifiedAt(library.getLastModifiedAt())
-        .librarySet(librarySet)
-        .reviewStatus(toReviewStatusDisplayName(reviewStatus))
-        .build();
-  }
-
-  private String toReviewStatusDisplayName(ReviewStatus reviewStatus) {
-    if (reviewStatus == null) {
-      return "";
-    }
-    switch (reviewStatus) {
-      case READY_FOR_REVIEW:
-        return "Ready";
-      case IN_PROGRESS:
-        return "In Progress";
-      case COMPLETE:
-        return "Complete";
-      default:
-        return "";
-    }
-  }
-
   private void enrichWithUserDetails(List<LibraryListDTO> libraries) {
-    if (CollectionUtils.isEmpty(libraries)) {
-      return;
-    }
-
-    List<String> ownerIds =
-        libraries.stream()
-            .map(lib -> lib.getLibrarySet() != null ? lib.getLibrarySet().getOwner() : null)
-            .filter(Objects::nonNull)
-            .distinct()
-            .collect(Collectors.toList());
-
-    if (ownerIds.isEmpty()) {
-      return;
-    }
-
-    Map<String, UserDetailsDto> userDetailsMap = userServiceClient.getBulkUserDetails(ownerIds);
-
-    libraries.forEach(
-        library -> {
-          if (library.getLibrarySet() != null && library.getLibrarySet().getOwner() != null) {
-            String ownerId = library.getLibrarySet().getOwner();
-            UserDetailsDto userDetails = userDetailsMap.get(ownerId);
-            library.setOwnerDisplayName(resolveOwnerDisplayName(userDetails, ownerId));
-          }
-        });
-  }
-
-  /**
-   * Resolves an owner's display name with a consistent fallback chain: full/partial name when the
-   * user is found and named, otherwise the owner's HARP id, otherwise "-". A null {@code
-   * userDetails} means the user-service lookup failed (service error / not found), which falls
-   * through to "-".
-   *
-   * @param userDetails user details from the user service, or null if the lookup failed
-   * @param ownerId the owner's HARP id
-   * @return the resolved display name
-   */
-  private String resolveOwnerDisplayName(UserDetailsDto userDetails, String ownerId) {
-    if (userDetails == null) {
-      return "-";
-    }
-    String firstName = userDetails.getFirstName();
-    String lastName = userDetails.getLastName();
-
-    String displayName = "";
-
-    if (StringUtils.isNotBlank(firstName) && StringUtils.isNotBlank(lastName)) {
-      displayName = firstName + " " + lastName;
-    } else if (StringUtils.isNotBlank(firstName)) {
-      displayName = firstName;
-    } else if (StringUtils.isNotBlank(lastName)) {
-      displayName = lastName;
-    }
-
-    return StringUtils.isNotBlank(displayName)
-        ? displayName
-        : StringUtils.isNotBlank(ownerId) ? ownerId : "-";
+    LibraryUserDetailsHelper.enrichWithUserDetails(libraries, userServiceClient);
   }
 
   private String getFullName(UserDetailsDto userDetails) {
-    String firstName = userDetails.getFirstName() != null ? userDetails.getFirstName() : "";
-    String lastName = userDetails.getLastName() != null ? userDetails.getLastName() : "";
-    return (firstName + " " + lastName).trim();
+    return LibraryUserDetailsHelper.getFullName(userDetails);
   }
 
   public void checkDuplicateCqlLibraryName(String cqlLibraryName) {
@@ -332,7 +247,8 @@ public class CqlLibraryService {
     cqlLibrary.setLibrarySet(librarySet);
     if (librarySet != null && StringUtils.isNotBlank(librarySet.getOwner())) {
       UserDetailsDto details = userServiceClient.getSingleUserDetails(librarySet.getOwner());
-      cqlLibrary.setOwnerDisplayName(resolveOwnerDisplayName(details, librarySet.getOwner()));
+      cqlLibrary.setOwnerDisplayName(
+          LibraryUserDetailsHelper.resolveOwnerDisplayName(details, librarySet.getOwner()));
     }
     return mapMadieLibrary(cqlLibrary);
   }
@@ -641,10 +557,7 @@ public class CqlLibraryService {
                     CqlLibraryReview::getStatus,
                     (existing, duplicate) -> existing));
 
-    libraries.forEach(
-        library ->
-            library.setReviewStatus(
-                toReviewStatusDisplayName(statusByLibraryId.get(library.getId()))));
+    LibraryReviewDtoHelper.applyReviewStatus(libraries, statusByLibraryId);
   }
 
   public boolean hasAssociatedLibraries(LibraryListDTO library) {

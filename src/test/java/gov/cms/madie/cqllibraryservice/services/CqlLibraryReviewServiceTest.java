@@ -303,7 +303,7 @@ class CqlLibraryReviewServiceTest {
   }
 
   @Test
-  void getLibrariesInReviewVerifiesAccessAndDelegatesWithStatusMap() {
+  void getLibrariesInReviewVerifiesAccessAndDelegatesWithReviewMap() {
     CqlLibraryReview inProgress =
         CqlLibraryReview.builder()
             .id("review-2")
@@ -325,7 +325,7 @@ class CqlLibraryReviewServiceTest {
 
     LibraryListDTO dto =
         LibraryListDTO.builder().id("lib-1").librarySetId("set-1").reviewStatus("Ready").build();
-    ArgumentCaptor<Map<String, ReviewStatus>> mapCaptor = ArgumentCaptor.forClass(Map.class);
+    ArgumentCaptor<Map<String, CqlLibraryReview>> mapCaptor = ArgumentCaptor.forClass(Map.class);
     when(cqlLibraryService.getReviewLibraries(mapCaptor.capture())).thenReturn(List.of(dto));
 
     List<LibraryListDTO> results =
@@ -335,12 +335,12 @@ class CqlLibraryReviewServiceTest {
     assertEquals("lib-1", results.get(0).getId());
     // reviewer access is enforced before any data is gathered
     verify(cqlLibraryAccessControlService, times(1)).verifyReviewerAccess(USERNAME, ACCESS_TOKEN);
-    // review documents are collapsed into an id -> status map for the library service
-    Map<String, ReviewStatus> statusByLibraryId = mapCaptor.getValue();
-    assertEquals(3, statusByLibraryId.size());
-    assertEquals(ReviewStatus.READY_FOR_REVIEW, statusByLibraryId.get("lib-1"));
-    assertEquals(ReviewStatus.IN_PROGRESS, statusByLibraryId.get("lib-2"));
-    assertEquals(ReviewStatus.COMPLETE, statusByLibraryId.get("lib-3"));
+    // review documents are collapsed into an id -> review map for the library service
+    Map<String, CqlLibraryReview> reviewByLibraryId = mapCaptor.getValue();
+    assertEquals(3, reviewByLibraryId.size());
+    assertEquals(ReviewStatus.READY_FOR_REVIEW, reviewByLibraryId.get("lib-1").getStatus());
+    assertEquals(ReviewStatus.IN_PROGRESS, reviewByLibraryId.get("lib-2").getStatus());
+    assertEquals(ReviewStatus.COMPLETE, reviewByLibraryId.get("lib-3").getStatus());
   }
 
   @Test
@@ -376,7 +376,7 @@ class CqlLibraryReviewServiceTest {
 
     LibraryListDTO dto =
         LibraryListDTO.builder().id("lib-1").librarySetId("set-1").reviewStatus("Ready").build();
-    ArgumentCaptor<Map<String, ReviewStatus>> mapCaptor = ArgumentCaptor.forClass(Map.class);
+    ArgumentCaptor<Map<String, CqlLibraryReview>> mapCaptor = ArgumentCaptor.forClass(Map.class);
     when(cqlLibraryService.getReviewLibraries(mapCaptor.capture())).thenReturn(List.of(dto));
 
     List<LibraryListDTO> results =
@@ -386,11 +386,11 @@ class CqlLibraryReviewServiceTest {
     assertEquals("lib-1", results.get(0).getId());
     // reviewer access is enforced before any data is gathered
     verify(cqlLibraryAccessControlService, times(1)).verifyReviewerAccess(USERNAME, ACCESS_TOKEN);
-    // review documents are collapsed into an id -> status map for the library service
-    Map<String, ReviewStatus> statusByLibraryId = mapCaptor.getValue();
-    assertEquals(2, statusByLibraryId.size());
-    assertEquals(ReviewStatus.READY_FOR_REVIEW, statusByLibraryId.get("lib-1"));
-    assertEquals(ReviewStatus.READY_FOR_REVIEW, statusByLibraryId.get("lib-2"));
+    // review documents are collapsed into an id -> review map for the library service
+    Map<String, CqlLibraryReview> reviewByLibraryId = mapCaptor.getValue();
+    assertEquals(2, reviewByLibraryId.size());
+    assertEquals(ReviewStatus.READY_FOR_REVIEW, reviewByLibraryId.get("lib-1").getStatus());
+    assertEquals(ReviewStatus.READY_FOR_REVIEW, reviewByLibraryId.get("lib-2").getStatus());
   }
 
   @Test
@@ -414,15 +414,15 @@ class CqlLibraryReviewServiceTest {
                 ReviewStatus.READY_FOR_REVIEW, ReviewStatus.IN_PROGRESS, ReviewStatus.COMPLETE)))
         .thenReturn(List.of(missingLibraryId, valid));
 
-    ArgumentCaptor<Map<String, ReviewStatus>> mapCaptor = ArgumentCaptor.forClass(Map.class);
+    ArgumentCaptor<Map<String, CqlLibraryReview>> mapCaptor = ArgumentCaptor.forClass(Map.class);
     when(cqlLibraryService.getReviewLibraries(mapCaptor.capture()))
         .thenReturn(List.of(new LibraryListDTO()));
 
     cqlLibraryReviewService.getLibrariesInReview(USERNAME, ACCESS_TOKEN, OwnershipType.ALL);
 
-    Map<String, ReviewStatus> statusByLibraryId = mapCaptor.getValue();
-    assertEquals(1, statusByLibraryId.size());
-    assertEquals(ReviewStatus.IN_PROGRESS, statusByLibraryId.get("lib-2"));
+    Map<String, CqlLibraryReview> reviewByLibraryId = mapCaptor.getValue();
+    assertEquals(1, reviewByLibraryId.size());
+    assertEquals(ReviewStatus.IN_PROGRESS, reviewByLibraryId.get("lib-2").getStatus());
   }
 
   @Test
@@ -447,12 +447,12 @@ class CqlLibraryReviewServiceTest {
                 ReviewStatus.READY_FOR_REVIEW, ReviewStatus.IN_PROGRESS, ReviewStatus.COMPLETE)))
         .thenReturn(List.of(first, duplicate));
 
-    ArgumentCaptor<Map<String, ReviewStatus>> mapCaptor = ArgumentCaptor.forClass(Map.class);
+    ArgumentCaptor<Map<String, CqlLibraryReview>> mapCaptor = ArgumentCaptor.forClass(Map.class);
     when(cqlLibraryService.getReviewLibraries(mapCaptor.capture()))
         .thenReturn(List.of(new LibraryListDTO()));
 
     cqlLibraryReviewService.getLibrariesInReview(USERNAME, ACCESS_TOKEN, OwnershipType.ALL);
 
-    assertEquals(ReviewStatus.READY_FOR_REVIEW, mapCaptor.getValue().get("lib-dup"));
+    assertEquals(ReviewStatus.READY_FOR_REVIEW, mapCaptor.getValue().get("lib-dup").getStatus());
   }
 }

@@ -94,9 +94,15 @@ public class CqlLibrarySearchServiceImpl implements CqlLibrarySearchService {
                         reviewStatusCase(ReviewStatus.COMPLETE, "Complete"))
                     .defaultTo(""))
             .build();
+    AddFieldsOperation reviewersOperation =
+        addFields()
+            .addFieldWithValue(
+                "reviewers", ArrayOperators.ArrayElemAt.arrayOf("$review.reviewers").elementAt(0))
+            .build();
     stages.add(addLibraryIdStringOperation);
     stages.add(reviewLookupOperation);
     stages.add(reviewStatusOperation);
+    stages.add(reviewersOperation);
     return stages;
   }
 
@@ -157,7 +163,6 @@ public class CqlLibrarySearchServiceImpl implements CqlLibrarySearchService {
     List<AggregationOperation> matchOps = new ArrayList<>();
     matchOps.add(lookupOperation);
     matchOps.add(unwindOperation);
-    matchOps.addAll(reviewStages);
     matchOps.add(matchOperation);
     matchOps.add(
         group("librarySetId").count().as("matchCount").first("_id").as("matchedLibraryId"));

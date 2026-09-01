@@ -135,9 +135,9 @@ public class CqlLibraryReviewService {
       String username, String accessToken, OwnershipType ownershipType) {
     cqlLibraryAccessControlService.verifyReviewerAccess(username, accessToken);
 
-    Map<String, ReviewStatus> statusByLibraryId = new HashMap<>();
+    Map<String, CqlLibraryReview> reviewByLibraryId = new HashMap<>();
     if (ownershipType.equals(OwnershipType.OWNED)) {
-      statusByLibraryId =
+      reviewByLibraryId =
           cqlLibraryReviewRepository
               .findAllByStatusInAndReviewersContaining(MY_REVIEW_STATUSES, username)
               .stream()
@@ -145,21 +145,21 @@ public class CqlLibraryReviewService {
               .collect(
                   Collectors.toMap(
                       CqlLibraryReview::getLibraryId,
-                      CqlLibraryReview::getStatus,
+                      review -> review,
                       (existing, duplicate) -> existing));
     } else {
 
-      statusByLibraryId =
+      reviewByLibraryId =
           cqlLibraryReviewRepository.findAllByStatusIn(IN_REVIEW_STATUSES).stream()
               .filter(review -> review.getLibraryId() != null)
               .collect(
                   Collectors.toMap(
                       CqlLibraryReview::getLibraryId,
-                      CqlLibraryReview::getStatus,
+                      review -> review,
                       (existing, duplicate) -> existing));
     }
 
-    return cqlLibraryService.getReviewLibraries(statusByLibraryId);
+    return cqlLibraryService.getReviewLibraries(reviewByLibraryId);
   }
 
   /**

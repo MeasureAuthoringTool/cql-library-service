@@ -16,6 +16,7 @@ import lombok.experimental.SuperBuilder;
 import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.time.Instant;
+import java.util.List;
 
 import gov.cms.madie.cqllibraryservice.locks.CqlLibraryLock;
 
@@ -47,6 +48,7 @@ public class LibraryListDTO {
   private boolean draft;
   private boolean hasAssociatedLibraries;
   private String reviewStatus;
+  private List<String> reviewers;
 
   @JsonInclude(JsonInclude.Include.NON_NULL)
   private CqlLibraryLock cqlLibraryLock;
