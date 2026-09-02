@@ -49,7 +49,6 @@ import gov.cms.madie.models.library.LibrarySet;
 
 import org.bson.types.ObjectId;
 import org.hamcrest.CustomMatcher;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -102,9 +101,6 @@ public class CqlLibraryControllerMvcTest {
         JsonMapper.builder().disable(DateTimeFeature.WRITE_DATES_AS_TIMESTAMPS).build();
     return mapper.writeValueAsString(obj);
   }
-
-  @BeforeEach
-  void setUp() {}
 
   @Test
   public void testCreateCqlLibraryReturnsValidationErrorForNullCqlLibraryName() throws Exception {
@@ -496,6 +492,11 @@ public class CqlLibraryControllerMvcTest {
         .andExpect(jsonPath("$.id").isNotEmpty())
         .andExpect(jsonPath("$.model").value(ModelType.US_QUALITY_CORE_0_5_0.toString()))
         .andExpect(jsonPath("$.createdBy").value(TEST_USER_ID));
+
+    verify(cqlLibraryRepository, times(1)).save(cqlLibraryArgumentCaptor.capture());
+    assertThat(
+        cqlLibraryArgumentCaptor.getValue().getModel(),
+        is(equalTo(ModelType.US_QUALITY_CORE_0_5_0.toString())));
   }
 
   @Test
