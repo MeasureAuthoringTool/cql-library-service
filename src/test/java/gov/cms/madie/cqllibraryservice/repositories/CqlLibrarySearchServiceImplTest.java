@@ -161,6 +161,7 @@ public class CqlLibrarySearchServiceImplTest {
     assertTrue(pipelines.contains("COMPLETE"));
     assertTrue(pipelines.contains("Complete"));
     assertTrue(pipelines.contains("reviewStatus"));
+    assertTrue(pipelines.contains("reviewers"));
   }
 
   @Test

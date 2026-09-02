@@ -1819,8 +1819,18 @@ class CqlLibraryServiceTest {
   void testGetUserDetailsWhenNoUserDetailsFound() {
     LibrarySet librarySet1 = LibrarySet.builder().owner("owner1").build();
     LibrarySet librarySet2 = LibrarySet.builder().owner("owner2").build();
-    LibraryListDTO library1 = LibraryListDTO.builder().id("L1").librarySet(librarySet1).build();
-    LibraryListDTO library2 = LibraryListDTO.builder().id("L2").librarySet(librarySet2).build();
+    LibraryListDTO library1 =
+        LibraryListDTO.builder()
+            .id("L1")
+            .librarySet(librarySet1)
+            .reviewers(List.of("reviewer1", "reviewer2"))
+            .build();
+    LibraryListDTO library2 =
+        LibraryListDTO.builder()
+            .id("L2")
+            .librarySet(librarySet2)
+            .reviewers(List.of("reviewer3"))
+            .build();
     List<LibraryListDTO> libraries = List.of(library1, library2);
     Page<LibraryListDTO> librariesPage = new PageImpl<>(libraries);
 
@@ -1839,7 +1849,10 @@ class CqlLibraryServiceTest {
 
     assertEquals("-", result.getContent().get(0).getOwnerDisplayName());
     assertEquals("-", result.getContent().get(1).getOwnerDisplayName());
-    verify(userServiceClient, times(1)).getBulkUserDetails(List.of("owner1", "owner2"));
+    assertEquals(List.of("reviewer1", "reviewer2"), result.getContent().get(0).getReviewers());
+    assertEquals(List.of("reviewer3"), result.getContent().get(1).getReviewers());
+    verify(userServiceClient, times(1))
+        .getBulkUserDetails(List.of("owner1", "owner2", "reviewer1", "reviewer2", "reviewer3"));
   }
 
   @Test
@@ -1849,11 +1862,36 @@ class CqlLibraryServiceTest {
     LibrarySet librarySet3 = LibrarySet.builder().owner("owner3").build();
     LibrarySet librarySet4 = LibrarySet.builder().owner("owner4").build();
     LibrarySet librarySet5 = LibrarySet.builder().owner("owner5").build();
-    LibraryListDTO library1 = LibraryListDTO.builder().id("L1").librarySet(librarySet1).build();
-    LibraryListDTO library2 = LibraryListDTO.builder().id("L2").librarySet(librarySet2).build();
-    LibraryListDTO library3 = LibraryListDTO.builder().id("L3").librarySet(librarySet3).build();
-    LibraryListDTO library4 = LibraryListDTO.builder().id("L4").librarySet(librarySet4).build();
-    LibraryListDTO library5 = LibraryListDTO.builder().id("L5").librarySet(librarySet5).build();
+    LibraryListDTO library1 =
+        LibraryListDTO.builder()
+            .id("L1")
+            .librarySet(librarySet1)
+            .reviewers(List.of("reviewer1"))
+            .build();
+    LibraryListDTO library2 =
+        LibraryListDTO.builder()
+            .id("L2")
+            .librarySet(librarySet2)
+            .reviewers(List.of("reviewer2"))
+            .build();
+    LibraryListDTO library3 =
+        LibraryListDTO.builder()
+            .id("L3")
+            .librarySet(librarySet3)
+            .reviewers(List.of("reviewer3"))
+            .build();
+    LibraryListDTO library4 =
+        LibraryListDTO.builder()
+            .id("L4")
+            .librarySet(librarySet4)
+            .reviewers(List.of("reviewer4"))
+            .build();
+    LibraryListDTO library5 =
+        LibraryListDTO.builder()
+            .id("L5")
+            .librarySet(librarySet5)
+            .reviewers(List.of("reviewer5"))
+            .build();
     List<LibraryListDTO> libraries = List.of(library1, library2, library3, library4, library5);
     Page<LibraryListDTO> librariesPage = new PageImpl<>(libraries);
 
@@ -1883,9 +1921,25 @@ class CqlLibraryServiceTest {
     assertEquals("owner3", result.getContent().get(2).getOwnerDisplayName());
     assertEquals("Doe", result.getContent().get(3).getOwnerDisplayName());
     assertEquals("Jane", result.getContent().get(4).getOwnerDisplayName());
+    assertEquals(List.of("reviewer1"), result.getContent().get(0).getReviewers());
+    assertEquals(List.of("reviewer2"), result.getContent().get(1).getReviewers());
+    assertEquals(List.of("reviewer3"), result.getContent().get(2).getReviewers());
+    assertEquals(List.of("reviewer4"), result.getContent().get(3).getReviewers());
+    assertEquals(List.of("reviewer5"), result.getContent().get(4).getReviewers());
 
     verify(userServiceClient, times(1))
-        .getBulkUserDetails(List.of("owner1", "owner2", "owner3", "owner4", "owner5"));
+        .getBulkUserDetails(
+            List.of(
+                "owner1",
+                "owner2",
+                "owner3",
+                "owner4",
+                "owner5",
+                "reviewer1",
+                "reviewer2",
+                "reviewer3",
+                "reviewer4",
+                "reviewer5"));
   }
 
   @Test
@@ -2010,41 +2064,6 @@ class CqlLibraryServiceTest {
   }
 
   @Test
-  public void testEnrichWithUserDetailsLibrariesNull() {
-    // use reflection to access the private method enrichWithUserDetails
-    ReflectionTestUtils.invokeMethod(
-        cqlLibraryService, "enrichWithUserDetails", Collections.emptyList());
-    // assert userServiceClient not called
-    verify(userServiceClient, times(0)).getBulkUserDetails(anyList());
-  }
-
-  @Test
-  public void testGetFullNameUserDetailsFirstNameNull() {
-    UserDetailsDto userDetails = UserDetailsDto.builder().firstName(null).lastName("Doe").build();
-    // use reflection to access the private method getFullName
-    String fullName =
-        ReflectionTestUtils.invokeMethod(cqlLibraryService, "getFullName", userDetails);
-    assertThat(fullName, is(equalTo("Doe")));
-  }
-
-  @Test
-  public void testGetFullNameUserDetailsLastNameNull() {
-    UserDetailsDto userDetails = UserDetailsDto.builder().firstName("John").lastName(null).build();
-    String fullName =
-        ReflectionTestUtils.invokeMethod(cqlLibraryService, "getFullName", userDetails);
-    assertThat(fullName, is(equalTo("John")));
-  }
-
-  @Test
-  public void testGetFullNameUserDetailsFirstNameAndLastNameNull() {
-    UserDetailsDto userDetails = UserDetailsDto.builder().firstName(null).lastName(null).build();
-    // use reflection to access the private method getFullName
-    String fullName =
-        ReflectionTestUtils.invokeMethod(cqlLibraryService, "getFullName", userDetails);
-    assertThat(fullName, is(equalTo("")));
-  }
-
-  @Test
   public void testCheckDuplicateCqlLibraryNameLibraryNameNull() {
     assertDoesNotThrow(() -> cqlLibraryService.checkDuplicateCqlLibraryName(null));
   }
@@ -2086,7 +2105,14 @@ class CqlLibraryServiceTest {
 
   @Test
   public void testGetReviewLibrariesReturnsEnrichedList() {
-    Map<String, ReviewStatus> statusByLibraryId = Map.of("lib-1", ReviewStatus.READY_FOR_REVIEW);
+    Map<String, CqlLibraryReview> reviewByLibraryId =
+        Map.of(
+            "lib-1",
+            CqlLibraryReview.builder()
+                .libraryId("lib-1")
+                .status(ReviewStatus.READY_FOR_REVIEW)
+                .reviewers(List.of("reviewer-1", "reviewer-2"))
+                .build());
 
     LibrarySet librarySet = new LibrarySet();
     librarySet.setOwner("owner-1");
@@ -2104,10 +2130,19 @@ class CqlLibraryServiceTest {
     UserDetailsDto ownerDetails = new UserDetailsDto();
     ownerDetails.setFirstName("Jane");
     ownerDetails.setLastName("Doe");
+    UserDetailsDto reviewerOneDetails = new UserDetailsDto();
+    reviewerOneDetails.setFirstName("Alex");
+    reviewerOneDetails.setLastName("Smith");
+    UserDetailsDto reviewerTwoDetails = new UserDetailsDto();
+    reviewerTwoDetails.setFirstName("OnlyFirst");
     when(userServiceClient.getBulkUserDetails(anyList()))
-        .thenReturn(Map.of("owner-1", ownerDetails));
+        .thenReturn(
+            Map.of(
+                "owner-1", ownerDetails,
+                "reviewer-1", reviewerOneDetails,
+                "reviewer-2", reviewerTwoDetails));
 
-    List<LibraryListDTO> result = cqlLibraryService.getReviewLibraries(statusByLibraryId);
+    List<LibraryListDTO> result = cqlLibraryService.getReviewLibraries(reviewByLibraryId);
 
     assertNotNull(result);
     assertEquals(1, result.size());
@@ -2117,17 +2152,30 @@ class CqlLibraryServiceTest {
     assertEquals("QI-Core v4.1.1", dto.getModel());
     assertTrue(dto.isDraft());
     assertEquals("Ready", dto.getReviewStatus());
+    assertEquals(List.of("Alex Smith", "reviewer-2"), dto.getReviewers());
     assertEquals(librarySet, dto.getLibrarySet());
     assertEquals("Jane Doe", dto.getOwnerDisplayName());
   }
 
   @Test
   public void testGetReviewLibrariesLabelsEveryInReviewStatus() {
-    Map<String, ReviewStatus> statusByLibraryId =
+    Map<String, CqlLibraryReview> reviewByLibraryId =
         Map.of(
-            "lib-1", ReviewStatus.READY_FOR_REVIEW,
-            "lib-2", ReviewStatus.IN_PROGRESS,
-            "lib-3", ReviewStatus.COMPLETE);
+            "lib-1",
+                CqlLibraryReview.builder()
+                    .libraryId("lib-1")
+                    .status(ReviewStatus.READY_FOR_REVIEW)
+                    .build(),
+            "lib-2",
+                CqlLibraryReview.builder()
+                    .libraryId("lib-2")
+                    .status(ReviewStatus.IN_PROGRESS)
+                    .build(),
+            "lib-3",
+                CqlLibraryReview.builder()
+                    .libraryId("lib-3")
+                    .status(ReviewStatus.COMPLETE)
+                    .build());
 
     LibrarySet librarySet = new LibrarySet();
     librarySet.setOwner("owner-1");
@@ -2141,7 +2189,7 @@ class CqlLibraryServiceTest {
     when(userServiceClient.getBulkUserDetails(anyList())).thenReturn(Map.of());
 
     Map<String, String> statusById =
-        cqlLibraryService.getReviewLibraries(statusByLibraryId).stream()
+        cqlLibraryService.getReviewLibraries(reviewByLibraryId).stream()
             .collect(Collectors.toMap(LibraryListDTO::getId, LibraryListDTO::getReviewStatus));
 
     assertEquals("Ready", statusById.get("lib-1"));
