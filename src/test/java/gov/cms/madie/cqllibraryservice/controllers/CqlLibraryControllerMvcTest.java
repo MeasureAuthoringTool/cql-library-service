@@ -49,7 +49,6 @@ import gov.cms.madie.models.library.LibrarySet;
 
 import org.bson.types.ObjectId;
 import org.hamcrest.CustomMatcher;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -101,11 +100,6 @@ public class CqlLibraryControllerMvcTest {
     ObjectMapper mapper =
         JsonMapper.builder().disable(DateTimeFeature.WRITE_DATES_AS_TIMESTAMPS).build();
     return mapper.writeValueAsString(obj);
-  }
-
-  @BeforeEach
-  void setUp() {
-    when(appConfigService.isFlagEnabled(MadieFeatureFlag.US_QUALITY_CORE)).thenReturn(true);
   }
 
   @Test
@@ -468,34 +462,7 @@ public class CqlLibraryControllerMvcTest {
   }
 
   @Test
-  public void testCreateCqlLibraryReturnsBadRequestForUsQualityCoreWhenFlagDisabled()
-      throws Exception {
-    CqlLibrary library =
-        CqlLibrary.builder()
-            .cqlLibraryName("UsQualityCoreLibrary")
-            .model(ModelType.US_QUALITY_CORE_0_5_0.toString())
-            .librarySetId(TEST_LIBRARYSET_ID)
-            .build();
-
-    when(appConfigService.isFlagEnabled(MadieFeatureFlag.US_QUALITY_CORE)).thenReturn(false);
-
-    mockMvc
-        .perform(
-            post("/cql-libraries")
-                .with(user(TEST_USER_ID))
-                .with(csrf())
-                .content(toJsonString(library))
-                .contentType(MediaType.APPLICATION_JSON_VALUE))
-        .andExpect(status().isBadRequest())
-        .andExpect(
-            jsonPath("$.message")
-                .value("The model US Quality Core v0.5.0 is not currently supported in MADiE."));
-
-    verify(cqlLibraryRepository, never()).save(any(CqlLibrary.class));
-  }
-
-  @Test
-  public void testCreateCqlLibraryReturnsCreatedForUsQualityCoreWhenFlagEnabled() throws Exception {
+  public void testCreateCqlLibraryReturnsCreatedForUsQualityCore() throws Exception {
     CqlLibrary library =
         CqlLibrary.builder()
             .cqlLibraryName("UsQualityCoreLibrary")
@@ -525,6 +492,11 @@ public class CqlLibraryControllerMvcTest {
         .andExpect(jsonPath("$.id").isNotEmpty())
         .andExpect(jsonPath("$.model").value(ModelType.US_QUALITY_CORE_0_5_0.toString()))
         .andExpect(jsonPath("$.createdBy").value(TEST_USER_ID));
+
+    verify(cqlLibraryRepository, times(1)).save(cqlLibraryArgumentCaptor.capture());
+    assertThat(
+        cqlLibraryArgumentCaptor.getValue().getModel(),
+        is(equalTo(ModelType.US_QUALITY_CORE_0_5_0.toString())));
   }
 
   @Test
