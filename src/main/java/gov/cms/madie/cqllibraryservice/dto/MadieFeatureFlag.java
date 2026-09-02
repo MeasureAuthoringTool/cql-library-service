@@ -2,8 +2,8 @@ package gov.cms.madie.cqllibraryservice.dto;
 
 /** Feature flags relevant to the cql-library-service */
 public enum MadieFeatureFlag {
-  // Enables creating CQL libraries using the "US Quality Core v0.5.0" model
-  US_QUALITY_CORE("usQualityCore");
+  // No feature flags currently exist. Replace PLACEHOLDER with next real feature flag to add
+  PLACEHOLDER("Placeholder");
 
   private final String flag;
 

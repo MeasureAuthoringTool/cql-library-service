@@ -104,9 +104,7 @@ public class CqlLibraryControllerMvcTest {
   }
 
   @BeforeEach
-  void setUp() {
-    when(appConfigService.isFlagEnabled(MadieFeatureFlag.US_QUALITY_CORE)).thenReturn(true);
-  }
+  void setUp() {}
 
   @Test
   public void testCreateCqlLibraryReturnsValidationErrorForNullCqlLibraryName() throws Exception {
@@ -468,34 +466,7 @@ public class CqlLibraryControllerMvcTest {
   }
 
   @Test
-  public void testCreateCqlLibraryReturnsBadRequestForUsQualityCoreWhenFlagDisabled()
-      throws Exception {
-    CqlLibrary library =
-        CqlLibrary.builder()
-            .cqlLibraryName("UsQualityCoreLibrary")
-            .model(ModelType.US_QUALITY_CORE_0_5_0.toString())
-            .librarySetId(TEST_LIBRARYSET_ID)
-            .build();
-
-    when(appConfigService.isFlagEnabled(MadieFeatureFlag.US_QUALITY_CORE)).thenReturn(false);
-
-    mockMvc
-        .perform(
-            post("/cql-libraries")
-                .with(user(TEST_USER_ID))
-                .with(csrf())
-                .content(toJsonString(library))
-                .contentType(MediaType.APPLICATION_JSON_VALUE))
-        .andExpect(status().isBadRequest())
-        .andExpect(
-            jsonPath("$.message")
-                .value("The model US Quality Core v0.5.0 is not currently supported in MADiE."));
-
-    verify(cqlLibraryRepository, never()).save(any(CqlLibrary.class));
-  }
-
-  @Test
-  public void testCreateCqlLibraryReturnsCreatedForUsQualityCoreWhenFlagEnabled() throws Exception {
+  public void testCreateCqlLibraryReturnsCreatedForUsQualityCore() throws Exception {
     CqlLibrary library =
         CqlLibrary.builder()
             .cqlLibraryName("UsQualityCoreLibrary")

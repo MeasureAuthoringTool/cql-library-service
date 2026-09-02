@@ -15,8 +15,6 @@ import gov.cms.madie.cqllibraryservice.dto.CqlDiffResultDTO;
 import gov.cms.madie.cqllibraryservice.dto.CqlFileComparisonDTO;
 import gov.cms.madie.cqllibraryservice.dto.LibraryListDTO;
 import gov.cms.madie.cqllibraryservice.dto.LibrarySearchCriteria;
-import gov.cms.madie.cqllibraryservice.dto.MadieFeatureFlag;
-import gov.cms.madie.cqllibraryservice.exceptions.BadRequestObjectException;
 import gov.cms.madie.cqllibraryservice.exceptions.InvalidIdException;
 import gov.cms.madie.cqllibraryservice.exceptions.PermissionDeniedException;
 import gov.cms.madie.cqllibraryservice.exceptions.ResourceNotDraftableException;
@@ -352,30 +350,7 @@ class CqlLibraryControllerTest {
   }
 
   @Test
-  void testSaveCqlLibraryThrowsBadRequestWhenUsQualityCoreFlagIsDisabled() {
-    CqlLibrary usQualityCoreLibrary =
-        CqlLibrary.builder()
-            .id("1")
-            .cqlLibraryName("UsQualityCoreLibrary")
-            .model(ModelType.US_QUALITY_CORE_0_5_0.getValue())
-            .build();
-    Principal principal = mock(Principal.class);
-    when(principal.getName()).thenReturn("test.user");
-    when(appConfigService.isFlagEnabled(MadieFeatureFlag.US_QUALITY_CORE)).thenReturn(false);
-
-    BadRequestObjectException exception =
-        assertThrows(
-            BadRequestObjectException.class,
-            () -> cqlLibraryController.createCqlLibrary(usQualityCoreLibrary, principal));
-
-    assertEquals(
-        "The model US Quality Core v0.5.0 is not currently supported in MADiE.",
-        exception.getMessage());
-    verify(cqlLibraryRepository, never()).save(any());
-  }
-
-  @Test
-  void testSaveCqlLibraryAllowsUsQualityCoreWhenFlagIsEnabled() {
+  void testSaveCqlLibraryAllowsUsQualityCore() {
     ArgumentCaptor<CqlLibrary> saveCqlLibraryArgCaptor = ArgumentCaptor.forClass(CqlLibrary.class);
     CqlLibrary usQualityCoreLibrary =
         CqlLibrary.builder()
@@ -385,7 +360,6 @@ class CqlLibraryControllerTest {
             .build();
     Principal principal = mock(Principal.class);
     when(principal.getName()).thenReturn("test.user");
-    when(appConfigService.isFlagEnabled(MadieFeatureFlag.US_QUALITY_CORE)).thenReturn(true);
     doReturn(cqlLibrary).when(cqlLibraryRepository).save(any());
     doNothing().when(librarySetService).createLibrarySet(anyString(), anyString(), anyString());
 
