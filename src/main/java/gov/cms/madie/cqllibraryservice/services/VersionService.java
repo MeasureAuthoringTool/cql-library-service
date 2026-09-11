@@ -34,6 +34,7 @@ public class VersionService {
   private final CqlLibraryAccessControlService cqlLibraryAccessControlService;
   private static final String USCORE_PATTERN = "using USCore version '6.1.0-derived'";
   private static final String FHIR_PATTERN = "using FHIR version '4.0.1'";
+  private static final String VERSION_LITERAL = "'[^']*'";
 
   public CqlLibrary createVersion(String id, boolean isMajor, String username, String accessToken) {
     CqlLibrary cqlLibrary = cqlLibraryService.findCqlLibraryById(id, username);
@@ -280,12 +281,12 @@ public class VersionService {
   }
 
   private String updateUsingStatement(String model, String cql) {
-    Pattern qicorePattern = Pattern.compile("using QICore .*version '[0-9]\\.[0-9](\\.[0-9])?'");
+    Pattern qicorePattern = Pattern.compile("using QICore .*version " + VERSION_LITERAL);
     Matcher matcher = qicorePattern.matcher(cql);
 
-    Pattern usCorePattern = Pattern.compile("using USCore .*version '[0-9]\\.[0-9](\\.[0-9])?'");
+    Pattern usCorePattern = Pattern.compile("using USCore .*version " + VERSION_LITERAL);
     Matcher usCoreMatcher = usCorePattern.matcher(cql);
-    Pattern fhirPattern = Pattern.compile("using FHIR .*version '[0-9]\\.[0-9](\\.[0-9])?'");
+    Pattern fhirPattern = Pattern.compile("using FHIR .*version " + VERSION_LITERAL);
     Matcher fhirMatcher = fhirPattern.matcher(cql);
 
     String standards = "QICore";
@@ -309,14 +310,13 @@ public class VersionService {
         cql = usCoreMatcher.replaceAll(USCORE_PATTERN);
       } else {
         cql =
-            cql.replaceAll(
-                "(using USQualityCore version '[0-9]\\.[0-9](\\.[0-9])?')",
-                "$1\n" + USCORE_PATTERN);
+            cql.replaceFirst(
+                "(using USQualityCore .*version " + VERSION_LITERAL + ")", "$1\n" + USCORE_PATTERN);
       }
 
       fhirMatcher.reset(cql);
       if (!fhirMatcher.find()) {
-        cql = cql.replaceAll("(using USCore version '6\\.1\\.0-derived')", "$1\n" + FHIR_PATTERN);
+        cql = cql.replaceFirst(Pattern.quote(USCORE_PATTERN), USCORE_PATTERN + "\n" + FHIR_PATTERN);
       }
     }
     return cql;
