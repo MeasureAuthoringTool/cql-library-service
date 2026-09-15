@@ -922,6 +922,57 @@ class VersionServiceTest {
     assertTrue(result.contains("using FHIR version '4.0.1'"));
   }
 
+  @Test
+  void testUpdateUsingStatementUSQualityCoreDoesNotDuplicateDerivedUSCore() throws Exception {
+    String cql =
+        "library TestLib4 version '5.0.000'\n"
+            + "\n"
+            + "using USQualityCore version '0.5.0'\n"
+            + "using USCore version '6.1.0-derived'\n"
+            + "using FHIR version '4.0.1'\n"
+            + "\n"
+            + "include FHIRHelpers version '1.0.000' called FHIRHelpers\n"
+            + "context Patient";
+    String result =
+        (String) invokeUpdateUsingStatement(ModelType.US_QUALITY_CORE_0_5_0.getValue(), cql);
+
+    assertThat(result, is(equalTo(cql)));
+    assertThat(countOccurrences(result, "using USCore version '6.1.0-derived'"), is(equalTo(1)));
+    assertThat(countOccurrences(result, "using FHIR version '4.0.1'"), is(equalTo(1)));
+  }
+
+  @Test
+  void testUpdateUsingStatementUSQualityCoreIsIdempotent() throws Exception {
+    String cql = "using USQualityCore version '0.5.0'\ndefine x: 1";
+    String firstPass =
+        (String) invokeUpdateUsingStatement(ModelType.US_QUALITY_CORE_0_5_0.getValue(), cql);
+    String secondPass =
+        (String) invokeUpdateUsingStatement(ModelType.US_QUALITY_CORE_0_5_0.getValue(), firstPass);
+
+    assertThat(secondPass, is(equalTo(firstPass)));
+  }
+
+  @Test
+  void testUpdateUsingStatementUSQualityCoreAddsSingleFhirWhenMultipleUSCoreMatches()
+      throws Exception {
+    String cql =
+        "using USQualityCore version '0.5.0'\nusing USCore version '3.0.0'\ndefine x: using USCore version '2.0.0'";
+    String result =
+        (String) invokeUpdateUsingStatement(ModelType.US_QUALITY_CORE_0_5_0.getValue(), cql);
+
+    assertThat(countOccurrences(result, "using FHIR version '4.0.1'"), is(equalTo(1)));
+  }
+
+  private int countOccurrences(String source, String target) {
+    int count = 0;
+    int index = 0;
+    while ((index = source.indexOf(target, index)) >= 0) {
+      count++;
+      index += target.length();
+    }
+    return count;
+  }
+
   private Object invokeUpdateUsingStatement(String model, String cql) throws Exception {
     var method =
         VersionService.class.getDeclaredMethod("updateUsingStatement", String.class, String.class);
