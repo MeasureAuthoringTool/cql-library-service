@@ -75,6 +75,7 @@ public class CqlLibraryControllerMvcTest {
   private static final String TEST_USER_ID = "test-okta-user-id-123";
   private static final String TEST_LIBRARYSET_ID = "test-okta-user-id-321";
   private static final String MODEL = ModelType.QI_CORE.toString();
+  private static final String MODEL_QDM = ModelType.QDM_5_6.toString();
   public static final String ELM_SEVERITY = "Info";
 
   @MockitoBean CqlLibraryRepository cqlLibraryRepository;
@@ -219,8 +220,45 @@ public class CqlLibraryControllerMvcTest {
   }
 
   @Test
+  public void testCreateCqlLibraryReturnsCreatedForContainingUnderscoreOnQdmModel()
+      throws Exception {
+    // given
+    CqlLibrary library =
+        CqlLibrary.builder()
+            .cqlLibraryName("With_Underscore")
+            .model(MODEL_QDM)
+            .librarySetId(TEST_LIBRARYSET_ID)
+            .build();
+    String json = toJsonString(library);
+    doNothing().when(cqlLibraryService).checkDuplicateCqlLibraryName(anyString());
+    doNothing().when(librarySetService).createLibrarySet(anyString(), anyString(), anyString());
+    when(cqlLibraryRepository.save(any(CqlLibrary.class)))
+        .then(
+            (args) -> {
+              CqlLibrary lib = args.getArgument(0);
+              lib.setId(ObjectId.get().toHexString());
+              return lib;
+            });
+
+    // when
+    // then
+    mockMvc
+        .perform(
+            post("/cql-libraries")
+                .with(user(TEST_USER_ID))
+                .with(csrf())
+                .content(json)
+                .contentType(MediaType.APPLICATION_JSON_VALUE))
+        .andExpect(status().isCreated())
+        .andExpect(jsonPath("$.cqlLibraryName").value("With_Underscore"))
+        .andExpect(jsonPath("$.model").value(MODEL_QDM));
+    verify(cqlLibraryRepository, times(1)).save(any(CqlLibrary.class));
+  }
+
+  @Test
   public void testCreateCqlLibraryReturnsValidationErrorForContainingSpecialCharacters()
       throws Exception {
+    // given
     String json =
         toJsonString(
             CqlLibrary.builder()
@@ -229,6 +267,9 @@ public class CqlLibraryControllerMvcTest {
                 .librarySetId(TEST_LIBRARYSET_ID)
                 .build());
     when(cqlLibraryRepository.existsByCqlLibraryName(anyString())).thenReturn(false);
+
+    // when
+    // then
     mockMvc
         .perform(
             post("/cql-libraries")
@@ -238,12 +279,111 @@ public class CqlLibraryControllerMvcTest {
                 .contentType(MediaType.APPLICATION_JSON_VALUE))
         .andExpect(status().isBadRequest())
         .andExpect(
+            jsonPath("$.validationErrors.cqlLibraryName")
+                .value("Content contains invalid characters."))
+        .andExpect(
             jsonPath("$.validationErrors.cqlLibrary")
                 .value(
                     "Library name must start with an upper case letter, "
                         + "followed by alpha-numeric character(s) and must not contain "
                         + "spaces or other special characters except of underscore for QDM."));
     verifyNoInteractions(cqlLibraryRepository);
+  }
+
+  @Test
+  public void testCreateCqlLibraryReturnsValidationErrorForXssInDescription() throws Exception {
+    // given
+    String json =
+        toJsonString(
+            CqlLibrary.builder()
+                .cqlLibraryName("ValidName1")
+                .model(MODEL)
+                .librarySetId(TEST_LIBRARYSET_ID)
+                .description("<script>alert('xss')</script>")
+                .build());
+    when(cqlLibraryRepository.existsByCqlLibraryName(anyString())).thenReturn(false);
+
+    // when
+    // then
+    mockMvc
+        .perform(
+            post("/cql-libraries")
+                .with(user(TEST_USER_ID))
+                .with(csrf())
+                .content(json)
+                .contentType(MediaType.APPLICATION_JSON_VALUE))
+        .andExpect(status().isBadRequest())
+        .andExpect(
+            jsonPath("$.validationErrors.description")
+                .value("Content contains invalid characters."));
+    verifyNoInteractions(cqlLibraryRepository);
+  }
+
+  @Test
+  public void testCreateCqlLibraryReturnsValidationErrorForXssInPublisher() throws Exception {
+    // given
+    String json =
+        toJsonString(
+            CqlLibrary.builder()
+                .cqlLibraryName("ValidName1")
+                .model(MODEL)
+                .librarySetId(TEST_LIBRARYSET_ID)
+                .publisher("<img src=x onerror=alert(1)>")
+                .build());
+    when(cqlLibraryRepository.existsByCqlLibraryName(anyString())).thenReturn(false);
+
+    // when
+    // then
+    mockMvc
+        .perform(
+            post("/cql-libraries")
+                .with(user(TEST_USER_ID))
+                .with(csrf())
+                .content(json)
+                .contentType(MediaType.APPLICATION_JSON_VALUE))
+        .andExpect(status().isBadRequest())
+        .andExpect(
+            jsonPath("$.validationErrors.publisher").value("Content contains invalid characters."));
+    verifyNoInteractions(cqlLibraryRepository);
+  }
+
+  @Test
+  public void testCreateCqlLibraryReturnsCreatedForValidDescriptionAndPublisher() throws Exception {
+    // given
+    CqlLibrary library =
+        CqlLibrary.builder()
+            .cqlLibraryName("NewValidName2")
+            .model(MODEL)
+            .librarySetId(TEST_LIBRARYSET_ID)
+            .publisher("Centers for Medicare & Medicaid Services")
+            .description("A valid, plain-text description of the library.")
+            .build();
+    String json = toJsonString(library);
+    doNothing().when(cqlLibraryService).checkDuplicateCqlLibraryName(anyString());
+    doNothing().when(librarySetService).createLibrarySet(anyString(), anyString(), anyString());
+    when(cqlLibraryRepository.save(any(CqlLibrary.class)))
+        .then(
+            (args) -> {
+              CqlLibrary lib = args.getArgument(0);
+              lib.setId(ObjectId.get().toHexString());
+              return lib;
+            });
+
+    // when
+    // then
+    mockMvc
+        .perform(
+            post("/cql-libraries")
+                .with(user(TEST_USER_ID))
+                .with(csrf())
+                .content(json)
+                .contentType(MediaType.APPLICATION_JSON_VALUE))
+        .andExpect(status().isCreated())
+        .andExpect(jsonPath("$.cqlLibraryName").value("NewValidName2"))
+        .andExpect(jsonPath("$.publisher").value("Centers for Medicare & Medicaid Services"))
+        .andExpect(
+            jsonPath("$.description").value("A valid, plain-text description of the library."));
+    verify(cqlLibraryRepository, times(1)).save(any(CqlLibrary.class));
   }
 
   @Test
@@ -714,6 +854,153 @@ public class CqlLibraryControllerMvcTest {
   }
 
   @Test
+  public void testUpdateCqlLibraryReturns400ForContainingUnderscore() throws Exception {
+    // given
+    final CqlLibrary updatingLibrary =
+        CqlLibrary.builder()
+            .id("Library1_ID")
+            .cqlLibraryName("With_underscore")
+            .model(MODEL)
+            .librarySetId(TEST_LIBRARYSET_ID)
+            .build();
+    String json = toJsonString(updatingLibrary);
+
+    // when
+    // then
+    mockMvc
+        .perform(
+            put("/cql-libraries/Library1_ID")
+                .with(user(TEST_USER_ID))
+                .with(csrf())
+                .content(json)
+                .contentType(MediaType.APPLICATION_JSON_VALUE))
+        .andExpect(status().isBadRequest())
+        .andExpect(
+            jsonPath("$.validationErrors.cqlLibrary")
+                .value(
+                    "Library name must start with an upper case letter, "
+                        + "followed by alpha-numeric character(s) and must not contain "
+                        + "spaces or other special characters except of underscore for QDM."));
+    verifyNoInteractions(cqlLibraryRepository);
+  }
+
+  @Test
+  public void testUpdateCqlLibraryReturns400ForXssInDescription() throws Exception {
+    // given
+    final CqlLibrary updatingLibrary =
+        CqlLibrary.builder()
+            .id("Library1_ID")
+            .cqlLibraryName("LibraryName")
+            .model(MODEL)
+            .librarySetId(TEST_LIBRARYSET_ID)
+            .description("<script>alert('xss')</script>")
+            .build();
+    String json = toJsonString(updatingLibrary);
+
+    // when
+    // then
+    mockMvc
+        .perform(
+            put("/cql-libraries/Library1_ID")
+                .with(user(TEST_USER_ID))
+                .with(csrf())
+                .content(json)
+                .contentType(MediaType.APPLICATION_JSON_VALUE))
+        .andExpect(status().isBadRequest())
+        .andExpect(
+            jsonPath("$.validationErrors.description")
+                .value("Content contains invalid characters."));
+    verifyNoInteractions(cqlLibraryRepository);
+  }
+
+  @Test
+  public void testUpdateCqlLibraryReturns400ForXssInPublisher() throws Exception {
+    // given
+    final CqlLibrary updatingLibrary =
+        CqlLibrary.builder()
+            .id("Library1_ID")
+            .cqlLibraryName("LibraryName")
+            .model(MODEL)
+            .librarySetId(TEST_LIBRARYSET_ID)
+            .publisher("<img src=x onerror=alert(1)>")
+            .build();
+    String json = toJsonString(updatingLibrary);
+
+    // when
+    // then
+    mockMvc
+        .perform(
+            put("/cql-libraries/Library1_ID")
+                .with(user(TEST_USER_ID))
+                .with(csrf())
+                .content(json)
+                .contentType(MediaType.APPLICATION_JSON_VALUE))
+        .andExpect(status().isBadRequest())
+        .andExpect(
+            jsonPath("$.validationErrors.publisher").value("Content contains invalid characters."));
+    verifyNoInteractions(cqlLibraryRepository);
+  }
+
+  @Test
+  public void testUpdateCqlLibraryReturns200ForValidDescriptionAndPublisher() throws Exception {
+    // given
+    final CqlLibrary updatingLibrary =
+        CqlLibrary.builder()
+            .id("Library1_ID")
+            .librarySetId(TEST_LIBRARYSET_ID)
+            .cqlLibraryName("LibraryName")
+            .model(MODEL)
+            .publisher("Centers for Medicare & Medicaid Services")
+            .description("A valid, plain-text description of the library.")
+            .build();
+    when(cqlLibraryService.updateCqlLibrary(any(CqlLibrary.class), anyString()))
+        .thenReturn(updatingLibrary);
+
+    // when
+    // then
+    mockMvc
+        .perform(
+            put("/cql-libraries/Library1_ID")
+                .with(user(TEST_USER_ID))
+                .with(csrf())
+                .content(toJsonString(updatingLibrary))
+                .contentType(MediaType.APPLICATION_JSON_VALUE))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.publisher").value("Centers for Medicare & Medicaid Services"))
+        .andExpect(
+            jsonPath("$.description").value("A valid, plain-text description of the library."));
+    verify(cqlLibraryService, times(1)).updateCqlLibrary(updatingLibrary, TEST_USER_ID);
+  }
+
+  @Test
+  public void testUpdateCqlLibraryReturns200ForContainingUnderscoreOnQdmModel() throws Exception {
+    // given
+    final CqlLibrary updatingLibrary =
+        CqlLibrary.builder()
+            .id("Library1_ID")
+            .librarySetId(TEST_LIBRARYSET_ID)
+            .cqlLibraryName("With_Underscore")
+            .model(MODEL_QDM)
+            .build();
+    when(cqlLibraryService.updateCqlLibrary(any(CqlLibrary.class), anyString()))
+        .thenReturn(updatingLibrary);
+
+    // when
+    // then
+    mockMvc
+        .perform(
+            put("/cql-libraries/Library1_ID")
+                .with(user(TEST_USER_ID))
+                .with(csrf())
+                .content(toJsonString(updatingLibrary))
+                .contentType(MediaType.APPLICATION_JSON_VALUE))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.cqlLibraryName").value("With_Underscore"))
+        .andExpect(jsonPath("$.model").value(MODEL_QDM));
+    verify(cqlLibraryService, times(1)).updateCqlLibrary(updatingLibrary, TEST_USER_ID);
+  }
+
+  @Test
   public void testUpdateCqlLibraryReturns404ForNotFoundLibrary() throws Exception {
     final CqlLibrary updatingLibrary =
         CqlLibrary.builder()
@@ -847,7 +1134,8 @@ public class CqlLibraryControllerMvcTest {
 
   @Test
   public void testCreateDraftReturnsValidationErrorForContainingUnderscore() throws Exception {
-    final CqlLibraryDraft draft = CqlLibraryDraft.builder().cqlLibraryName("Invalid_").build();
+    final CqlLibraryDraft draft =
+        CqlLibraryDraft.builder().cqlLibraryName("Invalid_").model(MODEL).build();
     mockMvc
         .perform(
             post("/cql-libraries/draft/Library1_ID")
@@ -858,18 +1146,55 @@ public class CqlLibraryControllerMvcTest {
         .andExpect(status().isBadRequest())
         .andExpect(content().contentType(MediaType.APPLICATION_JSON_VALUE))
         .andExpect(
-            jsonPath("$.validationErrors.cqlLibraryName")
+            jsonPath("$.validationErrors.cqlLibraryDraft")
                 .value(
                     "Library name must start with an upper case letter, "
                         + "followed by alpha-numeric character(s) and must not contain "
-                        + "spaces or other special characters."));
+                        + "spaces or other special characters except of underscore for QDM."));
     verifyNoInteractions(cqlLibraryRepository);
+  }
+
+  @Test
+  public void testCreateDraftReturnsCreatedForContainingUnderscoreOnQdmModel() throws Exception {
+    final Instant createdTime = Instant.now().minus(100, ChronoUnit.MINUTES);
+    final CqlLibrary draftLibrary =
+        CqlLibrary.builder()
+            .id("Library1_ID")
+            .cqlLibraryName("With_Underscore")
+            .model(MODEL_QDM)
+            .draft(true)
+            .version(new Version(1, 0, 0))
+            .createdAt(createdTime)
+            .createdBy("User1")
+            .lastModifiedAt(createdTime)
+            .lastModifiedBy("User1")
+            .build();
+    final CqlLibraryDraft draft =
+        CqlLibraryDraft.builder().cqlLibraryName("With_Underscore").model(MODEL_QDM).build();
+
+    when(versionService.createDraft(anyString(), anyString(), anyString(), anyString()))
+        .thenReturn(draftLibrary);
+    mockMvc
+        .perform(
+            post("/cql-libraries/draft/Library1_ID")
+                .with(user(TEST_USER_ID))
+                .with(csrf())
+                .content(toJsonString(draft))
+                .contentType(MediaType.APPLICATION_JSON_VALUE))
+        .andExpect(status().isCreated())
+        .andExpect(content().contentType(MediaType.APPLICATION_JSON_VALUE))
+        .andExpect(jsonPath("$.cqlLibraryName").value("With_Underscore"))
+        .andExpect(jsonPath("$.model").value(MODEL_QDM))
+        .andExpect(jsonPath("$.draft").value(true));
+    verify(versionService, times(1))
+        .createDraft(eq("Library1_ID"), eq("With_Underscore"), eq(MODEL_QDM), eq(TEST_USER_ID));
   }
 
   @Test
   public void testCreateDraftReturnsValidationErrorForContainingSpecialCharacters()
       throws Exception {
-    final CqlLibraryDraft draft = CqlLibraryDraft.builder().cqlLibraryName("Name*$").build();
+    final CqlLibraryDraft draft =
+        CqlLibraryDraft.builder().cqlLibraryName("Name#1").model(MODEL).build();
     mockMvc
         .perform(
             post("/cql-libraries/draft/Library1_ID")
@@ -880,11 +1205,11 @@ public class CqlLibraryControllerMvcTest {
         .andExpect(status().isBadRequest())
         .andExpect(content().contentType(MediaType.APPLICATION_JSON_VALUE))
         .andExpect(
-            jsonPath("$.validationErrors.cqlLibraryName")
+            jsonPath("$.validationErrors.cqlLibraryDraft")
                 .value(
                     "Library name must start with an upper case letter, "
                         + "followed by alpha-numeric character(s) and must not contain "
-                        + "spaces or other special characters."));
+                        + "spaces or other special characters except of underscore for QDM."));
     verifyNoInteractions(cqlLibraryRepository);
   }
 
