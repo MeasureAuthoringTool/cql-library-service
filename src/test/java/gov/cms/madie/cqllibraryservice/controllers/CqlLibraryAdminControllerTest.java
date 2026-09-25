@@ -5,6 +5,7 @@ import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.doNothing;
@@ -34,10 +35,13 @@ import gov.cms.madie.cqllibraryservice.services.AdminService;
 import gov.cms.madie.cqllibraryservice.services.CqlLibraryLockService;
 import gov.cms.madie.cqllibraryservice.services.CqlLibraryService;
 import gov.cms.madie.cqllibraryservice.services.IgPackageService;
+import gov.cms.madie.cqllibraryservice.exceptions.GeneralConflictException;
 import gov.cms.madie.models.access.AclOperation;
 import gov.cms.madie.models.access.AclSpecification;
 import gov.cms.madie.models.access.RoleEnum;
 import gov.cms.madie.models.common.OwnershipType;
+import gov.cms.madie.models.common.Version;
+import gov.cms.madie.models.library.CqlLibrary;
 
 @ExtendWith(MockitoExtension.class)
 public class CqlLibraryAdminControllerTest {
@@ -139,5 +143,43 @@ public class CqlLibraryAdminControllerTest {
     assertTrue(response.getBody().contains("hl7.fhir.us.qicore"));
     assertTrue(response.getBody().contains("7.0.2"));
     verify(igPackageService, times(1)).installIgPackage(anyString(), anyString(), anyString());
+  }
+
+  @Test
+  void testCorrectLibraryVersionDelegatesToAdminService() {
+    when(principal.getName()).thenReturn("Admin.User");
+    CqlLibrary reverted =
+        CqlLibrary.builder().id("lib-1").version(Version.parse("1.0.000")).draft(true).build();
+    when(adminService.correctLibraryVersion(
+            "lib-1", "1.0.001", "1.0.000", "owner.harp", "admin.user"))
+        .thenReturn(reverted);
+
+    ResponseEntity<CqlLibrary> response =
+        controller.correctLibraryVersion("owner.harp", principal, "lib-1", "1.0.001", "1.0.000");
+
+    assertEquals(HttpStatus.OK, response.getStatusCode());
+    assertEquals(reverted, response.getBody());
+    verify(adminService, times(1))
+        .correctLibraryVersion("lib-1", "1.0.001", "1.0.000", "owner.harp", "admin.user");
+  }
+
+  @Test
+  void testCorrectLibraryVersionPropagatesServiceFailures() {
+    when(principal.getName()).thenReturn("admin.user");
+    when(adminService.correctLibraryVersion(
+            anyString(), anyString(), anyString(), anyString(), anyString()))
+        .thenThrow(
+            new GeneralConflictException(
+                "New version # must be lower than the intended final version number"));
+
+    GeneralConflictException exception =
+        assertThrows(
+            GeneralConflictException.class,
+            () ->
+                controller.correctLibraryVersion(
+                    "owner.harp", principal, "lib-1", "1.0.001", "1.0.002"));
+    assertEquals(
+        "New version # must be lower than the intended final version number",
+        exception.getMessage());
   }
 }
