@@ -44,17 +44,6 @@ public class AdminService {
   private static final String VERSION_ALREADY_USED_ERROR =
       "New version # must not be one that has been used previously for this library";
 
-  /**
-   * Reverts a versioned library back to an earlier (lower) version number and returns it to a draft
-   * state, so that the owner can re-version it up to the intended final version number.
-   *
-   * @param id id of the library whose version is being corrected
-   * @param inCorrectVersion the version the library currently carries
-   * @param draftVersion the lower version number the library should be reverted to
-   * @param harpId harp id of the library set owner
-   * @param username the admin performing the change, recorded on the action log
-   * @return the reverted library
-   */
   public CqlLibrary correctLibraryVersion(
       String id, String inCorrectVersion, String draftVersion, String harpId, String username) {
     CqlLibrary libraryToCorrectVersion = cqlLibraryService.findCqlLibraryById(id, username);
