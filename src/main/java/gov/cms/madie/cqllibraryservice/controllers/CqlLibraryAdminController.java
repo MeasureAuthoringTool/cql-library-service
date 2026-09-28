@@ -9,8 +9,10 @@ import java.util.Map;
 import gov.cms.madie.cqllibraryservice.dto.IgPackageInstallRequest;
 import gov.cms.madie.cqllibraryservice.dto.LibraryListDTO;
 import gov.cms.madie.cqllibraryservice.dto.LibrarySearchCriteria;
+import gov.cms.madie.cqllibraryservice.dto.UserLibrariesDTO;
 import gov.cms.madie.cqllibraryservice.services.AdminService;
 import gov.cms.madie.cqllibraryservice.services.IgPackageService;
+import gov.cms.madie.cqllibraryservice.services.UserLibraryExportService;
 import gov.cms.madie.cqllibraryservice.utils.PaginationUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.data.domain.Page;
@@ -19,6 +21,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
+import org.springframework.util.CollectionUtils;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -52,6 +55,7 @@ public class CqlLibraryAdminController {
   private final CqlLibraryService cqlLibraryService;
   private final AdminService adminService;
   private final IgPackageService igPackageService;
+  private final UserLibraryExportService userLibraryExportService;
 
   @PutMapping("/userProfile/{harpId}/searches")
   @PreAuthorize("hasRole('MADIE-ADMIN')")
@@ -68,6 +72,24 @@ public class CqlLibraryAdminController {
         cqlLibraryService.getLibrariesByCriteria(
             librarySearchCriteria, ownershipType, pageReq, harpId.toLowerCase());
     return ResponseEntity.ok(libraries);
+  }
+
+  /**
+   * Bulk variant of {@link #searchLibrariesForUser} for the Full User Export: returns the owned and
+   * shared libraries (latest per family) for many users in a single request.
+   *
+   * @param harpIds the users to include; when null/empty, every user with libraries is returned
+   * @return map of lower-cased HARP id -> owned/shared library lists
+   */
+  @PutMapping("/bulk-fetch-for-users")
+  @PreAuthorize("hasRole('MADIE-ADMIN')")
+  public ResponseEntity<Map<String, UserLibrariesDTO>> bulkExportLibrariesForUsers(
+      @RequestBody(required = false) List<String> harpIds, Principal principal) {
+    log.info(
+        "Admin [{}] requested bulk library export for {} user(s)",
+        principal != null ? principal.getName() : "unknown",
+        CollectionUtils.isEmpty(harpIds) ? "all" : harpIds.size());
+    return ResponseEntity.ok(userLibraryExportService.getLibrariesForUsers(harpIds));
   }
 
   @DeleteMapping("/locks")
