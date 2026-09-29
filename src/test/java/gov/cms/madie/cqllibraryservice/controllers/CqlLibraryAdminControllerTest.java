@@ -19,6 +19,7 @@ import java.util.Set;
 
 import gov.cms.madie.cqllibraryservice.dto.LibraryListDTO;
 import gov.cms.madie.cqllibraryservice.dto.LibrarySearchCriteria;
+import gov.cms.madie.cqllibraryservice.dto.UserLibrariesDTO;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -35,6 +36,7 @@ import gov.cms.madie.cqllibraryservice.services.AdminService;
 import gov.cms.madie.cqllibraryservice.services.CqlLibraryLockService;
 import gov.cms.madie.cqllibraryservice.services.CqlLibraryService;
 import gov.cms.madie.cqllibraryservice.services.IgPackageService;
+import gov.cms.madie.cqllibraryservice.services.UserLibraryExportService;
 import gov.cms.madie.cqllibraryservice.exceptions.GeneralConflictException;
 import gov.cms.madie.models.access.AclOperation;
 import gov.cms.madie.models.access.AclSpecification;
@@ -51,6 +53,7 @@ public class CqlLibraryAdminControllerTest {
   @Mock private CqlLibraryService cqlLibraryService;
   @Mock private AdminService adminService;
   @Mock private IgPackageService igPackageService;
+  @Mock private UserLibraryExportService userLibraryExportService;
   @Mock Principal principal;
 
   @Test
@@ -61,6 +64,7 @@ public class CqlLibraryAdminControllerTest {
 
     ResponseEntity<List<String>> response = controller.unlockAllByUser("test.user", principal);
     assertNotNull(response);
+    assertNotNull(response.getBody());
     assertEquals(2, response.getBody().size());
     assertTrue(response.getBody().get(0).contains(msg1));
     assertTrue(response.getBody().get(1).contains(msg2));
@@ -123,6 +127,23 @@ public class CqlLibraryAdminControllerTest {
     verify(cqlLibraryService)
         .getLibrariesByCriteria(
             eq(criteria), eq(OwnershipType.OWNED), any(Pageable.class), eq("profile_user"));
+  }
+
+  @Test
+  void testBulkExportLibrariesForUsers() {
+    when(principal.getName()).thenReturn("admin.user");
+    UserLibrariesDTO libraries = new UserLibrariesDTO();
+    when(userLibraryExportService.getLibrariesForUsers(List.of("harp1", "harp2")))
+        .thenReturn(java.util.Map.of("harp1", libraries));
+
+    ResponseEntity<java.util.Map<String, UserLibrariesDTO>> response =
+        controller.bulkExportLibrariesForUsers(List.of("harp1", "harp2"), principal);
+
+    assertEquals(HttpStatus.OK, response.getStatusCode());
+    assertNotNull(response.getBody());
+    assertEquals(1, response.getBody().size());
+    assertTrue(response.getBody().containsKey("harp1"));
+    verify(userLibraryExportService).getLibrariesForUsers(List.of("harp1", "harp2"));
   }
 
   @Test
