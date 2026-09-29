@@ -5,6 +5,10 @@ import static org.mockito.Mockito.*;
 
 import gov.cms.madie.cqllibraryservice.dto.LibraryAccessReportDTO;
 import gov.cms.madie.cqllibraryservice.dto.LibraryListDTO;
+import gov.cms.madie.cqllibraryservice.exceptions.GeneralConflictException;
+import gov.cms.madie.cqllibraryservice.exceptions.HarpIdMismatchException;
+import gov.cms.madie.cqllibraryservice.exceptions.ResourceNotDraftableException;
+import gov.cms.madie.cqllibraryservice.exceptions.ResourceNotFoundException;
 import gov.cms.madie.cqllibraryservice.repositories.CqlLibraryRepository;
 import gov.cms.madie.cqllibraryservice.repositories.LibrarySetActionLogRepository;
 import gov.cms.madie.models.access.AclSpecification;
@@ -12,7 +16,10 @@ import gov.cms.madie.models.access.RoleEnum;
 import gov.cms.madie.models.common.AccessControlAction;
 import gov.cms.madie.models.common.ActionType;
 import gov.cms.madie.models.common.LibrarySetActionLog;
+import gov.cms.madie.models.common.Version;
+import gov.cms.madie.models.library.CqlLibrary;
 import gov.cms.madie.models.library.LibrarySet;
+import org.mockito.ArgumentCaptor;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -33,12 +40,19 @@ class AdminServiceTest {
   @Mock private CqlLibraryRepository cqlLibraryRepository;
   @Mock private LibrarySetActionLogRepository librarySetActionLogRepository;
   @Mock private ExcelClient excelClient;
+  @Mock private CqlLibraryService cqlLibraryService;
+  @Mock private VersionService versionService;
+  @Mock private ActionLogService actionLogService;
 
   @InjectMocks private AdminService adminService;
 
   private LibraryListDTO testLibraryDTO;
   private LibrarySet testLibrarySet;
   private LibrarySetActionLog testActionLog;
+
+  private static final String LIBRARY_ID = "lib-1";
+  private static final String LIBRARY_SET_ID = "lib-set-123";
+  private static final String OWNER = "testOwner";
 
   @BeforeEach
   void setUp() {
@@ -397,5 +411,193 @@ class AdminServiceTest {
 
     assertEquals(2, result.size());
     verify(librarySetActionLogRepository, times(1)).findByTargetId("lib-set-123");
+  }
+
+  private CqlLibrary versionedLibrary() {
+    return CqlLibrary.builder()
+        .id(LIBRARY_ID)
+        .librarySetId(LIBRARY_SET_ID)
+        .cqlLibraryName("TestLibrary")
+        .version(Version.parse("1.0.001"))
+        .draft(false)
+        .active(true)
+        .cql("library TestLibrary version '1.0.001'\nusing FHIR version '4.0.1'")
+        .librarySet(LibrarySet.builder().librarySetId(LIBRARY_SET_ID).owner(OWNER).build())
+        .build();
+  }
+
+  private void stubVersionLines() {
+    when(versionService.generateLibraryContentLine(eq("TestLibrary"), any(Version.class)))
+        .thenAnswer(
+            invocation ->
+                "library TestLibrary version '" + invocation.getArgument(1).toString() + "'");
+  }
+
+  @Test
+  void correctLibraryVersionRevertsLibraryToDraftAtLowerVersion() {
+    CqlLibrary library = versionedLibrary();
+    when(cqlLibraryService.findCqlLibraryById(LIBRARY_ID, "admin.user")).thenReturn(library);
+    when(cqlLibraryRepository.findByLibrarySetIdAndDraftAndActive(LIBRARY_SET_ID, true, true))
+        .thenReturn(Collections.emptyList());
+    when(cqlLibraryRepository.findByLibrarySetIdAndActive(LIBRARY_SET_ID, true))
+        .thenReturn(List.of(library));
+    stubVersionLines();
+    when(cqlLibraryRepository.save(any(CqlLibrary.class))).thenAnswer(i -> i.getArgument(0));
+
+    CqlLibrary result =
+        adminService.correctLibraryVersion(LIBRARY_ID, "1.0.001", "1.0.000", OWNER, "admin.user");
+
+    assertEquals("1.0.000", result.getVersion().toString());
+    assertTrue(result.isDraft());
+    assertTrue(result.getCql().contains("library TestLibrary version '1.0.000'"));
+    assertEquals("admin.user", result.getLastModifiedBy());
+
+    ArgumentCaptor<String> messageCaptor = ArgumentCaptor.forClass(String.class);
+    verify(actionLogService)
+        .logAction(
+            eq(LIBRARY_ID),
+            eq(ActionType.VERSION_REVERT),
+            eq("admin.user"),
+            eq("actionLog"),
+            messageCaptor.capture());
+    assertEquals(
+        "Reverted from version 1.0.001 to 1.0.000 by MADiE Admin", messageCaptor.getValue());
+  }
+
+  @Test
+  void correctLibraryVersionThrowsWhenCurrentVersionDoesNotMatch() {
+    when(cqlLibraryService.findCqlLibraryById(LIBRARY_ID, "admin.user"))
+        .thenReturn(versionedLibrary());
+
+    assertThrows(
+        ResourceNotFoundException.class,
+        () ->
+            adminService.correctLibraryVersion(
+                LIBRARY_ID, "2.0.000", "1.0.000", OWNER, "admin.user"));
+    verify(cqlLibraryRepository, never()).save(any(CqlLibrary.class));
+  }
+
+  @Test
+  void correctLibraryVersionThrowsWhenLibraryHasNoVersion() {
+    CqlLibrary library = versionedLibrary();
+    library.setVersion(null);
+    when(cqlLibraryService.findCqlLibraryById(LIBRARY_ID, "admin.user")).thenReturn(library);
+
+    assertThrows(
+        ResourceNotFoundException.class,
+        () ->
+            adminService.correctLibraryVersion(
+                LIBRARY_ID, "1.0.001", "1.0.000", OWNER, "admin.user"));
+  }
+
+  @Test
+  void correctLibraryVersionThrowsWhenHarpIdDoesNotMatchOwner() {
+    when(cqlLibraryService.findCqlLibraryById(LIBRARY_ID, "admin.user"))
+        .thenReturn(versionedLibrary());
+
+    assertThrows(
+        HarpIdMismatchException.class,
+        () ->
+            adminService.correctLibraryVersion(
+                LIBRARY_ID, "1.0.001", "1.0.000", "someone.else", "admin.user"));
+  }
+
+  @Test
+  void correctLibraryVersionThrowsWhenLibrarySetIsMissing() {
+    CqlLibrary library = versionedLibrary();
+    library.setLibrarySet(null);
+    when(cqlLibraryService.findCqlLibraryById(LIBRARY_ID, "admin.user")).thenReturn(library);
+
+    assertThrows(
+        HarpIdMismatchException.class,
+        () ->
+            adminService.correctLibraryVersion(
+                LIBRARY_ID, "1.0.001", "1.0.000", OWNER, "admin.user"));
+  }
+
+  @Test
+  void correctLibraryVersionThrowsWhenAnotherDraftExistsInTheSet() {
+    when(cqlLibraryService.findCqlLibraryById(LIBRARY_ID, "admin.user"))
+        .thenReturn(versionedLibrary());
+    when(cqlLibraryRepository.findByLibrarySetIdAndDraftAndActive(LIBRARY_SET_ID, true, true))
+        .thenReturn(List.of(CqlLibrary.builder().id("other-draft").draft(true).build()));
+
+    assertThrows(
+        ResourceNotDraftableException.class,
+        () ->
+            adminService.correctLibraryVersion(
+                LIBRARY_ID, "1.0.001", "1.0.000", OWNER, "admin.user"));
+  }
+
+  @Test
+  void correctLibraryVersionThrowsWhenNewVersionIsNotLower() {
+    when(cqlLibraryService.findCqlLibraryById(LIBRARY_ID, "admin.user"))
+        .thenReturn(versionedLibrary());
+    when(cqlLibraryRepository.findByLibrarySetIdAndDraftAndActive(LIBRARY_SET_ID, true, true))
+        .thenReturn(Collections.emptyList());
+
+    GeneralConflictException exception =
+        assertThrows(
+            GeneralConflictException.class,
+            () ->
+                adminService.correctLibraryVersion(
+                    LIBRARY_ID, "1.0.001", "1.0.002", OWNER, "admin.user"));
+    assertEquals(
+        "New version # must be lower than the intended final version number",
+        exception.getMessage());
+  }
+
+  @Test
+  void correctLibraryVersionThrowsWhenNewVersionEqualsCurrentVersion() {
+    when(cqlLibraryService.findCqlLibraryById(LIBRARY_ID, "admin.user"))
+        .thenReturn(versionedLibrary());
+    when(cqlLibraryRepository.findByLibrarySetIdAndDraftAndActive(LIBRARY_SET_ID, true, true))
+        .thenReturn(Collections.emptyList());
+
+    assertThrows(
+        GeneralConflictException.class,
+        () ->
+            adminService.correctLibraryVersion(
+                LIBRARY_ID, "1.0.001", "1.0.001", OWNER, "admin.user"));
+  }
+
+  @Test
+  void correctLibraryVersionThrowsWhenNewVersionIsAlreadyUsedInTheSet() {
+    CqlLibrary library = versionedLibrary();
+    when(cqlLibraryService.findCqlLibraryById(LIBRARY_ID, "admin.user")).thenReturn(library);
+    when(cqlLibraryRepository.findByLibrarySetIdAndDraftAndActive(LIBRARY_SET_ID, true, true))
+        .thenReturn(Collections.emptyList());
+    when(cqlLibraryRepository.findByLibrarySetIdAndActive(LIBRARY_SET_ID, true))
+        .thenReturn(
+            List.of(
+                library,
+                CqlLibrary.builder().id("lib-0").version(Version.parse("1.0.000")).build()));
+
+    GeneralConflictException exception =
+        assertThrows(
+            GeneralConflictException.class,
+            () ->
+                adminService.correctLibraryVersion(
+                    LIBRARY_ID, "1.0.001", "1.0.000", OWNER, "admin.user"));
+    assertEquals(
+        "New version # must not be one that has been used previously for this library",
+        exception.getMessage());
+  }
+
+  @Test
+  void correctLibraryVersionAllowsRevertWhenTheLibraryItselfIsTheOnlyDraftInTheSet() {
+    CqlLibrary library = versionedLibrary();
+    when(cqlLibraryService.findCqlLibraryById(LIBRARY_ID, "admin.user")).thenReturn(library);
+    when(cqlLibraryRepository.findByLibrarySetIdAndDraftAndActive(LIBRARY_SET_ID, true, true))
+        .thenReturn(List.of(CqlLibrary.builder().id(LIBRARY_ID).draft(true).build()));
+    when(cqlLibraryRepository.findByLibrarySetIdAndActive(LIBRARY_SET_ID, true))
+        .thenReturn(List.of(library));
+    stubVersionLines();
+    when(cqlLibraryRepository.save(any(CqlLibrary.class))).thenAnswer(i -> i.getArgument(0));
+
+    CqlLibrary result =
+        adminService.correctLibraryVersion(LIBRARY_ID, "1.0.001", "0.9.999", OWNER, "admin.user");
+
+    assertEquals("0.9.999", result.getVersion().toString());
   }
 }

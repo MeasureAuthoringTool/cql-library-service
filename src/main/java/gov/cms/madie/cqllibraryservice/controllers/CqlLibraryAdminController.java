@@ -120,6 +120,25 @@ public class CqlLibraryAdminController {
     return ResponseEntity.ok(results);
   }
 
+  @PutMapping("/{id}/correct-version")
+  @PreAuthorize("hasRole('MADIE-ADMIN')")
+  public ResponseEntity<CqlLibrary> correctLibraryVersion(
+      @RequestHeader(name = "harpId") String harpId,
+      Principal principal,
+      @PathVariable String id,
+      @RequestParam String inCorrectVersion,
+      @RequestParam String draftVersion) {
+    final String username = principal.getName().toLowerCase();
+    log.info(
+        "Admin user [{}] is attempting to revert library [{}] from version [{}] to [{}]",
+        username,
+        id,
+        HtmlUtils.htmlEscape(inCorrectVersion),
+        HtmlUtils.htmlEscape(draftVersion));
+    return ResponseEntity.ok(
+        adminService.correctLibraryVersion(id, inCorrectVersion, draftVersion, harpId, username));
+  }
+
   @DeleteMapping("/{id}")
   @PreAuthorize("hasRole('MADIE-ADMIN')")
   public ResponseEntity<CqlLibrary> deleteCqlLibraryById(

@@ -6,6 +6,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -40,6 +41,7 @@ import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 
 import gov.cms.madie.cqllibraryservice.config.security.SecurityConfig;
 import gov.cms.madie.cqllibraryservice.dto.LibraryListDTO;
+import gov.cms.madie.cqllibraryservice.exceptions.GeneralConflictException;
 import gov.cms.madie.cqllibraryservice.repositories.CqlLibraryRepository;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
@@ -48,6 +50,7 @@ import gov.cms.madie.models.access.AclSpecification;
 import gov.cms.madie.models.access.RoleEnum;
 import gov.cms.madie.models.common.ActionType;
 import gov.cms.madie.models.common.OwnershipType;
+import gov.cms.madie.models.common.Version;
 import gov.cms.madie.models.library.CqlLibrary;
 import gov.cms.madie.models.library.LibrarySet;
 
@@ -116,6 +119,78 @@ public class CqlLibraryAdminControllerMvcTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{}"))
         .andExpect(status().isOk());
+  }
+
+  @Test
+  void testCorrectLibraryVersionReturnsRevertedLibrary() throws Exception {
+    CqlLibrary reverted =
+        CqlLibrary.builder()
+            .id("lib-1")
+            .cqlLibraryName("TestLibrary")
+            .version(Version.parse("1.0.000"))
+            .draft(true)
+            .build();
+    when(adminService.correctLibraryVersion(
+            eq("lib-1"), eq("1.0.001"), eq("1.0.000"), eq("owner1"), anyString()))
+        .thenReturn(reverted);
+
+    mockMvc
+        .perform(
+            put("/cql-libraries/admin/lib-1/correct-version")
+                .with(csrf())
+                .with(user(TEST_USER_ID).roles("MADIE-ADMIN"))
+                .header("Authorization", TEST_OKTA)
+                .header("harpId", "owner1")
+                .param("inCorrectVersion", "1.0.001")
+                .param("draftVersion", "1.0.000"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.id", equalTo("lib-1")))
+        .andExpect(jsonPath("$.version", equalTo("1.0.000")))
+        .andExpect(jsonPath("$.draft", equalTo(true)));
+
+    verify(adminService)
+        .correctLibraryVersion(
+            eq("lib-1"), eq("1.0.001"), eq("1.0.000"), eq("owner1"), anyString());
+  }
+
+  @Test
+  void testCorrectLibraryVersionIsForbiddenForNonAdminUsers() throws Exception {
+    mockMvc
+        .perform(
+            put("/cql-libraries/admin/lib-1/correct-version")
+                .with(csrf())
+                .with(user(TEST_USER_ID).roles("MADIE-USER"))
+                .header("Authorization", TEST_OKTA)
+                .header("harpId", "owner1")
+                .param("inCorrectVersion", "1.0.001")
+                .param("draftVersion", "1.0.000"))
+        .andExpect(status().isForbidden());
+
+    verify(adminService, never())
+        .correctLibraryVersion(anyString(), anyString(), anyString(), anyString(), anyString());
+  }
+
+  @Test
+  void testCorrectLibraryVersionReturnsConflictWhenNewVersionIsNotLower() throws Exception {
+    when(adminService.correctLibraryVersion(
+            anyString(), anyString(), anyString(), anyString(), anyString()))
+        .thenThrow(
+            new GeneralConflictException(
+                "New version # must be lower than the intended final version number"));
+
+    mockMvc
+        .perform(
+            put("/cql-libraries/admin/lib-1/correct-version")
+                .with(csrf())
+                .with(user(TEST_USER_ID).roles("MADIE-ADMIN"))
+                .header("Authorization", TEST_OKTA)
+                .header("harpId", "owner1")
+                .param("inCorrectVersion", "1.0.001")
+                .param("draftVersion", "1.0.002"))
+        .andExpect(status().isConflict())
+        .andExpect(
+            jsonPath("$.message")
+                .value("New version # must be lower than the intended final version number"));
   }
 
   @Test
