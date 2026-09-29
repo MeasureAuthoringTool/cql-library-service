@@ -117,7 +117,8 @@ public class UserLibraryExportService {
 
   /**
    * Aggregation: keep active libraries, join the librarySet, then return all library versions
-   * sorted by draft status and version (draft > version, DESC).
+   * sorted by librarySetId (to group same libraries together), then by draft status and version
+   * (DESC).
    */
   private List<LibraryListDTO> findAllLibraryVersions() {
     LookupOperation lookup = lookup("librarySet", "librarySetId", "librarySetId", "librarySet");
@@ -127,7 +128,11 @@ public class UserLibraryExportService {
             project().andExclude("cql", "elmJson", "elmXml"),
             lookup,
             unwind("librarySet"),
-            sort(Sort.by(Sort.Direction.DESC, "draft", "version")));
+            sort(
+                Sort.by(
+                    Sort.Order.asc("librarySetId"),
+                    Sort.Order.desc("draft"),
+                    Sort.Order.desc("version"))));
     return mongoTemplate
         .aggregate(aggregation, CqlLibrary.class, LibraryListDTO.class)
         .getMappedResults();
