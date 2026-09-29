@@ -69,6 +69,7 @@ public class CqlLibraryAdminControllerMvcTest {
   @MockitoBean private UserServiceClient userServiceClient;
   @MockitoBean AdminService adminService;
   @MockitoBean IgPackageService igPackageService;
+  @MockitoBean UserLibraryExportService userLibraryExportService;
   @MockitoBean ExternalLibraryImportService externalLibraryImportService;
   @MockitoBean PackageTrackingRepository packageTrackingRepository;
 
