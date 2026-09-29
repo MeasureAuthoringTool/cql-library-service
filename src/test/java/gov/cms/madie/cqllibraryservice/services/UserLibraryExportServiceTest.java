@@ -42,6 +42,7 @@ class UserLibraryExportServiceTest {
   @InjectMocks private UserLibraryExportService service;
 
   @org.mockito.Captor private org.mockito.ArgumentCaptor<List<String>> ownerIdsCaptor;
+  @org.mockito.Captor private org.mockito.ArgumentCaptor<Aggregation> aggregationCaptor;
 
   private void stubAggregate(List<LibraryListDTO> results) {
     when(mongoTemplate.aggregate(
@@ -197,5 +198,39 @@ class UserLibraryExportServiceTest {
     assertTrue(result.containsKey("ownera"));
     assertFalse(result.containsKey("userc"));
     assertFalse(result.containsKey("userd"));
+  }
+
+  @Test
+  void fallsBackToHarpIdWhenResolvedFullNameIsBlank() {
+    LibraryListDTO owned = library("set-1", "Library One", "OwnerA");
+    stubAggregate(List.of(owned));
+    when(userServiceClient.getBulkUserDetails(anyList()))
+        .thenReturn(Map.of("ownera", userDetails("ownera", " ", " ")));
+
+    service.getLibrariesForUsers(null);
+
+    assertEquals("ownera", owned.getOwnerDisplayName());
+  }
+
+  @Test
+  void returnsEmptyMapWhenNoLibrariesFound() {
+    stubAggregate(List.of());
+
+    Map<String, UserLibrariesDTO> result = service.getLibrariesForUsers(null);
+
+    assertTrue(result.isEmpty());
+    verify(userServiceClient, never()).getBulkUserDetails(any());
+  }
+
+  @Test
+  void buildsAllVersionsAggregationPipeline() {
+    stubAggregate(List.of());
+
+    service.getLibrariesForUsers(null);
+
+    verify(mongoTemplate)
+        .aggregate(aggregationCaptor.capture(), eq(CqlLibrary.class), eq(LibraryListDTO.class));
+    // match -> project -> lookup -> unwind -> sort (no group/replaceRoot for all versions)
+    assertEquals(5, aggregationCaptor.getValue().getPipeline().getOperations().size());
   }
 }

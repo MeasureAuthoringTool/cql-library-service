@@ -1,13 +1,6 @@
 package gov.cms.madie.cqllibraryservice.services;
 
-import static org.springframework.data.mongodb.core.aggregation.Aggregation.group;
-import static org.springframework.data.mongodb.core.aggregation.Aggregation.lookup;
-import static org.springframework.data.mongodb.core.aggregation.Aggregation.match;
-import static org.springframework.data.mongodb.core.aggregation.Aggregation.newAggregation;
-import static org.springframework.data.mongodb.core.aggregation.Aggregation.project;
-import static org.springframework.data.mongodb.core.aggregation.Aggregation.replaceRoot;
-import static org.springframework.data.mongodb.core.aggregation.Aggregation.sort;
-import static org.springframework.data.mongodb.core.aggregation.Aggregation.unwind;
+import static org.springframework.data.mongodb.core.aggregation.Aggregation.*;
 
 import gov.cms.madie.cqllibraryservice.dto.LibraryListDTO;
 import gov.cms.madie.cqllibraryservice.dto.UserLibrariesDTO;
@@ -44,8 +37,7 @@ public class UserLibraryExportService {
   private final UserServiceClient userServiceClient;
 
   /**
-   * Returns, for each requested HARP id, the latest library per family the user owns or is shared
-   * on.
+   * Returns, for each requested HARP id, all library versions the user owns or is shared on.
    *
    * @param harpIds users to include; when null/empty, every user that owns/shares a library is
    *     returned
@@ -60,10 +52,10 @@ public class UserLibraryExportService {
                 .map(String::toLowerCase)
                 .collect(Collectors.toSet());
 
-    List<LibraryListDTO> latestPerFamily = findLatestLibraryPerFamily();
+    List<LibraryListDTO> allLibraries = findAllLibraryVersions();
 
     List<String> ownerIds =
-        latestPerFamily.stream()
+        allLibraries.stream()
             .map(
                 library ->
                     library.getLibrarySet() == null ? null : library.getLibrarySet().getOwner())
@@ -75,7 +67,7 @@ public class UserLibraryExportService {
         ownerIds.isEmpty() ? Map.of() : userServiceClient.getBulkUserDetails(ownerIds);
 
     Map<String, UserLibrariesDTO> byUser = new HashMap<>();
-    for (LibraryListDTO library : latestPerFamily) {
+    for (LibraryListDTO library : allLibraries) {
       LibrarySet librarySet = library.getLibrarySet();
       if (librarySet == null) {
         continue;
@@ -102,9 +94,9 @@ public class UserLibraryExportService {
       }
     }
     log.info(
-        "Bulk export assembled libraries for {} user(s) from {} library families",
+        "Bulk export assembled libraries for {} user(s) from {} library versions",
         byUser.size(),
-        latestPerFamily.size());
+        allLibraries.size());
     return byUser;
   }
 
@@ -124,10 +116,10 @@ public class UserLibraryExportService {
   }
 
   /**
-   * One aggregation: keep active libraries, join the librarySet, then pick the latest library per
-   * family (draft > version, DESC) - matching the selection the UI/search uses.
+   * Aggregation: keep active libraries, join the librarySet, then return all library versions
+   * sorted by draft status and version (draft > version, DESC).
    */
-  private List<LibraryListDTO> findLatestLibraryPerFamily() {
+  private List<LibraryListDTO> findAllLibraryVersions() {
     LookupOperation lookup = lookup("librarySet", "librarySetId", "librarySetId", "librarySet");
     Aggregation aggregation =
         newAggregation(
@@ -135,9 +127,7 @@ public class UserLibraryExportService {
             project().andExclude("cql", "elmJson", "elmXml"),
             lookup,
             unwind("librarySet"),
-            sort(Sort.by(Sort.Direction.DESC, "draft", "version")),
-            group("librarySetId").first("$$ROOT").as("selectedDoc"),
-            replaceRoot("selectedDoc"));
+            sort(Sort.by(Sort.Direction.DESC, "draft", "version")));
     return mongoTemplate
         .aggregate(aggregation, CqlLibrary.class, LibraryListDTO.class)
         .getMappedResults();
