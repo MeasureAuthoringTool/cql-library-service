@@ -38,7 +38,7 @@ class FhirPackageDownloadServiceImplTest {
   @TempDir Path tempDir;
 
   private static final String PACKAGE_ID = "hl7.fhir.us.qicore";
-  private static final String VERSION = "7.0.2";
+  private static final String VERSION = "6.0.0";
   private static final String USERNAME = "admin.user";
   private static final String DEP_1 = "hl7.fhir.us.core";
   private static final String DEP_2 = "hl7.fhir.uv.extensions";

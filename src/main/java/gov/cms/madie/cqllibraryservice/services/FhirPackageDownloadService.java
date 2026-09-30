@@ -7,7 +7,7 @@ public interface FhirPackageDownloadService {
    * Downloads a FHIR NPM package from the package registry, use cache if available.
    *
    * @param packageId the FHIR package identifier (e.g., "hl7.fhir.us.qicore")
-   * @param version the package version (e.g., "7.0.2")
+   * @param version the package version (e.g., "6.0.0")
    * @param username the admin user initiating the download
    * @return a result object describing the outcome of the download
    */

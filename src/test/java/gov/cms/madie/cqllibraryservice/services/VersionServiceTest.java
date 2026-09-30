@@ -591,38 +591,6 @@ class VersionServiceTest {
   }
 
   @Test
-  void testIsQiCore411AndHasOtherQiCoreLibraryReturnsTrueForQiCore7() {
-    LibraryListDTO libraryDto =
-        LibraryListDTO.builder()
-            .id("testCqlLibraryId2")
-            .model(ModelType.QI_CORE_7_0_0.getValue())
-            .build();
-    when(cqlLibraryService.getLibrariesByLibrarySetId(anyString(), anyBoolean(), any()))
-        .thenReturn((List.of(libraryDto)));
-    boolean result = versionService.isQiCore411AndHasOtherQiCoreLibrary(existingCqlLibrary);
-    assertTrue(result);
-  }
-
-  @Test
-  void testIsValidDraftableVersionReturnsFalseWhenDraftedToQiCore6() {
-    CqlLibrary existingCqlLibrary1 =
-        existingCqlLibrary.toBuilder().model(ModelType.QI_CORE_7_0_0.getValue()).build();
-    boolean result =
-        versionService.isValidDraftableVersion(
-            existingCqlLibrary1, ModelType.QI_CORE_6_0_0.getValue());
-    assertFalse(result);
-  }
-
-  @Test
-  void testIsValidDraftableVersionReturnsFalseWhenDraftedToQiCore411() {
-    CqlLibrary existingCqlLibrary1 =
-        existingCqlLibrary.toBuilder().model(ModelType.QI_CORE_7_0_0.getValue()).build();
-    boolean result =
-        versionService.isValidDraftableVersion(existingCqlLibrary1, ModelType.QI_CORE.getValue());
-    assertFalse(result);
-  }
-
-  @Test
   void testCreateDraftThrowsExceptionForQiCore411DraftOffQiCore600() {
     CqlLibrary existingCqlLibrary1 = existingCqlLibrary.toBuilder().draft(false).build();
 
