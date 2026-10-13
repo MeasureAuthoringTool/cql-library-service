@@ -6,12 +6,12 @@ import tools.jackson.databind.json.JsonMapper;
 import gov.cms.madie.cqllibraryservice.config.EnvironmentConfig;
 import gov.cms.madie.cqllibraryservice.exceptions.CqlElmTranslationServiceException;
 import gov.cms.madie.models.common.ModelType;
+import gov.cms.madie.models.cql.CqlCompilerException;
 import gov.cms.madie.models.measure.ElmJson;
 import java.net.URI;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
-import org.cqframework.cql.cql2elm.CqlCompilerException;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
@@ -82,8 +82,6 @@ public class ElmTranslatorClient {
       if (jsonNode.has("errorExceptions") && jsonNode.get("errorExceptions").isArray()) {
         JsonNode errorExceptions = jsonNode.get("errorExceptions");
         for (JsonNode errorException : errorExceptions) {
-          // TODO CqlCompilerException is the sole reason for this project to rely on cql-to-elm
-          // dependency.. we could expose this value from madie-models instead
           if (CqlCompilerException.ErrorSeverity.Error.name()
               .equals(errorException.path("errorSeverity").asString(""))) {
             hasError = true;

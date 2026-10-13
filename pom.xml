@@ -14,7 +14,6 @@
   <name>cql-library-service</name>
   <description>Service layer for the CqlLibrary capabilities of MADiE</description>
   <properties>
-    <cqframework.version>3.27.0</cqframework.version>
     <java.version>17</java.version>
     <maven.compiler.source>${java.version}</maven.compiler.source>
     <maven.compiler.target>${java.version}</maven.compiler.target>
@@ -129,17 +128,12 @@
     <dependency>
       <groupId>gov.cms.madie</groupId>
       <artifactId>madie-java-models</artifactId>
-      <version>0.10.25-SNAPSHOT</version>
+      <version>0.10.26-SNAPSHOT</version>
     </dependency>
     <dependency>
       <groupId>gov.cms.madie</groupId>
       <artifactId>madie-rest-commons</artifactId>
       <version>1.1.1-SNAPSHOT</version>
-    </dependency>
-    <dependency>
-      <groupId>info.cqframework</groupId>
-      <artifactId>cql-to-elm</artifactId>
-      <version>${cqframework.version}</version>
     </dependency>
     <dependency>
       <groupId>ca.uhn.hapi.fhir</groupId>
