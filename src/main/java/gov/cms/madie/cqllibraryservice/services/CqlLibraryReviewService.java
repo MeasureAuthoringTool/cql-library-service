@@ -33,6 +33,7 @@ public class CqlLibraryReviewService {
   private final ActionLogService actionLogService;
   private final CqlLibraryService cqlLibraryService;
   private final CqlLibraryAccessControlService cqlLibraryAccessControlService;
+  private final UserNameService userNameService;
 
   /**
    * Creates a new review document for the given library. Enforces the one-review-per-library
@@ -109,9 +110,12 @@ public class CqlLibraryReviewService {
    * @return the review for the library
    */
   public CqlLibraryReview getReviewByLibraryId(String libraryId) {
-    return cqlLibraryReviewRepository
-        .findByLibraryId(libraryId)
-        .orElseThrow(() -> new ResourceNotFoundException("CQL Library Review", libraryId));
+    CqlLibraryReview review =
+        cqlLibraryReviewRepository
+            .findByLibraryId(libraryId)
+            .orElseThrow(() -> new ResourceNotFoundException("CQL Library Review", libraryId));
+    review.setReadyForReviewBy(userNameService.getDisplayName(review.getReadyForReviewBy()));
+    return review;
   }
 
   /**

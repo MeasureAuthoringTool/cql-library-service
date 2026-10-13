@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -49,6 +50,8 @@ class CqlLibraryReviewServiceTest {
 
   @Mock private CqlLibraryAccessControlService cqlLibraryAccessControlService;
 
+  @Mock private UserNameService userNameService;
+
   @InjectMocks private CqlLibraryReviewService cqlLibraryReviewService;
 
   @Captor private ArgumentCaptor<CqlLibraryReview> reviewCaptor;
@@ -57,6 +60,12 @@ class CqlLibraryReviewServiceTest {
 
   @BeforeEach
   void setUp() {
+    // Resolving display names is covered by ReviewDisplayNameServiceTest; here it
+    // just has to hand the review back untouched.
+    lenient()
+        .when(userNameService.getDisplayName(any()))
+        .thenAnswer(invocation -> invocation.getArgument(0));
+
     review =
         CqlLibraryReview.builder()
             .id("review-1")
@@ -185,6 +194,20 @@ class CqlLibraryReviewServiceTest {
 
     assertNull(result.getReadyForReviewBy());
     assertNull(result.getReadyForReviewAt());
+  }
+
+  @Test
+  void createReviewKeepsTheHarpIdOnTheSavedAndReturnedReview() {
+    when(cqlLibraryReviewRepository.existsByLibraryId("lib-1")).thenReturn(false);
+    when(cqlLibraryReviewRepository.save(any(CqlLibraryReview.class)))
+        .thenAnswer(invocation -> invocation.getArgument(0));
+
+    CqlLibraryReview result = cqlLibraryReviewService.createReview(review, USERNAME);
+
+    verify(cqlLibraryReviewRepository).save(reviewCaptor.capture());
+    assertEquals(USERNAME, reviewCaptor.getValue().getReadyForReviewBy());
+    assertEquals(USERNAME, result.getReadyForReviewBy());
+    verify(userNameService, never()).getDisplayName(any());
   }
 
   @Test
