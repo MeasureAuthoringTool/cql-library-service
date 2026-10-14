@@ -1,6 +1,7 @@
 package gov.cms.madie.cqllibraryservice.services;
 
 import gov.cms.madie.cqllibraryservice.dto.LibraryListDTO;
+import gov.cms.madie.cqllibraryservice.utils.UserDisplayNameUtils;
 import gov.cms.madie.models.dto.UserDetailsDto;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -93,9 +94,7 @@ final class LibraryUserDetailsHelper {
   }
 
   static String getFullName(UserDetailsDto userDetails) {
-    String firstName = userDetails.getFirstName() != null ? userDetails.getFirstName() : "";
-    String lastName = userDetails.getLastName() != null ? userDetails.getLastName() : "";
-    return (firstName + " " + lastName).trim();
+    return UserDisplayNameUtils.getFullName(userDetails);
   }
 
   private static String resolveReviewerDisplayName(UserDetailsDto userDetails, String reviewerId) {
