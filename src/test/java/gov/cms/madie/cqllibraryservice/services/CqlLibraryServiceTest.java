@@ -542,6 +542,41 @@ class CqlLibraryServiceTest {
   }
 
   @Test
+  void testFindCqlLibraryByIdFallsBackToExternalLibrary() {
+    String id = "external-lib-1";
+    ExternalLibrary externalLibrary =
+        ExternalLibrary.builder()
+            .id(id)
+            .librarySetId("external-set-1")
+            .libraryName("FHIRHelpers")
+            .libraryTitle("FHIR Helpers")
+            .description("Shared FHIR helper library")
+            .version("1.0.000")
+            .packageCanonical("http://hl7.org/fhir/us/qicore")
+            .namespacePrefix("hl7.fhir.us.qicore")
+            .cqlContent("library FHIRHelpers version '1.0.000'")
+            .publisher("MADiE")
+            .draft(false)
+            .build();
+
+    when(cqlLibraryRepository.findById(id)).thenReturn(Optional.empty());
+    when(externalLibraryRepository.findById(id)).thenReturn(Optional.of(externalLibrary));
+    when(librarySetService.findByLibrarySetId("external-set-1"))
+        .thenReturn(LibrarySet.builder().librarySetId("external-set-1").owner("system").build());
+    when(cqlLibraryLockService.findByCqlLibraryId(id)).thenReturn(null);
+
+    CqlLibrary result = cqlLibraryService.findCqlLibraryById(id, USERNAME);
+
+    assertNotNull(result);
+    assertEquals(id, result.getId());
+    assertEquals("FHIRHelpers", result.getCqlLibraryName());
+    assertEquals("external-set-1", result.getLibrarySetId());
+    assertNotNull(result.getLibrarySet());
+    assertEquals("system", result.getLibrarySet().getOwner());
+    assertNull(result.getCqlLibraryLock());
+  }
+
+  @Test
   public void testGetSharedLibrariesDelegates() {
     List<String> libraryIds = List.of("lib1", "lib2");
     Map<String, List<SharedUser>> expected = Map.of("lib1", List.of(), "lib2", List.of());
