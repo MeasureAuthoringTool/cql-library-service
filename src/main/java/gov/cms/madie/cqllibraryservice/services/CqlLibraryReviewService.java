@@ -8,6 +8,7 @@ import gov.cms.madie.models.common.OwnershipType;
 import gov.cms.madie.models.common.ReviewStatus;
 import gov.cms.madie.models.library.CqlLibraryReview;
 
+import java.time.Instant;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -32,6 +33,7 @@ public class CqlLibraryReviewService {
   private final ActionLogService actionLogService;
   private final CqlLibraryService cqlLibraryService;
   private final CqlLibraryAccessControlService cqlLibraryAccessControlService;
+  private final UserNameService userNameService;
 
   /**
    * Creates a new review document for the given library. Enforces the one-review-per-library
@@ -50,6 +52,9 @@ public class CqlLibraryReviewService {
     }
     // Ensure a new document is created rather than overwriting an existing one.
     review.setId(null);
+    boolean readyOnCreate = review.getStatus() == ReviewStatus.READY_FOR_REVIEW;
+    review.setReadyForReviewBy(readyOnCreate ? username : null);
+    review.setReadyForReviewAt(readyOnCreate ? Instant.now() : null);
     CqlLibraryReview saved = cqlLibraryReviewRepository.save(review);
     log.info("Created review [{}] for CQL Library [{}]", saved.getId(), libraryId);
     logReviewAction(libraryId, saved.getStatus(), username);
@@ -80,6 +85,7 @@ public class CqlLibraryReviewService {
     }
     existing.setComment(review.getComment());
     existing.setReviewers(review.getReviewers());
+    applyReadyForReviewStamp(existing, previousStatus, newStatus, username);
 
     CqlLibraryReview saved = cqlLibraryReviewRepository.save(existing);
     log.info("Updated review [{}] for CQL Library [{}]", saved.getId(), libraryId);
@@ -104,9 +110,12 @@ public class CqlLibraryReviewService {
    * @return the review for the library
    */
   public CqlLibraryReview getReviewByLibraryId(String libraryId) {
-    return cqlLibraryReviewRepository
-        .findByLibraryId(libraryId)
-        .orElseThrow(() -> new ResourceNotFoundException("CQL Library Review", libraryId));
+    CqlLibraryReview review =
+        cqlLibraryReviewRepository
+            .findByLibraryId(libraryId)
+            .orElseThrow(() -> new ResourceNotFoundException("CQL Library Review", libraryId));
+    review.setReadyForReviewBy(userNameService.getDisplayName(review.getReadyForReviewBy()));
+    return review;
   }
 
   /**
@@ -160,6 +169,23 @@ public class CqlLibraryReviewService {
     }
 
     return cqlLibraryService.getReviewLibraries(reviewByLibraryId);
+  }
+
+  private void applyReadyForReviewStamp(
+      CqlLibraryReview review,
+      ReviewStatus previousStatus,
+      ReviewStatus newStatus,
+      String username) {
+    if (newStatus == null || newStatus == previousStatus) {
+      return;
+    }
+    if (newStatus == ReviewStatus.NOT_READY_FOR_REVIEW) {
+      review.setReadyForReviewBy(null);
+      review.setReadyForReviewAt(null);
+    } else if (newStatus == ReviewStatus.READY_FOR_REVIEW && review.getReadyForReviewAt() == null) {
+      review.setReadyForReviewBy(username);
+      review.setReadyForReviewAt(Instant.now());
+    }
   }
 
   /**

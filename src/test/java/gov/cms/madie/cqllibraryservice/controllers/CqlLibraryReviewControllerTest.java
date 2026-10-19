@@ -10,6 +10,7 @@ import static org.mockito.Mockito.when;
 
 import gov.cms.madie.cqllibraryservice.dto.LibraryListDTO;
 import gov.cms.madie.cqllibraryservice.services.CqlLibraryReviewService;
+import gov.cms.madie.models.common.Comment;
 import gov.cms.madie.models.common.OwnershipType;
 import gov.cms.madie.models.common.ReviewStatus;
 import gov.cms.madie.models.library.CqlLibraryReview;
@@ -47,7 +48,7 @@ class CqlLibraryReviewControllerTest {
             .libraryId("lib-1")
             .librarySetId("set-1")
             .status(ReviewStatus.READY_FOR_REVIEW)
-            .comment("Looks good")
+            .comment(List.of(Comment.builder().content("Looks good").build()))
             .build();
   }
 
