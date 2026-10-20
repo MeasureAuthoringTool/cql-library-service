@@ -200,8 +200,9 @@ public class CqlLibrarySearchServiceImpl implements CqlLibrarySearchService {
 
     // Find all the libraries that matches the given Criteria and fetch unique librarySetIds
     List<AggregationOperation> matchOps = new ArrayList<>();
+    List<AggregationOperation> externalLibraryUnionStages = buildExternalLibraryUnionStages();
     if (ownershipType == OwnershipType.ALL) {
-      matchOps.addAll(buildExternalLibraryUnionStages());
+      matchOps.addAll(externalLibraryUnionStages);
     }
     matchOps.add(lookupOperation);
     matchOps.add(unwindOperation);
@@ -237,7 +238,7 @@ public class CqlLibrarySearchServiceImpl implements CqlLibrarySearchService {
 
     List<AggregationOperation> ops = new ArrayList<>();
     if (ownershipType == OwnershipType.ALL) {
-      ops.addAll(buildExternalLibraryUnionStages());
+      ops.addAll(externalLibraryUnionStages);
     }
     ops.add(lookupOperation);
     ops.add(unwindOperation);
