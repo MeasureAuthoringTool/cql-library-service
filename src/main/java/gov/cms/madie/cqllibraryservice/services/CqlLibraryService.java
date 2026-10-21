@@ -23,6 +23,7 @@ import gov.cms.madie.models.library.LibrarySet;
 import gov.cms.madie.models.measure.ElmJson;
 import java.time.Instant;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -352,8 +353,38 @@ public class CqlLibraryService {
         .build();
   }
 
+  private CqlLibrary mapLibraryDto(CqlLibraryDto dto) {
+    return CqlLibrary.builder()
+        .id(dto.getId())
+        .cqlLibraryName(dto.getCqlLibraryName())
+        .model(dto.getModel())
+        .version(Version.parse(dto.getVersion()))
+        .cql(dto.getCql())
+        .elmJson(dto.getElmJson())
+        .elmXml(dto.getElmXml())
+        .publisher(dto.getPublisher())
+        .description(dto.getDescription())
+        .experimental(dto.isExperimental())
+        .draft(dto.isDraft())
+        .ownerDisplayName(dto.getOwnerDisplayName())
+        .librarySetId(dto.getLibrarySetId())
+        .librarySet(dto.getLibrarySet())
+        .build();
+  }
+
   public CqlLibrary findCqlLibraryById(String id, String username) {
     Optional<CqlLibrary> optionalLibrary = cqlLibraryRepository.findById(id);
+    if (optionalLibrary.isEmpty()) {
+      AtomicReference<CqlLibrary> externalLibrary = new AtomicReference<>();
+      externalLibraryRepository
+          .findById(id)
+          .ifPresent(
+              external -> {
+                externalLibrary.set(mapLibraryDto(mapExternalLibrary(external)));
+              });
+
+      optionalLibrary = Optional.ofNullable(externalLibrary.get());
+    }
     if (optionalLibrary.isPresent()) {
       CqlLibrary cqlLibrary = optionalLibrary.get();
       LibrarySet librarySet = librarySetService.findByLibrarySetId(cqlLibrary.getLibrarySetId());

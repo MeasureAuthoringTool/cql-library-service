@@ -407,6 +407,33 @@ public class CqlLibrarySearchServiceImplTest {
   }
 
   @Test
+  void testSearchLibrariesByCriteriaIncludesExternalLibraryUnionForAllOwnership() {
+    PageRequest pageRequest = PageRequest.of(0, 5);
+    List<LibraryListDTO> results = List.of(library1, library2);
+    FacetDTO facetDTO =
+        FacetDTO.builder().queryResults(results).count(List.of(results.toArray())).build();
+    List<LibrarySetMatchCountDTO> matchResults =
+        List.of(new LibrarySetMatchCountDTO("setId1", 1, "lib1"));
+
+    when(mongoTemplate.aggregate(
+            any(Aggregation.class), eq(CqlLibrary.class), eq(LibrarySetMatchCountDTO.class)))
+        .thenReturn(new AggregationResults<>(matchResults, new Document()));
+    when(mongoTemplate.aggregate(any(Aggregation.class), eq(CqlLibrary.class), eq(FacetDTO.class)))
+        .thenReturn(new AggregationResults<>(List.of(facetDTO), new Document()));
+
+    Page<LibraryListDTO> page =
+        cqlLibrarySearchServiceImpl.searchLibrariesByCriteria(
+            null, pageRequest, null, OwnershipType.ALL);
+
+    assertEquals(2, page.getContent().size());
+    assertTrue(page.getTotalElements() >= 1);
+    verify(mongoTemplate, atLeastOnce())
+        .aggregate(any(Aggregation.class), eq(CqlLibrary.class), eq(LibrarySetMatchCountDTO.class));
+    verify(mongoTemplate, atLeastOnce())
+        .aggregate(any(Aggregation.class), eq(CqlLibrary.class), eq(FacetDTO.class));
+  }
+
+  @Test
   void testFindLibrariesByLibrarySetIdWithoutSearchCriteriaAndWithoutSorting() {
     String librarySetId = "set123";
     boolean sortByLatestVersion = false;

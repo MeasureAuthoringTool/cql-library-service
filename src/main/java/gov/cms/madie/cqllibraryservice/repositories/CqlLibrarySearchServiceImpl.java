@@ -6,6 +6,7 @@ import static org.springframework.data.mongodb.core.aggregation.Aggregation.proj
 
 import gov.cms.madie.cqllibraryservice.dto.*;
 import gov.cms.madie.models.access.RoleEnum;
+import gov.cms.madie.models.common.ModelType;
 import gov.cms.madie.models.common.OwnershipType;
 import gov.cms.madie.models.common.ReviewStatus;
 import gov.cms.madie.models.library.CqlLibrary;
@@ -125,6 +126,44 @@ public class CqlLibrarySearchServiceImpl implements CqlLibrarySearchService {
     this.mongoTemplate = mongoTemplate;
   }
 
+  private List<AggregationOperation> buildExternalLibraryUnionStages() {
+    return List.of(
+        UnionWithOperation.unionWith("externalLibrary")
+            .pipeline(
+                project()
+                    .and("_id")
+                    .as("id")
+                    .and("librarySetId")
+                    .as("librarySetId")
+                    .andExpression("concat(namespacePrefix, '.', libraryName)")
+                    .as("cqlLibraryName")
+                    .and("version")
+                    .as("externalVersion")
+                    .and("draft")
+                    .as("draft")
+                    .and("createdBy")
+                    .as("ownerDisplayName")
+                    .and("dateImported")
+                    .as("createdAt")
+                    .and("packageCanonical")
+                    .as("packageCanonical")
+                    .and("namespacePrefix")
+                    .as("namespacePrefix")
+                    .and("publisher")
+                    .as("publisher")
+                    .and("description")
+                    .as("description")
+                    .and("libraryTitle")
+                    .as("libraryTitle")
+                    .and("fhirResource")
+                    .as("fhirResource"),
+                addFields()
+                    .addFieldWithValue("active", true)
+                    .addFieldWithValue("model", ModelType.FHIR_4_0_1.getValue())
+                    .addFieldWithValue("externalLibrary", true)
+                    .build()));
+  }
+
   @Override
   public Page<LibraryListDTO> searchLibrariesByCriteria(
       String userId,
@@ -161,6 +200,10 @@ public class CqlLibrarySearchServiceImpl implements CqlLibrarySearchService {
 
     // Find all the libraries that matches the given Criteria and fetch unique librarySetIds
     List<AggregationOperation> matchOps = new ArrayList<>();
+    List<AggregationOperation> externalLibraryUnionStages = buildExternalLibraryUnionStages();
+    if (ownershipType == OwnershipType.ALL) {
+      matchOps.addAll(externalLibraryUnionStages);
+    }
     matchOps.add(lookupOperation);
     matchOps.add(unwindOperation);
     matchOps.add(matchOperation);
@@ -194,6 +237,9 @@ public class CqlLibrarySearchServiceImpl implements CqlLibrarySearchService {
     List<AggregationOperation> lockStages = buildLockLookupStages();
 
     List<AggregationOperation> ops = new ArrayList<>();
+    if (ownershipType == OwnershipType.ALL) {
+      ops.addAll(externalLibraryUnionStages);
+    }
     ops.add(lookupOperation);
     ops.add(unwindOperation);
     ops.addAll(reviewStages);

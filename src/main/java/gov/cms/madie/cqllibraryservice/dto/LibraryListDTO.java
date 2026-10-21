@@ -52,4 +52,7 @@ public class LibraryListDTO {
 
   @JsonInclude(JsonInclude.Include.NON_NULL)
   private CqlLibraryLock cqlLibraryLock;
+
+  private boolean externalLibrary;
+  private String externalVersion;
 }
