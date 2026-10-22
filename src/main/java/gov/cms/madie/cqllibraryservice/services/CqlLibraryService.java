@@ -80,7 +80,6 @@ public class CqlLibraryService {
 
     CqlLibrary savedLibrary = cqlLibraryRepository.save(cqlLibrary);
     actionLogService.logAction(savedLibrary.getId(), ActionType.UPDATED, username, "actionLog");
-
     return savedLibrary;
   }
 
@@ -658,7 +657,6 @@ public class CqlLibraryService {
     }
 
     enrichWithReviewStatus(librarySetId, librariesByLibrarySetId);
-
     return librariesByLibrarySetId;
   }
 
