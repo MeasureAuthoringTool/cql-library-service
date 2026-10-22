@@ -24,6 +24,7 @@ import gov.cms.madie.models.measure.ElmJson;
 import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -51,6 +52,10 @@ public class CqlLibraryService {
   private final CqlLibraryReviewRepository cqlLibraryReviewRepository;
   private final ExternalLibraryRepository externalLibraryRepository;
   private final LibrarySharingService librarySharingService;
+
+  // External (NPM) libraries are not available to QDM and QI-Core measures
+  private static final Set<ModelType> MODELS_WITHOUT_EXTERNAL_LIBRARIES =
+      EnumSet.of(ModelType.QDM_5_6, ModelType.QI_CORE, ModelType.QI_CORE_6_0_0);
 
   public CqlLibrary updateCqlLibrary(CqlLibrary cqlLibrary, String username) {
     if (cqlLibrary == null || StringUtils.isBlank(cqlLibrary.getId())) {
@@ -518,14 +523,50 @@ public class CqlLibraryService {
       throw new BadRequestObjectException("Please provide library name and model.");
     }
     List<LibraryListDTO> libraries =
-        cqlLibraryRepository.findLibrariesByNameAndModelOrderByNameAscAndVersionDsc(
-            libraryName, model);
+        new ArrayList<>(
+            cqlLibraryRepository.findLibrariesByNameAndModelOrderByNameAscAndVersionDsc(
+                libraryName, model));
     enrichWithUserDetails(libraries);
+    if (!MODELS_WITHOUT_EXTERNAL_LIBRARIES.contains(ModelType.valueOfName(model))) {
+      libraries.addAll(findExternalLibrariesByName(libraryName));
+    }
     return libraries;
   }
 
+  private List<LibraryListDTO> findExternalLibrariesByName(String libraryName) {
+    return externalLibraryRepository
+        .searchByQualifiedLibraryName(Pattern.quote(libraryName))
+        .stream()
+        .map(this::mapExternalLibraryListDto)
+        .sorted(
+            Comparator.comparing(LibraryListDTO::getCqlLibraryName)
+                .thenComparing(
+                    LibraryListDTO::getExternalVersion,
+                    Comparator.nullsLast(Comparator.reverseOrder())))
+        .toList();
+  }
+
+  private LibraryListDTO mapExternalLibraryListDto(ExternalLibrary externalLibrary) {
+    return LibraryListDTO.builder()
+        .id(externalLibrary.getId())
+        .librarySetId(externalLibrary.getLibrarySetId())
+        .cqlLibraryName(externalLibrary.getLibraryName())
+        .namespacePrefix(externalLibrary.getNamespacePrefix())
+        .externalVersion(externalLibrary.getVersion())
+        .externalLibrary(true)
+        .draft(externalLibrary.isDraft())
+        .model(ModelType.FHIR_4_0_1.getValue())
+        .ownerDisplayName(
+            StringUtils.defaultIfBlank(
+                externalLibrary.getPublisher(), externalLibrary.getCreatedBy()))
+        .createdAt(externalLibrary.getDateImported())
+        .build();
+  }
+
   /**
-   * Get the versioned libraries that belongs to given set id
+   * Get the versioned libraries that belongs to given set id. If the set id does not belong to a
+   * MADiE library, the versions of the external (NPM) library with the set id are returned.
+   * Versions are returned as strings since NPM versions do not follow the MADiE version format.
    *
    * @param librarySetId - set id of a Library
    * @return LibrarySetDTO - DTO containing all the versioned libraries for a set id and library set
@@ -535,9 +576,17 @@ public class CqlLibraryService {
     if (StringUtils.isBlank(librarySetId)) {
       throw new BadRequestObjectException("Please provide library set ID.");
     }
-    List<CqlLibrary> libraries =
-        cqlLibraryRepository.findByLibrarySetIdAndDraftAndActive(librarySetId, false, true);
-    if (CollectionUtils.isEmpty(libraries)) {
+    List<CqlLibraryDto> libraries =
+        cqlLibraryRepository.findByLibrarySetIdAndDraftAndActive(librarySetId, false, true).stream()
+            .map(this::mapMadieLibrary)
+            .toList();
+    if (libraries.isEmpty()) {
+      libraries =
+          externalLibraryRepository.findAllByLibrarySetId(librarySetId).stream()
+              .map(this::mapExternalLibrary)
+              .toList();
+    }
+    if (libraries.isEmpty()) {
       return null;
     }
     LibrarySet librarySet = librarySetRepository.findByLibrarySetId(librarySetId).orElse(null);
