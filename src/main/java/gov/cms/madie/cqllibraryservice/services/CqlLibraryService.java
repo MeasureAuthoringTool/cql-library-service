@@ -518,17 +518,6 @@ public class CqlLibraryService {
     return library;
   }
 
-  /**
-   * Find versioned libraries by name and model. For models that support external (NPM) libraries,
-   * matching external libraries are also returned if every model they use is declared by the parent
-   * measure or library.
-   *
-   * @param libraryName - library name to search for
-   * @param model - model of the parent measure or library
-   * @param usingModels - models declared in the CQL of the parent measure or library, as
-   *     name:version e.g. USQualityCore:0.5.0
-   * @return matching MADiE libraries followed by matching external libraries
-   */
   public List<LibraryListDTO> findLibrariesByNameAndModel(
       String libraryName, String model, List<String> usingModels) {
     if (StringUtils.isBlank(libraryName) || StringUtils.isBlank(model)) {
@@ -604,7 +593,6 @@ public class CqlLibraryService {
   /**
    * Get the versioned libraries that belongs to given set id. If the set id does not belong to a
    * MADiE library, the versions of the external (NPM) library with the set id are returned.
-   * Versions are returned as strings since NPM versions do not follow the MADiE version format.
    *
    * @param librarySetId - set id of a Library
    * @return LibrarySetDTO - DTO containing all the versioned libraries for a set id and library set
