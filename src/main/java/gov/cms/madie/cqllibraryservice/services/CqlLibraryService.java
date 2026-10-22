@@ -21,6 +21,7 @@ import gov.cms.madie.models.library.CqlLibraryLockInfo;
 import gov.cms.madie.models.library.CqlLibraryReview;
 import gov.cms.madie.models.library.LibrarySet;
 import gov.cms.madie.models.measure.ElmJson;
+import gov.cms.mat.cql.CqlTextParser;
 import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicReference;
@@ -518,7 +519,19 @@ public class CqlLibraryService {
     return library;
   }
 
-  public List<LibraryListDTO> findLibrariesByNameAndModel(String libraryName, String model) {
+  /**
+   * Find versioned libraries by name and model. For models that support external (NPM) libraries,
+   * matching external libraries are also returned if every model they use is declared by the parent
+   * measure or library.
+   *
+   * @param libraryName - library name to search for
+   * @param model - model of the parent measure or library
+   * @param usingModels - models declared in the CQL of the parent measure or library, as
+   *     name:version e.g. USQualityCore:0.5.0
+   * @return matching MADiE libraries followed by matching external libraries
+   */
+  public List<LibraryListDTO> findLibrariesByNameAndModel(
+      String libraryName, String model, List<String> usingModels) {
     if (StringUtils.isBlank(libraryName) || StringUtils.isBlank(model)) {
       throw new BadRequestObjectException("Please provide library name and model.");
     }
@@ -528,15 +541,25 @@ public class CqlLibraryService {
                 libraryName, model));
     enrichWithUserDetails(libraries);
     if (!MODELS_WITHOUT_EXTERNAL_LIBRARIES.contains(ModelType.valueOfName(model))) {
-      libraries.addAll(findExternalLibrariesByName(libraryName));
+      libraries.addAll(findExternalLibrariesByName(libraryName, usingModels));
     }
     return libraries;
   }
 
-  private List<LibraryListDTO> findExternalLibrariesByName(String libraryName) {
+  private List<LibraryListDTO> findExternalLibrariesByName(
+      String libraryName, List<String> usingModels) {
+    Set<String> parentModels =
+        usingModels == null
+            ? Set.of()
+            : usingModels.stream()
+                .map(StringUtils::trim)
+                .filter(StringUtils::isNotBlank)
+                .collect(Collectors.toSet());
     return externalLibraryRepository
         .searchByQualifiedLibraryName(Pattern.quote(libraryName))
         .stream()
+        // all models used by the external library must be declared by the parent
+        .filter(library -> parentModels.containsAll(getUsingModels(library.getCqlContent())))
         .map(this::mapExternalLibraryListDto)
         .sorted(
             Comparator.comparing(LibraryListDTO::getCqlLibraryName)
@@ -544,6 +567,22 @@ public class CqlLibraryService {
                     LibraryListDTO::getExternalVersion,
                     Comparator.nullsLast(Comparator.reverseOrder())))
         .toList();
+  }
+
+  // models declared by the using statements of the given CQL, as name:version
+  private Set<String> getUsingModels(String cql) {
+    if (StringUtils.isBlank(cql)) {
+      return Set.of();
+    }
+    return new CqlTextParser(cql)
+        .getAllUsings().stream()
+            .filter(using -> StringUtils.isNotBlank(using.getLibraryType()))
+            .map(
+                using ->
+                    StringUtils.strip(using.getLibraryType().trim(), "\"")
+                        + ":"
+                        + using.getVersion())
+            .collect(Collectors.toSet());
   }
 
   private LibraryListDTO mapExternalLibraryListDto(ExternalLibrary externalLibrary) {

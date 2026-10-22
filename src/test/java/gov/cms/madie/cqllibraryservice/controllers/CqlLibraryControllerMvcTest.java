@@ -1857,7 +1857,7 @@ public class CqlLibraryControllerMvcTest {
             .model("QDM 5.6")
             .build();
 
-    when(cqlLibraryService.findLibrariesByNameAndModel(anyString(), anyString()))
+    when(cqlLibraryService.findLibrariesByNameAndModel(anyString(), anyString(), any()))
         .thenReturn(List.of(l1));
     MvcResult result =
         mockMvc
@@ -1871,6 +1871,24 @@ public class CqlLibraryControllerMvcTest {
     assertThat(result.getResponse().getContentAsString(), containsString(l1.getModel()));
     assertThat(
         result.getResponse().getContentAsString(), containsString(l1.getVersion().toString()));
+  }
+
+  @Test
+  void testGetLibrariesByNameAndModelPassesUsingModels() throws Exception {
+    when(cqlLibraryService.findLibrariesByNameAndModel(anyString(), anyString(), any()))
+        .thenReturn(List.of());
+    mockMvc
+        .perform(
+            get("/cql-libraries/all-versioned")
+                .param("libraryName", "Common")
+                .param("model", "US Quality Core v0.5.0")
+                .param("usingModels", "USQualityCore:0.5.0,FHIR:4.0.1")
+                .with(user(TEST_USER_ID))
+                .with(csrf()))
+        .andExpect(status().isOk());
+    verify(cqlLibraryService)
+        .findLibrariesByNameAndModel(
+            "Common", "US Quality Core v0.5.0", List.of("USQualityCore:0.5.0", "FHIR:4.0.1"));
   }
 
   @Test

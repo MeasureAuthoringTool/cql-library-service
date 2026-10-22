@@ -28,13 +28,13 @@ public interface ExternalLibraryRepository extends MongoRepository<ExternalLibra
   /**
    * Case-insensitive regex search against the fully qualified library name ({@code
    * namespacePrefix.libraryName}), so a search term can match the prefix, the library name or both.
-   * CQL content and the FHIR resource are excluded from the results.
+   * The FHIR resource is excluded from the results.
    */
   @Query(
       value =
           "{'$expr': {'$regexMatch': {'input': {'$concat': [{'$ifNull': ['$namespacePrefix', '']},"
               + " '.', '$libraryName']}, 'regex': ?0, 'options': 'i'}}}",
-      fields = "{'cqlContent': 0, 'fhirResource': 0}")
+      fields = "{'fhirResource': 0}")
   List<ExternalLibrary> searchByQualifiedLibraryName(String regex);
 
   /**

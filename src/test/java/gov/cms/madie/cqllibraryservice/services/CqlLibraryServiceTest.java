@@ -1000,7 +1000,8 @@ class CqlLibraryServiceTest {
             UserDetailsDto.builder().firstName("Jane").lastName("Smith").build());
     when(userServiceClient.getBulkUserDetails(anyList())).thenReturn(userDetailsMap);
 
-    List<LibraryListDTO> result = cqlLibraryService.findLibrariesByNameAndModel(libraryName, model);
+    List<LibraryListDTO> result =
+        cqlLibraryService.findLibrariesByNameAndModel(libraryName, model, null);
 
     assertThat(result.size(), equalTo(2));
     assertThat(result.get(0).getOwnerDisplayName(), equalTo("John Doe"));
@@ -1022,7 +1023,8 @@ class CqlLibraryServiceTest {
         .thenReturn(List.of(l1));
     when(userServiceClient.getBulkUserDetails(anyList())).thenReturn(Collections.emptyMap());
 
-    List<LibraryListDTO> result = cqlLibraryService.findLibrariesByNameAndModel("test", "QICore");
+    List<LibraryListDTO> result =
+        cqlLibraryService.findLibrariesByNameAndModel("test", "QICore", null);
 
     assertThat(result.size(), equalTo(1));
     assertThat(result.get(0).getOwnerDisplayName(), equalTo("-"));
@@ -1049,6 +1051,7 @@ class CqlLibraryServiceTest {
             .namespacePrefix("hl7.fhir.uv.cql")
             .version("1.0.0")
             .publisher("HL7 International")
+            .cqlContent("library FHIRCommon version '1.0.0'\nusing FHIR version '4.0.1'")
             .build();
     ExternalLibrary newerExternal =
         ExternalLibrary.builder()
@@ -1058,13 +1061,16 @@ class CqlLibraryServiceTest {
             .namespacePrefix("hl7.fhir.uv.cql")
             .version("2.0.0")
             .createdBy("system")
+            .cqlContent("library FHIRCommon version '2.0.0'\nusing FHIR version '4.0.1'")
             .build();
     when(externalLibraryRepository.searchByQualifiedLibraryName(anyString()))
         .thenReturn(List.of(olderExternal, newerExternal));
 
     List<LibraryListDTO> result =
         cqlLibraryService.findLibrariesByNameAndModel(
-            "fhir.common", ModelType.US_QUALITY_CORE_0_5_0.getValue());
+            "fhir.common",
+            ModelType.US_QUALITY_CORE_0_5_0.getValue(),
+            List.of("USQualityCore:0.5.0", "FHIR:4.0.1"));
 
     verify(externalLibraryRepository).searchByQualifiedLibraryName("\\Qfhir.common\\E");
     assertThat(result.size(), equalTo(3));
@@ -1081,6 +1087,83 @@ class CqlLibraryServiceTest {
     assertThat(result.get(2).getOwnerDisplayName(), equalTo("HL7 International"));
   }
 
+  @Test
+  void testFindLibrariesByNameAndModelShowsExternalLibraryWhenModelsAreSubsetOfParent() {
+    when(cqlLibraryRepository.findLibrariesByNameAndModelOrderByNameAscAndVersionDsc(
+            anyString(), anyString()))
+        .thenReturn(List.of());
+    when(externalLibraryRepository.searchByQualifiedLibraryName(anyString()))
+        .thenReturn(
+            List.of(
+                usQualityCoreCommon(
+                    "library USQualityCoreCommon version '0.5.0'\n"
+                        + "// using USCore version '7.1.0-derived'\n"
+                        + "using USQualityCore version '0.5.0'")));
+
+    List<LibraryListDTO> result =
+        cqlLibraryService.findLibrariesByNameAndModel(
+            "USQualityCoreCommon",
+            ModelType.US_QUALITY_CORE_0_5_0.getValue(),
+            List.of("USQualityCore:0.5.0", "USCore:6.1.0-derived", "FHIR:4.0.1"));
+
+    assertThat(result.size(), equalTo(1));
+    assertThat(result.get(0).getCqlLibraryName(), equalTo("USQualityCoreCommon"));
+  }
+
+  @Test
+  void testFindLibrariesByNameAndModelHidesExternalLibraryWhenModelsAreNotSubsetOfParent() {
+    when(cqlLibraryRepository.findLibrariesByNameAndModelOrderByNameAscAndVersionDsc(
+            anyString(), anyString()))
+        .thenReturn(List.of());
+    when(externalLibraryRepository.searchByQualifiedLibraryName(anyString()))
+        .thenReturn(
+            List.of(
+                usQualityCoreCommon(
+                    "library USQualityCoreCommon version '0.5.0'\n"
+                        + "using USQualityCore version '0.5.0'\n"
+                        + "using USCore version '6.1.0-derived'\n"
+                        + "using USCore version '7.1.0-derived'\n"
+                        + "using FHIR version '4.0.1'")));
+
+    List<LibraryListDTO> result =
+        cqlLibraryService.findLibrariesByNameAndModel(
+            "USQualityCoreCommon",
+            ModelType.US_QUALITY_CORE_0_5_0.getValue(),
+            List.of("USQualityCore:0.5.0", "USCore:6.1.0-derived", "FHIR:4.0.1"));
+
+    assertThat(result.size(), equalTo(0));
+  }
+
+  @Test
+  void testFindLibrariesByNameAndModelHidesExternalLibrariesWhenParentDeclaresNoModels() {
+    when(cqlLibraryRepository.findLibrariesByNameAndModelOrderByNameAscAndVersionDsc(
+            anyString(), anyString()))
+        .thenReturn(List.of());
+    when(externalLibraryRepository.searchByQualifiedLibraryName(anyString()))
+        .thenReturn(
+            List.of(
+                usQualityCoreCommon(
+                    "library USQualityCoreCommon version '0.5.0'\n"
+                        + "using \"USQualityCore\" version '0.5.0'")));
+
+    List<LibraryListDTO> result =
+        cqlLibraryService.findLibrariesByNameAndModel(
+            "USQualityCoreCommon", ModelType.US_QUALITY_CORE_0_5_0.getValue(), null);
+
+    assertThat(result.size(), equalTo(0));
+  }
+
+  private ExternalLibrary usQualityCoreCommon(String cqlContent) {
+    return ExternalLibrary.builder()
+        .id("ext-uqc")
+        .librarySetId("ext-uqc-set")
+        .libraryName("USQualityCoreCommon")
+        .namespacePrefix("hl7.fhir.us.cql")
+        .version("0.5.0")
+        .cqlContent(cqlContent)
+        .build();
+  }
+
   @ParameterizedTest
   @EnumSource(
       value = ModelType.class,
@@ -1091,7 +1174,8 @@ class CqlLibraryServiceTest {
         .thenReturn(List.of());
 
     List<LibraryListDTO> result =
-        cqlLibraryService.findLibrariesByNameAndModel("Common", modelType.getValue());
+        cqlLibraryService.findLibrariesByNameAndModel(
+            "Common", modelType.getValue(), List.of("FHIR:4.0.1"));
 
     assertThat(result.size(), equalTo(0));
     verifyNoInteractions(externalLibraryRepository);
@@ -1102,7 +1186,7 @@ class CqlLibraryServiceTest {
     Exception ex =
         assertThrows(
             BadRequestObjectException.class,
-            () -> cqlLibraryService.findLibrariesByNameAndModel("Test", null));
+            () -> cqlLibraryService.findLibrariesByNameAndModel("Test", null, null));
     assertThat(ex.getMessage(), is(equalTo("Please provide library name and model.")));
   }
 
@@ -1111,7 +1195,7 @@ class CqlLibraryServiceTest {
     Exception ex =
         assertThrows(
             BadRequestObjectException.class,
-            () -> cqlLibraryService.findLibrariesByNameAndModel(null, "QDM"));
+            () -> cqlLibraryService.findLibrariesByNameAndModel(null, "QDM", null));
     assertThat(ex.getMessage(), is(equalTo("Please provide library name and model.")));
   }
 

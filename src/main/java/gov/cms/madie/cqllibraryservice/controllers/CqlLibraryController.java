@@ -218,9 +218,11 @@ public class CqlLibraryController {
       value = "/all-versioned",
       produces = {MediaType.APPLICATION_JSON_VALUE})
   public ResponseEntity<List<LibraryListDTO>> getLibrariesByNameAndModel(
-      @RequestParam String libraryName, @RequestParam String model) {
+      @RequestParam String libraryName,
+      @RequestParam String model,
+      @RequestParam(required = false) List<String> usingModels) {
     return ResponseEntity.ok()
-        .body(cqlLibraryService.findLibrariesByNameAndModel(libraryName, model));
+        .body(cqlLibraryService.findLibrariesByNameAndModel(libraryName, model, usingModels));
   }
 
   @DeleteMapping("/{id}")
