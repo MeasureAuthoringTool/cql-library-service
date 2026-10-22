@@ -1857,7 +1857,7 @@ public class CqlLibraryControllerMvcTest {
             .model("QDM 5.6")
             .build();
 
-    when(cqlLibraryService.findLibrariesByNameAndModel(anyString(), anyString()))
+    when(cqlLibraryService.findLibrariesByNameAndModel(anyString(), anyString(), any()))
         .thenReturn(List.of(l1));
     MvcResult result =
         mockMvc
@@ -1874,18 +1874,47 @@ public class CqlLibraryControllerMvcTest {
   }
 
   @Test
+  void testGetLibrariesByNameAndModelPassesUsingModels() throws Exception {
+    when(cqlLibraryService.findLibrariesByNameAndModel(anyString(), anyString(), any()))
+        .thenReturn(List.of());
+    mockMvc
+        .perform(
+            get("/cql-libraries/all-versioned")
+                .param("libraryName", "Common")
+                .param("model", "US Quality Core v0.5.0")
+                .param("usingModels", "USQualityCore:0.5.0,FHIR:4.0.1")
+                .with(user(TEST_USER_ID))
+                .with(csrf()))
+        .andExpect(status().isOk());
+    verify(cqlLibraryService)
+        .findLibrariesByNameAndModel(
+            "Common", "US Quality Core v0.5.0", List.of("USQualityCore:0.5.0", "FHIR:4.0.1"));
+  }
+
+  @Test
   void testGetLibrarySetBySetId() throws Exception {
     String librarySetId = "1-1-1-1";
     String owner = "John";
     LibrarySet librarySet = LibrarySet.builder().librarySetId(librarySetId).owner(owner).build();
-    CqlLibrary library =
-        CqlLibrary.builder()
+    CqlLibraryDto library =
+        CqlLibraryDto.builder()
             .cqlLibraryName("Lib1")
             .librarySetId(librarySetId)
-            .version(Version.parse("0.1.000"))
+            .version("0.1.000")
+            .build();
+    CqlLibraryDto externalLibrary =
+        CqlLibraryDto.builder()
+            .cqlLibraryName("FHIRCommon")
+            .namespacePrefix("hl7.fhir.uv.cql")
+            .librarySetId(librarySetId)
+            .version("2.0.0")
+            .external(true)
             .build();
     LibrarySetDTO librarySetDTO =
-        LibrarySetDTO.builder().librarySet(librarySet).libraries(List.of(library)).build();
+        LibrarySetDTO.builder()
+            .librarySet(librarySet)
+            .libraries(List.of(library, externalLibrary))
+            .build();
     when(cqlLibraryService.getLibrarySetBySetId(anyString())).thenReturn(librarySetDTO);
     MvcResult result =
         mockMvc
@@ -1903,6 +1932,7 @@ public class CqlLibraryControllerMvcTest {
     assertThat(
         result.getResponse().getContentAsString(),
         containsString(librarySetDTO.getLibraries().get(0).getCqlLibraryName()));
+    assertThat(result.getResponse().getContentAsString(), containsString("\"version\":\"2.0.0\""));
   }
 
   @Test
