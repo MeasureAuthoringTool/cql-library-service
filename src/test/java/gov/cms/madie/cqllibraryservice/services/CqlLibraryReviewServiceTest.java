@@ -589,4 +589,46 @@ class CqlLibraryReviewServiceTest {
 
     assertEquals(ReviewStatus.READY_FOR_REVIEW, mapCaptor.getValue().get("lib-dup").getStatus());
   }
+
+  @Test
+  void createReviewAssignsIdsToCommentsWithoutOne() {
+    review.setComment(
+        List.of(
+            Comment.builder().content("no id yet").build(),
+            Comment.builder().id("c-existing").content("already has one").build()));
+    when(cqlLibraryReviewRepository.existsByLibraryId("lib-1")).thenReturn(false);
+    when(cqlLibraryReviewRepository.save(any(CqlLibraryReview.class)))
+        .thenAnswer(invocation -> invocation.getArgument(0));
+
+    CqlLibraryReview result = cqlLibraryReviewService.createReview(review, USERNAME);
+
+    assertNotNull(
+        result.getComment().get(0).getId(), "embedded comments need a service-assigned id");
+    assertEquals("c-existing", result.getComment().get(1).getId());
+  }
+
+  @Test
+  void updateReviewAssignsIdsOnlyToCommentsWithoutOne() {
+    CqlLibraryReview existing =
+        CqlLibraryReview.builder()
+            .id("review-1")
+            .libraryId("lib-1")
+            .status(ReviewStatus.READY_FOR_REVIEW)
+            .build();
+    CqlLibraryReview update =
+        CqlLibraryReview.builder()
+            .comment(
+                List.of(
+                    Comment.builder().id("c1").content("kept").build(),
+                    Comment.builder().content("new").build()))
+            .build();
+    when(cqlLibraryReviewRepository.findByLibraryId("lib-1")).thenReturn(Optional.of(existing));
+    when(cqlLibraryReviewRepository.save(any(CqlLibraryReview.class)))
+        .thenAnswer(invocation -> invocation.getArgument(0));
+
+    CqlLibraryReview result = cqlLibraryReviewService.updateReview("lib-1", update, USERNAME);
+
+    assertEquals("c1", result.getComment().get(0).getId());
+    assertNotNull(result.getComment().get(1).getId());
+  }
 }
