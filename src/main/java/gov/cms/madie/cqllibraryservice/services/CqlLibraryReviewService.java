@@ -4,6 +4,7 @@ import gov.cms.madie.cqllibraryservice.dto.LibraryListDTO;
 import gov.cms.madie.cqllibraryservice.exceptions.GeneralConflictException;
 import gov.cms.madie.cqllibraryservice.exceptions.ResourceNotFoundException;
 import gov.cms.madie.cqllibraryservice.repositories.CqlLibraryReviewRepository;
+import gov.cms.madie.models.common.Comment;
 import gov.cms.madie.models.common.OwnershipType;
 import gov.cms.madie.models.common.ReviewStatus;
 import gov.cms.madie.models.library.CqlLibraryReview;
@@ -15,6 +16,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.bson.types.ObjectId;
 import org.springframework.stereotype.Service;
 
 @Slf4j
@@ -52,6 +54,7 @@ public class CqlLibraryReviewService {
     }
     // Ensure a new document is created rather than overwriting an existing one.
     review.setId(null);
+    review.setComment(withCommentIds(review.getComment()));
     boolean readyOnCreate = review.getStatus() == ReviewStatus.READY_FOR_REVIEW;
     review.setReadyForReviewBy(readyOnCreate ? username : null);
     review.setReadyForReviewAt(readyOnCreate ? Instant.now() : null);
@@ -83,7 +86,7 @@ public class CqlLibraryReviewService {
     if (newStatus != null) {
       existing.setStatus(newStatus);
     }
-    existing.setComment(review.getComment());
+    existing.setComment(withCommentIds(review.getComment()));
     existing.setReviewers(review.getReviewers());
     applyReadyForReviewStamp(existing, previousStatus, newStatus, username);
 
@@ -169,6 +172,15 @@ public class CqlLibraryReviewService {
     }
 
     return cqlLibraryService.getReviewLibraries(reviewByLibraryId);
+  }
+
+  private static List<Comment> withCommentIds(List<Comment> comments) {
+    if (comments != null) {
+      comments.stream()
+          .filter(comment -> comment.getId() == null || comment.getId().isBlank())
+          .forEach(comment -> comment.setId(ObjectId.get().toString()));
+    }
+    return comments;
   }
 
   private void applyReadyForReviewStamp(
