@@ -1,6 +1,6 @@
 package gov.cms.madie.cqllibraryservice.dto;
 
-import gov.cms.madie.models.library.CqlLibrary;
+import gov.cms.madie.models.dto.CqlLibraryDto;
 import gov.cms.madie.models.library.LibrarySet;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -15,5 +15,5 @@ import java.util.List;
 @NoArgsConstructor
 public class LibrarySetDTO {
   private LibrarySet librarySet;
-  private List<CqlLibrary> libraries;
+  private List<CqlLibraryDto> libraries;
 }

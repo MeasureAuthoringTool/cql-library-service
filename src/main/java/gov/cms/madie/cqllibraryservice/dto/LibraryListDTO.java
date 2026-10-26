@@ -55,4 +55,5 @@ public class LibraryListDTO {
 
   private boolean externalLibrary;
   private String externalVersion;
+  private String namespacePrefix;
 }

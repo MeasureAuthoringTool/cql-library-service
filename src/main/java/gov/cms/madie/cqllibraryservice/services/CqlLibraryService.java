@@ -21,9 +21,11 @@ import gov.cms.madie.models.library.CqlLibraryLockInfo;
 import gov.cms.madie.models.library.CqlLibraryReview;
 import gov.cms.madie.models.library.LibrarySet;
 import gov.cms.madie.models.measure.ElmJson;
+import gov.cms.mat.cql.CqlTextParser;
 import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -52,6 +54,10 @@ public class CqlLibraryService {
   private final ExternalLibraryRepository externalLibraryRepository;
   private final LibrarySharingService librarySharingService;
 
+  // External (NPM) libraries are not available to QDM and QI-Core measures
+  private static final Set<ModelType> MODELS_WITHOUT_EXTERNAL_LIBRARIES =
+      EnumSet.of(ModelType.QDM_5_6, ModelType.QI_CORE, ModelType.QI_CORE_6_0_0);
+
   public CqlLibrary updateCqlLibrary(CqlLibrary cqlLibrary, String username) {
     if (cqlLibrary == null || StringUtils.isBlank(cqlLibrary.getId())) {
       throw new BadRequestObjectException("CQL Library or CQL Library ID cannot be null.");
@@ -74,7 +80,6 @@ public class CqlLibraryService {
 
     CqlLibrary savedLibrary = cqlLibraryRepository.save(cqlLibrary);
     actionLogService.logAction(savedLibrary.getId(), ActionType.UPDATED, username, "actionLog");
-
     return savedLibrary;
   }
 
@@ -513,19 +518,81 @@ public class CqlLibraryService {
     return library;
   }
 
-  public List<LibraryListDTO> findLibrariesByNameAndModel(String libraryName, String model) {
+  public List<LibraryListDTO> findLibrariesByNameAndModel(
+      String libraryName, String model, List<String> usingModels) {
     if (StringUtils.isBlank(libraryName) || StringUtils.isBlank(model)) {
       throw new BadRequestObjectException("Please provide library name and model.");
     }
     List<LibraryListDTO> libraries =
-        cqlLibraryRepository.findLibrariesByNameAndModelOrderByNameAscAndVersionDsc(
-            libraryName, model);
+        new ArrayList<>(
+            cqlLibraryRepository.findLibrariesByNameAndModelOrderByNameAscAndVersionDsc(
+                libraryName, model));
     enrichWithUserDetails(libraries);
+    if (!MODELS_WITHOUT_EXTERNAL_LIBRARIES.contains(ModelType.valueOfName(model))) {
+      libraries.addAll(findExternalLibrariesByName(libraryName, usingModels));
+    }
     return libraries;
   }
 
+  private List<LibraryListDTO> findExternalLibrariesByName(
+      String libraryName, List<String> usingModels) {
+    Set<String> parentModels =
+        CollectionUtils.isEmpty(usingModels)
+            ? Set.of()
+            : usingModels.stream()
+                .map(StringUtils::trim)
+                .filter(StringUtils::isNotBlank)
+                .collect(Collectors.toSet());
+    return externalLibraryRepository
+        .searchByQualifiedLibraryName(Pattern.quote(libraryName))
+        .stream()
+        // all models used by the external library must be declared by the parent
+        .filter(library -> parentModels.containsAll(getUsingModels(library.getCqlContent())))
+        .map(this::mapExternalLibraryListDto)
+        .sorted(
+            Comparator.comparing(LibraryListDTO::getCqlLibraryName)
+                .thenComparing(
+                    LibraryListDTO::getExternalVersion,
+                    Comparator.nullsLast(Comparator.reverseOrder())))
+        .toList();
+  }
+
+  // models declared by the using statements of the given CQL, as name:version
+  private Set<String> getUsingModels(String cql) {
+    if (StringUtils.isBlank(cql)) {
+      return Set.of();
+    }
+    return new CqlTextParser(cql)
+        .getAllUsings().stream()
+            .filter(using -> StringUtils.isNotBlank(using.getLibraryType()))
+            .map(
+                using ->
+                    StringUtils.strip(using.getLibraryType().trim(), "\"")
+                        + ":"
+                        + using.getVersion())
+            .collect(Collectors.toSet());
+  }
+
+  private LibraryListDTO mapExternalLibraryListDto(ExternalLibrary externalLibrary) {
+    return LibraryListDTO.builder()
+        .id(externalLibrary.getId())
+        .librarySetId(externalLibrary.getLibrarySetId())
+        .cqlLibraryName(externalLibrary.getLibraryName())
+        .namespacePrefix(externalLibrary.getNamespacePrefix())
+        .externalVersion(externalLibrary.getVersion())
+        .externalLibrary(true)
+        .draft(externalLibrary.isDraft())
+        .model(ModelType.FHIR_4_0_1.getValue())
+        .ownerDisplayName(
+            StringUtils.defaultIfBlank(
+                externalLibrary.getPublisher(), externalLibrary.getCreatedBy()))
+        .createdAt(externalLibrary.getDateImported())
+        .build();
+  }
+
   /**
-   * Get the versioned libraries that belongs to given set id
+   * Get the versioned libraries that belongs to given set id. If the set id does not belong to a
+   * MADiE library, the versions of the external (NPM) library with the set id are returned.
    *
    * @param librarySetId - set id of a Library
    * @return LibrarySetDTO - DTO containing all the versioned libraries for a set id and library set
@@ -535,9 +602,17 @@ public class CqlLibraryService {
     if (StringUtils.isBlank(librarySetId)) {
       throw new BadRequestObjectException("Please provide library set ID.");
     }
-    List<CqlLibrary> libraries =
-        cqlLibraryRepository.findByLibrarySetIdAndDraftAndActive(librarySetId, false, true);
-    if (CollectionUtils.isEmpty(libraries)) {
+    List<CqlLibraryDto> libraries =
+        cqlLibraryRepository.findByLibrarySetIdAndDraftAndActive(librarySetId, false, true).stream()
+            .map(this::mapMadieLibrary)
+            .toList();
+    if (libraries.isEmpty()) {
+      libraries =
+          externalLibraryRepository.findAllByLibrarySetId(librarySetId).stream()
+              .map(this::mapExternalLibrary)
+              .toList();
+    }
+    if (libraries.isEmpty()) {
       return null;
     }
     LibrarySet librarySet = librarySetRepository.findByLibrarySetId(librarySetId).orElse(null);
@@ -570,7 +645,6 @@ public class CqlLibraryService {
     }
 
     enrichWithReviewStatus(librarySetId, librariesByLibrarySetId);
-
     return librariesByLibrarySetId;
   }
 
