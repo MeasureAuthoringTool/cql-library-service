@@ -1149,7 +1149,11 @@ class CqlLibraryServiceTest {
     List<LibraryListDTO> result =
         cqlLibraryService.findLibrariesByNameAndModel(
             "USQualityCoreCommon", ModelType.US_QUALITY_CORE_0_5_0.getValue(), null);
+    assertThat(result.size(), equalTo(0));
 
+    result =
+        cqlLibraryService.findLibrariesByNameAndModel(
+            "USQualityCoreCommon", ModelType.US_QUALITY_CORE_0_5_0.getValue(), List.of());
     assertThat(result.size(), equalTo(0));
   }
 
