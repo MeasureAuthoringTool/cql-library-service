@@ -368,7 +368,6 @@ class CqlLibraryReviewServiceTest {
         .thenAnswer(invocation -> invocation.getArgument(0));
 
     CqlLibraryReview saved = cqlLibraryReviewService.updateReview("lib-1", update, USERNAME);
-
     assertEquals(List.of("jane", "john"), saved.getReviewers());
     assertEquals(ReviewStatus.COMPLETE, saved.getStatus());
     verify(actionLogService, never())
