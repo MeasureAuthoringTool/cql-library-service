@@ -537,7 +537,7 @@ public class CqlLibraryService {
   private List<LibraryListDTO> findExternalLibrariesByName(
       String libraryName, List<String> usingModels) {
     Set<String> parentModels =
-        usingModels == null
+        CollectionUtils.isEmpty(usingModels)
             ? Set.of()
             : usingModels.stream()
                 .map(StringUtils::trim)
