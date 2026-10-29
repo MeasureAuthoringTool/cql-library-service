@@ -61,14 +61,15 @@ public class CqlLibraryReviewService {
     }
     // Ensure a new document is created rather than overwriting an existing one.
     review.setId(null);
-    review.setComment(withCommentIds(review.getComment()));
+    review.setComments(withCommentIds(review.getComments()));
     boolean readyOnCreate = review.getStatus() == ReviewStatus.READY_FOR_REVIEW;
     review.setMarkedForReviewBy(readyOnCreate ? username : null);
     review.setMarkedForReviewAt(readyOnCreate ? Instant.now() : null);
     CqlLibraryReview saved = cqlLibraryReviewRepository.save(review);
     log.info("Created review [{}] for CQL Library [{}]", saved.getId(), libraryId);
     logReviewAction(libraryId, saved.getStatus(), username);
-    logCommentActions(libraryId, ActionType.COMMENT_ADDED, saved.getComment(), username);
+    List<Comment> added = Objects.requireNonNullElse(saved.getComments(), List.of());
+    logCommentActions(libraryId, Map.of(ActionType.COMMENT_ADDED, added), username);
     return saved;
   }
 
@@ -94,8 +95,11 @@ public class CqlLibraryReviewService {
     if (newStatus != null) {
       existing.setStatus(newStatus);
     }
-    CommentChanges commentChanges = diffComments(existing.getComment(), review.getComment());
-    existing.setComment(withCommentIds(review.getComment()));
+    // a request without a comment list (e.g. a status-only save) keeps the stored comments
+    List<Comment> comments =
+        review.getComments() != null ? review.getComments() : existing.getComments();
+    Map<ActionType, List<Comment>> commentChanges = diffComments(existing.getComments(), comments);
+    existing.setComments(withCommentIds(comments));
     existing.setReviewers(review.getReviewers());
     applyMarkedForReviewStamp(existing, previousStatus, newStatus, username);
 
@@ -112,9 +116,7 @@ public class CqlLibraryReviewService {
           newStatus,
           libraryId);
     }
-    logCommentActions(libraryId, ActionType.COMMENT_ADDED, commentChanges.added(), username);
-    logCommentActions(libraryId, ActionType.COMMENT_EDITED, commentChanges.edited(), username);
-    logCommentActions(libraryId, ActionType.COMMENT_DELETED, commentChanges.deleted(), username);
+    logCommentActions(libraryId, commentChanges, username);
     return saved;
   }
 
@@ -195,9 +197,9 @@ public class CqlLibraryReviewService {
     return comments;
   }
 
-  private record CommentChanges(List<Comment> added, List<Comment> edited, List<Comment> deleted) {}
-
-  private static CommentChanges diffComments(List<Comment> stored, List<Comment> incoming) {
+  // comments that changed between the stored and incoming review, keyed by the action to log
+  private static Map<ActionType, List<Comment>> diffComments(
+      List<Comment> stored, List<Comment> incoming) {
     List<Comment> before = stored == null ? List.of() : stored;
     List<Comment> after = incoming == null ? List.of() : incoming;
     Map<String, Comment> storedById =
@@ -216,22 +218,24 @@ public class CqlLibraryReviewService {
             .toList();
     List<Comment> deleted =
         before.stream().filter(c -> c.getId() != null && !incomingIds.contains(c.getId())).toList();
-    return new CommentChanges(added, edited, deleted);
+    return Map.of(
+        ActionType.COMMENT_ADDED, added,
+        ActionType.COMMENT_EDITED, edited,
+        ActionType.COMMENT_DELETED, deleted);
   }
 
   private void logCommentActions(
-      String libraryId, ActionType actionType, List<Comment> comments, String username) {
-    if (comments == null) {
-      return;
-    }
-    comments.forEach(
-        comment ->
-            actionLogService.logAction(
-                libraryId,
-                actionType,
-                username,
-                REVIEW_ACTION_LOG_COLLECTION,
-                relatedCommentMessage(comment)));
+      String libraryId, Map<ActionType, List<Comment>> commentsByAction, String username) {
+    commentsByAction.forEach(
+        (actionType, comments) ->
+            comments.forEach(
+                comment ->
+                    actionLogService.logAction(
+                        libraryId,
+                        actionType,
+                        username,
+                        REVIEW_ACTION_LOG_COLLECTION,
+                        relatedCommentMessage(comment))));
   }
 
   static String relatedCommentMessage(Comment comment) {
