@@ -61,15 +61,15 @@ public class CqlLibraryReviewService {
     }
     // Ensure a new document is created rather than overwriting an existing one.
     review.setId(null);
-    review.setComments(withCommentIds(review.getComments()));
-    boolean readyOnCreate = review.getStatus() == ReviewStatus.READY_FOR_REVIEW;
-    review.setMarkedForReviewBy(readyOnCreate ? username : null);
-    review.setMarkedForReviewAt(readyOnCreate ? Instant.now() : null);
+    review.setComments(assignIdsToNewComments(review.getComments()));
+    boolean isReadyForReviewOnCreate = review.getStatus() == ReviewStatus.READY_FOR_REVIEW;
+    review.setMarkedForReviewBy(isReadyForReviewOnCreate ? username : null);
+    review.setMarkedForReviewAt(isReadyForReviewOnCreate ? Instant.now() : null);
     CqlLibraryReview saved = cqlLibraryReviewRepository.save(review);
     log.info("Created review [{}] for CQL Library [{}]", saved.getId(), libraryId);
     logReviewAction(libraryId, saved.getStatus(), username);
-    List<Comment> added = Objects.requireNonNullElse(saved.getComments(), List.of());
-    logCommentActions(libraryId, Map.of(ActionType.COMMENT_ADDED, added), username);
+    List<Comment> addedComments = Objects.requireNonNullElse(saved.getComments(), List.of());
+    logCommentActions(libraryId, Map.of(ActionType.COMMENT_ADDED, addedComments), username);
     return saved;
   }
 
@@ -95,11 +95,11 @@ public class CqlLibraryReviewService {
     if (newStatus != null) {
       existing.setStatus(newStatus);
     }
-    
+
     List<Comment> comments =
         review.getComments() != null ? review.getComments() : existing.getComments();
     Map<ActionType, List<Comment>> commentChanges = diffComments(existing.getComments(), comments);
-    existing.setComments(withCommentIds(comments));
+    existing.setComments(assignIdsToNewComments(comments));
     existing.setReviewers(review.getReviewers());
     applyMarkedForReviewStamp(existing, previousStatus, newStatus, username);
 
@@ -188,7 +188,7 @@ public class CqlLibraryReviewService {
     return cqlLibraryService.getReviewLibraries(reviewByLibraryId);
   }
 
-  private static List<Comment> withCommentIds(List<Comment> comments) {
+  private static List<Comment> assignIdsToNewComments(List<Comment> comments) {
     if (comments != null) {
       comments.stream()
           .filter(comment -> comment.getId() == null || comment.getId().isBlank())
@@ -199,29 +199,39 @@ public class CqlLibraryReviewService {
 
   // comments that changed between the stored and incoming review, keyed by the action to log
   private static Map<ActionType, List<Comment>> diffComments(
-      List<Comment> stored, List<Comment> incoming) {
-    List<Comment> before = stored == null ? List.of() : stored;
-    List<Comment> after = incoming == null ? List.of() : incoming;
-    Map<String, Comment> storedById =
-        before.stream()
+      List<Comment> storedComments, List<Comment> incomingComments) {
+    List<Comment> stored = storedComments == null ? List.of() : storedComments;
+    List<Comment> incoming = incomingComments == null ? List.of() : incomingComments;
+    Map<String, Comment> storedCommentsById =
+        stored.stream()
             .filter(comment -> comment.getId() != null)
             .collect(Collectors.toMap(Comment::getId, Function.identity(), (a, b) -> a));
-    Set<String> incomingIds =
-        after.stream().map(Comment::getId).filter(Objects::nonNull).collect(Collectors.toSet());
+    Set<String> incomingCommentIds =
+        incoming.stream().map(Comment::getId).filter(Objects::nonNull).collect(Collectors.toSet());
 
-    List<Comment> added =
-        after.stream().filter(c -> c.getId() == null || c.getId().isBlank()).toList();
-    List<Comment> edited =
-        after.stream()
-            .filter(c -> c.getId() != null && storedById.containsKey(c.getId()))
-            .filter(c -> !Objects.equals(c.getContent(), storedById.get(c.getId()).getContent()))
+    List<Comment> addedComments =
+        incoming.stream()
+            .filter(comment -> comment.getId() == null || comment.getId().isBlank())
             .toList();
-    List<Comment> deleted =
-        before.stream().filter(c -> c.getId() != null && !incomingIds.contains(c.getId())).toList();
+    List<Comment> editedComments =
+        incoming.stream()
+            .filter(
+                comment ->
+                    comment.getId() != null && storedCommentsById.containsKey(comment.getId()))
+            .filter(
+                comment ->
+                    !Objects.equals(
+                        comment.getContent(), storedCommentsById.get(comment.getId()).getContent()))
+            .toList();
+    List<Comment> deletedComments =
+        stored.stream()
+            .filter(
+                comment -> comment.getId() != null && !incomingCommentIds.contains(comment.getId()))
+            .toList();
     return Map.of(
-        ActionType.COMMENT_ADDED, added,
-        ActionType.COMMENT_EDITED, edited,
-        ActionType.COMMENT_DELETED, deleted);
+        ActionType.COMMENT_ADDED, addedComments,
+        ActionType.COMMENT_EDITED, editedComments,
+        ActionType.COMMENT_DELETED, deletedComments);
   }
 
   private void logCommentActions(
@@ -235,10 +245,10 @@ public class CqlLibraryReviewService {
                         actionType,
                         username,
                         REVIEW_ACTION_LOG_COLLECTION,
-                        relatedCommentMessage(comment))));
+                        relatedCommentLogMessage(comment))));
   }
 
-  static String relatedCommentMessage(Comment comment) {
+  static String relatedCommentLogMessage(Comment comment) {
     return RELATED_COMMENT_MESSAGE_PREFIX + comment.getId();
   }
 
