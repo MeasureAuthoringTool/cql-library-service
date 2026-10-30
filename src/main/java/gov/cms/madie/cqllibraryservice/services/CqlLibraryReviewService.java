@@ -4,6 +4,8 @@ import gov.cms.madie.cqllibraryservice.dto.LibraryListDTO;
 import gov.cms.madie.cqllibraryservice.exceptions.GeneralConflictException;
 import gov.cms.madie.cqllibraryservice.exceptions.ResourceNotFoundException;
 import gov.cms.madie.cqllibraryservice.repositories.CqlLibraryReviewRepository;
+import gov.cms.madie.models.common.ActionType;
+import gov.cms.madie.models.common.Comment;
 import gov.cms.madie.models.common.OwnershipType;
 import gov.cms.madie.models.common.ReviewStatus;
 import gov.cms.madie.models.library.CqlLibraryReview;
@@ -12,9 +14,13 @@ import java.time.Instant;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.bson.types.ObjectId;
 import org.springframework.stereotype.Service;
 
 @Slf4j
@@ -23,6 +29,9 @@ import org.springframework.stereotype.Service;
 public class CqlLibraryReviewService {
 
   private static final String LIBRARY_HISTORY_COLLECTION = "actionLog";
+
+  private static final String REVIEW_ACTION_LOG_COLLECTION = "libraryReviewActionLog";
+  private static final String RELATED_COMMENT_MESSAGE_PREFIX = "relatedCommentId: ";
 
   private static final List<ReviewStatus> IN_REVIEW_STATUSES =
       List.of(ReviewStatus.READY_FOR_REVIEW, ReviewStatus.IN_PROGRESS, ReviewStatus.COMPLETE);
@@ -52,12 +61,15 @@ public class CqlLibraryReviewService {
     }
     // Ensure a new document is created rather than overwriting an existing one.
     review.setId(null);
-    boolean readyOnCreate = review.getStatus() == ReviewStatus.READY_FOR_REVIEW;
-    review.setReadyForReviewBy(readyOnCreate ? username : null);
-    review.setReadyForReviewAt(readyOnCreate ? Instant.now() : null);
+    review.setComments(assignIdsToNewComments(review.getComments()));
+    boolean isReadyForReviewOnCreate = review.getStatus() == ReviewStatus.READY_FOR_REVIEW;
+    review.setMarkedForReviewBy(isReadyForReviewOnCreate ? username : null);
+    review.setMarkedForReviewAt(isReadyForReviewOnCreate ? Instant.now() : null);
     CqlLibraryReview saved = cqlLibraryReviewRepository.save(review);
     log.info("Created review [{}] for CQL Library [{}]", saved.getId(), libraryId);
     logReviewAction(libraryId, saved.getStatus(), username);
+    List<Comment> addedComments = Objects.requireNonNullElse(saved.getComments(), List.of());
+    logCommentActions(libraryId, Map.of(ActionType.COMMENT_ADDED, addedComments), username);
     return saved;
   }
 
@@ -83,9 +95,13 @@ public class CqlLibraryReviewService {
     if (newStatus != null) {
       existing.setStatus(newStatus);
     }
-    existing.setComment(review.getComment());
+
+    List<Comment> comments =
+        review.getComments() != null ? review.getComments() : existing.getComments();
+    Map<ActionType, List<Comment>> commentChanges = diffComments(existing.getComments(), comments);
+    existing.setComments(assignIdsToNewComments(comments));
     existing.setReviewers(review.getReviewers());
-    applyReadyForReviewStamp(existing, previousStatus, newStatus, username);
+    applyMarkedForReviewStamp(existing, previousStatus, newStatus, username);
 
     CqlLibraryReview saved = cqlLibraryReviewRepository.save(existing);
     log.info("Updated review [{}] for CQL Library [{}]", saved.getId(), libraryId);
@@ -100,6 +116,7 @@ public class CqlLibraryReviewService {
           newStatus,
           libraryId);
     }
+    logCommentActions(libraryId, commentChanges, username);
     return saved;
   }
 
@@ -114,7 +131,7 @@ public class CqlLibraryReviewService {
         cqlLibraryReviewRepository
             .findByLibraryId(libraryId)
             .orElseThrow(() -> new ResourceNotFoundException("CQL Library Review", libraryId));
-    review.setReadyForReviewBy(userNameService.getDisplayName(review.getReadyForReviewBy()));
+    review.setMarkedForReviewBy(userNameService.getDisplayName(review.getMarkedForReviewBy()));
     return review;
   }
 
@@ -171,7 +188,71 @@ public class CqlLibraryReviewService {
     return cqlLibraryService.getReviewLibraries(reviewByLibraryId);
   }
 
-  private void applyReadyForReviewStamp(
+  private static List<Comment> assignIdsToNewComments(List<Comment> comments) {
+    if (comments != null) {
+      comments.stream()
+          .filter(comment -> comment.getId() == null || comment.getId().isBlank())
+          .forEach(comment -> comment.setId(ObjectId.get().toString()));
+    }
+    return comments;
+  }
+
+  // comments that changed between the stored and incoming review, keyed by the action to log
+  private static Map<ActionType, List<Comment>> diffComments(
+      List<Comment> storedComments, List<Comment> incomingComments) {
+    List<Comment> stored = storedComments == null ? List.of() : storedComments;
+    List<Comment> incoming = incomingComments == null ? List.of() : incomingComments;
+    Map<String, Comment> storedCommentsById =
+        stored.stream()
+            .filter(comment -> comment.getId() != null)
+            .collect(Collectors.toMap(Comment::getId, Function.identity(), (a, b) -> a));
+    Set<String> incomingCommentIds =
+        incoming.stream().map(Comment::getId).filter(Objects::nonNull).collect(Collectors.toSet());
+
+    List<Comment> addedComments =
+        incoming.stream()
+            .filter(comment -> comment.getId() == null || comment.getId().isBlank())
+            .toList();
+    List<Comment> editedComments =
+        incoming.stream()
+            .filter(
+                comment ->
+                    comment.getId() != null && storedCommentsById.containsKey(comment.getId()))
+            .filter(
+                comment ->
+                    !Objects.equals(
+                        comment.getContent(), storedCommentsById.get(comment.getId()).getContent()))
+            .toList();
+    List<Comment> deletedComments =
+        stored.stream()
+            .filter(
+                comment -> comment.getId() != null && !incomingCommentIds.contains(comment.getId()))
+            .toList();
+    return Map.of(
+        ActionType.COMMENT_ADDED, addedComments,
+        ActionType.COMMENT_EDITED, editedComments,
+        ActionType.COMMENT_DELETED, deletedComments);
+  }
+
+  private void logCommentActions(
+      String libraryId, Map<ActionType, List<Comment>> commentsByAction, String username) {
+    commentsByAction.forEach(
+        (actionType, comments) ->
+            comments.forEach(
+                comment ->
+                    actionLogService.logAction(
+                        libraryId,
+                        actionType,
+                        username,
+                        REVIEW_ACTION_LOG_COLLECTION,
+                        relatedCommentLogMessage(comment))));
+  }
+
+  static String relatedCommentLogMessage(Comment comment) {
+    return RELATED_COMMENT_MESSAGE_PREFIX + comment.getId();
+  }
+
+  private void applyMarkedForReviewStamp(
       CqlLibraryReview review,
       ReviewStatus previousStatus,
       ReviewStatus newStatus,
@@ -180,11 +261,12 @@ public class CqlLibraryReviewService {
       return;
     }
     if (newStatus == ReviewStatus.NOT_READY_FOR_REVIEW) {
-      review.setReadyForReviewBy(null);
-      review.setReadyForReviewAt(null);
-    } else if (newStatus == ReviewStatus.READY_FOR_REVIEW && review.getReadyForReviewAt() == null) {
-      review.setReadyForReviewBy(username);
-      review.setReadyForReviewAt(Instant.now());
+      review.setMarkedForReviewBy(null);
+      review.setMarkedForReviewAt(null);
+    } else if (newStatus == ReviewStatus.READY_FOR_REVIEW
+        && review.getMarkedForReviewAt() == null) {
+      review.setMarkedForReviewBy(username);
+      review.setMarkedForReviewAt(Instant.now());
     }
   }
 
