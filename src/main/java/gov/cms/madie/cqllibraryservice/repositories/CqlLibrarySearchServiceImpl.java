@@ -5,6 +5,7 @@ import static org.springframework.data.mongodb.core.aggregation.Aggregation.*;
 import static org.springframework.data.mongodb.core.aggregation.Aggregation.project;
 
 import gov.cms.madie.cqllibraryservice.dto.*;
+import gov.cms.madie.cqllibraryservice.models.ExternalLibrary;
 import gov.cms.madie.models.access.RoleEnum;
 import gov.cms.madie.models.common.ModelType;
 import gov.cms.madie.models.common.OwnershipType;
@@ -126,42 +127,66 @@ public class CqlLibrarySearchServiceImpl implements CqlLibrarySearchService {
     this.mongoTemplate = mongoTemplate;
   }
 
-  private List<AggregationOperation> buildExternalLibraryUnionStages() {
+  private List<AggregationOperation> buildExternalLibraryProjectionStages() {
     return List.of(
-        UnionWithOperation.unionWith("externalLibrary")
-            .pipeline(
-                project()
-                    .and("_id")
-                    .as("id")
-                    .and("librarySetId")
-                    .as("librarySetId")
-                    .andExpression("concat(namespacePrefix, '.', libraryName)")
-                    .as("cqlLibraryName")
-                    .and("version")
-                    .as("externalVersion")
-                    .and("draft")
-                    .as("draft")
-                    .and("createdBy")
-                    .as("ownerDisplayName")
-                    .and("dateImported")
-                    .as("createdAt")
-                    .and("packageCanonical")
-                    .as("packageCanonical")
-                    .and("namespacePrefix")
-                    .as("namespacePrefix")
-                    .and("publisher")
-                    .as("publisher")
-                    .and("description")
-                    .as("description")
-                    .and("libraryTitle")
-                    .as("libraryTitle")
-                    .and("fhirResource")
-                    .as("fhirResource"),
-                addFields()
-                    .addFieldWithValue("active", true)
-                    .addFieldWithValue("model", ModelType.FHIR_4_0_1.getValue())
-                    .addFieldWithValue("externalLibrary", true)
-                    .build()));
+        project("_id")
+            .and("_id")
+            .as("id")
+            .and("librarySetId")
+            .as("librarySetId")
+            .andExpression("concat(namespacePrefix, '.', libraryName)")
+            .as("cqlLibraryName")
+            .and("version")
+            .as("externalVersion")
+            .and("draft")
+            .as("draft")
+            .and("createdBy")
+            .as("ownerDisplayName")
+            .and("dateImported")
+            .as("createdAt")
+            .and("packageCanonical")
+            .as("packageCanonical")
+            .and("namespacePrefix")
+            .as("namespacePrefix")
+            .and("publisher")
+            .as("publisher")
+            .and("description")
+            .as("description")
+            .and("libraryTitle")
+            .as("libraryTitle")
+            .and("fhirResource")
+            .as("fhirResource"),
+        addFields()
+            .addFieldWithValue("active", true)
+            .addFieldWithValue("model", ModelType.FHIR_4_0_1.getValue())
+            .addFieldWithValue("externalLibrary", true)
+            .build());
+  }
+
+  private LibrarySource getLibrarySource(LibrarySearchCriteria searchCriteria) {
+    return searchCriteria == null || searchCriteria.getLibrarySource() == null
+        ? LibrarySource.ALL
+        : searchCriteria.getLibrarySource();
+  }
+
+  private List<AggregationOperation> buildLibrarySourceStages(LibrarySource source) {
+    return switch (source) {
+      case MADIE -> List.of();
+      case EXTERNAL -> {
+        List<AggregationOperation> stages = new ArrayList<>(buildExternalLibraryProjectionStages());
+        // Keep the native sort field available without interpreting external version strings.
+        stages.add(addFields().addFieldWithValue("version", null).build());
+        yield stages;
+      }
+      case ALL ->
+          List.of(
+              UnionWithOperation.unionWith("externalLibrary")
+                  .pipeline(buildExternalLibraryProjectionStages()));
+    };
+  }
+
+  private Class<?> getLibraryCollectionType(LibrarySource source) {
+    return source == LibrarySource.EXTERNAL ? ExternalLibrary.class : CqlLibrary.class;
   }
 
   @Override
@@ -173,6 +198,12 @@ public class CqlLibrarySearchServiceImpl implements CqlLibrarySearchService {
     LookupOperation lookupOperation = getLookupOperation();
     UnwindOperation unwindOperation = unwind("librarySet");
     List<AggregationOperation> reviewStages = buildReviewLookupStages();
+    LibrarySource source =
+        ownershipType == OwnershipType.ALL
+            ? getLibrarySource(librarySearchCriteria)
+            : LibrarySource.MADIE;
+    Class<?> collectionType = getLibraryCollectionType(source);
+    List<AggregationOperation> sourceStages = buildLibrarySourceStages(source);
 
     Criteria criteria = Criteria.where("active").is(true);
 
@@ -199,11 +230,7 @@ public class CqlLibrarySearchServiceImpl implements CqlLibrarySearchService {
             .as("queryResults");
 
     // Find all the libraries that matches the given Criteria and fetch unique librarySetIds
-    List<AggregationOperation> matchOps = new ArrayList<>();
-    List<AggregationOperation> externalLibraryUnionStages = buildExternalLibraryUnionStages();
-    if (ownershipType == OwnershipType.ALL) {
-      matchOps.addAll(externalLibraryUnionStages);
-    }
+    List<AggregationOperation> matchOps = new ArrayList<>(sourceStages);
     matchOps.add(lookupOperation);
     matchOps.add(unwindOperation);
     matchOps.add(matchOperation);
@@ -212,7 +239,7 @@ public class CqlLibrarySearchServiceImpl implements CqlLibrarySearchService {
 
     List<LibrarySetMatchCountDTO> matchedLibrarySetCounts =
         mongoTemplate
-            .aggregate(newAggregation(matchOps), CqlLibrary.class, LibrarySetMatchCountDTO.class)
+            .aggregate(newAggregation(matchOps), collectionType, LibrarySetMatchCountDTO.class)
             .getMappedResults();
 
     Map<String, LibrarySetMatchCountDTO> matchInfoMap =
@@ -236,10 +263,7 @@ public class CqlLibrarySearchServiceImpl implements CqlLibrarySearchService {
 
     List<AggregationOperation> lockStages = buildLockLookupStages();
 
-    List<AggregationOperation> ops = new ArrayList<>();
-    if (ownershipType == OwnershipType.ALL) {
-      ops.addAll(externalLibraryUnionStages);
-    }
+    List<AggregationOperation> ops = new ArrayList<>(sourceStages);
     ops.add(lookupOperation);
     ops.add(unwindOperation);
     ops.addAll(reviewStages);
@@ -252,7 +276,7 @@ public class CqlLibrarySearchServiceImpl implements CqlLibrarySearchService {
 
     Aggregation pipeline = newAggregation(ops);
     List<FacetDTO> results =
-        mongoTemplate.aggregate(pipeline, CqlLibrary.class, FacetDTO.class).getMappedResults();
+        mongoTemplate.aggregate(pipeline, collectionType, FacetDTO.class).getMappedResults();
     for (LibraryListDTO dto : results.get(0).getQueryResults()) {
       LibrarySetMatchCountDTO matchInfo = matchInfoMap.get(dto.getLibrarySetId());
 
@@ -288,7 +312,8 @@ public class CqlLibrarySearchServiceImpl implements CqlLibrarySearchService {
     LookupOperation lookupOperation = getLookupOperation();
     UnwindOperation unwindOperation = unwind("librarySet");
 
-    List<AggregationOperation> operations = new ArrayList<>();
+    LibrarySource source = getLibrarySource(librarySearchCriteria);
+    List<AggregationOperation> operations = new ArrayList<>(buildLibrarySourceStages(source));
     operations.add(lookupOperation);
     operations.add(unwindOperation);
 
@@ -307,7 +332,8 @@ public class CqlLibrarySearchServiceImpl implements CqlLibrarySearchService {
     }
 
     var result =
-        mongoTemplate.aggregate(newAggregation(operations), CqlLibrary.class, LibraryListDTO.class);
+        mongoTemplate.aggregate(
+            newAggregation(operations), getLibraryCollectionType(source), LibraryListDTO.class);
     return result.getMappedResults();
   }
 

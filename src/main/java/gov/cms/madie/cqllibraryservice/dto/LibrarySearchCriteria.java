@@ -14,4 +14,9 @@ import java.util.List;
 public class LibrarySearchCriteria {
   private String searchField;
   private List<String> optionalSearchProperties; // can be ["libraryName", "version"] ..etc
+  private LibrarySource librarySource;
+
+  public LibrarySearchCriteria(String searchField, List<String> optionalSearchProperties) {
+    this(searchField, optionalSearchProperties, null);
+  }
 }

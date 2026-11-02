@@ -6,6 +6,7 @@ import gov.cms.madie.cqllibraryservice.exceptions.*;
 import gov.cms.madie.cqllibraryservice.locks.CqlLibraryLock;
 import gov.cms.madie.cqllibraryservice.services.*;
 import gov.cms.madie.models.common.ModelType;
+import gov.cms.madie.models.common.OwnershipType;
 
 import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.CoreMatchers.is;
@@ -14,6 +15,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
@@ -51,6 +53,9 @@ import org.bson.types.ObjectId;
 import org.hamcrest.CustomMatcher;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -61,6 +66,7 @@ import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
+import org.springframework.data.domain.Page;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
@@ -101,6 +107,70 @@ public class CqlLibraryControllerMvcTest {
     ObjectMapper mapper =
         JsonMapper.builder().disable(DateTimeFeature.WRITE_DATES_AS_TIMESTAMPS).build();
     return mapper.writeValueAsString(obj);
+  }
+
+  @ParameterizedTest
+  @EnumSource(LibrarySource.class)
+  void searchAcceptsLibrarySource(LibrarySource source) throws Exception {
+    when(cqlLibraryService.getLibrariesByCriteria(any(), any(), any(), any()))
+        .thenReturn(Page.empty());
+
+    mockMvc
+        .perform(
+            put("/cql-libraries/searches")
+                .with(user(TEST_USER_ID))
+                .with(csrf())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(
+                    "{\"librarySource\":\""
+                        + source
+                        + "\",\"searchField\":\"FHIRCommon\","
+                        + "\"optionalSearchProperties\":[\"library\"]}"))
+        .andExpect(status().isOk());
+
+    ArgumentCaptor<LibrarySearchCriteria> captor =
+        ArgumentCaptor.forClass(LibrarySearchCriteria.class);
+    verify(cqlLibraryService)
+        .getLibrariesByCriteria(captor.capture(), eq(OwnershipType.ALL), any(), any());
+    assertEquals(source, captor.getValue().getLibrarySource());
+    assertEquals("FHIRCommon", captor.getValue().getSearchField());
+    assertEquals(List.of("library"), captor.getValue().getOptionalSearchProperties());
+  }
+
+  @Test
+  void searchRejectsUnknownLibrarySource() throws Exception {
+    mockMvc
+        .perform(
+            put("/cql-libraries/searches")
+                .with(user(TEST_USER_ID))
+                .with(csrf())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"librarySource\":\"UNKNOWN\"}"))
+        .andExpect(status().isBadRequest());
+
+    verifyNoInteractions(cqlLibraryService);
+  }
+
+  @ParameterizedTest
+  @ValueSource(strings = {"{}", "{\"librarySource\":null}"})
+  void searchStillAcceptsCriteriaWithoutASource(String body) throws Exception {
+    when(cqlLibraryService.getLibrariesByCriteria(any(), any(), any(), any()))
+        .thenReturn(Page.empty());
+
+    mockMvc
+        .perform(
+            put("/cql-libraries/searches")
+                .with(user(TEST_USER_ID))
+                .with(csrf())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(body))
+        .andExpect(status().isOk());
+
+    ArgumentCaptor<LibrarySearchCriteria> captor =
+        ArgumentCaptor.forClass(LibrarySearchCriteria.class);
+    verify(cqlLibraryService)
+        .getLibrariesByCriteria(captor.capture(), eq(OwnershipType.ALL), any(), any());
+    assertNull(captor.getValue().getLibrarySource());
   }
 
   @Test
