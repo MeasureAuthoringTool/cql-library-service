@@ -48,7 +48,7 @@ class CqlLibraryReviewControllerTest {
             .libraryId("lib-1")
             .librarySetId("set-1")
             .status(ReviewStatus.READY_FOR_REVIEW)
-            .comment(List.of(Comment.builder().content("Looks good").build()))
+            .comments(List.of(Comment.builder().content("Looks good").build()))
             .build();
   }
 
