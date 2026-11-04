@@ -1,6 +1,6 @@
 package gov.cms.madie.cqllibraryservice.services;
 
-import com.nimbusds.oauth2.sdk.util.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import gov.cms.madie.cqllibraryservice.dto.LibraryListDTO;
 import gov.cms.madie.cqllibraryservice.exceptions.GeneralConflictException;
 import gov.cms.madie.cqllibraryservice.exceptions.ResourceNotFoundException;
