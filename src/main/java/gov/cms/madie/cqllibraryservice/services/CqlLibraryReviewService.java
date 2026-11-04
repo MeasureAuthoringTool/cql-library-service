@@ -1,5 +1,6 @@
 package gov.cms.madie.cqllibraryservice.services;
 
+import com.nimbusds.oauth2.sdk.util.StringUtils;
 import gov.cms.madie.cqllibraryservice.dto.LibraryListDTO;
 import gov.cms.madie.cqllibraryservice.exceptions.GeneralConflictException;
 import gov.cms.madie.cqllibraryservice.exceptions.ResourceNotFoundException;
@@ -61,7 +62,7 @@ public class CqlLibraryReviewService {
     }
     // Ensure a new document is created rather than overwriting an existing one.
     review.setId(null);
-    review.setComments(assignIdsToNewComments(review.getComments()));
+    assignIdsToNewComments(review.getComments());
     boolean isReadyForReviewOnCreate = review.getStatus() == ReviewStatus.READY_FOR_REVIEW;
     review.setMarkedForReviewBy(isReadyForReviewOnCreate ? username : null);
     review.setMarkedForReviewAt(isReadyForReviewOnCreate ? Instant.now() : null);
@@ -99,7 +100,8 @@ public class CqlLibraryReviewService {
     List<Comment> comments =
         review.getComments() != null ? review.getComments() : existing.getComments();
     Map<ActionType, List<Comment>> commentChanges = diffComments(existing.getComments(), comments);
-    existing.setComments(assignIdsToNewComments(comments));
+    assignIdsToNewComments(comments);
+    existing.setComments(comments);
     existing.setReviewers(review.getReviewers());
     applyMarkedForReviewStamp(existing, previousStatus, newStatus, username);
 
@@ -188,13 +190,12 @@ public class CqlLibraryReviewService {
     return cqlLibraryService.getReviewLibraries(reviewByLibraryId);
   }
 
-  private static List<Comment> assignIdsToNewComments(List<Comment> comments) {
+  private void assignIdsToNewComments(List<Comment> comments) {
     if (comments != null) {
       comments.stream()
-          .filter(comment -> comment.getId() == null || comment.getId().isBlank())
+          .filter(comment -> StringUtils.isBlank(comment.getId()))
           .forEach(comment -> comment.setId(ObjectId.get().toString()));
     }
-    return comments;
   }
 
   // comments that changed between the stored and incoming review, keyed by the action to log
@@ -210,9 +211,7 @@ public class CqlLibraryReviewService {
         incoming.stream().map(Comment::getId).filter(Objects::nonNull).collect(Collectors.toSet());
 
     List<Comment> addedComments =
-        incoming.stream()
-            .filter(comment -> comment.getId() == null || comment.getId().isBlank())
-            .toList();
+        incoming.stream().filter(comment -> StringUtils.isBlank(comment.getId())).toList();
     List<Comment> editedComments =
         incoming.stream()
             .filter(
