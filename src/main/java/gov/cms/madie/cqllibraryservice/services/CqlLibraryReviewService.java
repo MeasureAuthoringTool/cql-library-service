@@ -1,6 +1,5 @@
 package gov.cms.madie.cqllibraryservice.services;
 
-import org.apache.commons.lang3.StringUtils;
 import gov.cms.madie.cqllibraryservice.dto.LibraryListDTO;
 import gov.cms.madie.cqllibraryservice.exceptions.GeneralConflictException;
 import gov.cms.madie.cqllibraryservice.exceptions.ResourceNotFoundException;
@@ -10,8 +9,8 @@ import gov.cms.madie.models.common.Comment;
 import gov.cms.madie.models.common.OwnershipType;
 import gov.cms.madie.models.common.ReviewStatus;
 import gov.cms.madie.models.library.CqlLibraryReview;
-
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -21,6 +20,8 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.collections4.ListUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.bson.types.ObjectId;
 import org.springframework.stereotype.Service;
 
@@ -33,6 +34,8 @@ public class CqlLibraryReviewService {
 
   private static final String REVIEW_ACTION_LOG_COLLECTION = "libraryReviewActionLog";
   private static final String RELATED_COMMENT_MESSAGE_PREFIX = "relatedCommentId: ";
+  // second entry on a reply's logged message, naming the comment it replies to
+  private static final String PARENT_COMMENT_MESSAGE_PREFIX = "parentCommentId: ";
 
   private static final List<ReviewStatus> IN_REVIEW_STATUSES =
       List.of(ReviewStatus.READY_FOR_REVIEW, ReviewStatus.IN_PROGRESS, ReviewStatus.COMPLETE);
@@ -69,8 +72,11 @@ public class CqlLibraryReviewService {
     CqlLibraryReview saved = cqlLibraryReviewRepository.save(review);
     log.info("Created review [{}] for CQL Library [{}]", saved.getId(), libraryId);
     logReviewAction(libraryId, saved.getStatus(), username);
-    List<Comment> addedComments = Objects.requireNonNullElse(saved.getComments(), List.of());
-    logCommentActions(libraryId, Map.of(ActionType.COMMENT_ADDED, addedComments), username);
+    List<CommentChange> addedCommentChanges =
+        ListUtils.emptyIfNull(saved.getComments()).stream()
+            .map(comment -> new CommentChange(ActionType.COMMENT_ADDED, comment, null))
+            .toList();
+    logCommentActions(libraryId, addedCommentChanges, username);
     return saved;
   }
 
@@ -99,7 +105,8 @@ public class CqlLibraryReviewService {
 
     List<Comment> comments =
         review.getComments() != null ? review.getComments() : existing.getComments();
-    Map<ActionType, List<Comment>> commentChanges = diffComments(existing.getComments(), comments);
+    List<CommentChange> commentChanges =
+        findChangedCommentsAndReplies(existing.getComments(), comments);
     assignIdsToNewComments(comments);
     existing.setComments(comments);
     existing.setReviewers(review.getReviewers());
@@ -195,56 +202,124 @@ public class CqlLibraryReviewService {
       comments.stream()
           .filter(comment -> StringUtils.isBlank(comment.getId()))
           .forEach(comment -> comment.setId(ObjectId.get().toString()));
+      comments.stream()
+          .map(CqlLibraryReviewService::getRepliesOrEmpty)
+          .flatMap(List::stream)
+          .filter(reply -> StringUtils.isBlank(reply.getId()))
+          .forEach(reply -> reply.setId(ObjectId.get().toString()));
     }
   }
 
-  // comments that changed between the stored and incoming review, keyed by the action to log
-  private static Map<ActionType, List<Comment>> diffComments(
+  /**
+   * Finds every comment and reply that was added, edited or deleted between the stored review and
+   * the incoming update. Replies are only compared for comments that still exist; when a comment is
+   * deleted its replies go with it and only the comment deletion is reported.
+   */
+  private static List<CommentChange> findChangedCommentsAndReplies(
       List<Comment> storedComments, List<Comment> incomingComments) {
-    List<Comment> stored = storedComments == null ? List.of() : storedComments;
-    List<Comment> incoming = incomingComments == null ? List.of() : incomingComments;
-    Map<String, Comment> storedCommentsById =
-        stored.stream()
-            .filter(comment -> comment.getId() != null)
-            .collect(Collectors.toMap(Comment::getId, Function.identity(), (a, b) -> a));
-    Set<String> incomingCommentIds =
-        incoming.stream().map(Comment::getId).filter(Objects::nonNull).collect(Collectors.toSet());
+    List<Comment> storedCommentsOrEmpty = ListUtils.emptyIfNull(storedComments);
+    List<Comment> incomingCommentsOrEmpty = ListUtils.emptyIfNull(incomingComments);
+    Map<String, Comment> storedCommentsById = mapCommentsById(storedCommentsOrEmpty);
 
-    List<Comment> addedComments =
-        incoming.stream().filter(comment -> StringUtils.isBlank(comment.getId())).toList();
-    List<Comment> editedComments =
-        incoming.stream()
+    List<CommentChange> collectedChanges = new ArrayList<>();
+    collectAddedEditedAndDeletedEntries(
+        storedCommentsOrEmpty, incomingCommentsOrEmpty, null, collectedChanges);
+    incomingCommentsOrEmpty.forEach(
+        incomingComment -> {
+          Comment storedVersionOfComment =
+              StringUtils.isBlank(incomingComment.getId())
+                  ? null
+                  : storedCommentsById.get(incomingComment.getId());
+          collectAddedEditedAndDeletedEntries(
+              getRepliesOrEmpty(storedVersionOfComment),
+              getRepliesOrEmpty(incomingComment),
+              incomingComment,
+              collectedChanges);
+        });
+    return collectedChanges;
+  }
+
+  private static List<Comment> getRepliesOrEmpty(Comment comment) {
+    return comment == null ? List.of() : ListUtils.emptyIfNull(comment.getReplies());
+  }
+
+  private static Map<String, Comment> mapCommentsById(List<Comment> comments) {
+    return comments.stream()
+        .filter(comment -> comment.getId() != null)
+        .collect(
+            Collectors.toMap(Comment::getId, Function.identity(), (first, duplicate) -> first));
+  }
+
+  /**
+   * Compares one level of entries, either the top-level comments or the replies of one comment, and
+   * adds an added / edited / deleted change for each entry that differs.
+   *
+   * @param storedEntries the entries currently saved
+   * @param incomingEntries the entries sent in the update
+   * @param parentComment the comment the entries reply to, or null for top-level comments
+   * @param collectedChanges the list the changes are added to
+   */
+  private static void collectAddedEditedAndDeletedEntries(
+      List<Comment> storedEntries,
+      List<Comment> incomingEntries,
+      Comment parentComment,
+      List<CommentChange> collectedChanges) {
+    Map<String, Comment> storedEntriesById = mapCommentsById(storedEntries);
+    Set<String> incomingEntryIds =
+        incomingEntries.stream()
+            .map(Comment::getId)
+            .filter(Objects::nonNull)
+            .collect(Collectors.toSet());
+
+    List<Comment> addedEntries =
+        incomingEntries.stream().filter(entry -> StringUtils.isBlank(entry.getId())).toList();
+    List<Comment> editedEntries =
+        incomingEntries.stream()
+            .filter(entry -> entry.getId() != null && storedEntriesById.containsKey(entry.getId()))
             .filter(
-                comment ->
-                    comment.getId() != null && storedCommentsById.containsKey(comment.getId()))
-            .filter(
-                comment ->
+                entry ->
                     !Objects.equals(
-                        comment.getContent(), storedCommentsById.get(comment.getId()).getContent()))
+                        entry.getContent(), storedEntriesById.get(entry.getId()).getContent()))
             .toList();
-    List<Comment> deletedComments =
-        stored.stream()
-            .filter(
-                comment -> comment.getId() != null && !incomingCommentIds.contains(comment.getId()))
+    List<Comment> deletedEntries =
+        storedEntries.stream()
+            .filter(entry -> entry.getId() != null && !incomingEntryIds.contains(entry.getId()))
             .toList();
-    return Map.of(
-        ActionType.COMMENT_ADDED, addedComments,
-        ActionType.COMMENT_EDITED, editedComments,
-        ActionType.COMMENT_DELETED, deletedComments);
+
+    addedEntries.forEach(
+        entry ->
+            collectedChanges.add(
+                new CommentChange(ActionType.COMMENT_ADDED, entry, parentComment)));
+    editedEntries.forEach(
+        entry ->
+            collectedChanges.add(
+                new CommentChange(ActionType.COMMENT_EDITED, entry, parentComment)));
+    deletedEntries.forEach(
+        entry ->
+            collectedChanges.add(
+                new CommentChange(ActionType.COMMENT_DELETED, entry, parentComment)));
   }
 
   private void logCommentActions(
-      String libraryId, Map<ActionType, List<Comment>> commentsByAction, String username) {
-    commentsByAction.forEach(
-        (actionType, comments) ->
-            comments.forEach(
-                comment ->
-                    actionLogService.logAction(
-                        libraryId,
-                        actionType,
-                        username,
-                        REVIEW_ACTION_LOG_COLLECTION,
-                        relatedCommentLogMessage(comment))));
+      String libraryId, List<CommentChange> commentChanges, String username) {
+    commentChanges.forEach(
+        commentChange ->
+            actionLogService.logAction(
+                libraryId,
+                commentChange.actionType(),
+                username,
+                REVIEW_ACTION_LOG_COLLECTION,
+                buildLogMessages(commentChange)));
+  }
+
+  private static String[] buildLogMessages(CommentChange commentChange) {
+    String changedCommentMessage = relatedCommentLogMessage(commentChange.changedComment());
+    return commentChange.parentComment() == null
+        ? new String[] {changedCommentMessage}
+        : new String[] {
+          changedCommentMessage,
+          PARENT_COMMENT_MESSAGE_PREFIX + commentChange.parentComment().getId()
+        };
   }
 
   static String relatedCommentLogMessage(Comment comment) {
@@ -285,4 +360,8 @@ public class CqlLibraryReviewService {
     actionLogService.logAction(
         libraryId, status.toActionType(), username, LIBRARY_HISTORY_COLLECTION);
   }
+
+  // one comment or reply to log; parentComment is set only when the changed entry is a reply
+  private record CommentChange(
+          ActionType actionType, Comment changedComment, Comment parentComment) {}
 }

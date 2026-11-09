@@ -764,4 +764,154 @@ class CqlLibraryReviewServiceTest {
             "libraryReviewActionLog",
             "relatedCommentId: " + result.getComments().get(0).getId());
   }
+
+  @Test
+  void updateReviewAssignsIdsToNewReplies() {
+    CqlLibraryReview existing =
+        CqlLibraryReview.builder()
+            .id("review-1")
+            .libraryId("lib-1")
+            .status(ReviewStatus.READY_FOR_REVIEW)
+            .comments(List.of(Comment.builder().id("c1").content("parent").build()))
+            .build();
+    CqlLibraryReview update =
+        CqlLibraryReview.builder()
+            .comments(
+                List.of(
+                    Comment.builder()
+                        .id("c1")
+                        .content("parent")
+                        .replies(
+                            List.of(
+                                Comment.builder().id("r1").content("kept").build(),
+                                Comment.builder().content("new").build()))
+                        .build()))
+            .build();
+    when(cqlLibraryReviewRepository.findByLibraryId("lib-1")).thenReturn(Optional.of(existing));
+    when(cqlLibraryReviewRepository.save(any(CqlLibraryReview.class)))
+        .thenAnswer(invocation -> invocation.getArgument(0));
+
+    CqlLibraryReview result = cqlLibraryReviewService.updateReview("lib-1", update, USERNAME);
+
+    List<Comment> replies = result.getComments().get(0).getReplies();
+    assertEquals("r1", replies.get(0).getId());
+    assertNotNull(replies.get(1).getId(), "a reply needs an id to be edited or deleted");
+  }
+
+  @Test
+  void updateReviewLogsAddedEditedAndDeletedRepliesWithTheirParent() {
+    CqlLibraryReview existing =
+        CqlLibraryReview.builder()
+            .id("review-1")
+            .libraryId("lib-1")
+            .status(ReviewStatus.READY_FOR_REVIEW)
+            .comments(
+                List.of(
+                    Comment.builder()
+                        .id("c1")
+                        .content("parent")
+                        .replies(
+                            List.of(
+                                Comment.builder().id("r1").content("old text").build(),
+                                Comment.builder().id("r2").content("to be removed").build(),
+                                Comment.builder().id("r3").content("untouched").build()))
+                        .build()))
+            .build();
+    CqlLibraryReview update =
+        CqlLibraryReview.builder()
+            .comments(
+                List.of(
+                    Comment.builder()
+                        .id("c1")
+                        .content("parent")
+                        .replies(
+                            List.of(
+                                Comment.builder().id("r1").content("new text").build(),
+                                Comment.builder().id("r3").content("untouched").build(),
+                                Comment.builder().content("brand new").build()))
+                        .build()))
+            .build();
+    when(cqlLibraryReviewRepository.findByLibraryId("lib-1")).thenReturn(Optional.of(existing));
+    when(cqlLibraryReviewRepository.save(any(CqlLibraryReview.class)))
+        .thenAnswer(invocation -> invocation.getArgument(0));
+
+    CqlLibraryReview result = cqlLibraryReviewService.updateReview("lib-1", update, USERNAME);
+
+    String newReplyId = result.getComments().get(0).getReplies().get(2).getId();
+    verify(actionLogService)
+        .logAction(
+            "lib-1",
+            ActionType.COMMENT_ADDED,
+            USERNAME,
+            "libraryReviewActionLog",
+            "relatedCommentId: " + newReplyId,
+            "parentCommentId: c1");
+    verify(actionLogService)
+        .logAction(
+            "lib-1",
+            ActionType.COMMENT_EDITED,
+            USERNAME,
+            "libraryReviewActionLog",
+            "relatedCommentId: r1",
+            "parentCommentId: c1");
+    verify(actionLogService)
+        .logAction(
+            "lib-1",
+            ActionType.COMMENT_DELETED,
+            USERNAME,
+            "libraryReviewActionLog",
+            "relatedCommentId: r2",
+            "parentCommentId: c1");
+    verify(actionLogService, never())
+        .logAction(
+            anyString(),
+            any(ActionType.class),
+            anyString(),
+            anyString(),
+            eq("relatedCommentId: r3"),
+            anyString());
+    // adding a reply is not an edit of the comment it replies to
+    verify(actionLogService, never())
+        .logAction(
+            anyString(),
+            any(ActionType.class),
+            anyString(),
+            anyString(),
+            eq("relatedCommentId: c1"));
+    verify(actionLogService, never())
+        .logAction(anyString(), any(ActionType.class), anyString(), eq("actionLog"));
+  }
+
+  @Test
+  void updateReviewLogsOnlyTheCommentWhenACommentWithRepliesIsDeleted() {
+    CqlLibraryReview existing =
+        CqlLibraryReview.builder()
+            .id("review-1")
+            .libraryId("lib-1")
+            .status(ReviewStatus.READY_FOR_REVIEW)
+            .comments(
+                List.of(
+                    Comment.builder()
+                        .id("c1")
+                        .content("parent")
+                        .replies(List.of(Comment.builder().id("r1").content("reply").build()))
+                        .build()))
+            .build();
+    CqlLibraryReview update = CqlLibraryReview.builder().comments(List.of()).build();
+    when(cqlLibraryReviewRepository.findByLibraryId("lib-1")).thenReturn(Optional.of(existing));
+    when(cqlLibraryReviewRepository.save(any(CqlLibraryReview.class)))
+        .thenAnswer(invocation -> invocation.getArgument(0));
+
+    cqlLibraryReviewService.updateReview("lib-1", update, USERNAME);
+
+    verify(actionLogService)
+        .logAction(
+            "lib-1",
+            ActionType.COMMENT_DELETED,
+            USERNAME,
+            "libraryReviewActionLog",
+            "relatedCommentId: c1");
+    verify(actionLogService, times(1))
+        .logAction(anyString(), any(ActionType.class), anyString(), anyString(), any());
+  }
 }
