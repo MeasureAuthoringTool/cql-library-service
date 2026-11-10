@@ -25,6 +25,7 @@ import gov.cms.madie.models.common.OwnershipType;
 import gov.cms.madie.models.common.ReviewStatus;
 import gov.cms.madie.models.library.CqlLibraryReview;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -198,17 +199,56 @@ class CqlLibraryReviewServiceTest {
   }
 
   @Test
-  void createReviewKeepsTheHarpIdOnTheSavedAndReturnedReview() {
+  void createReviewSavesTheHarpIdButReturnsTheDisplayName() {
+    List<String> markedForReviewByWhenSaved = new ArrayList<>();
     when(cqlLibraryReviewRepository.existsByLibraryId("lib-1")).thenReturn(false);
     when(cqlLibraryReviewRepository.save(any(CqlLibraryReview.class)))
-        .thenAnswer(invocation -> invocation.getArgument(0));
+        .thenAnswer(
+            invocation -> {
+              CqlLibraryReview toSave = invocation.getArgument(0);
+              markedForReviewByWhenSaved.add(toSave.getMarkedForReviewBy());
+              return toSave;
+            });
+    when(userNameService.getDisplayName(USERNAME)).thenReturn("Test User");
 
     CqlLibraryReview result = cqlLibraryReviewService.createReview(review, USERNAME);
 
-    verify(cqlLibraryReviewRepository).save(reviewCaptor.capture());
-    assertEquals(USERNAME, reviewCaptor.getValue().getMarkedForReviewBy());
-    assertEquals(USERNAME, result.getMarkedForReviewBy());
-    verify(userNameService, never()).getDisplayName(any());
+    assertEquals(List.of(USERNAME), markedForReviewByWhenSaved);
+    assertEquals("Test User", result.getMarkedForReviewBy());
+  }
+
+  @Test
+  void updateReviewReturnsTheDisplayNameOfWhoMarkedItForReview() {
+    CqlLibraryReview existing =
+        CqlLibraryReview.builder()
+            .id("review-1")
+            .libraryId("lib-1")
+            .status(ReviewStatus.READY_FOR_REVIEW)
+            .markedForReviewBy(USERNAME)
+            .comments(List.of())
+            .build();
+    // a comment-only save sends back the display name it was given; it is not stored
+    CqlLibraryReview update =
+        CqlLibraryReview.builder()
+            .status(ReviewStatus.READY_FOR_REVIEW)
+            .markedForReviewBy("Test User")
+            .comments(List.of(Comment.builder().content("new").build()))
+            .build();
+    List<String> markedForReviewByWhenSaved = new ArrayList<>();
+    when(cqlLibraryReviewRepository.findByLibraryId("lib-1")).thenReturn(Optional.of(existing));
+    when(cqlLibraryReviewRepository.save(any(CqlLibraryReview.class)))
+        .thenAnswer(
+            invocation -> {
+              CqlLibraryReview toSave = invocation.getArgument(0);
+              markedForReviewByWhenSaved.add(toSave.getMarkedForReviewBy());
+              return toSave;
+            });
+    when(userNameService.getDisplayName(USERNAME)).thenReturn("Test User");
+
+    CqlLibraryReview result = cqlLibraryReviewService.updateReview("lib-1", update, USERNAME);
+
+    assertEquals(List.of(USERNAME), markedForReviewByWhenSaved);
+    assertEquals("Test User", result.getMarkedForReviewBy());
   }
 
   @Test
@@ -232,13 +272,13 @@ class CqlLibraryReviewServiceTest {
             .libraryId("lib-1")
             .librarySetId("set-1")
             .status(ReviewStatus.NOT_READY_FOR_REVIEW)
-            .comments(List.of(Comment.builder().content("old").build()))
+            .comments(List.of(Comment.builder().id("c1").harpId(USERNAME).content("old").build()))
             .build();
 
     CqlLibraryReview update =
         CqlLibraryReview.builder()
             .status(ReviewStatus.READY_FOR_REVIEW)
-            .comments(List.of(Comment.builder().content("updated").build()))
+            .comments(List.of(Comment.builder().id("c1").content("updated").build()))
             .librarySetId("set-1")
             .build();
 
@@ -383,14 +423,20 @@ class CqlLibraryReviewServiceTest {
             .libraryId("lib-1")
             .librarySetId("set-1")
             .status(ReviewStatus.READY_FOR_REVIEW)
-            .comments(List.of(Comment.builder().content("original comment").build()))
+            .comments(
+                List.of(
+                    Comment.builder()
+                        .id("c1")
+                        .harpId(USERNAME)
+                        .content("original comment")
+                        .build()))
             .build();
 
     // Same status, only the comment changes.
     CqlLibraryReview update =
         CqlLibraryReview.builder()
             .status(ReviewStatus.READY_FOR_REVIEW)
-            .comments(List.of(Comment.builder().content("updated comment").build()))
+            .comments(List.of(Comment.builder().id("c1").content("updated comment").build()))
             .build();
 
     when(cqlLibraryReviewRepository.findByLibraryId("lib-1")).thenReturn(Optional.of(existing));
@@ -613,6 +659,7 @@ class CqlLibraryReviewServiceTest {
         CqlLibraryReview.builder()
             .id("review-1")
             .libraryId("lib-1")
+            .comments(List.of(Comment.builder().id("c1").harpId(USERNAME).content("kept").build()))
             .status(ReviewStatus.READY_FOR_REVIEW)
             .build();
     CqlLibraryReview update =
@@ -641,16 +688,16 @@ class CqlLibraryReviewServiceTest {
             .status(ReviewStatus.READY_FOR_REVIEW)
             .comments(
                 List.of(
-                    Comment.builder().id("c1").content("old text").build(),
-                    Comment.builder().id("c2").content("to be removed").build(),
-                    Comment.builder().id("c3").content("untouched").build()))
+                    Comment.builder().harpId(USERNAME).id("c1").content("old text").build(),
+                    Comment.builder().harpId(USERNAME).id("c2").content("to be removed").build(),
+                    Comment.builder().harpId(USERNAME).id("c3").content("untouched").build()))
             .build();
     CqlLibraryReview update =
         CqlLibraryReview.builder()
             .comments(
                 List.of(
-                    Comment.builder().id("c1").content("new text").build(),
-                    Comment.builder().id("c3").content("untouched").build(),
+                    Comment.builder().harpId(USERNAME).id("c1").content("new text").build(),
+                    Comment.builder().harpId(USERNAME).id("c3").content("untouched").build(),
                     Comment.builder().content("brand new").build()))
             .build();
     when(cqlLibraryReviewRepository.findByLibraryId("lib-1")).thenReturn(Optional.of(existing));
@@ -772,7 +819,20 @@ class CqlLibraryReviewServiceTest {
             .id("review-1")
             .libraryId("lib-1")
             .status(ReviewStatus.READY_FOR_REVIEW)
-            .comments(List.of(Comment.builder().id("c1").content("parent").build()))
+            .comments(
+                List.of(
+                    Comment.builder()
+                        .harpId(USERNAME)
+                        .id("c1")
+                        .content("parent")
+                        .replies(
+                            List.of(
+                                Comment.builder()
+                                    .harpId(USERNAME)
+                                    .id("r1")
+                                    .content("kept")
+                                    .build()))
+                        .build()))
             .build();
     CqlLibraryReview update =
         CqlLibraryReview.builder()
@@ -783,7 +843,7 @@ class CqlLibraryReviewServiceTest {
                         .content("parent")
                         .replies(
                             List.of(
-                                Comment.builder().id("r1").content("kept").build(),
+                                Comment.builder().harpId(USERNAME).id("r1").content("kept").build(),
                                 Comment.builder().content("new").build()))
                         .build()))
             .build();
@@ -812,9 +872,21 @@ class CqlLibraryReviewServiceTest {
                         .content("parent")
                         .replies(
                             List.of(
-                                Comment.builder().id("r1").content("old text").build(),
-                                Comment.builder().id("r2").content("to be removed").build(),
-                                Comment.builder().id("r3").content("untouched").build()))
+                                Comment.builder()
+                                    .harpId(USERNAME)
+                                    .id("r1")
+                                    .content("old text")
+                                    .build(),
+                                Comment.builder()
+                                    .harpId(USERNAME)
+                                    .id("r2")
+                                    .content("to be removed")
+                                    .build(),
+                                Comment.builder()
+                                    .harpId(USERNAME)
+                                    .id("r3")
+                                    .content("untouched")
+                                    .build()))
                         .build()))
             .build();
     CqlLibraryReview update =
@@ -826,8 +898,16 @@ class CqlLibraryReviewServiceTest {
                         .content("parent")
                         .replies(
                             List.of(
-                                Comment.builder().id("r1").content("new text").build(),
-                                Comment.builder().id("r3").content("untouched").build(),
+                                Comment.builder()
+                                    .harpId(USERNAME)
+                                    .id("r1")
+                                    .content("new text")
+                                    .build(),
+                                Comment.builder()
+                                    .harpId(USERNAME)
+                                    .id("r3")
+                                    .content("untouched")
+                                    .build(),
                                 Comment.builder().content("brand new").build()))
                         .build()))
             .build();
@@ -892,9 +972,16 @@ class CqlLibraryReviewServiceTest {
             .comments(
                 List.of(
                     Comment.builder()
+                        .harpId(USERNAME)
                         .id("c1")
                         .content("parent")
-                        .replies(List.of(Comment.builder().id("r1").content("reply").build()))
+                        .replies(
+                            List.of(
+                                Comment.builder()
+                                    .harpId(USERNAME)
+                                    .id("r1")
+                                    .content("reply")
+                                    .build()))
                         .build()))
             .build();
     CqlLibraryReview update = CqlLibraryReview.builder().comments(List.of()).build();
@@ -913,5 +1000,179 @@ class CqlLibraryReviewServiceTest {
             "relatedCommentId: c1");
     verify(actionLogService, times(1))
         .logAction(anyString(), any(ActionType.class), anyString(), anyString(), any());
+  }
+
+  @Test
+  void updateReviewKeepsAnotherUsersCommentLeftOutOfAnOutdatedUpdate() {
+    Comment theirs = Comment.builder().id("c2").harpId("other.user").content("theirs").build();
+    CqlLibraryReview existing =
+        CqlLibraryReview.builder()
+            .id("review-1")
+            .libraryId("lib-1")
+            .status(ReviewStatus.READY_FOR_REVIEW)
+            .comments(
+                List.of(
+                    Comment.builder().id("c1").harpId(USERNAME).content("mine").build(), theirs))
+            .build();
+    // built from a copy loaded before the other user commented
+    CqlLibraryReview update =
+        CqlLibraryReview.builder()
+            .comments(
+                List.of(
+                    Comment.builder().id("c1").harpId(USERNAME).content("mine").build(),
+                    Comment.builder().content("new").build()))
+            .build();
+    when(cqlLibraryReviewRepository.findByLibraryId("lib-1")).thenReturn(Optional.of(existing));
+    when(cqlLibraryReviewRepository.save(any(CqlLibraryReview.class)))
+        .thenAnswer(invocation -> invocation.getArgument(0));
+
+    CqlLibraryReview result = cqlLibraryReviewService.updateReview("lib-1", update, USERNAME);
+
+    assertEquals(
+        List.of("mine", "theirs", "new"),
+        result.getComments().stream().map(Comment::getContent).toList());
+    verify(actionLogService, never())
+        .logAction(
+            anyString(),
+            eq(ActionType.COMMENT_DELETED),
+            anyString(),
+            anyString(),
+            eq("relatedCommentId: c2"));
+  }
+
+  @Test
+  void updateReviewIgnoresChangesToAnotherUsersComment() {
+    CqlLibraryReview existing =
+        CqlLibraryReview.builder()
+            .id("review-1")
+            .libraryId("lib-1")
+            .status(ReviewStatus.READY_FOR_REVIEW)
+            .comments(
+                List.of(
+                    Comment.builder().id("c2").harpId("other.user").content("original").build()))
+            .build();
+    CqlLibraryReview update =
+        CqlLibraryReview.builder()
+            .comments(
+                List.of(Comment.builder().id("c2").harpId(USERNAME).content("changed").build()))
+            .build();
+    when(cqlLibraryReviewRepository.findByLibraryId("lib-1")).thenReturn(Optional.of(existing));
+    when(cqlLibraryReviewRepository.save(any(CqlLibraryReview.class)))
+        .thenAnswer(invocation -> invocation.getArgument(0));
+
+    CqlLibraryReview result = cqlLibraryReviewService.updateReview("lib-1", update, USERNAME);
+
+    Comment saved = result.getComments().get(0);
+    assertEquals("original", saved.getContent());
+    assertEquals("other.user", saved.getHarpId());
+    verify(actionLogService, never())
+        .logAction(anyString(), any(ActionType.class), anyString(), anyString(), any());
+  }
+
+  @Test
+  void updateReviewKeepsAnotherUsersReplyLeftOutOfAnOutdatedUpdate() {
+    Comment theirReply =
+        Comment.builder().id("r1").harpId("other.user").content("their reply").build();
+    CqlLibraryReview existing =
+        CqlLibraryReview.builder()
+            .id("review-1")
+            .libraryId("lib-1")
+            .status(ReviewStatus.READY_FOR_REVIEW)
+            .comments(
+                List.of(
+                    Comment.builder()
+                        .id("c1")
+                        .harpId("other.user")
+                        .content("parent")
+                        .replies(List.of(theirReply))
+                        .build()))
+            .build();
+    CqlLibraryReview update =
+        CqlLibraryReview.builder()
+            .comments(
+                List.of(
+                    Comment.builder()
+                        .id("c1")
+                        .harpId("other.user")
+                        .content("parent")
+                        .replies(List.of(Comment.builder().content("my reply").build()))
+                        .build()))
+            .build();
+    when(cqlLibraryReviewRepository.findByLibraryId("lib-1")).thenReturn(Optional.of(existing));
+    when(cqlLibraryReviewRepository.save(any(CqlLibraryReview.class)))
+        .thenAnswer(invocation -> invocation.getArgument(0));
+
+    CqlLibraryReview result = cqlLibraryReviewService.updateReview("lib-1", update, USERNAME);
+
+    List<Comment> replies = result.getComments().get(0).getReplies();
+    assertEquals(
+        List.of("their reply", "my reply"), replies.stream().map(Comment::getContent).toList());
+    assertEquals(USERNAME, replies.get(1).getHarpId());
+  }
+
+  @Test
+  void updateReviewDropsACommentThatWasDeletedMeanwhile() {
+    CqlLibraryReview existing =
+        CqlLibraryReview.builder()
+            .id("review-1")
+            .libraryId("lib-1")
+            .status(ReviewStatus.READY_FOR_REVIEW)
+            .comments(List.of())
+            .build();
+    CqlLibraryReview update =
+        CqlLibraryReview.builder()
+            .comments(
+                List.of(Comment.builder().id("gone").harpId(USERNAME).content("deleted").build()))
+            .build();
+    when(cqlLibraryReviewRepository.findByLibraryId("lib-1")).thenReturn(Optional.of(existing));
+    when(cqlLibraryReviewRepository.save(any(CqlLibraryReview.class)))
+        .thenAnswer(invocation -> invocation.getArgument(0));
+
+    CqlLibraryReview result = cqlLibraryReviewService.updateReview("lib-1", update, USERNAME);
+
+    assertEquals(List.of(), result.getComments());
+  }
+
+  @Test
+  void updateReviewStampsNewCommentsWithTheCallersHarpId() {
+    CqlLibraryReview existing =
+        CqlLibraryReview.builder()
+            .id("review-1")
+            .libraryId("lib-1")
+            .status(ReviewStatus.READY_FOR_REVIEW)
+            .build();
+    CqlLibraryReview update =
+        CqlLibraryReview.builder()
+            .comments(List.of(Comment.builder().harpId("someone.else").content("new").build()))
+            .build();
+    when(cqlLibraryReviewRepository.findByLibraryId("lib-1")).thenReturn(Optional.of(existing));
+    when(cqlLibraryReviewRepository.save(any(CqlLibraryReview.class)))
+        .thenAnswer(invocation -> invocation.getArgument(0));
+
+    CqlLibraryReview result = cqlLibraryReviewService.updateReview("lib-1", update, USERNAME);
+
+    assertEquals(USERNAME, result.getComments().get(0).getHarpId());
+  }
+
+  @Test
+  void updateReviewLetsTheAuthorDeleteAnOlderCommentWithoutAHarpId() {
+    CqlLibraryReview existing =
+        CqlLibraryReview.builder()
+            .id("review-1")
+            .libraryId("lib-1")
+            .status(ReviewStatus.READY_FOR_REVIEW)
+            .comments(
+                List.of(
+                    Comment.builder().id("c1").authorName(USERNAME).content("mine").build(),
+                    Comment.builder().id("c2").authorName("Other User").content("theirs").build()))
+            .build();
+    CqlLibraryReview update = CqlLibraryReview.builder().comments(List.of()).build();
+    when(cqlLibraryReviewRepository.findByLibraryId("lib-1")).thenReturn(Optional.of(existing));
+    when(cqlLibraryReviewRepository.save(any(CqlLibraryReview.class)))
+        .thenAnswer(invocation -> invocation.getArgument(0));
+
+    CqlLibraryReview result = cqlLibraryReviewService.updateReview("lib-1", update, USERNAME);
+
+    assertEquals(List.of("c2"), result.getComments().stream().map(Comment::getId).toList());
   }
 }

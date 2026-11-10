@@ -77,7 +77,7 @@ public class CqlLibraryReviewService {
             .map(comment -> new CommentChange(ActionType.COMMENT_ADDED, comment, null))
             .toList();
     logCommentActions(libraryId, addedCommentChanges, username);
-    return saved;
+    return withMarkedForReviewByDisplayName(saved);
   }
 
   /**
@@ -104,7 +104,10 @@ public class CqlLibraryReviewService {
     }
 
     List<Comment> comments =
-        review.getComments() != null ? review.getComments() : existing.getComments();
+        review.getComments() != null
+            ? mergeUserChangesIntoStoredComments(
+                existing.getComments(), review.getComments(), username)
+            : existing.getComments();
     List<CommentChange> commentChanges =
         findChangedCommentsAndReplies(existing.getComments(), comments);
     assignIdsToNewComments(comments);
@@ -126,7 +129,7 @@ public class CqlLibraryReviewService {
           libraryId);
     }
     logCommentActions(libraryId, commentChanges, username);
-    return saved;
+    return withMarkedForReviewByDisplayName(saved);
   }
 
   /**
@@ -140,6 +143,10 @@ public class CqlLibraryReviewService {
         cqlLibraryReviewRepository
             .findByLibraryId(libraryId)
             .orElseThrow(() -> new ResourceNotFoundException("CQL Library Review", libraryId));
+    return withMarkedForReviewByDisplayName(review);
+  }
+
+  private CqlLibraryReview withMarkedForReviewByDisplayName(CqlLibraryReview review) {
     review.setMarkedForReviewBy(userNameService.getDisplayName(review.getMarkedForReviewBy()));
     return review;
   }
@@ -208,6 +215,65 @@ public class CqlLibraryReviewService {
           .filter(reply -> StringUtils.isBlank(reply.getId()))
           .forEach(reply -> reply.setId(ObjectId.get().toString()));
     }
+  }
+
+  /**
+   * Builds the comment list to save from the stored comments and the user's update. The update can
+   * come from a page that was loaded before other users made changes, so it is only trusted for the
+   * comments and replies the user wrote; everyone else's stay exactly as stored.
+   *
+   * <ul>
+   *   <li>A stored entry that is missing from the update is deleted only if the user wrote it.
+   *   <li>A stored entry whose text changed in the update takes the new text only if the user wrote
+   *       it.
+   *   <li>An entry in the update whose id is no longer stored (deleted meanwhile) is dropped.
+   *   <li>An entry in the update without an id is new and is stamped with the user's HARP id.
+   * </ul>
+   *
+   * @param storedEntries the comments (or one comment's replies) currently saved
+   * @param incomingEntries the comments (or replies) sent in the update
+   * @param username the HARP id of the user saving the update
+   * @return the entries to save
+   */
+  private static List<Comment> mergeUserChangesIntoStoredComments(
+      List<Comment> storedEntries, List<Comment> incomingEntries, String username) {
+    if (storedEntries == null && incomingEntries == null) {
+      return null;
+    }
+    Map<String, Comment> incomingEntriesById =
+        mapCommentsById(ListUtils.emptyIfNull(incomingEntries));
+    List<Comment> mergedEntries = new ArrayList<>();
+
+    for (Comment storedEntry : ListUtils.emptyIfNull(storedEntries)) {
+      Comment incomingEntry = incomingEntriesById.get(storedEntry.getId());
+      boolean writtenByUser = isWrittenByUser(storedEntry, username);
+      if (incomingEntry == null) {
+        if (!writtenByUser) {
+          mergedEntries.add(storedEntry);
+        }
+        continue;
+      }
+      Comment versionToKeep = writtenByUser ? incomingEntry : storedEntry;
+      mergedEntries.add(
+          versionToKeep.toBuilder()
+              .harpId(storedEntry.getHarpId())
+              .replies(
+                  mergeUserChangesIntoStoredComments(
+                      storedEntry.getReplies(), incomingEntry.getReplies(), username))
+              .build());
+    }
+
+    ListUtils.emptyIfNull(incomingEntries).stream()
+        .filter(entry -> StringUtils.isBlank(entry.getId()))
+        .map(newEntry -> newEntry.toBuilder().harpId(username).build())
+        .forEach(mergedEntries::add);
+    return mergedEntries;
+  }
+
+  private static boolean isWrittenByUser(Comment entry, String username) {
+    String author =
+        StringUtils.isNotBlank(entry.getHarpId()) ? entry.getHarpId() : entry.getAuthorName();
+    return StringUtils.equalsIgnoreCase(author, username);
   }
 
   /**
@@ -363,5 +429,5 @@ public class CqlLibraryReviewService {
 
   // one comment or reply to log; parentComment is set only when the changed entry is a reply
   private record CommentChange(
-          ActionType actionType, Comment changedComment, Comment parentComment) {}
+      ActionType actionType, Comment changedComment, Comment parentComment) {}
 }
