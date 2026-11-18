@@ -1167,6 +1167,50 @@ class CqlLibraryReviewServiceTest {
   }
 
   @Test
+  void updateReviewRetainsOmittedPlaceholderWithoutLoggingAnotherDeletion() {
+    Comment reply = Comment.builder().id("r1").harpId("other").content("reply").build();
+    Comment deleted =
+        Comment.builder().id("c1").harpId(USERNAME).content(null).replies(List.of(reply)).build();
+    CqlLibraryReview existing =
+        CqlLibraryReview.builder().libraryId("lib-1").comments(List.of(deleted)).build();
+    CqlLibraryReview update = CqlLibraryReview.builder().comments(List.of()).build();
+    when(cqlLibraryReviewRepository.findByLibraryId("lib-1")).thenReturn(Optional.of(existing));
+    when(cqlLibraryReviewRepository.save(any(CqlLibraryReview.class)))
+        .thenAnswer(invocation -> invocation.getArgument(0));
+
+    assertEquals(
+        List.of(deleted),
+        cqlLibraryReviewService.updateReview("lib-1", update, USERNAME).getComments());
+    verify(actionLogService, never())
+        .logAction(anyString(), any(ActionType.class), anyString(), anyString(), any());
+  }
+
+  @Test
+  void updateReviewRemovesNullContentCommentWithoutReplies() {
+    Comment parent = Comment.builder().id("c1").harpId(USERNAME).content("parent").build();
+    CqlLibraryReview existing =
+        CqlLibraryReview.builder().libraryId("lib-1").comments(List.of(parent)).build();
+    CqlLibraryReview update =
+        CqlLibraryReview.builder()
+            .comments(List.of(parent.toBuilder().content(null).build()))
+            .build();
+    when(cqlLibraryReviewRepository.findByLibraryId("lib-1")).thenReturn(Optional.of(existing));
+    when(cqlLibraryReviewRepository.save(any(CqlLibraryReview.class)))
+        .thenAnswer(invocation -> invocation.getArgument(0));
+
+    assertEquals(
+        List.of(), cqlLibraryReviewService.updateReview("lib-1", update, USERNAME).getComments());
+    verify(actionLogService)
+        .logAction(
+            "lib-1",
+            ActionType.COMMENT_DELETED,
+            USERNAME,
+            "libraryReviewActionLog",
+            "relatedCommentId: c1");
+    verify(userNameService, never()).getCommentAuthorDisplayName(any());
+  }
+
+  @Test
   void updateReviewKeepsAnotherUsersCommentLeftOutOfAnOutdatedUpdate() {
     Comment theirs = Comment.builder().id("c2").harpId("other.user").content("theirs").build();
     CqlLibraryReview existing =

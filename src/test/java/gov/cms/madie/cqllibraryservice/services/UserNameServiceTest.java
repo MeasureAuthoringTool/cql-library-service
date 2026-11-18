@@ -96,4 +96,24 @@ class UserNameServiceTest {
     when(userServiceClient.getBulkUserDetails(List.of(missingNameId))).thenReturn(Map.of());
     assertEquals(missingNameId, userNameService.getCommentAuthorDisplayName(missingNameId));
   }
+
+  @Test
+  void commentAuthorFallsBackWhenFirstNameOrUserResponseIsMissing() {
+    String lastNameOnlyId = "last-only";
+    String unavailableId = "unavailable";
+    when(userServiceClient.getBulkUserDetails(List.of(lastNameOnlyId)))
+        .thenReturn(Map.of(lastNameOnlyId, UserDetailsDto.builder().lastName("Jones").build()));
+    when(userServiceClient.getBulkUserDetails(List.of(unavailableId))).thenReturn(null);
+
+    assertEquals(lastNameOnlyId, userNameService.getCommentAuthorDisplayName(lastNameOnlyId));
+    assertEquals(unavailableId, userNameService.getCommentAuthorDisplayName(unavailableId));
+  }
+
+  @Test
+  void commentAuthorSkipsLookupForBlankHarpId() {
+    String blankId = "  ";
+    assertNull(userNameService.getCommentAuthorDisplayName(null));
+    assertEquals(blankId, userNameService.getCommentAuthorDisplayName(blankId));
+    verify(userServiceClient, never()).getBulkUserDetails(any());
+  }
 }
