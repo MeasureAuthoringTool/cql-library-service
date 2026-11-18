@@ -383,8 +383,8 @@ public class CqlLibraryReviewService {
                 entry ->
                     entry.getId() != null
                         && (!incomingEntryIds.contains(entry.getId())
-                            || (entry.getContent() != null
-                                && incomingEntriesById.get(entry.getId()).getContent() == null)))
+                            || entry.getContent() != null
+                                && incomingEntriesById.get(entry.getId()).getContent() == null))
             .toList();
 
     addedEntries.forEach(
