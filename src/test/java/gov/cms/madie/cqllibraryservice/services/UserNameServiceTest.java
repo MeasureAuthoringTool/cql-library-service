@@ -79,18 +79,21 @@ class UserNameServiceTest {
 
   @Test
   void commentAuthorRequiresBothNamesAndFallsBackToHarpId() {
-    when(userServiceClient.getBulkUserDetails(List.of("jjones")))
+    String fullNameId = "jjones";
+    String partialNameId = "partial";
+    String missingNameId = "missing";
+    when(userServiceClient.getBulkUserDetails(List.of(fullNameId)))
         .thenReturn(
             Map.of(
-                "jjones",
+                fullNameId,
                 UserDetailsDto.builder().firstName(" Jonathan ").lastName(" Jones ").build()));
-    assertEquals("Jonathan Jones", userNameService.getCommentAuthorDisplayName("jjones"));
+    assertEquals("Jonathan Jones", userNameService.getCommentAuthorDisplayName(fullNameId));
 
-    when(userServiceClient.getBulkUserDetails(List.of("partial")))
-        .thenReturn(Map.of("partial", UserDetailsDto.builder().firstName("Jonathan").build()));
-    assertEquals("partial", userNameService.getCommentAuthorDisplayName("partial"));
+    when(userServiceClient.getBulkUserDetails(List.of(partialNameId)))
+        .thenReturn(Map.of(partialNameId, UserDetailsDto.builder().firstName("Jonathan").build()));
+    assertEquals(partialNameId, userNameService.getCommentAuthorDisplayName(partialNameId));
 
-    when(userServiceClient.getBulkUserDetails(List.of("missing"))).thenReturn(Map.of());
-    assertEquals("missing", userNameService.getCommentAuthorDisplayName("missing"));
+    when(userServiceClient.getBulkUserDetails(List.of(missingNameId))).thenReturn(Map.of());
+    assertEquals(missingNameId, userNameService.getCommentAuthorDisplayName(missingNameId));
   }
 }
