@@ -76,4 +76,21 @@ class UserNameServiceTest {
 
     verify(userServiceClient, never()).getBulkUserDetails(any());
   }
+
+  @Test
+  void commentAuthorRequiresBothNamesAndFallsBackToHarpId() {
+    when(userServiceClient.getBulkUserDetails(List.of("jjones")))
+        .thenReturn(
+            Map.of(
+                "jjones",
+                UserDetailsDto.builder().firstName(" Jonathan ").lastName(" Jones ").build()));
+    assertEquals("Jonathan Jones", userNameService.getCommentAuthorDisplayName("jjones"));
+
+    when(userServiceClient.getBulkUserDetails(List.of("partial")))
+        .thenReturn(Map.of("partial", UserDetailsDto.builder().firstName("Jonathan").build()));
+    assertEquals("partial", userNameService.getCommentAuthorDisplayName("partial"));
+
+    when(userServiceClient.getBulkUserDetails(List.of("missing"))).thenReturn(Map.of());
+    assertEquals("missing", userNameService.getCommentAuthorDisplayName("missing"));
+  }
 }
