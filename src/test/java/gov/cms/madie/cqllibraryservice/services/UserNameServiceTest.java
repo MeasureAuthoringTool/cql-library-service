@@ -76,4 +76,44 @@ class UserNameServiceTest {
 
     verify(userServiceClient, never()).getBulkUserDetails(any());
   }
+
+  @Test
+  void commentAuthorRequiresBothNamesAndFallsBackToHarpId() {
+    String fullNameId = "jjones";
+    String partialNameId = "partial";
+    String missingNameId = "missing";
+    when(userServiceClient.getBulkUserDetails(List.of(fullNameId)))
+        .thenReturn(
+            Map.of(
+                fullNameId,
+                UserDetailsDto.builder().firstName(" Jonathan ").lastName(" Jones ").build()));
+    assertEquals("Jonathan Jones", userNameService.getCommentAuthorDisplayName(fullNameId));
+
+    when(userServiceClient.getBulkUserDetails(List.of(partialNameId)))
+        .thenReturn(Map.of(partialNameId, UserDetailsDto.builder().firstName("Jonathan").build()));
+    assertEquals(partialNameId, userNameService.getCommentAuthorDisplayName(partialNameId));
+
+    when(userServiceClient.getBulkUserDetails(List.of(missingNameId))).thenReturn(Map.of());
+    assertEquals(missingNameId, userNameService.getCommentAuthorDisplayName(missingNameId));
+  }
+
+  @Test
+  void commentAuthorFallsBackWhenFirstNameOrUserResponseIsMissing() {
+    String lastNameOnlyId = "last-only";
+    String unavailableId = "unavailable";
+    when(userServiceClient.getBulkUserDetails(List.of(lastNameOnlyId)))
+        .thenReturn(Map.of(lastNameOnlyId, UserDetailsDto.builder().lastName("Jones").build()));
+    when(userServiceClient.getBulkUserDetails(List.of(unavailableId))).thenReturn(null);
+
+    assertEquals(lastNameOnlyId, userNameService.getCommentAuthorDisplayName(lastNameOnlyId));
+    assertEquals(unavailableId, userNameService.getCommentAuthorDisplayName(unavailableId));
+  }
+
+  @Test
+  void commentAuthorSkipsLookupForBlankHarpId() {
+    String blankId = "  ";
+    assertNull(userNameService.getCommentAuthorDisplayName(null));
+    assertEquals(blankId, userNameService.getCommentAuthorDisplayName(blankId));
+    verify(userServiceClient, never()).getBulkUserDetails(any());
+  }
 }

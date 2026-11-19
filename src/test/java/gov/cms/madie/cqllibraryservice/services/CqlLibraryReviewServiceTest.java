@@ -67,6 +67,9 @@ class CqlLibraryReviewServiceTest {
     lenient()
         .when(userNameService.getDisplayName(any()))
         .thenAnswer(invocation -> invocation.getArgument(0));
+    lenient()
+        .when(userNameService.getCommentAuthorDisplayName(any()))
+        .thenAnswer(invocation -> invocation.getArgument(0));
 
     review =
         CqlLibraryReview.builder()
@@ -989,7 +992,7 @@ class CqlLibraryReviewServiceTest {
     when(cqlLibraryReviewRepository.save(any(CqlLibraryReview.class)))
         .thenAnswer(invocation -> invocation.getArgument(0));
 
-    cqlLibraryReviewService.updateReview("lib-1", update, USERNAME);
+    CqlLibraryReview result = cqlLibraryReviewService.updateReview("lib-1", update, USERNAME);
 
     verify(actionLogService)
         .logAction(
@@ -1000,6 +1003,211 @@ class CqlLibraryReviewServiceTest {
             "relatedCommentId: c1");
     verify(actionLogService, times(1))
         .logAction(anyString(), any(ActionType.class), anyString(), anyString(), any());
+    assertNull(result.getComments().get(0).getContent());
+    assertEquals("reply", result.getComments().get(0).getReplies().get(0).getContent());
+  }
+
+  @Test
+  void updateReviewPreservesRepliesAndLogsDeletionForNullContent() {
+    Comment reply = Comment.builder().id("r1").harpId("other").content("reply").build();
+    Instant createdAt = Instant.parse("2026-09-15T11:33:00Z");
+    Comment parent =
+        Comment.builder()
+            .id("c1")
+            .harpId(USERNAME)
+            .authorName("old name")
+            .createdAt(createdAt)
+            .content("parent")
+            .edited(true)
+            .replies(List.of(reply))
+            .build();
+    CqlLibraryReview existing =
+        CqlLibraryReview.builder().libraryId("lib-1").comments(List.of(parent)).build();
+    CqlLibraryReview update =
+        CqlLibraryReview.builder()
+            .comments(List.of(parent.toBuilder().content(null).replies(List.of()).build()))
+            .build();
+    when(userNameService.getCommentAuthorDisplayName(USERNAME)).thenReturn("Test User");
+    when(cqlLibraryReviewRepository.findByLibraryId("lib-1")).thenReturn(Optional.of(existing));
+    when(cqlLibraryReviewRepository.save(any(CqlLibraryReview.class)))
+        .thenAnswer(invocation -> invocation.getArgument(0));
+
+    Comment deleted =
+        cqlLibraryReviewService.updateReview("lib-1", update, USERNAME).getComments().get(0);
+
+    assertNull(deleted.getContent());
+    assertEquals(false, deleted.isEdited());
+    assertEquals("Test User", deleted.getAuthorName());
+    assertEquals(createdAt, deleted.getCreatedAt());
+    assertEquals(List.of(reply), deleted.getReplies());
+    verify(actionLogService)
+        .logAction(
+            "lib-1",
+            ActionType.COMMENT_DELETED,
+            USERNAME,
+            "libraryReviewActionLog",
+            "relatedCommentId: c1");
+    verify(actionLogService, never())
+        .logAction(anyString(), eq(ActionType.COMMENT_EDITED), anyString(), anyString(), any());
+    verify(actionLogService, never())
+        .logAction(anyString(), any(ActionType.class), anyString(), eq("actionLog"));
+  }
+
+  @Test
+  void updateReviewDoesNotRestoreDeletedTextAndStillAllowsReplyChanges() {
+    Comment reply = Comment.builder().id("r1").harpId(USERNAME).content("old reply").build();
+    Comment deleted =
+        Comment.builder()
+            .id("c1")
+            .harpId(USERNAME)
+            .authorName("Test User")
+            .content(null)
+            .replies(List.of(reply))
+            .build();
+    CqlLibraryReview existing =
+        CqlLibraryReview.builder().libraryId("lib-1").comments(List.of(deleted)).build();
+    CqlLibraryReview update =
+        CqlLibraryReview.builder()
+            .comments(
+                List.of(
+                    deleted.toBuilder()
+                        .content("stale original")
+                        .replies(List.of(reply.toBuilder().content("updated reply").build()))
+                        .build()))
+            .build();
+    when(cqlLibraryReviewRepository.findByLibraryId("lib-1")).thenReturn(Optional.of(existing));
+    when(cqlLibraryReviewRepository.save(any(CqlLibraryReview.class)))
+        .thenAnswer(invocation -> invocation.getArgument(0));
+
+    Comment result =
+        cqlLibraryReviewService.updateReview("lib-1", update, USERNAME).getComments().get(0);
+
+    assertNull(result.getContent());
+    assertEquals("Test User", result.getAuthorName());
+    assertEquals("updated reply", result.getReplies().get(0).getContent());
+    verify(actionLogService)
+        .logAction(
+            "lib-1",
+            ActionType.COMMENT_EDITED,
+            USERNAME,
+            "libraryReviewActionLog",
+            "relatedCommentId: r1",
+            "parentCommentId: c1");
+    verify(actionLogService, never())
+        .logAction(
+            anyString(),
+            any(ActionType.class),
+            anyString(),
+            anyString(),
+            eq("relatedCommentId: c1"));
+  }
+
+  @Test
+  void updateReviewDoesNotDeleteAnotherUsersCommentWithNullContent() {
+    Comment reply = Comment.builder().id("r1").harpId(USERNAME).content("reply").build();
+    Comment parent =
+        Comment.builder()
+            .id("c1")
+            .harpId("other")
+            .content("parent")
+            .replies(List.of(reply))
+            .build();
+    CqlLibraryReview existing =
+        CqlLibraryReview.builder().libraryId("lib-1").comments(List.of(parent)).build();
+    CqlLibraryReview update =
+        CqlLibraryReview.builder()
+            .comments(List.of(parent.toBuilder().content(null).build()))
+            .build();
+    when(cqlLibraryReviewRepository.findByLibraryId("lib-1")).thenReturn(Optional.of(existing));
+    when(cqlLibraryReviewRepository.save(any(CqlLibraryReview.class)))
+        .thenAnswer(invocation -> invocation.getArgument(0));
+
+    assertEquals(
+        parent,
+        cqlLibraryReviewService.updateReview("lib-1", update, USERNAME).getComments().get(0));
+    verify(actionLogService, never())
+        .logAction(anyString(), any(ActionType.class), anyString(), anyString(), any());
+  }
+
+  @Test
+  void updateReviewRetainsPlaceholderWhenTheLastReplyIsRemoved() {
+    Comment reply = Comment.builder().id("r1").harpId(USERNAME).content("reply").build();
+    Comment deleted =
+        Comment.builder().id("c1").harpId(USERNAME).content(null).replies(List.of(reply)).build();
+    CqlLibraryReview existing =
+        CqlLibraryReview.builder().libraryId("lib-1").comments(List.of(deleted)).build();
+    CqlLibraryReview update =
+        CqlLibraryReview.builder()
+            .comments(List.of(deleted.toBuilder().replies(List.of()).build()))
+            .build();
+    when(cqlLibraryReviewRepository.findByLibraryId("lib-1")).thenReturn(Optional.of(existing));
+    when(cqlLibraryReviewRepository.save(any(CqlLibraryReview.class)))
+        .thenAnswer(invocation -> invocation.getArgument(0));
+
+    Comment result =
+        cqlLibraryReviewService.updateReview("lib-1", update, USERNAME).getComments().get(0);
+
+    assertNull(result.getContent());
+    assertEquals(List.of(), result.getReplies());
+    verify(actionLogService)
+        .logAction(
+            "lib-1",
+            ActionType.COMMENT_DELETED,
+            USERNAME,
+            "libraryReviewActionLog",
+            "relatedCommentId: r1",
+            "parentCommentId: c1");
+    verify(actionLogService, never())
+        .logAction(
+            anyString(),
+            any(ActionType.class),
+            anyString(),
+            anyString(),
+            eq("relatedCommentId: c1"));
+  }
+
+  @Test
+  void updateReviewRetainsOmittedPlaceholderWithoutLoggingAnotherDeletion() {
+    Comment reply = Comment.builder().id("r1").harpId("other").content("reply").build();
+    Comment deleted =
+        Comment.builder().id("c1").harpId(USERNAME).content(null).replies(List.of(reply)).build();
+    CqlLibraryReview existing =
+        CqlLibraryReview.builder().libraryId("lib-1").comments(List.of(deleted)).build();
+    CqlLibraryReview update = CqlLibraryReview.builder().comments(List.of()).build();
+    when(cqlLibraryReviewRepository.findByLibraryId("lib-1")).thenReturn(Optional.of(existing));
+    when(cqlLibraryReviewRepository.save(any(CqlLibraryReview.class)))
+        .thenAnswer(invocation -> invocation.getArgument(0));
+
+    assertEquals(
+        List.of(deleted),
+        cqlLibraryReviewService.updateReview("lib-1", update, USERNAME).getComments());
+    verify(actionLogService, never())
+        .logAction(anyString(), any(ActionType.class), anyString(), anyString(), any());
+  }
+
+  @Test
+  void updateReviewRemovesNullContentCommentWithoutReplies() {
+    Comment parent = Comment.builder().id("c1").harpId(USERNAME).content("parent").build();
+    CqlLibraryReview existing =
+        CqlLibraryReview.builder().libraryId("lib-1").comments(List.of(parent)).build();
+    CqlLibraryReview update =
+        CqlLibraryReview.builder()
+            .comments(List.of(parent.toBuilder().content(null).build()))
+            .build();
+    when(cqlLibraryReviewRepository.findByLibraryId("lib-1")).thenReturn(Optional.of(existing));
+    when(cqlLibraryReviewRepository.save(any(CqlLibraryReview.class)))
+        .thenAnswer(invocation -> invocation.getArgument(0));
+
+    assertEquals(
+        List.of(), cqlLibraryReviewService.updateReview("lib-1", update, USERNAME).getComments());
+    verify(actionLogService)
+        .logAction(
+            "lib-1",
+            ActionType.COMMENT_DELETED,
+            USERNAME,
+            "libraryReviewActionLog",
+            "relatedCommentId: c1");
+    verify(userNameService, never()).getCommentAuthorDisplayName(any());
   }
 
   @Test
